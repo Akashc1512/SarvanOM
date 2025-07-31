@@ -42,15 +42,17 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import MAANG components
-from api.integration_layer import (
-    get_system_manager, system_lifecycle, setup_signal_handlers,
-    start_system, stop_system, get_system_status, is_system_healthy
+from services.analytics-service.integration_layer import (
+    get_system_manager,
+    start_system,
+    stop_system,
+    is_system_healthy,
 )
-from api.config import get_settings
-from api.monitoring import get_monitoring_manager
-from api.performance import get_performance_monitor
-from api.analytics_v2 import get_analytics_processor
-from api.realtime import start_realtime_services, stop_realtime_services
+from shared.core.api.config import get_settings
+from shared.core.api.monitoring import get_monitoring_manager
+from shared.core.performance import get_performance_monitor
+from services.analytics-service.analytics_v2 import get_analytics_processor
+from services.api-gateway.realtime import start_realtime_services, stop_realtime_services
 
 # Configure logging
 structlog.configure(

@@ -18,5 +18,85 @@
     "is_active": true,
     "created_at": "2025-07-28T04:22:59.514405",
     "last_login": null
+  },
+  "testuser_health_check": {
+    "username": "testuser_health_check",
+    "email": "test@healthcheck.com",
+    "hashed_password": "$2b$12$EOjzoc0tPsx6eSZb6Lybieitt99msM8hJ9MrFI5kAM2ZBgkghACHm",
+    "role": "user",
+    "full_name": null,
+    "is_active": true,
+    "created_at": "2025-07-31T05:53:28.079238",
+    "last_login": null
+  },
+  "testuser2": {
+    "username": "testuser2",
+    "email": "test2@healthcheck.com",
+    "hashed_password": "$2b$12$tkpHTmPgJrtXnHBuSD2SruXVSEBUCm1jgysIOKB4kYzLy0LfxeD2q",
+    "role": "user",
+    "full_name": null,
+    "is_active": true,
+    "created_at": "2025-07-31T05:55:51.756143",
+    "last_login": null
+  },
+  "testuser3": {
+    "username": "testuser3",
+    "email": "test3@healthcheck.com",
+    "hashed_password": "$2b$12$jdf3qdzhK6t9IJpvgkcZce.MDXUw2y/7thWCX01.5fuk7OZacsj4O",
+    "role": "user",
+    "full_name": null,
+    "is_active": true,
+    "created_at": "2025-07-31T05:57:14.022418",
+    "last_login": null
+  },
+  "debuguser": {
+    "username": "debuguser",
+    "email": "debug@test.com",
+    "hashed_password": "$2b$12$1A85zk/fRoRwso/l2Qud0.VDwnXJ2LLMYta.CzRr7Pq8VO5EG2Abe",
+    "role": "user",
+    "full_name": null,
+    "is_active": true,
+    "created_at": "2025-07-31T05:58:17.086656",
+    "last_login": null
+  },
+  "debuguser2": {
+    "username": "debuguser2",
+    "email": "debug2@test.com",
+    "hashed_password": "$2b$12$aBdDvKqDH/Um77o/ftk62OCmeELkd6wK.Yo/5AvvFXKTSdoCE0L1m",
+    "role": "user",
+    "full_name": null,
+    "is_active": true,
+    "created_at": "2025-07-31T05:59:15.347806",
+    "last_login": null
+  },
+  "testuser_simple": {
+    "username": "testuser_simple",
+    "email": "simple@test.com",
+    "hashed_password": "$2b$12$Js5U42T/7dGw3z70j0ML3eqeFSGLWl3AscG5RHo00qRSZH7hT0ji2",
+    "role": "user",
+    "full_name": null,
+    "is_active": true,
+    "created_at": "2025-07-31T06:01:40.043109",
+    "last_login": "2025-07-31T06:28:36.964523"
+  },
+  "testuser_simple2": {
+    "username": "testuser_simple2",
+    "email": "simple2@test.com",
+    "hashed_password": "$2b$12$yKJZLh9cM57C1oedrK4fw..qZUwLc40kdXHW4TdaHaHCGMdWmJbEm",
+    "role": "user",
+    "full_name": null,
+    "is_active": true,
+    "created_at": "2025-07-31T06:02:48.591755",
+    "last_login": null
+  },
+  "testuser_oauth2": {
+    "username": "testuser_oauth2",
+    "email": "oauth2@test.com",
+    "hashed_password": "$2b$12$3sy2Rmg5ME8KEvTEVFmw3u31z1hTtWRWLMxCbY7Hpxtgsq6aUu/Zm",
+    "role": "user",
+    "full_name": "Test User OAuth2",
+    "is_active": true,
+    "created_at": "2025-07-31T06:09:00.651053",
+    "last_login": null
   }
 }

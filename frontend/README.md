@@ -1,175 +1,452 @@
-# Universal Knowledge Platform - Frontend
+# SarvanOM Universal Knowledge Platform - Frontend
 
-A modern, responsive web application built with Next.js, TypeScript, and Tailwind CSS for the Universal Knowledge Platform.
+A modern, enterprise-grade frontend implementation for the SarvanOM Universal Knowledge Platform, built with Next.js 15, React 19, and TypeScript.
 
 ## 🚀 Features
 
-- **Modern UI**: Clean, accessible interface built with Next.js and Tailwind CSS
-- **TypeScript**: Full type safety and better development experience
-- **Responsive Design**: Mobile-first design that works on all devices
-- **Accessibility**: WCAG 2.1 AA compliant with proper ARIA labels
-- **Real-time Feedback**: User feedback system for continuous improvement
-- **Error Handling**: Comprehensive error handling and user feedback
+### Core Architecture
 
-## 🛠️ Tech Stack
+- **Next.js 15** with React 19 Server Components
+- **TypeScript strict mode** for type safety
+- **Zustand** for state management with persistence
+- **Tailwind CSS** with comprehensive design system
+- **Radix UI** primitives for accessibility
 
-- **Framework**: Next.js 14+ with App Router
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Icons**: Heroicons
-- **HTTP Client**: Axios
-- **UI Components**: Headless UI
+### AI-Powered Interface
+
+- **Intelligent search** with natural language processing
+- **AI suggestions** and auto-completion
+- **Real-time collaboration** with cursor tracking
+- **Smart document management** with AI assistance
+
+### Enterprise Features
+
+- **Multi-tenant architecture** support
+- **Role-based access control** (RBAC)
+- **Comprehensive analytics** and reporting
+- **Real-time notifications** and updates
+- **Advanced search** with faceted filtering
+
+### Performance & Accessibility
+
+- **Core Web Vitals** optimization
+- **WCAG 2.1 AA** compliance
+- **Progressive enhancement** patterns
+- **Responsive design** for all devices
+- **Internationalization** ready
+
+## 🛠️ Technology Stack
+
+### Core Framework
+
+- **Next.js 15** - React framework with App Router
+- **React 19** - Latest React with Server Components
+- **TypeScript 5.5** - Strict type checking
+
+### State Management
+
+- **Zustand** - Lightweight state management
+- **React Query** - Server state management
+- **React Hook Form** - Form handling
+
+### Styling & Design
+
+- **Tailwind CSS 3.4** - Utility-first CSS
+- **Class Variance Authority** - Component variants
+- **Radix UI** - Accessible primitives
+- **Lucide React** - Icon library
+
+### Development Tools
+
+- **ESLint** - Code linting with strict rules
+- **Prettier** - Code formatting
+- **Jest** - Unit testing
+- **Playwright** - E2E testing
+- **Storybook** - Component documentation
 
 ## 📦 Installation
 
-1. **Install dependencies**:
-   ```bash
-   npm install
-   ```
+### Prerequisites
 
-2. **Set up environment variables**:
-   ```bash
-   cp env.example .env.local
-   ```
-   
-   Edit `.env.local` with your configuration:
-   ```env
-   NEXT_PUBLIC_API_BASE_URL=http://localhost:8002
-   ```
+- Node.js 18+
+- npm or yarn
+- Git
 
-3. **Start the development server**:
-   ```bash
-   npm run dev
-   ```
+### Setup
 
-4. **Open your browser**:
-   Navigate to [http://localhost:3000](http://localhost:3000)
+```bash
+# Clone the repository
+git clone <repository-url>
+cd universal-knowledge-hub/frontend
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp env.example .env.local
+
+# Start development server
+npm run dev
+```
+
+### Environment Variables
+
+Create a `.env.local` file with the following variables:
+
+```env
+# API Configuration
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Analytics (optional)
+NEXT_PUBLIC_GOOGLE_ANALYTICS_ID=
+NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=
+
+# Feature Flags
+NEXT_PUBLIC_ENABLE_AI_FEATURES=true
+NEXT_PUBLIC_ENABLE_COLLABORATION=true
+NEXT_PUBLIC_ENABLE_ANALYTICS=true
+```
 
 ## 🏗️ Project Structure
 
 ```
-frontend/
-├── src/
-│   ├── app/                 # Next.js App Router pages
-│   ├── components/          # Reusable UI components
-│   ├── lib/                 # Utility functions and API client
-│   └── types/               # TypeScript type definitions
-├── public/                  # Static assets
-└── env.example             # Environment variables template
+src/
+├── app/                    # Next.js App Router
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Dashboard page
+│   └── globals.css        # Global styles
+├── components/            # React components
+│   ├── ui/               # Base UI components
+│   │   ├── button.tsx
+│   │   ├── input.tsx
+│   │   ├── card.tsx
+│   │   └── toast.tsx
+│   ├── providers/        # Context providers
+│   └── features/         # Feature-specific components
+├── lib/                  # Utilities and configurations
+│   ├── store.ts          # Zustand store
+│   ├── api.ts            # API client
+│   └── utils.ts          # Utility functions
+├── hooks/                # Custom React hooks
+├── types/                # TypeScript type definitions
+└── styles/               # Additional styles
 ```
-
-## 🧩 Components
-
-### Core Components
-
-- **QueryForm**: Main query input with validation and examples
-- **AnswerDisplay**: Renders answers with confidence scores and citations
-- **CitationList**: Displays source citations with links
-- **ConfidenceBadge**: Shows confidence level with color coding
-- **FeedbackForm**: User feedback collection system
-
-### API Integration
-
-- **api.ts**: Axios-based API client with error handling
-- **types/api.ts**: TypeScript interfaces for API responses
 
 ## 🎨 Design System
 
-The application uses a consistent design system with:
+### Color Palette
 
-- **Colors**: Blue primary, semantic colors for feedback
-- **Typography**: Clear hierarchy with proper contrast
-- **Spacing**: Consistent spacing using Tailwind utilities
-- **Components**: Reusable, accessible components
+The design system uses CSS custom properties for consistent theming:
 
-## ♿ Accessibility
+```css
+:root {
+  --primary: 221.2 83.2% 53.3%;
+  --secondary: 210 40% 96%;
+  --accent: 210 40% 96%;
+  --destructive: 0 84.2% 60.2%;
+  --muted: 210 40% 96%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+}
+```
 
-- **WCAG 2.1 AA Compliance**: Full accessibility support
-- **Screen Reader Support**: Proper ARIA labels and roles
-- **Keyboard Navigation**: All interactive elements keyboard accessible
-- **High Contrast**: Proper color contrast ratios
-- **Focus Management**: Clear focus indicators
+### Component Variants
+
+Components use Class Variance Authority for consistent variants:
+
+```tsx
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline: "border border-input bg-background hover:bg-accent",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        ghost: "hover:bg-accent hover:text-accent-foreground",
+        link: "text-primary underline-offset-4 hover:underline",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+        icon: "h-10 w-10",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      size: "default",
+    },
+  },
+);
+```
+
+## 🔧 Development
+
+### Available Scripts
+
+```bash
+# Development
+npm run dev              # Start development server
+npm run build            # Build for production
+npm run start            # Start production server
+
+# Code Quality
+npm run lint             # Run ESLint
+npm run type-check       # Run TypeScript check
+npm run format           # Format code with Prettier
+
+# Testing
+npm run test             # Run unit tests
+npm run test:watch       # Run tests in watch mode
+npm run test:coverage    # Run tests with coverage
+npm run test:e2e         # Run E2E tests
+
+# Storybook
+npm run storybook        # Start Storybook
+npm run build-storybook  # Build Storybook
+```
+
+### Code Quality Standards
+
+#### TypeScript
+
+- Strict mode enabled
+- No `any` types allowed
+- Branded types for domain safety
+- Comprehensive type definitions
+
+#### ESLint Rules
+
+- React Hooks rules
+- Accessibility rules (jsx-a11y)
+- TypeScript-specific rules
+- Import/export rules
+
+#### Component Guidelines
+
+- Use TypeScript for all components
+- Implement proper accessibility
+- Follow naming conventions
+- Add JSDoc comments for complex logic
+
+### Testing Strategy
+
+#### Unit Tests
+
+- Jest with React Testing Library
+- Component testing
+- Hook testing
+- Utility function testing
+
+#### Integration Tests
+
+- API integration testing
+- State management testing
+- User interaction testing
+
+#### E2E Tests
+
+- Playwright for browser testing
+- Critical user journeys
+- Cross-browser compatibility
+
+## 🚀 Performance Optimization
+
+### Core Web Vitals
+
+- **LCP** < 2.5s - Optimized image loading
+- **FID** < 100ms - Efficient event handling
+- **CLS** < 0.1 - Stable layout shifts
+
+### Optimization Techniques
+
+- **Code splitting** with dynamic imports
+- **Image optimization** with Next.js Image
+- **Font optimization** with next/font
+- **Bundle analysis** with @next/bundle-analyzer
+
+### Caching Strategy
+
+- **Static generation** for content pages
+- **Incremental Static Regeneration** for dynamic content
+- **Service Worker** for offline support
+- **CDN caching** for static assets
+
+## 🔒 Security
+
+### Security Measures
+
+- **Content Security Policy** (CSP)
+- **Input validation** and sanitization
+- **XSS protection** with DOMPurify
+- **CSRF protection** with tokens
+- **Secure headers** configuration
+
+### Authentication
+
+- **OAuth 2.0** with PKCE
+- **JWT token** management
+- **Session management** with secure cookies
+- **Role-based access control**
+
+## 📱 Responsive Design
+
+### Breakpoints
+
+```css
+/* Mobile First Approach */
+xs: 475px    /* Small phones */
+sm: 640px    /* Large phones */
+md: 768px    /* Tablets */
+lg: 1024px   /* Laptops */
+xl: 1280px   /* Desktops */
+2xl: 1400px  /* Large desktops */
+```
+
+### Design Principles
+
+- **Mobile-first** responsive design
+- **Touch-friendly** interface elements
+- **Accessible** navigation patterns
+- **Progressive enhancement**
+
+## 🌐 Internationalization
+
+### i18n Setup
+
+- **react-i18next** for translations
+- **next-i18next** for Next.js integration
+- **Dynamic language detection**
+- **Pluralization support**
+
+### RTL Support
+
+- **CSS logical properties**
+- **RTL-aware components**
+- **Bidirectional text support**
+
+## 📊 Analytics & Monitoring
+
+### Analytics Integration
+
+- **Google Analytics 4** setup
+- **Custom event tracking**
+- **Performance monitoring**
+- **Error tracking**
+
+### User Analytics
+
+- **Page view tracking**
+- **User interaction tracking**
+- **Conversion tracking**
+- **A/B testing support**
 
 ## 🧪 Testing
 
-```bash
-# Run tests
-npm test
+### Test Structure
 
-# Run tests in watch mode
-npm run test:watch
-
-# Run accessibility tests
-npm run test:a11y
 ```
+tests/
+├── unit/                 # Unit tests
+├── integration/          # Integration tests
+├── e2e/                 # End-to-end tests
+└── fixtures/            # Test data
+```
+
+### Testing Guidelines
+
+- **Test-driven development** (TDD)
+- **Comprehensive coverage** targets
+- **Accessibility testing**
+- **Performance testing**
+
+## 📚 Documentation
+
+### Component Documentation
+
+- **Storybook** for component stories
+- **JSDoc** comments for functions
+- **README** files for complex features
+- **API documentation**
+
+### Architecture Documentation
+
+- **System architecture** diagrams
+- **Data flow** documentation
+- **State management** patterns
+- **Performance** guidelines
 
 ## 🚀 Deployment
 
-### Vercel (Recommended)
-
-1. Connect your GitHub repository to Vercel
-2. Set environment variables in Vercel dashboard
-3. Deploy automatically on push to main branch
-
-### Docker
+### Production Build
 
 ```bash
-# Build the Docker image
-docker build -t universal-knowledge-frontend .
+# Build the application
+npm run build
 
-# Run the container
-docker run -p 3000:3000 universal-knowledge-frontend
+# Start production server
+npm run start
 ```
 
-## 🔧 Configuration
+### Environment Configuration
 
-### Environment Variables
+- **Environment-specific** configurations
+- **Feature flags** for gradual rollouts
+- **Monitoring** and logging setup
+- **Error reporting** integration
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NEXT_PUBLIC_API_BASE_URL` | Backend API URL | `http://localhost:8002` |
-| `NEXT_PUBLIC_APP_NAME` | Application name | `"Universal Knowledge Platform"` |
-| `NEXT_PUBLIC_ENABLE_FEEDBACK` | Enable feedback system | `true` |
-| `NEXT_PUBLIC_ENABLE_ANALYTICS` | Enable analytics | `true` |
+### CI/CD Pipeline
 
-### Backend Integration
-
-The frontend integrates with the FastAPI backend:
-
-- **Query Endpoint**: `POST /query` - Submit questions
-- **Feedback Endpoint**: `POST /feedback` - Submit user feedback
-- **Analytics Endpoint**: `GET /analytics` - Get usage statistics
-- **Health Check**: `GET /health` - Backend health status
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **CORS Errors**: Ensure backend has CORS configured for frontend domain
-2. **API Connection**: Verify backend is running on correct port
-3. **Environment Variables**: Check `.env.local` file exists and is configured
-
-### Development Tips
-
-- Use browser dev tools to inspect network requests
-- Check console for API error messages
-- Verify backend health endpoint is accessible
-
-## 📈 Performance
-
-- **Lighthouse Score**: Target > 90
-- **First Contentful Paint**: < 1.5s
-- **Largest Contentful Paint**: < 2.5s
-- **Cumulative Layout Shift**: < 0.1
+- **GitHub Actions** workflow
+- **Automated testing**
+- **Code quality checks**
+- **Deployment automation**
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
+### Development Workflow
+
+1. **Fork** the repository
+2. **Create** a feature branch
+3. **Implement** changes with tests
+4. **Submit** a pull request
+5. **Code review** and approval
+6. **Merge** to main branch
+
+### Code Review Checklist
+
+- [ ] TypeScript types are correct
+- [ ] Tests are included and passing
+- [ ] Accessibility requirements met
+- [ ] Performance impact considered
+- [ ] Documentation updated
 
 ## 📄 License
 
-This project is part of the Universal Knowledge Platform.
+This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
+
+## 🆘 Support
+
+### Getting Help
+
+- **Documentation** - Check the docs first
+- **Issues** - Search existing issues
+- **Discussions** - Ask questions in discussions
+- **Email** - Contact the development team
+
+### Reporting Issues
+
+- **Bug reports** with reproduction steps
+- **Feature requests** with use cases
+- **Performance issues** with metrics
+- **Security vulnerabilities** privately
+
+---
+
+**Built with ❤️ by the SarvanOM Team**

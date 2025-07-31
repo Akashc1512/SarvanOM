@@ -22,6 +22,7 @@ The frontend application uses the following environment variables for API config
 ## Configuration Files
 
 ### .env.local
+
 Create this file in the frontend directory with your configuration:
 
 ```bash
@@ -64,12 +65,14 @@ The frontend automatically includes the API key in all requests to the backend. 
 ### Request Headers
 
 All API requests include:
+
 - `Content-Type: application/json`
 - `X-API-Key: [your-api-key]`
 
 ### Error Handling
 
 The application handles various HTTP status codes:
+
 - `401`: Authentication required (check API key)
 - `403`: Query blocked by content guidelines
 - `503`: Service temporarily unavailable
@@ -86,4 +89,4 @@ The application handles various HTTP status codes:
 
 1. Set environment variables in your deployment platform
 2. Ensure `NEXT_PUBLIC_API_BASE_URL` points to your production backend
-3. Set appropriate API keys for production access 
+3. Set appropriate API keys for production access

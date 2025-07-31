@@ -8,7 +8,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from api.user_management import get_user_manager, UserCreate, UserRole
+from services.auth-service.user_management import get_user_manager, UserCreate, UserRole
 
 def initialize_users():
     """Initialize default users."""

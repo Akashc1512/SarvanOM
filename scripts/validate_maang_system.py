@@ -38,14 +38,14 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import MAANG components
-from api.integration_layer import get_system_manager, start_system, stop_system
-from api.config import get_settings
-from api.security import get_security_manager
-from api.monitoring import get_monitoring_manager
-from api.performance import get_performance_monitor
-from api.analytics_v2 import get_analytics_processor
-from api.ml_integration import get_model_manager
-from api.realtime import get_connection_manager
+from services.analytics-service.integration_layer import get_system_manager, start_system, stop_system
+from shared.core.api.config import get_settings
+from shared.core.security import get_security_manager
+from shared.core.api.monitoring import get_monitoring_manager
+from shared.core.performance import get_performance_monitor
+from services.analytics-service.analytics_v2 import get_analytics_processor
+from shared.core.ml_integration import get_model_manager
+from services.api-gateway.realtime import get_connection_manager
 
 # Configure logging
 structlog.configure(

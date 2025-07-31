@@ -1,0 +1,73 @@
+{
+  "name": "universal-knowledge-hub",
+  "version": "1.0.0",
+  "description": "Universal Knowledge Platform with AI-powered search and synthesis",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "services/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:backend": "python -m uvicorn services.api-gateway.main:app --reload --host 0.0.0.0 --port 8000",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:backend": "python -m pip install -e .",
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "npm run test --workspace=frontend",
+    "test:backend": "python -m pytest tests/",
+    "test:unit": "python -m pytest tests/unit/",
+    "test:integration": "python -m pytest tests/integration/",
+    "test:e2e": "python -m pytest tests/e2e/",
+    "test:performance": "python -m pytest tests/performance/",
+    "lint": "npm run lint:frontend && npm run lint:backend",
+    "lint:frontend": "npm run lint --workspace=frontend",
+    "lint:backend": "black . && flake8 . && mypy .",
+    "format": "npm run format:frontend && npm run format:backend",
+    "format:frontend": "npm run format --workspace=frontend",
+    "format:backend": "black . && isort .",
+    "install:all": "npm install && pip install -e .[dev,test,security]",
+    "clean": "npm run clean:frontend && npm run clean:backend",
+    "clean:frontend": "npm run clean --workspace=frontend",
+    "clean:backend": "python -m pip uninstall universal-knowledge-hub -y",
+    "setup": "npm run install:all && npm run setup:env",
+    "setup:env": "cp .env.template .env && echo 'Please configure your .env file'",
+    "start": "npm run start:frontend & npm run start:backend",
+    "start:frontend": "npm run start --workspace=frontend",
+    "start:backend": "python -m uvicorn services.api-gateway.main:app --host 0.0.0.0 --port 8000",
+    "start:api-gateway": "python -m uvicorn services.api-gateway.main:app --reload --host 0.0.0.0 --port 8000",
+    "start:auth-service": "python -m uvicorn services.auth-service.main:app --reload --host 0.0.0.0 --port 8001",
+    "start:search-service": "python -m uvicorn services.search-service.main:app --reload --host 0.0.0.0 --port 8002",
+    "start:synthesis-service": "python -m uvicorn services.synthesis-service.main:app --reload --host 0.0.0.0 --port 8003",
+    "start:factcheck-service": "python -m uvicorn services.factcheck-service.main:app --reload --host 0.0.0.0 --port 8004",
+    "start:analytics-service": "python -m uvicorn services.analytics-service.main:app --reload --host 0.0.0.0 --port 8005"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.0.5",
+    "@types/react-beautiful-dnd": "^13.1.8",
+    "@types/socket.io-client": "^3.0.0",
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0",
+    "python": ">=3.13.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/universal-knowledge-hub.git"
+  },
+  "keywords": [
+    "ai",
+    "knowledge",
+    "search",
+    "synthesis",
+    "fastapi",
+    "nextjs",
+    "typescript",
+    "python"
+  ],
+  "author": "Universal Knowledge Hub Team",
+  "license": "MIT"
+}

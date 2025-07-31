@@ -1,0 +1,2272 @@
+{
+  "test_summary": {
+    "total_tests": 20,
+    "successful_tests": 14,
+    "failed_tests": 6,
+    "success_rate": 70.0,
+    "average_latency_ms": 1875.33,
+    "test_duration_seconds": 37.52,
+    "start_time": "2025-07-30T18:43:46.152957",
+    "end_time": "2025-07-30T18:44:23.677648"
+  },
+  "endpoint_results": {
+    "successful": [
+      {
+        "endpoint": "/",
+        "method": "GET",
+        "status_code": 200,
+        "expected_status": 200,
+        "latency_ms": 2085.07,
+        "response_size": 131,
+        "timestamp": "2025-07-30T18:43:48.238217",
+        "success": true,
+        "response_data": {
+          "message": "Universal Knowledge Hub API Gateway",
+          "version": "1.0.0",
+          "status": "operational",
+          "timestamp": "2025-07-30T18:43:48.235093"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:13:47 GMT",
+          "server": "uvicorn",
+          "content-length": "131",
+          "content-type": "application/json",
+          "x-request-id": "2e49eaf3-0469-4af5-bc5a-3251305d1e33"
+        }
+      },
+      {
+        "endpoint": "/health",
+        "method": "GET",
+        "status_code": 200,
+        "expected_status": 200,
+        "latency_ms": 2068.62,
+        "response_size": 198,
+        "timestamp": "2025-07-30T18:43:50.307573",
+        "success": true,
+        "response_data": {
+          "status": "healthy",
+          "timestamp": "2025-07-30T18:43:50.303828",
+          "version": "1.0.0",
+          "uptime": 32.11920714378357,
+          "memory_usage": {
+            "rss": 56725504,
+            "vms": 41508864,
+            "percent": 0.6738884174302998
+          },
+          "cpu_usage": 0.0
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:13:49 GMT",
+          "server": "uvicorn",
+          "content-length": "198",
+          "content-type": "application/json",
+          "x-request-id": "90ca5a5d-d7fe-414b-9d6e-7c499b0b19db"
+        }
+      },
+      {
+        "endpoint": "/docs",
+        "method": "GET",
+        "status_code": 200,
+        "expected_status": 200,
+        "latency_ms": 2074.09,
+        "response_size": 951,
+        "timestamp": "2025-07-30T18:43:52.382378",
+        "success": true,
+        "response_data": "\n    <!DOCTYPE html>\n    <html>\n    <head>\n    <link type=\"text/css\" rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css\">\n    <link rel=\"shortcut icon\" href=\"https://fastapi.tiangolo.com/img/favicon.png\">\n    <title>Universal Knowledge Hub API - Swagger UI</title>\n    </head>\n    <body>\n    <div id=\"swagger-ui\">\n    </div>\n    <script src=\"https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js\"></script>\n    <!-- `SwaggerUIBundle` is now available o",
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:13:52 GMT",
+          "server": "uvicorn",
+          "content-length": "951",
+          "content-type": "text/html; charset=utf-8",
+          "x-request-id": "b9bed7a2-1408-4754-aa1a-36ea5d87abea"
+        }
+      },
+      {
+        "endpoint": "/openapi.json",
+        "method": "GET",
+        "status_code": 200,
+        "expected_status": 200,
+        "latency_ms": 2078.45,
+        "response_size": 9165,
+        "timestamp": "2025-07-30T18:43:54.461474",
+        "success": true,
+        "response_data": {
+          "openapi": "3.1.0",
+          "info": {
+            "title": "Universal Knowledge Hub API",
+            "description": "API Gateway for the Universal Knowledge Platform",
+            "version": "1.0.0"
+          },
+          "paths": {
+            "/": {
+              "get": {
+                "summary": "Root",
+                "description": "Root endpoint.",
+                "operationId": "root__get",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "additionalProperties": true,
+                          "type": "object",
+                          "title": "Response Root  Get"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/health": {
+              "get": {
+                "summary": "Health Check",
+                "description": "Health check endpoint.",
+                "operationId": "health_check_health_get",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/HealthResponse"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/docs": {
+              "get": {
+                "summary": "Get Docs",
+                "description": "API documentation endpoint.",
+                "operationId": "get_docs_docs_get",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {}
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/openapi.json": {
+              "get": {
+                "summary": "Get Openapi",
+                "description": "OpenAPI schema endpoint.",
+                "operationId": "get_openapi_openapi_json_get",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {}
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/auth/login": {
+              "post": {
+                "summary": "Login",
+                "description": "User login endpoint.",
+                "operationId": "login_auth_login_post",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/LoginRequest"
+                      }
+                    }
+                  },
+                  "required": true
+                },
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/AuthResponse"
+                        }
+                      }
+                    }
+                  },
+                  "422": {
+                    "description": "Validation Error",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/HTTPValidationError"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/auth/register": {
+              "post": {
+                "summary": "Register",
+                "description": "User registration endpoint.",
+                "operationId": "register_auth_register_post",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/RegisterRequest"
+                      }
+                    }
+                  },
+                  "required": true
+                },
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/AuthResponse"
+                        }
+                      }
+                    }
+                  },
+                  "422": {
+                    "description": "Validation Error",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/HTTPValidationError"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/query": {
+              "post": {
+                "summary": "Process Query",
+                "description": "Process a knowledge query.",
+                "operationId": "process_query_query_post",
+                "requestBody": {
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/QueryRequest"
+                      }
+                    }
+                  },
+                  "required": true
+                },
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/QueryResponse"
+                        }
+                      }
+                    }
+                  },
+                  "422": {
+                    "description": "Validation Error",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/HTTPValidationError"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/queries": {
+              "get": {
+                "summary": "List Queries",
+                "description": "List all queries (requires authentication).",
+                "operationId": "list_queries_queries_get",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "additionalProperties": true,
+                          "type": "object",
+                          "title": "Response List Queries Queries Get"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/queries/{query_id}": {
+              "get": {
+                "summary": "Get Query",
+                "description": "Get specific query details (requires authentication).",
+                "operationId": "get_query_queries__query_id__get",
+                "parameters": [
+                  {
+                    "name": "query_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                      "type": "string",
+                      "title": "Query Id"
+                    }
+                  }
+                ],
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "type": "object",
+                          "additionalProperties": true,
+                          "title": "Response Get Query Queries  Query Id  Get"
+                        }
+                      }
+                    }
+                  },
+                  "422": {
+                    "description": "Validation Error",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/HTTPValidationError"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/feedback": {
+              "post": {
+                "summary": "Submit Feedback",
+                "description": "Submit feedback (requires authentication).",
+                "operationId": "submit_feedback_feedback_post",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {}
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/metrics": {
+              "get": {
+                "summary": "Get Metrics",
+                "description": "Get metrics (requires authentication).",
+                "operationId": "get_metrics_metrics_get",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {}
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/analytics": {
+              "get": {
+                "summary": "Get Analytics",
+                "description": "Get analytics (requires authentication).",
+                "operationId": "get_analytics_analytics_get",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {}
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/security": {
+              "get": {
+                "summary": "Get Security Status",
+                "description": "Get security status (requires authentication).",
+                "operationId": "get_security_status_security_get",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {}
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/integrations": {
+              "get": {
+                "summary": "Get Integration Status",
+                "description": "Get integration status.",
+                "operationId": "get_integration_status_integrations_get",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {}
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/tasks": {
+              "post": {
+                "summary": "Generate Tasks",
+                "description": "Generate tasks.",
+                "operationId": "generate_tasks_tasks_post",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {}
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/expert-reviews/pending": {
+              "get": {
+                "summary": "Get Pending Reviews",
+                "description": "Get pending expert reviews (requires authentication).",
+                "operationId": "get_pending_reviews_expert_reviews_pending_get",
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {}
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "/expert-reviews/{review_id}": {
+              "post": {
+                "summary": "Submit Expert Review",
+                "description": "Submit expert review (requires authentication).",
+                "operationId": "submit_expert_review_expert_reviews__review_id__post",
+                "parameters": [
+                  {
+                    "name": "review_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                      "type": "string",
+                      "title": "Review Id"
+                    }
+                  }
+                ],
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {}
+                      }
+                    }
+                  },
+                  "422": {
+                    "description": "Validation Error",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/HTTPValidationError"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "get": {
+                "summary": "Get Review Details",
+                "description": "Get review details (requires authentication).",
+                "operationId": "get_review_details_expert_reviews__review_id__get",
+                "parameters": [
+                  {
+                    "name": "review_id",
+                    "in": "path",
+                    "required": true,
+                    "schema": {
+                      "type": "string",
+                      "title": "Review Id"
+                    }
+                  }
+                ],
+                "responses": {
+                  "200": {
+                    "description": "Successful Response",
+                    "content": {
+                      "application/json": {
+                        "schema": {}
+                      }
+                    }
+                  },
+                  "422": {
+                    "description": "Validation Error",
+                    "content": {
+                      "application/json": {
+                        "schema": {
+                          "$ref": "#/components/schemas/HTTPValidationError"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "components": {
+            "schemas": {
+              "AuthResponse": {
+                "properties": {
+                  "access_token": {
+                    "type": "string",
+                    "title": "Access Token"
+                  },
+                  "token_type": {
+                    "type": "string",
+                    "title": "Token Type"
+                  },
+                  "user_id": {
+                    "type": "string",
+                    "title": "User Id"
+                  },
+                  "role": {
+                    "type": "string",
+                    "title": "Role"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "access_token",
+                  "token_type",
+                  "user_id",
+                  "role"
+                ],
+                "title": "AuthResponse"
+              },
+              "HTTPValidationError": {
+                "properties": {
+                  "detail": {
+                    "items": {
+                      "$ref": "#/components/schemas/ValidationError"
+                    },
+                    "type": "array",
+                    "title": "Detail"
+                  }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+              },
+              "HealthResponse": {
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "title": "Status"
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "title": "Timestamp"
+                  },
+                  "version": {
+                    "type": "string",
+                    "title": "Version"
+                  },
+                  "uptime": {
+                    "type": "number",
+                    "title": "Uptime"
+                  },
+                  "memory_usage": {
+                    "additionalProperties": true,
+                    "type": "object",
+                    "title": "Memory Usage"
+                  },
+                  "cpu_usage": {
+                    "type": "number",
+                    "title": "Cpu Usage"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "status",
+                  "timestamp",
+                  "version",
+                  "uptime",
+                  "memory_usage",
+                  "cpu_usage"
+                ],
+                "title": "HealthResponse"
+              },
+              "LoginRequest": {
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "title": "Username"
+                  },
+                  "password": {
+                    "type": "string",
+                    "title": "Password"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "username",
+                  "password"
+                ],
+                "title": "LoginRequest"
+              },
+              "QueryRequest": {
+                "properties": {
+                  "query": {
+                    "type": "string",
+                    "title": "Query"
+                  },
+                  "context": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "Context"
+                  },
+                  "user_id": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "title": "User Id"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "query"
+                ],
+                "title": "QueryRequest"
+              },
+              "QueryResponse": {
+                "properties": {
+                  "query_id": {
+                    "type": "string",
+                    "title": "Query Id"
+                  },
+                  "status": {
+                    "type": "string",
+                    "title": "Status"
+                  },
+                  "answer": {
+                    "type": "string",
+                    "title": "Answer"
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "title": "Confidence"
+                  },
+                  "sources": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array",
+                    "title": "Sources"
+                  },
+                  "processing_time": {
+                    "type": "number",
+                    "title": "Processing Time"
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "title": "Timestamp"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "query_id",
+                  "status",
+                  "answer",
+                  "confidence",
+                  "sources",
+                  "processing_time",
+                  "timestamp"
+                ],
+                "title": "QueryResponse"
+              },
+              "RegisterRequest": {
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "title": "Username"
+                  },
+                  "password": {
+                    "type": "string",
+                    "title": "Password"
+                  },
+                  "role": {
+                    "type": "string",
+                    "title": "Role",
+                    "default": "user"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "username",
+                  "password"
+                ],
+                "title": "RegisterRequest"
+              },
+              "ValidationError": {
+                "properties": {
+                  "loc": {
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "integer"
+                        }
+                      ]
+                    },
+                    "type": "array",
+                    "title": "Location"
+                  },
+                  "msg": {
+                    "type": "string",
+                    "title": "Message"
+                  },
+                  "type": {
+                    "type": "string",
+                    "title": "Error Type"
+                  }
+                },
+                "type": "object",
+                "required": [
+                  "loc",
+                  "msg",
+                  "type"
+                ],
+                "title": "ValidationError"
+              }
+            }
+          }
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:13:54 GMT",
+          "server": "uvicorn",
+          "content-length": "9165",
+          "content-type": "application/json",
+          "x-request-id": "35bf6666-2bc8-40f4-9b26-39869f21991a"
+        }
+      },
+      {
+        "endpoint": "/queries",
+        "method": "GET",
+        "status_code": 401,
+        "expected_status": 401,
+        "latency_ms": 2087.6,
+        "response_size": 36,
+        "timestamp": "2025-07-30T18:44:02.878334",
+        "success": true,
+        "response_data": {
+          "detail": "Authentication required"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:14:01 GMT",
+          "server": "uvicorn",
+          "content-length": "36",
+          "content-type": "application/json",
+          "x-request-id": "4ccf4c13-3630-4219-a9b5-0a09d869334a"
+        }
+      },
+      {
+        "endpoint": "/queries/123",
+        "method": "GET",
+        "status_code": 401,
+        "expected_status": 401,
+        "latency_ms": 2089.03,
+        "response_size": 36,
+        "timestamp": "2025-07-30T18:44:04.967910",
+        "success": true,
+        "response_data": {
+          "detail": "Authentication required"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:14:04 GMT",
+          "server": "uvicorn",
+          "content-length": "36",
+          "content-type": "application/json",
+          "x-request-id": "933b0133-9787-4d7f-bf70-42d14404f8ef"
+        }
+      },
+      {
+        "endpoint": "/feedback",
+        "method": "POST",
+        "status_code": 401,
+        "expected_status": 401,
+        "latency_ms": 2064.08,
+        "response_size": 36,
+        "timestamp": "2025-07-30T18:44:07.033097",
+        "success": true,
+        "response_data": {
+          "detail": "Authentication required"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:14:06 GMT",
+          "server": "uvicorn",
+          "content-length": "36",
+          "content-type": "application/json",
+          "x-request-id": "071cb266-a724-47b1-8369-5cd646769344"
+        }
+      },
+      {
+        "endpoint": "/metrics",
+        "method": "GET",
+        "status_code": 401,
+        "expected_status": 401,
+        "latency_ms": 2041.19,
+        "response_size": 36,
+        "timestamp": "2025-07-30T18:44:09.075017",
+        "success": true,
+        "response_data": {
+          "detail": "Authentication required"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:14:08 GMT",
+          "server": "uvicorn",
+          "content-length": "36",
+          "content-type": "application/json",
+          "x-request-id": "7339437c-8479-4f32-9aad-f77544da176e"
+        }
+      },
+      {
+        "endpoint": "/analytics",
+        "method": "GET",
+        "status_code": 401,
+        "expected_status": 401,
+        "latency_ms": 2079.81,
+        "response_size": 36,
+        "timestamp": "2025-07-30T18:44:11.155739",
+        "success": true,
+        "response_data": {
+          "detail": "Authentication required"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:14:10 GMT",
+          "server": "uvicorn",
+          "content-length": "36",
+          "content-type": "application/json",
+          "x-request-id": "f0698c3f-9f85-436f-8fec-278e99569722"
+        }
+      },
+      {
+        "endpoint": "/security",
+        "method": "GET",
+        "status_code": 401,
+        "expected_status": 401,
+        "latency_ms": 2074.93,
+        "response_size": 36,
+        "timestamp": "2025-07-30T18:44:13.231265",
+        "success": true,
+        "response_data": {
+          "detail": "Authentication required"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:14:12 GMT",
+          "server": "uvicorn",
+          "content-length": "36",
+          "content-type": "application/json",
+          "x-request-id": "a5ac8926-0ca0-4c0d-a97a-e930ed828e7e"
+        }
+      },
+      {
+        "endpoint": "/integrations",
+        "method": "GET",
+        "status_code": 200,
+        "expected_status": 200,
+        "latency_ms": 2078.83,
+        "response_size": 291,
+        "timestamp": "2025-07-30T18:44:15.310770",
+        "success": true,
+        "response_data": {
+          "status": "operational",
+          "integrations": {
+            "openai": {
+              "status": "connected",
+              "version": "1.0.0"
+            },
+            "anthropic": {
+              "status": "connected",
+              "version": "1.0.0"
+            },
+            "elasticsearch": {
+              "status": "connected",
+              "version": "8.0.0"
+            },
+            "redis": {
+              "status": "connected",
+              "version": "6.0.0"
+            }
+          },
+          "timestamp": "2025-07-30T18:44:15.307518"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:14:14 GMT",
+          "server": "uvicorn",
+          "content-length": "291",
+          "content-type": "application/json",
+          "x-request-id": "3c557d4e-229a-4a67-9340-0a9227e5c81b"
+        }
+      },
+      {
+        "endpoint": "/expert-reviews/pending",
+        "method": "GET",
+        "status_code": 401,
+        "expected_status": 401,
+        "latency_ms": 2076.34,
+        "response_size": 36,
+        "timestamp": "2025-07-30T18:44:19.454761",
+        "success": true,
+        "response_data": {
+          "detail": "Authentication required"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:14:19 GMT",
+          "server": "uvicorn",
+          "content-length": "36",
+          "content-type": "application/json",
+          "x-request-id": "eca73146-abea-4e16-b2b1-f6a37a38300f"
+        }
+      },
+      {
+        "endpoint": "/expert-reviews/123",
+        "method": "POST",
+        "status_code": 401,
+        "expected_status": 401,
+        "latency_ms": 2083.9,
+        "response_size": 36,
+        "timestamp": "2025-07-30T18:44:21.539278",
+        "success": true,
+        "response_data": {
+          "detail": "Authentication required"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:14:21 GMT",
+          "server": "uvicorn",
+          "content-length": "36",
+          "content-type": "application/json",
+          "x-request-id": "51711365-fc23-496c-9837-5d1affa555b5"
+        }
+      },
+      {
+        "endpoint": "/expert-reviews/123",
+        "method": "GET",
+        "status_code": 401,
+        "expected_status": 401,
+        "latency_ms": 2071.33,
+        "response_size": 36,
+        "timestamp": "2025-07-30T18:44:23.611303",
+        "success": true,
+        "response_data": {
+          "detail": "Authentication required"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:14:22 GMT",
+          "server": "uvicorn",
+          "content-length": "36",
+          "content-type": "application/json",
+          "x-request-id": "91f6ad34-0ffd-4032-84a4-d0fb61d4bf15"
+        }
+      }
+    ],
+    "failed": [
+      {
+        "endpoint": "/auth/register",
+        "method": "POST",
+        "status_code": 200,
+        "expected_status": 422,
+        "latency_ms": 2086.25,
+        "response_size": 94,
+        "timestamp": "2025-07-30T18:43:56.548401",
+        "success": false,
+        "response_data": {
+          "access_token": "test-token-456",
+          "token_type": "bearer",
+          "user_id": "new-user-123",
+          "role": "user"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:13:56 GMT",
+          "server": "uvicorn",
+          "content-length": "94",
+          "content-type": "application/json",
+          "x-request-id": "1b73d135-9b3a-4f9e-8b8a-9d3bcebb5f3b"
+        }
+      },
+      {
+        "endpoint": "/auth/login",
+        "method": "POST",
+        "status_code": 401,
+        "expected_status": 422,
+        "latency_ms": 2071.43,
+        "response_size": 32,
+        "timestamp": "2025-07-30T18:43:58.622634",
+        "success": false,
+        "response_data": {
+          "detail": "Invalid credentials"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:13:58 GMT",
+          "server": "uvicorn",
+          "content-length": "32",
+          "content-type": "application/json",
+          "x-request-id": "4e04cfeb-2816-46b3-95dd-fab7fa979918"
+        }
+      },
+      {
+        "endpoint": "/query",
+        "method": "POST",
+        "status_code": 200,
+        "expected_status": 422,
+        "latency_ms": 2166.93,
+        "response_size": 278,
+        "timestamp": "2025-07-30T18:44:00.790164",
+        "success": false,
+        "response_data": {
+          "query_id": "2bdfcef7-a83b-472f-8e65-d556691c8298",
+          "status": "completed",
+          "answer": "This is a simulated response to your query.",
+          "confidence": 0.85,
+          "sources": [
+            "simulated_source_1",
+            "simulated_source_2"
+          ],
+          "processing_time": 0.10489630699157715,
+          "timestamp": "2025-07-30T18:44:00.786561"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:13:59 GMT",
+          "server": "uvicorn",
+          "content-length": "278",
+          "content-type": "application/json",
+          "x-request-id": "7c30523b-1b7c-4aae-8038-0e20495ddff3"
+        }
+      },
+      {
+        "endpoint": "/tasks",
+        "method": "POST",
+        "status_code": 200,
+        "expected_status": 422,
+        "latency_ms": 2066.48,
+        "response_size": 247,
+        "timestamp": "2025-07-30T18:44:17.377854",
+        "success": false,
+        "response_data": {
+          "task_id": "a857885c-d0d1-4bc5-9c3e-020b831adf94",
+          "status": "created",
+          "tasks": [
+            {
+              "id": 1,
+              "description": "Research AI trends",
+              "priority": "high"
+            },
+            {
+              "id": 2,
+              "description": "Analyze market data",
+              "priority": "medium"
+            }
+          ],
+          "timestamp": "2025-07-30T18:44:17.374731"
+        },
+        "response_headers": {
+          "date": "Wed, 30 Jul 2025 13:14:17 GMT",
+          "server": "uvicorn",
+          "content-length": "247",
+          "content-type": "application/json",
+          "x-request-id": "b5952ce3-b7f2-4a05-858f-ea066cb8947d"
+        }
+      },
+      {
+        "endpoint": "/ws/collaboration",
+        "method": "WEBSOCKET",
+        "status": "ERROR",
+        "error": "BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+        "latency_ms": 61.58,
+        "timestamp": "2025-07-30T18:44:23.675710",
+        "success": false
+      },
+      {
+        "endpoint": "/ws/query-updates",
+        "method": "WEBSOCKET",
+        "status": "ERROR",
+        "error": "BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+        "latency_ms": 0.73,
+        "timestamp": "2025-07-30T18:44:23.677104",
+        "success": false
+      }
+    ]
+  },
+  "detailed_results": [
+    {
+      "endpoint": "/",
+      "method": "GET",
+      "status_code": 200,
+      "expected_status": 200,
+      "latency_ms": 2085.07,
+      "response_size": 131,
+      "timestamp": "2025-07-30T18:43:48.238217",
+      "success": true,
+      "response_data": {
+        "message": "Universal Knowledge Hub API Gateway",
+        "version": "1.0.0",
+        "status": "operational",
+        "timestamp": "2025-07-30T18:43:48.235093"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:13:47 GMT",
+        "server": "uvicorn",
+        "content-length": "131",
+        "content-type": "application/json",
+        "x-request-id": "2e49eaf3-0469-4af5-bc5a-3251305d1e33"
+      }
+    },
+    {
+      "endpoint": "/health",
+      "method": "GET",
+      "status_code": 200,
+      "expected_status": 200,
+      "latency_ms": 2068.62,
+      "response_size": 198,
+      "timestamp": "2025-07-30T18:43:50.307573",
+      "success": true,
+      "response_data": {
+        "status": "healthy",
+        "timestamp": "2025-07-30T18:43:50.303828",
+        "version": "1.0.0",
+        "uptime": 32.11920714378357,
+        "memory_usage": {
+          "rss": 56725504,
+          "vms": 41508864,
+          "percent": 0.6738884174302998
+        },
+        "cpu_usage": 0.0
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:13:49 GMT",
+        "server": "uvicorn",
+        "content-length": "198",
+        "content-type": "application/json",
+        "x-request-id": "90ca5a5d-d7fe-414b-9d6e-7c499b0b19db"
+      }
+    },
+    {
+      "endpoint": "/docs",
+      "method": "GET",
+      "status_code": 200,
+      "expected_status": 200,
+      "latency_ms": 2074.09,
+      "response_size": 951,
+      "timestamp": "2025-07-30T18:43:52.382378",
+      "success": true,
+      "response_data": "\n    <!DOCTYPE html>\n    <html>\n    <head>\n    <link type=\"text/css\" rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css\">\n    <link rel=\"shortcut icon\" href=\"https://fastapi.tiangolo.com/img/favicon.png\">\n    <title>Universal Knowledge Hub API - Swagger UI</title>\n    </head>\n    <body>\n    <div id=\"swagger-ui\">\n    </div>\n    <script src=\"https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js\"></script>\n    <!-- `SwaggerUIBundle` is now available o",
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:13:52 GMT",
+        "server": "uvicorn",
+        "content-length": "951",
+        "content-type": "text/html; charset=utf-8",
+        "x-request-id": "b9bed7a2-1408-4754-aa1a-36ea5d87abea"
+      }
+    },
+    {
+      "endpoint": "/openapi.json",
+      "method": "GET",
+      "status_code": 200,
+      "expected_status": 200,
+      "latency_ms": 2078.45,
+      "response_size": 9165,
+      "timestamp": "2025-07-30T18:43:54.461474",
+      "success": true,
+      "response_data": {
+        "openapi": "3.1.0",
+        "info": {
+          "title": "Universal Knowledge Hub API",
+          "description": "API Gateway for the Universal Knowledge Platform",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/": {
+            "get": {
+              "summary": "Root",
+              "description": "Root endpoint.",
+              "operationId": "root__get",
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "additionalProperties": true,
+                        "type": "object",
+                        "title": "Response Root  Get"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/health": {
+            "get": {
+              "summary": "Health Check",
+              "description": "Health check endpoint.",
+              "operationId": "health_check_health_get",
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/HealthResponse"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/docs": {
+            "get": {
+              "summary": "Get Docs",
+              "description": "API documentation endpoint.",
+              "operationId": "get_docs_docs_get",
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/openapi.json": {
+            "get": {
+              "summary": "Get Openapi",
+              "description": "OpenAPI schema endpoint.",
+              "operationId": "get_openapi_openapi_json_get",
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/auth/login": {
+            "post": {
+              "summary": "Login",
+              "description": "User login endpoint.",
+              "operationId": "login_auth_login_post",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/LoginRequest"
+                    }
+                  }
+                },
+                "required": true
+              },
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/AuthResponse"
+                      }
+                    }
+                  }
+                },
+                "422": {
+                  "description": "Validation Error",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/HTTPValidationError"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/auth/register": {
+            "post": {
+              "summary": "Register",
+              "description": "User registration endpoint.",
+              "operationId": "register_auth_register_post",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/RegisterRequest"
+                    }
+                  }
+                },
+                "required": true
+              },
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/AuthResponse"
+                      }
+                    }
+                  }
+                },
+                "422": {
+                  "description": "Validation Error",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/HTTPValidationError"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/query": {
+            "post": {
+              "summary": "Process Query",
+              "description": "Process a knowledge query.",
+              "operationId": "process_query_query_post",
+              "requestBody": {
+                "content": {
+                  "application/json": {
+                    "schema": {
+                      "$ref": "#/components/schemas/QueryRequest"
+                    }
+                  }
+                },
+                "required": true
+              },
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/QueryResponse"
+                      }
+                    }
+                  }
+                },
+                "422": {
+                  "description": "Validation Error",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/HTTPValidationError"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/queries": {
+            "get": {
+              "summary": "List Queries",
+              "description": "List all queries (requires authentication).",
+              "operationId": "list_queries_queries_get",
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "additionalProperties": true,
+                        "type": "object",
+                        "title": "Response List Queries Queries Get"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/queries/{query_id}": {
+            "get": {
+              "summary": "Get Query",
+              "description": "Get specific query details (requires authentication).",
+              "operationId": "get_query_queries__query_id__get",
+              "parameters": [
+                {
+                  "name": "query_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                    "type": "string",
+                    "title": "Query Id"
+                  }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "title": "Response Get Query Queries  Query Id  Get"
+                      }
+                    }
+                  }
+                },
+                "422": {
+                  "description": "Validation Error",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/HTTPValidationError"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/feedback": {
+            "post": {
+              "summary": "Submit Feedback",
+              "description": "Submit feedback (requires authentication).",
+              "operationId": "submit_feedback_feedback_post",
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/metrics": {
+            "get": {
+              "summary": "Get Metrics",
+              "description": "Get metrics (requires authentication).",
+              "operationId": "get_metrics_metrics_get",
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/analytics": {
+            "get": {
+              "summary": "Get Analytics",
+              "description": "Get analytics (requires authentication).",
+              "operationId": "get_analytics_analytics_get",
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/security": {
+            "get": {
+              "summary": "Get Security Status",
+              "description": "Get security status (requires authentication).",
+              "operationId": "get_security_status_security_get",
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/integrations": {
+            "get": {
+              "summary": "Get Integration Status",
+              "description": "Get integration status.",
+              "operationId": "get_integration_status_integrations_get",
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/tasks": {
+            "post": {
+              "summary": "Generate Tasks",
+              "description": "Generate tasks.",
+              "operationId": "generate_tasks_tasks_post",
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/expert-reviews/pending": {
+            "get": {
+              "summary": "Get Pending Reviews",
+              "description": "Get pending expert reviews (requires authentication).",
+              "operationId": "get_pending_reviews_expert_reviews_pending_get",
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {}
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "/expert-reviews/{review_id}": {
+            "post": {
+              "summary": "Submit Expert Review",
+              "description": "Submit expert review (requires authentication).",
+              "operationId": "submit_expert_review_expert_reviews__review_id__post",
+              "parameters": [
+                {
+                  "name": "review_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                    "type": "string",
+                    "title": "Review Id"
+                  }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {}
+                    }
+                  }
+                },
+                "422": {
+                  "description": "Validation Error",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/HTTPValidationError"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "get": {
+              "summary": "Get Review Details",
+              "description": "Get review details (requires authentication).",
+              "operationId": "get_review_details_expert_reviews__review_id__get",
+              "parameters": [
+                {
+                  "name": "review_id",
+                  "in": "path",
+                  "required": true,
+                  "schema": {
+                    "type": "string",
+                    "title": "Review Id"
+                  }
+                }
+              ],
+              "responses": {
+                "200": {
+                  "description": "Successful Response",
+                  "content": {
+                    "application/json": {
+                      "schema": {}
+                    }
+                  }
+                },
+                "422": {
+                  "description": "Validation Error",
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "$ref": "#/components/schemas/HTTPValidationError"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "components": {
+          "schemas": {
+            "AuthResponse": {
+              "properties": {
+                "access_token": {
+                  "type": "string",
+                  "title": "Access Token"
+                },
+                "token_type": {
+                  "type": "string",
+                  "title": "Token Type"
+                },
+                "user_id": {
+                  "type": "string",
+                  "title": "User Id"
+                },
+                "role": {
+                  "type": "string",
+                  "title": "Role"
+                }
+              },
+              "type": "object",
+              "required": [
+                "access_token",
+                "token_type",
+                "user_id",
+                "role"
+              ],
+              "title": "AuthResponse"
+            },
+            "HTTPValidationError": {
+              "properties": {
+                "detail": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValidationError"
+                  },
+                  "type": "array",
+                  "title": "Detail"
+                }
+              },
+              "type": "object",
+              "title": "HTTPValidationError"
+            },
+            "HealthResponse": {
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "title": "Status"
+                },
+                "timestamp": {
+                  "type": "string",
+                  "title": "Timestamp"
+                },
+                "version": {
+                  "type": "string",
+                  "title": "Version"
+                },
+                "uptime": {
+                  "type": "number",
+                  "title": "Uptime"
+                },
+                "memory_usage": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Memory Usage"
+                },
+                "cpu_usage": {
+                  "type": "number",
+                  "title": "Cpu Usage"
+                }
+              },
+              "type": "object",
+              "required": [
+                "status",
+                "timestamp",
+                "version",
+                "uptime",
+                "memory_usage",
+                "cpu_usage"
+              ],
+              "title": "HealthResponse"
+            },
+            "LoginRequest": {
+              "properties": {
+                "username": {
+                  "type": "string",
+                  "title": "Username"
+                },
+                "password": {
+                  "type": "string",
+                  "title": "Password"
+                }
+              },
+              "type": "object",
+              "required": [
+                "username",
+                "password"
+              ],
+              "title": "LoginRequest"
+            },
+            "QueryRequest": {
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "title": "Query"
+                },
+                "context": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Context"
+                },
+                "user_id": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "User Id"
+                }
+              },
+              "type": "object",
+              "required": [
+                "query"
+              ],
+              "title": "QueryRequest"
+            },
+            "QueryResponse": {
+              "properties": {
+                "query_id": {
+                  "type": "string",
+                  "title": "Query Id"
+                },
+                "status": {
+                  "type": "string",
+                  "title": "Status"
+                },
+                "answer": {
+                  "type": "string",
+                  "title": "Answer"
+                },
+                "confidence": {
+                  "type": "number",
+                  "title": "Confidence"
+                },
+                "sources": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "title": "Sources"
+                },
+                "processing_time": {
+                  "type": "number",
+                  "title": "Processing Time"
+                },
+                "timestamp": {
+                  "type": "string",
+                  "title": "Timestamp"
+                }
+              },
+              "type": "object",
+              "required": [
+                "query_id",
+                "status",
+                "answer",
+                "confidence",
+                "sources",
+                "processing_time",
+                "timestamp"
+              ],
+              "title": "QueryResponse"
+            },
+            "RegisterRequest": {
+              "properties": {
+                "username": {
+                  "type": "string",
+                  "title": "Username"
+                },
+                "password": {
+                  "type": "string",
+                  "title": "Password"
+                },
+                "role": {
+                  "type": "string",
+                  "title": "Role",
+                  "default": "user"
+                }
+              },
+              "type": "object",
+              "required": [
+                "username",
+                "password"
+              ],
+              "title": "RegisterRequest"
+            },
+            "ValidationError": {
+              "properties": {
+                "loc": {
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "integer"
+                      }
+                    ]
+                  },
+                  "type": "array",
+                  "title": "Location"
+                },
+                "msg": {
+                  "type": "string",
+                  "title": "Message"
+                },
+                "type": {
+                  "type": "string",
+                  "title": "Error Type"
+                }
+              },
+              "type": "object",
+              "required": [
+                "loc",
+                "msg",
+                "type"
+              ],
+              "title": "ValidationError"
+            }
+          }
+        }
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:13:54 GMT",
+        "server": "uvicorn",
+        "content-length": "9165",
+        "content-type": "application/json",
+        "x-request-id": "35bf6666-2bc8-40f4-9b26-39869f21991a"
+      }
+    },
+    {
+      "endpoint": "/auth/register",
+      "method": "POST",
+      "status_code": 200,
+      "expected_status": 422,
+      "latency_ms": 2086.25,
+      "response_size": 94,
+      "timestamp": "2025-07-30T18:43:56.548401",
+      "success": false,
+      "response_data": {
+        "access_token": "test-token-456",
+        "token_type": "bearer",
+        "user_id": "new-user-123",
+        "role": "user"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:13:56 GMT",
+        "server": "uvicorn",
+        "content-length": "94",
+        "content-type": "application/json",
+        "x-request-id": "1b73d135-9b3a-4f9e-8b8a-9d3bcebb5f3b"
+      }
+    },
+    {
+      "endpoint": "/auth/login",
+      "method": "POST",
+      "status_code": 401,
+      "expected_status": 422,
+      "latency_ms": 2071.43,
+      "response_size": 32,
+      "timestamp": "2025-07-30T18:43:58.622634",
+      "success": false,
+      "response_data": {
+        "detail": "Invalid credentials"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:13:58 GMT",
+        "server": "uvicorn",
+        "content-length": "32",
+        "content-type": "application/json",
+        "x-request-id": "4e04cfeb-2816-46b3-95dd-fab7fa979918"
+      }
+    },
+    {
+      "endpoint": "/query",
+      "method": "POST",
+      "status_code": 200,
+      "expected_status": 422,
+      "latency_ms": 2166.93,
+      "response_size": 278,
+      "timestamp": "2025-07-30T18:44:00.790164",
+      "success": false,
+      "response_data": {
+        "query_id": "2bdfcef7-a83b-472f-8e65-d556691c8298",
+        "status": "completed",
+        "answer": "This is a simulated response to your query.",
+        "confidence": 0.85,
+        "sources": [
+          "simulated_source_1",
+          "simulated_source_2"
+        ],
+        "processing_time": 0.10489630699157715,
+        "timestamp": "2025-07-30T18:44:00.786561"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:13:59 GMT",
+        "server": "uvicorn",
+        "content-length": "278",
+        "content-type": "application/json",
+        "x-request-id": "7c30523b-1b7c-4aae-8038-0e20495ddff3"
+      }
+    },
+    {
+      "endpoint": "/queries",
+      "method": "GET",
+      "status_code": 401,
+      "expected_status": 401,
+      "latency_ms": 2087.6,
+      "response_size": 36,
+      "timestamp": "2025-07-30T18:44:02.878334",
+      "success": true,
+      "response_data": {
+        "detail": "Authentication required"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:14:01 GMT",
+        "server": "uvicorn",
+        "content-length": "36",
+        "content-type": "application/json",
+        "x-request-id": "4ccf4c13-3630-4219-a9b5-0a09d869334a"
+      }
+    },
+    {
+      "endpoint": "/queries/123",
+      "method": "GET",
+      "status_code": 401,
+      "expected_status": 401,
+      "latency_ms": 2089.03,
+      "response_size": 36,
+      "timestamp": "2025-07-30T18:44:04.967910",
+      "success": true,
+      "response_data": {
+        "detail": "Authentication required"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:14:04 GMT",
+        "server": "uvicorn",
+        "content-length": "36",
+        "content-type": "application/json",
+        "x-request-id": "933b0133-9787-4d7f-bf70-42d14404f8ef"
+      }
+    },
+    {
+      "endpoint": "/feedback",
+      "method": "POST",
+      "status_code": 401,
+      "expected_status": 401,
+      "latency_ms": 2064.08,
+      "response_size": 36,
+      "timestamp": "2025-07-30T18:44:07.033097",
+      "success": true,
+      "response_data": {
+        "detail": "Authentication required"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:14:06 GMT",
+        "server": "uvicorn",
+        "content-length": "36",
+        "content-type": "application/json",
+        "x-request-id": "071cb266-a724-47b1-8369-5cd646769344"
+      }
+    },
+    {
+      "endpoint": "/metrics",
+      "method": "GET",
+      "status_code": 401,
+      "expected_status": 401,
+      "latency_ms": 2041.19,
+      "response_size": 36,
+      "timestamp": "2025-07-30T18:44:09.075017",
+      "success": true,
+      "response_data": {
+        "detail": "Authentication required"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:14:08 GMT",
+        "server": "uvicorn",
+        "content-length": "36",
+        "content-type": "application/json",
+        "x-request-id": "7339437c-8479-4f32-9aad-f77544da176e"
+      }
+    },
+    {
+      "endpoint": "/analytics",
+      "method": "GET",
+      "status_code": 401,
+      "expected_status": 401,
+      "latency_ms": 2079.81,
+      "response_size": 36,
+      "timestamp": "2025-07-30T18:44:11.155739",
+      "success": true,
+      "response_data": {
+        "detail": "Authentication required"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:14:10 GMT",
+        "server": "uvicorn",
+        "content-length": "36",
+        "content-type": "application/json",
+        "x-request-id": "f0698c3f-9f85-436f-8fec-278e99569722"
+      }
+    },
+    {
+      "endpoint": "/security",
+      "method": "GET",
+      "status_code": 401,
+      "expected_status": 401,
+      "latency_ms": 2074.93,
+      "response_size": 36,
+      "timestamp": "2025-07-30T18:44:13.231265",
+      "success": true,
+      "response_data": {
+        "detail": "Authentication required"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:14:12 GMT",
+        "server": "uvicorn",
+        "content-length": "36",
+        "content-type": "application/json",
+        "x-request-id": "a5ac8926-0ca0-4c0d-a97a-e930ed828e7e"
+      }
+    },
+    {
+      "endpoint": "/integrations",
+      "method": "GET",
+      "status_code": 200,
+      "expected_status": 200,
+      "latency_ms": 2078.83,
+      "response_size": 291,
+      "timestamp": "2025-07-30T18:44:15.310770",
+      "success": true,
+      "response_data": {
+        "status": "operational",
+        "integrations": {
+          "openai": {
+            "status": "connected",
+            "version": "1.0.0"
+          },
+          "anthropic": {
+            "status": "connected",
+            "version": "1.0.0"
+          },
+          "elasticsearch": {
+            "status": "connected",
+            "version": "8.0.0"
+          },
+          "redis": {
+            "status": "connected",
+            "version": "6.0.0"
+          }
+        },
+        "timestamp": "2025-07-30T18:44:15.307518"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:14:14 GMT",
+        "server": "uvicorn",
+        "content-length": "291",
+        "content-type": "application/json",
+        "x-request-id": "3c557d4e-229a-4a67-9340-0a9227e5c81b"
+      }
+    },
+    {
+      "endpoint": "/tasks",
+      "method": "POST",
+      "status_code": 200,
+      "expected_status": 422,
+      "latency_ms": 2066.48,
+      "response_size": 247,
+      "timestamp": "2025-07-30T18:44:17.377854",
+      "success": false,
+      "response_data": {
+        "task_id": "a857885c-d0d1-4bc5-9c3e-020b831adf94",
+        "status": "created",
+        "tasks": [
+          {
+            "id": 1,
+            "description": "Research AI trends",
+            "priority": "high"
+          },
+          {
+            "id": 2,
+            "description": "Analyze market data",
+            "priority": "medium"
+          }
+        ],
+        "timestamp": "2025-07-30T18:44:17.374731"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:14:17 GMT",
+        "server": "uvicorn",
+        "content-length": "247",
+        "content-type": "application/json",
+        "x-request-id": "b5952ce3-b7f2-4a05-858f-ea066cb8947d"
+      }
+    },
+    {
+      "endpoint": "/expert-reviews/pending",
+      "method": "GET",
+      "status_code": 401,
+      "expected_status": 401,
+      "latency_ms": 2076.34,
+      "response_size": 36,
+      "timestamp": "2025-07-30T18:44:19.454761",
+      "success": true,
+      "response_data": {
+        "detail": "Authentication required"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:14:19 GMT",
+        "server": "uvicorn",
+        "content-length": "36",
+        "content-type": "application/json",
+        "x-request-id": "eca73146-abea-4e16-b2b1-f6a37a38300f"
+      }
+    },
+    {
+      "endpoint": "/expert-reviews/123",
+      "method": "POST",
+      "status_code": 401,
+      "expected_status": 401,
+      "latency_ms": 2083.9,
+      "response_size": 36,
+      "timestamp": "2025-07-30T18:44:21.539278",
+      "success": true,
+      "response_data": {
+        "detail": "Authentication required"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:14:21 GMT",
+        "server": "uvicorn",
+        "content-length": "36",
+        "content-type": "application/json",
+        "x-request-id": "51711365-fc23-496c-9837-5d1affa555b5"
+      }
+    },
+    {
+      "endpoint": "/expert-reviews/123",
+      "method": "GET",
+      "status_code": 401,
+      "expected_status": 401,
+      "latency_ms": 2071.33,
+      "response_size": 36,
+      "timestamp": "2025-07-30T18:44:23.611303",
+      "success": true,
+      "response_data": {
+        "detail": "Authentication required"
+      },
+      "response_headers": {
+        "date": "Wed, 30 Jul 2025 13:14:22 GMT",
+        "server": "uvicorn",
+        "content-length": "36",
+        "content-type": "application/json",
+        "x-request-id": "91f6ad34-0ffd-4032-84a4-d0fb61d4bf15"
+      }
+    },
+    {
+      "endpoint": "/ws/collaboration",
+      "method": "WEBSOCKET",
+      "status": "ERROR",
+      "error": "BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "latency_ms": 61.58,
+      "timestamp": "2025-07-30T18:44:23.675710",
+      "success": false
+    },
+    {
+      "endpoint": "/ws/query-updates",
+      "method": "WEBSOCKET",
+      "status": "ERROR",
+      "error": "BaseEventLoop.create_connection() got an unexpected keyword argument 'timeout'",
+      "latency_ms": 0.73,
+      "timestamp": "2025-07-30T18:44:23.677104",
+      "success": false
+    }
+  ]
+}

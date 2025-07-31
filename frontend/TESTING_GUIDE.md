@@ -3,28 +3,34 @@
 ## 🚀 Quick Start
 
 ### 1. Start the Mock Backend
+
 ```bash
 cd frontend
 node mock-backend.js
 ```
+
 This will start a mock backend server on `http://localhost:8002`
 
 ### 2. Start the Frontend
+
 ```bash
 cd frontend
 npm run dev
 ```
+
 This will start the Next.js development server on `http://localhost:3000`
 
 ## 🧪 Testing Checklist
 
 ### ✅ Basic Functionality
+
 - [ ] **Homepage loads** - Visit `http://localhost:3000`
 - [ ] **Prototype notice visible** - Blue info box at the top
 - [ ] **Query form accessible** - Large text area with placeholder
 - [ ] **Example questions clickable** - Try clicking the example questions
 
 ### ✅ Query Testing
+
 - [ ] **Submit a query** - Enter "What is the capital of France?" and submit
 - [ ] **Loading state** - Should see "Analyzing..." and spinner
 - [ ] **Answer display** - Should show "Paris is the capital of France..."
@@ -34,17 +40,20 @@ This will start the Next.js development server on `http://localhost:3000`
 - [ ] **Cache indicator** - Should show "Fresh Result" (not cached)
 
 ### ✅ Error Handling
+
 - [ ] **Empty query** - Try submitting empty query, should show error
 - [ ] **Short query** - Try "Hi", should show "too short" error
 - [ ] **Network error** - Stop backend, submit query, should show error message
 
 ### ✅ Feedback System
+
 - [ ] **Helpful feedback** - Click "Helpful" button
 - [ ] **Not helpful feedback** - Click "Not Helpful", should show details form
 - [ ] **Feedback submission** - Submit feedback with details
 - [ ] **Success message** - Should show "Thank you for your feedback!"
 
 ### ✅ Analytics Dashboard
+
 - [ ] **Analytics button** - Click "Analytics" in header
 - [ ] **Dashboard opens** - Should show modal with metrics
 - [ ] **Key metrics** - Total requests, success rate, response time, cache hit rate
@@ -52,6 +61,7 @@ This will start the Next.js development server on `http://localhost:3000`
 - [ ] **Close modal** - Click X or outside modal to close
 
 ### ✅ Accessibility
+
 - [ ] **Keyboard navigation** - Tab through all interactive elements
 - [ ] **Screen reader** - Test with screen reader (if available)
 - [ ] **Focus indicators** - All interactive elements should have visible focus
@@ -60,6 +70,7 @@ This will start the Next.js development server on `http://localhost:3000`
 ## 🔧 Mock Backend Features
 
 ### Query Responses
+
 The mock backend provides realistic responses for testing:
 
 1. **"What is the capital of France?"**
@@ -81,6 +92,7 @@ The mock backend provides realistic responses for testing:
    - Explains limitations
 
 ### Analytics Data
+
 - Total requests: 42
 - Total errors: 3
 - Average response time: 1.2s
@@ -90,16 +102,19 @@ The mock backend provides realistic responses for testing:
 ## 🐛 Troubleshooting
 
 ### Frontend Issues
+
 - **Build errors**: Check TypeScript compilation with `npx tsc --noEmit`
 - **Port conflicts**: Change port in `package.json` dev script
 - **Module errors**: Run `npm install` to ensure dependencies
 
 ### Backend Issues
+
 - **Port 8002 in use**: Kill existing process or change port in mock-backend.js
 - **CORS errors**: Ensure mock backend has CORS enabled
 - **Connection refused**: Check if mock backend is running
 
 ### Network Issues
+
 - **API calls failing**: Check browser dev tools Network tab
 - **CORS errors**: Verify backend CORS configuration
 - **Timeout errors**: Check if backend is responding
@@ -107,6 +122,7 @@ The mock backend provides realistic responses for testing:
 ## 📊 Expected Network Calls
 
 ### Successful Query
+
 ```
 POST http://localhost:8002/query
 Content-Type: application/json
@@ -118,6 +134,7 @@ X-API-Key: user-key-456
 ```
 
 **Response:**
+
 ```json
 {
   "answer": "Paris is the capital of France...",
@@ -130,11 +147,13 @@ X-API-Key: user-key-456
 ```
 
 ### Analytics Request
+
 ```
 GET http://localhost:8002/analytics
 ```
 
 **Response:**
+
 ```json
 {
   "total_requests": 42,
@@ -149,12 +168,14 @@ GET http://localhost:8002/analytics
 ## 🎯 Demo Scenarios
 
 ### Scenario 1: Basic Query
+
 1. Open `http://localhost:3000`
 2. Enter "What is the capital of France?"
 3. Submit query
 4. Verify answer, confidence, citations, and processing time
 
 ### Scenario 2: Feedback Flow
+
 1. Submit any query
 2. Click "Not Helpful"
 3. Enter feedback details
@@ -162,12 +183,14 @@ GET http://localhost:8002/analytics
 5. Verify success message
 
 ### Scenario 3: Analytics Dashboard
+
 1. Click "Analytics" in header
 2. Review all metrics
 3. Check popular query categories
 4. Close dashboard
 
 ### Scenario 4: Error Handling
+
 1. Stop mock backend
 2. Submit a query
 3. Verify error message appears
@@ -179,4 +202,4 @@ GET http://localhost:8002/analytics
 - All responses include proper confidence scores and citations
 - The prototype notice sets proper expectations for users
 - The UI is fully accessible and responsive
-- Analytics dashboard shows realistic metrics for demonstration 
+- Analytics dashboard shows realistic metrics for demonstration

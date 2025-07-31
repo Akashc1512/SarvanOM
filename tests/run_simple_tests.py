@@ -27,9 +27,9 @@ load_dotenv()
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import components
-from agents.base_agent import BaseAgent, AgentType, QueryContext
-from agents.lead_orchestrator import LeadOrchestrator
-from api.main import app
+from shared.core.agents.base_agent import BaseAgent, AgentType, QueryContext
+from shared.core.agents.lead_orchestrator import LeadOrchestrator
+from services.api-gateway.main import app
 
 # Test configuration with environment variables
 TEST_CONFIG = {

@@ -1,0 +1,191 @@
+version: '3.8'
+
+services:
+  # API Gateway Service
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./services/api-gateway:/app/services/api-gateway
+      - ./shared:/app/shared
+    depends_on:
+      - auth-service
+      - search-service
+      - synthesis-service
+      - factcheck-service
+      - analytics-service
+    networks:
+      - knowledge-hub-network
+
+  # Authentication Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./services/auth-service:/app/services/auth-service
+      - ./shared:/app/shared
+    networks:
+      - knowledge-hub-network
+
+  # Search Service
+  search-service:
+    build:
+      context: .
+      dockerfile: services/search-service/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./services/search-service:/app/services/search-service
+      - ./shared:/app/shared
+    networks:
+      - knowledge-hub-network
+
+  # Synthesis Service
+  synthesis-service:
+    build:
+      context: .
+      dockerfile: services/synthesis-service/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./services/synthesis-service:/app/services/synthesis-service
+      - ./shared:/app/shared
+    networks:
+      - knowledge-hub-network
+
+  # Fact Check Service
+  factcheck-service:
+    build:
+      context: .
+      dockerfile: services/factcheck-service/Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./services/factcheck-service:/app/services/factcheck-service
+      - ./shared:/app/shared
+    networks:
+      - knowledge-hub-network
+
+  # Analytics Service
+  analytics-service:
+    build:
+      context: .
+      dockerfile: services/analytics-service/Dockerfile
+    ports:
+      - "8005:8005"
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./services/analytics-service:/app/services/analytics-service
+      - ./shared:/app/shared
+    networks:
+      - knowledge-hub-network
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - knowledge-hub-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - knowledge-hub-network
+
+  # Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - knowledge-hub-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=knowledge_hub
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - knowledge-hub-network
+
+  # Monitoring Stack
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - knowledge-hub-network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana:/etc/grafana/provisioning
+    networks:
+      - knowledge-hub-network
+
+volumes:
+  redis_data:
+  elasticsearch_data:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  knowledge-hub-network:
+    driver: bridge 

@@ -1,14 +1,17 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Citation } from '@/types/api';
-import { ArrowTopRightOnSquareIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import React from "react";
+import { Citation } from "@/types/api";
+import {
+  ArrowTopRightOnSquareIcon,
+  DocumentTextIcon,
+} from "@heroicons/react/24/outline";
 
 interface CitationListProps {
   citations: Citation[];
 }
 
-export default function CitationList({ citations }: CitationListProps) {
+export function CitationList({ citations }: CitationListProps) {
   if (!citations || citations.length === 0) {
     return (
       <div className="text-sm text-gray-500 italic flex items-center space-x-2">
@@ -26,25 +29,25 @@ export default function CitationList({ citations }: CitationListProps) {
           Sources ({citations.length})
         </h3>
       </div>
-      
+
       <div className="space-y-3">
         {citations.map((citation, index) => (
-          <div 
-            key={citation.id || index} 
+          <div
+            key={citation.id || index}
             className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
           >
-            <span 
+            <span
               className="text-xs font-bold text-gray-600 bg-white rounded-full w-6 h-6 flex items-center justify-center border border-gray-300 flex-shrink-0 mt-0.5"
               aria-label={`Citation ${index + 1}`}
             >
               {index + 1}
             </span>
-            
+
             <div className="flex-1 min-w-0">
               <div className="text-sm text-gray-800 leading-relaxed">
                 {citation.text}
               </div>
-              
+
               {(citation.title || citation.author || citation.date) && (
                 <div className="mt-2 text-xs text-gray-600 space-y-1">
                   {citation.title && (
@@ -62,7 +65,7 @@ export default function CitationList({ citations }: CitationListProps) {
                 </div>
               )}
             </div>
-            
+
             {citation.url && (
               <a
                 href={citation.url}
@@ -81,4 +84,4 @@ export default function CitationList({ citations }: CitationListProps) {
       </div>
     </div>
   );
-} 
+}

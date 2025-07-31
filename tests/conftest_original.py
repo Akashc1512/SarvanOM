@@ -48,12 +48,12 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from api.main import app
-from api.config import get_settings, Settings
-from api.database.models import Base
-from api.cache import get_cache_manager
-from api.monitoring import start_monitoring, stop_monitoring
-from api.security import get_threat_stats
+from services.api-gateway.main import app
+from shared.core.api.config import get_settings, Settings
+from shared.core.database.models import Base
+from shared.core.cache import get_cache_manager
+from shared.core.api.monitoring import start_monitoring, stop_monitoring
+from shared.core.security import get_threat_stats
 
 logger = structlog.get_logger(__name__)
 

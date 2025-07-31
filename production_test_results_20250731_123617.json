@@ -1,0 +1,66 @@
+{
+  "summary": {
+    "total_tests": 3,
+    "passed_tests": 1,
+    "failed_tests": 2,
+    "success_rate": 0.3333333333333333,
+    "timestamp": "2025-07-31T12:36:17.574065"
+  },
+  "results": [
+    {
+      "test_name": "Query Endpoint",
+      "success": false,
+      "status_code": 500,
+      "response_time": 4.201099395751953,
+      "error_message": "HTTP 500",
+      "response_body": {
+        "error": "Query processing failed: 500: Unable to generate a complete answer due to processing errors: LLM Client initialization failed: LLM API call failed: LLM API call failed: This event loop is already running",
+        "request_id": "fac29990-70ba-40d4-89b1-56dfcdb1a79c"
+      },
+      "recommendations": [
+        "Check backend logs for 'DEEP DEBUG' messages",
+        "Verify LLM API keys are set correctly",
+        "Ensure LLM client initialization is successful",
+        "Check if orchestrator is properly initialized"
+      ]
+    },
+    {
+      "test_name": "Metrics Endpoint",
+      "success": false,
+      "status_code": 401,
+      "response_time": 0.003997802734375,
+      "error_message": "HTTP 401",
+      "response_body": {
+        "error": "Authentication required. Please provide API key or valid token.",
+        "request_id": "e48a78c6-4bc3-4ca4-a695-d092d2308fda"
+      },
+      "recommendations": [
+        "Check metrics service configuration",
+        "Verify prometheus_client installation",
+        "Check Redis connection if using Redis metrics"
+      ]
+    },
+    {
+      "test_name": "WebSocket Endpoint",
+      "success": true,
+      "status_code": 200,
+      "response_time": 2.1042325496673584,
+      "error_message": null,
+      "response_body": {
+        "type": "error",
+        "message": "Collaboration service unavailable",
+        "error_code": "SERVICE_UNAVAILABLE"
+      },
+      "recommendations": []
+    }
+  ],
+  "recommendations": [
+    "Verify LLM API keys are set correctly",
+    "Check metrics service configuration",
+    "Ensure LLM client initialization is successful",
+    "Check Redis connection if using Redis metrics",
+    "Verify prometheus_client installation",
+    "Check if orchestrator is properly initialized",
+    "Check backend logs for 'DEEP DEBUG' messages"
+  ]
+}

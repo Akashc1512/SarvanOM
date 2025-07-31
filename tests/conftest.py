@@ -14,7 +14,10 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from api.main_simple import app
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'services', 'api-gateway'))
+from services.api-gateway.main import app
 
 # Create test client
 @pytest.fixture
@@ -32,7 +35,7 @@ def event_loop():
 @pytest.fixture
 def mock_external_services():
     """Mock external services for testing."""
-    with patch("api.main_simple.asyncio.sleep") as mock_sleep:
+    with patch("main_simple.asyncio.sleep") as mock_sleep:
         mock_sleep.return_value = None
         yield {"sleep": mock_sleep}
 

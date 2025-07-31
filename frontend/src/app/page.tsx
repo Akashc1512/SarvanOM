@@ -1,288 +1,307 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { QueryResponse } from '@/types/api';
-import api from '@/lib/api';
-import QueryForm from '@/components/QueryForm';
-import AnswerDisplay from '@/components/AnswerDisplay';
-import FeedbackForm from '@/components/FeedbackForm';
-import ErrorDisplay from '@/components/ErrorDisplay';
-import ToastContainer, { useToasts } from '@/components/ToastContainer';
-import AnalyticsDashboard from '@/components/AnalyticsDashboard';
-import { ChartBarIcon } from '@heroicons/react/24/outline';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { QueryForm } from "@/components/QueryForm";
+import { AnswerDisplay } from "@/components/AnswerDisplay";
+import { TaskList } from "@/components/TaskList";
+import { type QueryResponse } from "@/lib/api";
+import {
+  Search,
+  Sparkles,
+  TrendingUp,
+  Clock,
+  Star,
+  MessageSquare,
+  Zap,
+  Globe,
+  BookOpen,
+  Users,
+  BarChart3,
+} from "lucide-react";
 
-export default function HomePage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [errorRequestId, setErrorRequestId] = useState<string | null>(null);
-  const [result, setResult] = useState<QueryResponse | null>(null);
-  const [lastQuery, setLastQuery] = useState<string>('');
-  const [showAnalytics, setShowAnalytics] = useState(false);
-  const { toasts, removeToast, showSuccess, showError } = useToasts();
+export default function Dashboard() {
+  const { toast } = useToast();
+  const [currentQuery, setCurrentQuery] = useState<QueryResponse | null>(null);
+  const [recentQueries, setRecentQueries] = useState<QueryResponse[]>([]);
 
-  const handleSubmitQuery = async (query: string) => {
-    setIsLoading(true);
-    setError(null);
-    setErrorRequestId(null);
-    setResult(null);
-    setLastQuery(query);
-
-    try {
-      const response = await api.submitQuery(query);
-      setResult(response);
-    } catch (err: unknown) {
-      // Extract request ID from error if available
-      if (err && typeof err === 'object' && 'response' in err) {
-        const axiosError = err as { response?: { data?: { request_id?: string } }; message?: string };
-        const requestId = axiosError.response?.data?.request_id || null;
-        setErrorRequestId(requestId);
-        setError(axiosError.message || 'An error occurred while processing your question.');
-      } else {
-        setError('An error occurred while processing your question.');
-      }
-    } finally {
-      setIsLoading(false);
-    }
+  const handleQuerySubmit = async (query: QueryResponse) => {
+    setCurrentQuery(query);
+    // Add to recent queries
+    setRecentQueries((prev) => [query, ...prev.slice(0, 4)]);
   };
 
-  const handleRetry = () => {
-    if (lastQuery) {
-      handleSubmitQuery(lastQuery);
-    }
+  const handleQueryUpdate = (query: QueryResponse) => {
+    setCurrentQuery(query);
+    // Update in recent queries
+    setRecentQueries((prev) =>
+      prev.map((q) => (q.query_id === query.query_id ? query : q)),
+    );
   };
 
-  const handleFeedback = async (type: 'helpful' | 'not-helpful', details?: string) => {
-    if (result?.query_id) {
-      try {
-        await api.submitFeedback({
-          query_id: result.query_id,
-          feedback_type: type,
-          details
-        });
-        showSuccess('Feedback submitted', 'Thank you for your feedback!');
-      } catch (error) {
-        console.error('Failed to submit feedback:', error);
-        showError('Feedback submission failed', 'Please try again later.');
-        throw error; // Re-throw to let the FeedbackForm handle the error
-      }
-    }
+  const handleFeedback = (
+    rating: number,
+    helpful: boolean,
+    feedback?: string,
+  ) => {
+    console.log("Feedback submitted:", { rating, helpful, feedback });
+    // Analytics tracking could be added here
   };
+
+  // Mock data for demonstration
+  const platformStats = {
+    totalQueries: 1247,
+    activeUsers: 23,
+    aiInteractions: 156,
+    avgResponseTime: "2.3s",
+  };
+
+  const quickActions = [
+    {
+      title: "Market Research",
+      description: "Analyze market trends and competitive landscape",
+      icon: TrendingUp,
+      query: "What are the latest trends in renewable energy markets?",
+    },
+    {
+      title: "Technical Analysis",
+      description: "Get detailed technical explanations",
+      icon: Zap,
+      query: "How does quantum computing work and what are its applications?",
+    },
+    {
+      title: "Academic Research",
+      description: "Find academic sources and papers",
+      icon: BookOpen,
+      query: "What are the recent developments in machine learning algorithms?",
+    },
+    {
+      title: "Industry Insights",
+      description: "Get industry-specific analysis",
+      icon: Globe,
+      query: "What are the key challenges facing the healthcare industry?",
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Toast Container */}
-      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
-
-      {/* Analytics Dashboard */}
-      <AnalyticsDashboard 
-        isVisible={showAnalytics} 
-        onClose={() => setShowAnalytics(false)} 
-      />
-
+    <div className="space-y-8">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-gray-900">
-                SarvanOM
-              </h1>
-            </div>
-            <nav className="flex items-center space-x-4">
-              <button
-                onClick={() => setShowAnalytics(true)}
-                className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors"
-                aria-label="View analytics dashboard"
-              >
-                <ChartBarIcon className="h-5 w-5" />
-                <span>Analytics</span>
-              </button>
-              <a
-                href="/about"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                About
-              </a>
-              <a
-                href="/help"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Help
-              </a>
-            </nav>
-          </div>
-        </div>
-      </header>
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          Universal Knowledge Hub
+        </h1>
+        <p className="text-xl text-gray-600">
+          AI-powered research platform combining search, synthesis, and
+          collaboration
+        </p>
+      </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Prototype Notice */}
-        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-                                        <h3 className="text-sm font-medium text-blue-800">
-                            Early Prototype
-                          </h3>
-                          <div className="mt-2 text-sm text-blue-700">
-                            <p>
-                              This is an early prototype of SarvanOM - Universal Knowledge Platform.
-                              It currently uses a limited built-in knowledge base and may not answer all queries accurately.
-                              Future versions will integrate real search engines and advanced language models.
-                            </p>
-                          </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Ask Anything, Get Accurate Answers
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Our advanced AI system uses multiple agents to provide comprehensive, 
-            well-cited answers to your questions. Get reliable information with 
-            confidence scores and source citations.
-          </p>
-        </div>
-
-        {/* Query Form */}
-        <div className="mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Search Interface */}
           <QueryForm
-            onSubmit={handleSubmitQuery}
-            isLoading={isLoading}
-            placeholder="Ask any question..."
-            maxLength={10000}
+            onQuerySubmit={handleQuerySubmit}
+            onQueryUpdate={handleQueryUpdate}
           />
-        </div>
 
-        {/* Answer Display */}
-        {result && (
-          <div className="mb-6">
-            <AnswerDisplay
-              answer={result.answer}
-              confidence={result.confidence}
-              citations={result.citations}
-              isLoading={false}
-              queryId={result.query_id}
-              queryType={result.query_type}
-              processingTime={result.processing_time}
+          {/* Results Display */}
+          {currentQuery && (
+            <AnswerDisplay query={currentQuery} onFeedback={handleFeedback} />
+          )}
+
+          {/* Task Generation */}
+          {currentQuery && currentQuery.answer && (
+            <TaskList
+              answer={currentQuery.answer}
+              query={currentQuery.query_id}
+              onTasksGenerated={(tasks) => {
+                console.log("Tasks generated:", tasks);
+                // Analytics tracking could be added here
+              }}
             />
-          </div>
-        )}
+          )}
 
-        {/* Error Display */}
-        {error && !isLoading && (
-          <div className="mb-6">
-            <ErrorDisplay
-              error={error}
-              onRetry={handleRetry}
-              requestId={errorRequestId || undefined}
-            />
-          </div>
-        )}
-
-        {/* Feedback Form */}
-        {result && !isLoading && (
-          <div className="mb-8">
-            <FeedbackForm
-              queryId={result.query_id || 'unknown'}
-              onFeedback={handleFeedback}
-              disabled={isLoading}
-            />
-          </div>
-        )}
-
-        {/* Features Section */}
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="text-center">
-            <div className="bg-blue-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <svg className="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Multi-Agent Intelligence
-            </h3>
-            <p className="text-gray-600">
-              Our system uses specialized AI agents for retrieval, fact-checking, 
-              synthesis, and citation to ensure accurate answers.
-            </p>
-          </div>
-
-          <div className="text-center">
-            <div className="bg-green-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Verified Sources
-            </h3>
-            <p className="text-gray-600">
-              Every answer includes citations from reliable sources, 
-              giving you confidence in the information provided.
-            </p>
-          </div>
-
-          <div className="text-center">
-            <div className="bg-purple-100 rounded-full p-3 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-              <svg className="h-8 w-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Fast & Reliable
-            </h3>
-            <p className="text-gray-600">
-              Get comprehensive answers quickly with confidence scores 
-              that help you understand the reliability of each response.
-            </p>
-          </div>
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* About */}
-                                    <div>
-                          <h3 className="text-sm font-semibold text-gray-900 mb-3">About</h3>
-                          <p className="text-sm text-gray-600">
-                            SarvanOM is an advanced AI system that uses multiple specialized agents
-                            to provide comprehensive, well-cited answers to complex questions.
-                          </p>
+          {/* Quick Actions */}
+          {!currentQuery && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  Quick Research Actions
+                </CardTitle>
+                <CardDescription>
+                  Start with these popular research topics
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {quickActions.map((action, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      className="h-auto p-4 justify-start text-left"
+                      onClick={() => {
+                        // This would trigger a new query
+                        toast({
+                          title: "Quick Action",
+                          description: `Research: ${action.title}`,
+                        });
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <action.icon className="h-5 w-5 text-blue-500 mt-0.5" />
+                        <div>
+                          <div className="font-medium">{action.title}</div>
+                          <div className="text-sm text-gray-500">
+                            {action.description}
+                          </div>
                         </div>
-            
-            {/* Current Status */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Current Status</h3>
-              <p className="text-sm text-gray-600">
-                This is an early prototype demonstrating the multi-agent architecture. 
-                It uses a limited knowledge base and placeholder responses for testing purposes.
-              </p>
-            </div>
-            
-            {/* Future Plans */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Future Plans</h3>
-              <p className="text-sm text-gray-600">
-                Future versions will integrate real search engines, advanced language models, 
-                and comprehensive knowledge bases for accurate, up-to-date information.
-              </p>
-            </div>
-          </div>
-          
-                                <div className="mt-8 pt-8 border-t border-gray-200 text-center text-gray-600">
-                        <p>&copy; 2025 SarvanOM. All rights reserved. | <a href="https://sarvanom.com" className="text-blue-600 hover:text-blue-800">sarvanom.com</a></p>
                       </div>
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
-      </footer>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Platform Stats */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Platform Stats
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Total Queries</span>
+                  <span className="font-medium">
+                    {platformStats.totalQueries.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Active Users</span>
+                  <span className="font-medium">
+                    {platformStats.activeUsers}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">AI Interactions</span>
+                  <span className="font-medium">
+                    {platformStats.aiInteractions}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Avg Response</span>
+                  <span className="font-medium">
+                    {platformStats.avgResponseTime}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Queries */}
+          {recentQueries.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Recent Queries
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {recentQueries.map((query) => (
+                    <div
+                      key={query.query_id}
+                      className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => setCurrentQuery(query)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          setCurrentQuery(query);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {query.query_id}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        {new Date(query.created_at).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            query.status === "completed"
+                              ? "bg-green-100 text-green-800"
+                              : query.status === "processing"
+                                ? "bg-blue-100 text-blue-800"
+                                : query.status === "failed"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {query.status}
+                        </span>
+                        {query.confidence && (
+                          <span className="text-xs text-gray-500">
+                            {(query.confidence * 100).toFixed(0)}% confidence
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Features */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-5 w-5" />
+                Platform Features
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <Search className="h-4 w-4 text-blue-500" />
+                  <span>Multi-source search</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-green-500" />
+                  <span>AI synthesis</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-purple-500" />
+                  <span>Real-time collaboration</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-orange-500" />
+                  <span>Expert review system</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
