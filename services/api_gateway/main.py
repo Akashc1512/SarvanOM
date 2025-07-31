@@ -846,7 +846,7 @@ async def security_check(request: Request, call_next):
                 if error_type in ["authentication_error", "rate_limit_error", "model_error", "api_error", "initialization_error", "configuration_error"]:
                     raise HTTPException(status_code=503, detail=error_msg)
                 else:
-                raise HTTPException(status_code=500, detail=error_msg)
+                    raise HTTPException(status_code=500, detail=error_msg)
 
             # Record comprehensive metrics for orchestrator processing
             # record_request_metrics("POST", "/query", 200, process_time)
@@ -1116,11 +1116,10 @@ async def get_metrics_user():
 @app.get("/metrics")
 async def get_metrics(admin: bool = False):
     if admin:
-        # Optionally require admin auth here (not implemented in this public version)
         return JSONResponse(status_code=403, content={"error": "Admin metrics not enabled"})
     try:
         import prometheus_client
-            from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+        from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
         metrics_data = generate_latest()
         return Response(
             content=metrics_data,
@@ -1128,9 +1127,9 @@ async def get_metrics(admin: bool = False):
             headers={"Cache-Control": "no-cache"}
         )
     except ImportError:
-                return JSONResponse(
+        return JSONResponse(
             status_code=503,
-                    content={
+            content={
                 "status": "degraded",
                 "message": "Prometheus client not available",
                 "error": "prometheus_client package not installed",

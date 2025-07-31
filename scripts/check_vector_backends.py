@@ -62,6 +62,7 @@ class VectorBackendChecker:
         await self._check_elasticsearch()
         await self._check_qdrant()
         await self._check_knowledge_graph()
+        await self._check_redis()
         
         return self.results
     
@@ -82,6 +83,7 @@ class VectorBackendChecker:
             api_key = os.getenv("PINECONE_API_KEY")
             environment = os.getenv("PINECONE_ENVIRONMENT")
             index_name = os.getenv("PINECONE_INDEX_NAME", "knowledge-base")
+            vector_db_host = os.getenv("VECTOR_DB_HOST")
             
             if not api_key:
                 status.error = "PINECONE_API_KEY not set"
@@ -92,6 +94,12 @@ class VectorBackendChecker:
                 status.error = "PINECONE_ENVIRONMENT not set"
                 self.results["pinecone"] = status
                 return
+            
+            # Log configuration details
+            logger.info(f"Pinecone API Key: {'*' * (len(api_key) - 4) + api_key[-4:] if api_key else 'Not set'}")
+            logger.info(f"Pinecone Environment: {environment}")
+            logger.info(f"Pinecone Index Name: {index_name}")
+            logger.info(f"Vector DB Host: {vector_db_host}")
             
             status.configured = True
             
@@ -178,12 +186,21 @@ class VectorBackendChecker:
         try:
             # Check environment variables
             es_url = os.getenv("ELASTICSEARCH_URL")
+            es_api_key = os.getenv("ELASTICSEARCH_API_KEY")
+            es_username = os.getenv("ELASTICSEARCH_USERNAME")
+            es_password = os.getenv("ELASTICSEARCH_PASSWORD")
+            es_index = os.getenv("ELASTICSEARCH_INDEX", "knowledge-base")
             es_host = os.getenv("ELASTICSEARCH_HOST", "localhost")
             es_port = os.getenv("ELASTICSEARCH_PORT", "9200")
-            es_index = os.getenv("ELASTICSEARCH_INDEX", "knowledge-base")
             
             if not es_url:
                 es_url = f"http://{es_host}:{es_port}"
+            
+            # Log configuration details
+            logger.info(f"Elasticsearch URL: {es_url}")
+            logger.info(f"Elasticsearch API Key: {'*' * (len(es_api_key) - 4) + es_api_key[-4:] if es_api_key else 'Not set'}")
+            logger.info(f"Elasticsearch Username: {es_username}")
+            logger.info(f"Elasticsearch Index: {es_index}")
             
             status.configured = True
             
@@ -274,12 +291,18 @@ class VectorBackendChecker:
         try:
             # Check environment variables
             qdrant_url = os.getenv("QDRANT_URL")
+            qdrant_api_key = os.getenv("QDRANT_API_KEY")
             qdrant_host = os.getenv("QDRANT_HOST", "localhost")
             qdrant_port = os.getenv("QDRANT_PORT", "6333")
             collection_name = os.getenv("QDRANT_COLLECTION", "knowledge-base")
             
             if not qdrant_url:
                 qdrant_url = f"http://{qdrant_host}:{qdrant_port}"
+            
+            # Log configuration details
+            logger.info(f"Qdrant URL: {qdrant_url}")
+            logger.info(f"Qdrant API Key: {'*' * (len(qdrant_api_key) - 4) + qdrant_api_key[-4:] if qdrant_api_key else 'Not set'}")
+            logger.info(f"Qdrant Collection: {collection_name}")
             
             status.configured = True
             
@@ -364,10 +387,13 @@ class VectorBackendChecker:
         try:
             # Check environment variables
             neo4j_uri = os.getenv("NEO4J_URI")
+            neo4j_user = os.getenv("NEO4J_USERNAME", "neo4j")
+            neo4j_password = os.getenv("NEO4J_PASSWORD")
+            neo4j_database = os.getenv("NEO4J_DATABASE", "neo4j")
+            aura_instance_id = os.getenv("AURA_INSTANCEID")
+            aura_instance_name = os.getenv("AURA_INSTANCENAME")
             neo4j_host = os.getenv("NEO4J_HOST", "localhost")
             neo4j_port = os.getenv("NEO4J_PORT", "7687")
-            neo4j_user = os.getenv("NEO4J_USER", "neo4j")
-            neo4j_password = os.getenv("NEO4J_PASSWORD")
             
             if not neo4j_uri:
                 neo4j_uri = f"bolt://{neo4j_host}:{neo4j_port}"
@@ -376,6 +402,13 @@ class VectorBackendChecker:
                 status.error = "NEO4J_PASSWORD not set"
                 self.results["knowledge_graph"] = status
                 return
+            
+            # Log configuration details
+            logger.info(f"Neo4j URI: {neo4j_uri}")
+            logger.info(f"Neo4j Username: {neo4j_user}")
+            logger.info(f"Neo4j Database: {neo4j_database}")
+            logger.info(f"Aura Instance ID: {aura_instance_id}")
+            logger.info(f"Aura Instance Name: {aura_instance_name}")
             
             status.configured = True
             
@@ -432,6 +465,78 @@ class VectorBackendChecker:
             status.error = f"Unexpected error: {str(e)}"
         
         self.results["knowledge_graph"] = status
+    
+    async def _check_redis(self):
+        """Check Redis configuration and connectivity."""
+        logger.info("🔍 Checking Redis...")
+        
+        start_time = time.time()
+        status = BackendStatus(
+            name="Redis",
+            available=False,
+            configured=False,
+            reachable=False
+        )
+        
+        try:
+            # Check environment variables
+            redis_url = os.getenv("REDIS_URL")
+            
+            if not redis_url:
+                status.error = "REDIS_URL not set"
+                self.results["redis"] = status
+                return
+            
+            # Log configuration details
+            logger.info(f"Redis URL: {redis_url}")
+            
+            status.configured = True
+            
+            # Try to import Redis
+            try:
+                import redis.asyncio as redis
+                status.available = True
+            except ImportError:
+                status.error = "Redis Python client not installed. Run: pip install redis"
+                self.results["redis"] = status
+                return
+            
+            # Test connection
+            try:
+                client = redis.from_url(redis_url)
+                
+                # Test basic connectivity
+                await client.ping()
+                status.reachable = True
+                status.response_time = time.time() - start_time
+                
+                # Test a simple operation
+                try:
+                    await client.set("test_key", "test_value", ex=60)
+                    test_value = await client.get("test_key")
+                    await client.delete("test_key")
+                    
+                    status.details = {
+                        "connection_successful": True,
+                        "test_operation_successful": True,
+                        "test_value": test_value.decode() if test_value else None
+                    }
+                except Exception as e:
+                    status.details = {
+                        "connection_successful": True,
+                        "test_operation_successful": False,
+                        "test_error": str(e)
+                    }
+                
+                await client.close()
+                
+            except Exception as e:
+                status.error = f"Connection failed: {str(e)}"
+                
+        except Exception as e:
+            status.error = f"Unexpected error: {str(e)}"
+        
+        self.results["redis"] = status
     
     def print_results(self):
         """Print comprehensive results."""

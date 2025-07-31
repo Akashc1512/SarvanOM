@@ -267,19 +267,28 @@ class VectorDBClient:
 
     def _initialize_vector_db(self):
         """Initialize vector database connection."""
-        # Try Pinecone first
-        if PINECONE_AVAILABLE and self.pinecone_api_key:
+        # Try Pinecone v3 first
+        if self.pinecone_api_key:
             try:
-                pinecone.init(
-                    api_key=self.pinecone_api_key, environment=self.pinecone_env
-                )
-                self.pinecone_index = pinecone.Index(self.pinecone_index_name)
-                logger.info("✅ Pinecone initialized successfully")
+                from pinecone import Pinecone
+                pc = Pinecone(api_key=self.pinecone_api_key)
+                self.pinecone_index = pc.Index(self.pinecone_index_name)
+                logger.info("✅ Pinecone v3 initialized successfully")
                 return
+            except ImportError:
+                logger.warning("⚠️ Pinecone v3 not available, trying v2")
+                try:
+                    import pinecone
+                    pinecone.init(
+                        api_key=self.pinecone_api_key, environment=self.pinecone_env
+                    )
+                    self.pinecone_index = pinecone.Index(self.pinecone_index_name)
+                    logger.info("✅ Pinecone v2 initialized successfully")
+                    return
+                except Exception as e:
+                    logger.warning(f"⚠️ Pinecone v2 initialization failed: {e}")
             except Exception as e:
-                logger.warning(f"⚠️ Pinecone initialization failed: {e}")
-
-        # No fallback needed - using Pinecone only
+                logger.warning(f"⚠️ Pinecone v3 initialization failed: {e}")
 
         logger.info("⚠️ No vector database available, using fallback storage")
 
@@ -325,18 +334,35 @@ class VectorDBClient:
                     include_metadata=True,
                     filter=filters,
                 )
-                hits = result.get("matches", [])
-                results = []
-                for match in hits:
-                    results.append(
-                        {
-                            "id": match.get("id", ""),
-                            "content": match["metadata"].get("content", ""),
-                            "score": match.get("score", 0.0),
-                            "metadata": match.get("metadata", {}),
-                        }
-                    )
-                return results
+                # Handle both v2 and v3 API responses
+                if hasattr(result, 'matches'):
+                    # v3 API
+                    hits = result.matches
+                    results = []
+                    for match in hits:
+                        results.append(
+                            {
+                                "id": match.id,
+                                "content": match.metadata.get("content", "") if match.metadata else "",
+                                "score": match.score,
+                                "metadata": match.metadata or {},
+                            }
+                        )
+                    return results
+                else:
+                    # v2 API
+                    hits = result.get("matches", [])
+                    results = []
+                    for match in hits:
+                        results.append(
+                            {
+                                "id": match.get("id", ""),
+                                "content": match["metadata"].get("content", ""),
+                                "score": match.get("score", 0.0),
+                                "metadata": match.get("metadata", {}),
+                            }
+                        )
+                    return results
             except Exception as e:
                 logger.error(f"Pinecone search error: {e}")
 
@@ -407,20 +433,26 @@ class VectorDBClient:
         try:
             vectors = []
             for i, (doc, embedding) in enumerate(zip(documents, embeddings)):
-                vectors.append(
-                    {
-                        "id": doc.get("id", f"doc_{i}"),
-                        "values": embedding,
-                        "metadata": {
-                            "content": doc["content"],
-                            "source": doc.get("source", "unknown"),
-                            "timestamp": doc.get("timestamp", ""),
-                            **doc.get("metadata", {}),
-                        },
-                    }
-                )
+                vector_data = {
+                    "id": doc.get("id", f"doc_{i}"),
+                    "values": embedding,
+                    "metadata": {
+                        "content": doc["content"],
+                        "source": doc.get("source", "unknown"),
+                        "timestamp": doc.get("timestamp", ""),
+                        **doc.get("metadata", {}),
+                    },
+                }
+                vectors.append(vector_data)
 
-            self.pinecone_index.upsert(vectors=vectors)
+            # Handle both v2 and v3 API
+            if hasattr(self.pinecone_index, 'upsert'):
+                # v3 API
+                self.pinecone_index.upsert(vectors=vectors)
+            else:
+                # v2 API
+                self.pinecone_index.upsert(vectors=vectors)
+            
             logger.info(f"Upserted {len(documents)} documents to Pinecone")
 
         except Exception as e:
@@ -456,16 +488,21 @@ class ElasticsearchClient:
         self.index_name = config.get(
             "index_name", os.getenv("ELASTICSEARCH_INDEX", "knowledge_base")
         )
-        self.host = os.getenv("ELASTICSEARCH_HOST", "http://localhost:9200")
+        self.host = os.getenv("ELASTICSEARCH_URL", os.getenv("ELASTICSEARCH_HOST", "http://localhost:9200"))
         self.username = os.getenv("ELASTICSEARCH_USERNAME")
         self.password = os.getenv("ELASTICSEARCH_PASSWORD")
+        self.api_key = os.getenv("ELASTICSEARCH_API_KEY")
+        
+        # Configure authentication
+        auth_config = {}
+        if self.api_key:
+            auth_config["api_key"] = self.api_key
+        elif self.username and self.password:
+            auth_config["http_auth"] = (self.username, self.password)
+        
         self.es = AsyncElasticsearch(
             hosts=[self.host],
-            http_auth=(
-                (self.username, self.password)
-                if self.username and self.password
-                else None
-            ),
+            **auth_config,
             verify_certs=True,
         )
 

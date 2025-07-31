@@ -214,7 +214,7 @@ class LeadOrchestrator:
             # Analyze and plan
             logger.info("🔍 Starting query analysis and planning...")
             try:
-            plan = await self.analyze_and_plan(context)
+                plan = await self.analyze_and_plan(context)
                 logger.info(f"✅ Query analysis completed: {plan}")
             except Exception as e:
                 logger.error(f"❌ Query analysis failed: {e}")
