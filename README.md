@@ -1,302 +1,217 @@
-# Universal Knowledge Hub
+# 🚀 SarvanOM - Universal Knowledge Hub
 
-> **MAANG-Level AI-Powered Knowledge Platform**
-> 
-> A production-ready, enterprise-grade platform for intelligent knowledge search, synthesis, and verification with comprehensive AI integration.
+A comprehensive AI-powered knowledge platform with multi-agent architecture, vector databases, and real-time collaboration capabilities.
 
-[![CI/CD](https://github.com/your-org/universal-knowledge-hub/workflows/Enterprise%20CI/badge.svg)](https://github.com/your-org/universal-knowledge-hub/actions)
-[![Code Coverage](https://codecov.io/gh/your-org/universal-knowledge-hub/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/universal-knowledge-hub)
-[![Security](https://img.shields.io/badge/security-audited-brightgreen.svg)](SECURITY.md)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+## 🌟 Features
 
-## 🚀 Quick Start (5 minutes)
+- **🤖 Multi-Agent AI System**: Retrieval, Fact-Checking, Synthesis, and Citation agents
+- **🔍 Vector Database Integration**: Pinecone, Elasticsearch, Qdrant, and Neo4j support
+- **⚡ Real-time Collaboration**: WebSocket-based live collaboration
+- **📊 Analytics & Monitoring**: Comprehensive metrics and health checks
+- **🔐 Enterprise Security**: Role-based access control and threat detection
+- **🌐 Modern Web Interface**: Next.js frontend with responsive design
+
+## 🏗️ Architecture
+
+```
+├── services/
+│   ├── api-gateway/          # FastAPI backend with comprehensive endpoints
+│   ├── auth-service/         # Authentication and authorization
+│   ├── analytics-service/    # Analytics and monitoring
+│   ├── factcheck-service/    # Fact verification agent
+│   ├── search-service/       # Document retrieval agent
+│   └── synthesis-service/    # Answer synthesis agent
+├── shared/
+│   └── core/                # Shared libraries and agent implementations
+├── frontend/                # Next.js React application
+└── infrastructure/          # Kubernetes and Terraform configurations
+```
+
+## 🚀 Quick Start
 
 ### Prerequisites
-- **Node.js** >= 18.0.0
-- **Python** >= 3.13.5
-- **Git**
 
-### One-Command Setup
+- Python 3.11+
+- Node.js 18+
+- Redis
+- Vector databases (Pinecone, Elasticsearch, Qdrant, Neo4j)
+
+### 1. Clone the Repository
+
 ```bash
-# Clone and setup in one command
-git clone https://github.com/your-org/universal-knowledge-hub.git && \
-cd universal-knowledge-hub && \
-.\dev.bat setup && \
-.\dev.bat dev
+git clone https://github.com/akashc1512/sarvanom.git
+cd sarvanom
 ```
 
-### Manual Setup
+### 2. Set Up Environment
+
 ```bash
-# 1. Clone repository
-git clone https://github.com/your-org/universal-knowledge-hub.git
-cd universal-knowledge-hub
+# Copy environment template
+cp env.template .env
 
-# 2. Install dependencies
-.\dev.bat install
-
-# 3. Configure environment
-.\dev.bat setup
-
-# 4. Start development servers
-.\dev.bat dev
+# Edit .env with your API keys and configurations
+# See VECTOR_BACKEND_CONFIGURATION_GUIDE.md for details
 ```
 
-**🎉 You're ready!** 
-- Frontend: http://localhost:3000
-- API Gateway: http://localhost:8000
-- API Docs: http://localhost:8000/docs
+### 3. Install Dependencies
 
-## 🏗️ Architecture Overview
-
-```
-universal-knowledge-hub/
-├── services/                    # Microservices Architecture
-│   ├── api-gateway/            # 🚪 Main entry point & orchestration
-│   ├── auth-service/           # 🔐 Authentication & authorization
-│   ├── search-service/         # 🔍 Knowledge retrieval & vector search
-│   ├── synthesis-service/      # 🤖 AI synthesis & recommendations
-│   ├── factcheck-service/      # ✅ Fact verification & validation
-│   └── analytics-service/      # 📊 Metrics & monitoring
-├── shared/                     # 📚 Shared libraries & utilities
-│   ├── core/                   # Core functionality
-│   ├── models/                 # Data models
-│   ├── config/                 # Configuration management
-│   └── middleware/             # Shared middleware
-├── frontend/                   # ⚛️ Next.js application
-├── infrastructure/             # 🏗️ Infrastructure as Code
-├── tests/                      # 🧪 Comprehensive test suite
-└── scripts/                    # 🔧 Build & deployment scripts
-```
-
-## 🛠️ Development Commands
-
-### Essential Commands
 ```bash
-# Development
-.\dev.bat dev                   # Start all services
-.\dev.bat dev:frontend         # Frontend only
-.\dev.bat dev:backend          # Backend only
+# Backend dependencies
+pip install -r requirements.txt
 
-# Testing
-.\dev.bat test                 # All tests
-.\dev.bat test:unit           # Unit tests
-.\dev.bat test:integration    # Integration tests
-.\dev.bat test:e2e            # End-to-end tests
-
-# Code Quality
-.\dev.bat lint                 # Linting
-.\dev.bat format              # Code formatting
+# Frontend dependencies
+cd frontend
+npm install
 ```
 
-### Service-Specific Development
+### 4. Start the Backend
+
 ```bash
-# Start individual services
-.\dev.bat start:api-gateway
-.\dev.bat start:auth-service
-.\dev.bat start:search-service
-.\dev.bat start:synthesis-service
-.\dev.bat start:factcheck-service
-.\dev.bat start:analytics-service
+# Start the API server
+python -m uvicorn services.api_gateway.main:app --host 127.0.0.1 --port 8000
 ```
 
-## 🧪 Testing Strategy
+### 5. Start the Frontend
 
-### Test Coverage
-- **Unit Tests**: 90%+ coverage required
-- **Integration Tests**: Service communication
-- **E2E Tests**: Full user workflows
-- **Performance Tests**: Load testing & benchmarks
-
-### Running Tests
 ```bash
-# All tests with coverage
-.\dev.bat test
-
-# Specific test types
-.\dev.bat test:unit
-.\dev.bat test:integration
-.\dev.bat test:e2e
-.\dev.bat test:performance
-
-# With coverage report
-pytest --cov=services --cov=shared --cov-report=html
+# In a new terminal
+cd frontend
+npm run dev
 ```
-
-## 📊 Monitoring & Observability
-
-### Health Checks
-```bash
-# Check all service health
-.\dev.bat monitor:health
-
-# View application logs
-.\dev.bat monitor:logs
-```
-
-### Metrics & Dashboards
-- **Service Metrics**: `/metrics` endpoints
-- **Health Checks**: `/health` endpoints
-- **Real-time Monitoring**: Grafana dashboards
 
 ## 🔧 Configuration
 
 ### Environment Variables
-Copy `.env.template` to `.env` and configure:
+
+Key environment variables to configure:
 
 ```bash
-# Core Configuration
-ENVIRONMENT=development
-LOG_LEVEL=DEBUG
+# LLM API Keys
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
 
-# Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/knowledge_hub
+# Vector Databases
+PINECONE_API_KEY=your_pinecone_api_key
+ELASTICSEARCH_URL=your_elasticsearch_url
+QDRANT_URL=your_qdrant_url
+NEO4J_URI=your_neo4j_uri
 
 # Redis
-REDIS_URL=redis://localhost:6379
+REDIS_URL=your_redis_url
+```
 
-# Elasticsearch
-ELASTICSEARCH_URL=http://localhost:9200
+### Vector Database Setup
 
-# AI Services
-OPENAI_API_KEY=your_openai_key
-ANTHROPIC_API_KEY=your_anthropic_key
+See `VECTOR_BACKEND_CONFIGURATION_GUIDE.md` for detailed setup instructions for:
+- Pinecone v3 configuration
+- Elasticsearch authentication
+- Qdrant Cloud setup
+- Neo4j Aura configuration
 
-# Security
-JWT_SECRET_KEY=your_jwt_secret
-SECRET_KEY=your_secret_key
+## 📊 API Endpoints
+
+### Core Endpoints
+
+- `POST /query` - Submit knowledge queries
+- `GET /health` - Health check
+- `GET /metrics` - Prometheus metrics
+- `GET /analytics` - Analytics dashboard
+- `GET /integrations` - Integration status
+
+### Authentication
+
+- `POST /auth/login` - User login
+- `POST /auth/register` - User registration
+- `GET /auth/me` - Current user info
+
+### WebSocket
+
+- `ws://localhost:8000/ws/collaboration` - Real-time collaboration
+- `ws://localhost:8000/ws/query-updates` - Query progress updates
+
+## 🧪 Testing
+
+### Backend Tests
+
+```bash
+# Run all tests
+python -m pytest tests/
+
+# Run specific test categories
+python -m pytest tests/unit/
+python -m pytest tests/integration/
+python -m pytest tests/e2e/
+```
+
+### Frontend Tests
+
+```bash
+cd frontend
+npm test
 ```
 
 ## 🚀 Deployment
 
-### Production Deployment
-```bash
-# Build for production
-.\dev.bat build
+### Docker Deployment
 
-# Deploy to production
-.\scripts\enterprise-deploy.sh deploy
+```bash
+# Build and run with Docker Compose
+docker-compose up -d
 ```
 
-### Infrastructure
-- **Kubernetes**: `infrastructure/kubernetes/`
-- **Terraform**: `infrastructure/terraform/`
-- **Monitoring**: `infrastructure/monitoring/`
+### Kubernetes Deployment
 
-## 📚 Documentation
+```bash
+# Deploy to Kubernetes
+kubectl apply -f infrastructure/kubernetes/
+```
 
-### Quick Links
-- **API Documentation**: http://localhost:8000/docs
-- **Architecture**: [docs/architecture/](docs/architecture/)
-- **Migration Guide**: [MIGRATION.md](MIGRATION.md)
-- **Setup Instructions**: [SETUP_GUIDE.md](SETUP_GUIDE.md)
-- **Security**: [SECURITY.md](SECURITY.md)
+### Production Setup
 
-### Developer Guides
-- [Getting Started](docs/getting-started.md)
-- [Architecture Deep Dive](docs/architecture/README.md)
-- [API Reference](docs/api/README.md)
-- [Testing Guide](docs/testing/README.md)
-- [Deployment Guide](docs/deployment/README.md)
+See `PRODUCTION_DEPLOYMENT_GUIDE.md` for enterprise deployment instructions.
+
+## 📈 Monitoring
+
+### Health Checks
+
+```bash
+# Check backend health
+curl http://localhost:8000/health
+
+# Check vector backends
+python scripts/check_vector_backends.py
+```
+
+### Metrics
+
+- Prometheus metrics available at `/metrics`
+- Grafana dashboards in `infrastructure/monitoring/`
 
 ## 🤝 Contributing
 
-### Development Workflow
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/your-feature
-   ```
-3. **Make changes and test**
-   ```bash
-   .\dev.bat test
-   .\dev.bat lint
-   ```
-4. **Commit with conventional commits**
-   ```bash
-   git commit -m "feat: add new feature"
-   ```
-5. **Push and create a pull request**
-
-### Code Standards
-- **Python**: Black, flake8, mypy
-- **TypeScript**: ESLint, Prettier
-- **Testing**: pytest with 90%+ coverage
-- **Documentation**: Comprehensive docstrings
-
-## 🔒 Security
-
-### Security Features
-- **Authentication**: JWT-based with refresh tokens
-- **Authorization**: Role-based access control
-- **Input Validation**: Pydantic models with strict validation
-- **Rate Limiting**: Per-user and per-endpoint limits
-- **Security Headers**: CORS, CSP, HSTS
-- **Audit Logging**: Comprehensive security event logging
-
-### Security Audit
-```bash
-# Run security audit
-.\dev.bat security:audit
-```
-
-## 📈 Performance
-
-### Optimization Features
-- **Caching**: Redis-based caching with TTL
-- **Connection Pooling**: Database and HTTP connection pooling
-- **Async Processing**: Non-blocking I/O operations
-- **Load Balancing**: Service-level load balancing
-- **Monitoring**: Real-time performance metrics
-
-### Performance Testing
-```bash
-# Run performance tests
-.\dev.bat test:performance
-```
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-#### 1. Service won't start
-```bash
-# Check service health
-.\dev.bat monitor:health
-
-# View logs
-.\dev.bat monitor:logs
-```
-
-#### 2. Import errors
-```bash
-# Check import paths
-python -c "import services.api_gateway.main"
-```
-
-#### 3. Environment issues
-```bash
-# Verify environment
-.\dev.bat setup
-```
-
-#### 4. PowerShell execution policy
-```powershell
-# If you get execution policy errors
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### Getting Help
-- **Documentation**: Check [docs/](docs/) directory
-- **Issues**: Create [GitHub issue](https://github.com/your-org/universal-knowledge-hub/issues)
-- **Discussions**: Use [GitHub Discussions](https://github.com/your-org/universal-knowledge-hub/discussions)
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 🆘 Support
 
-- Built with FastAPI, Next.js, and modern Python
-- Follows MAANG-level engineering practices
-- Comprehensive testing and monitoring
-- Production-ready microservices architecture
+- 📖 [Documentation](docs/)
+- 🐛 [Issue Tracker](https://github.com/akashc1512/sarvanom/issues)
+- 💬 [Discussions](https://github.com/akashc1512/sarvanom/discussions)
+
+## 🏆 Acknowledgments
+
+- Built with FastAPI, Next.js, and modern AI technologies
+- Vector database integrations with Pinecone, Elasticsearch, Qdrant, and Neo4j
+- Real-time collaboration powered by WebSockets
+- Enterprise-grade security and monitoring
+
+---
+
+**SarvanOM** - Your Own Knowledge Hub Powered by AI 🚀
