@@ -77,12 +77,12 @@ groups:
       - record: redis:hit_rate
         expr: rate(redis_keyspace_hits_total[5m]) / (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]))
 
-      # Elasticsearch Metrics
-      - record: elasticsearch:query_rate
-        expr: rate(elasticsearch_indices_search_query_total[5m])
+      # Meilisearch Metrics
+- record: meilisearch:query_rate
+  expr: rate(meilisearch_http_requests_total{method="POST", path="/indexes/*/search"}[5m])
 
-      - record: elasticsearch:index_rate
-        expr: rate(elasticsearch_indices_indexing_index_total[5m])
+- record: meilisearch:index_rate
+  expr: rate(meilisearch_http_requests_total{method="POST", path="/indexes/*/documents"}[5m])
 
       # Vector Database Metrics
       - record: qdrant:search_rate

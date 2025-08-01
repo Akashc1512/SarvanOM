@@ -484,17 +484,17 @@ def security_tester() -> SecurityTester:
 def mock_external_services():
     """Mock external services for testing."""
     with patch("api.health_checks.check_vector_db") as mock_vector_db, \
-         patch("api.health_checks.check_elasticsearch") as mock_elasticsearch, \
+         patch("api.health_checks.check_meilisearch") as mock_meilisearch, \
          patch("api.health_checks.check_redis") as mock_redis:
         
         # Configure mocks
         mock_vector_db.return_value = {"status": "healthy", "response_time": 0.1}
-        mock_elasticsearch.return_value = {"status": "healthy", "response_time": 0.1}
+        mock_meilisearch.return_value = {"status": "healthy", "response_time": 0.1}
         mock_redis.return_value = {"status": "healthy", "response_time": 0.1}
         
         yield {
             "vector_db": mock_vector_db,
-            "elasticsearch": mock_elasticsearch,
+            "meilisearch": mock_meilisearch,
             "redis": mock_redis
         }
 

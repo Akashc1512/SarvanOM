@@ -50,21 +50,21 @@ def check_service_availability() -> Dict[str, bool]:
             'note': "Redis not configured"
         }
     
-    # Check Elasticsearch
-    es_url = os.getenv('ELASTICSEARCH_URL', '')
-    if es_url and not any(p in es_url for p in ['your-', 'change-', 'placeholder']):
+    # Check Meilisearch
+    meili_url = os.getenv('MEILISEARCH_URL', '')
+    if meili_url and not any(p in meili_url for p in ['your-', 'change-', 'placeholder']):
         # Remove quotes if present
-        es_url = es_url.strip('"\'')
-        services['elasticsearch'] = {
+        meili_url = meili_url.strip('"\'')
+        services['meilisearch'] = {
             'available': True,
-            'url': es_url,
-            'note': "Elasticsearch configured"
+            'url': meili_url,
+            'note': "Meilisearch configured"
         }
     else:
-        services['elasticsearch'] = {
+        services['meilisearch'] = {
             'available': False,
             'url': None,
-            'note': "Elasticsearch not configured"
+            'note': "Meilisearch not configured"
         }
     
     # Check Pinecone
@@ -94,18 +94,19 @@ def check_service_availability() -> Dict[str, bool]:
             'note': "Qdrant not configured"
         }
     
-    # Check Neo4j
-    neo4j_uri = os.getenv('NEO4J_URI', '')
-    if neo4j_uri and not any(p in neo4j_uri for p in ['your-', 'change-', 'placeholder']):
-        services['neo4j'] = {
+    # Check ArangoDB
+    arango_url = os.getenv('ARANGO_URL', '')
+    if arango_url and not any(p in arango_url for p in ['your-', 'change-', 'placeholder']):
+        services['arangodb'] = {
             'available': True,
-            'uri': neo4j_uri,
-            'note': "Neo4j configured"
+            'url': arango_url,
+            'note': "ArangoDB configured"
         }
     else:
-        services['neo4j'] = {
+        services['arangodb'] = {
             'available': False,
-            'note': "Neo4j not configured"
+            'url': None,
+            'note': "ArangoDB not configured"
         }
     
     return services
@@ -118,9 +119,9 @@ def generate_config_overrides(services: Dict[str, bool]) -> Dict[str, any]:
                 'enabled': services.get('redis', {}).get('available', False),
                 'url': services.get('redis', {}).get('url', None)
             },
-            'elasticsearch': {
-                'enabled': services.get('elasticsearch', {}).get('available', False),
-                'url': services.get('elasticsearch', {}).get('url', None)
+            'meilisearch': {
+                'enabled': services.get('meilisearch', {}).get('available', False),
+                'url': services.get('meilisearch', {}).get('url', None)
             },
             'pinecone': {
                 'enabled': services.get('pinecone', {}).get('available', False)
@@ -129,9 +130,9 @@ def generate_config_overrides(services: Dict[str, bool]) -> Dict[str, any]:
                 'enabled': services.get('qdrant', {}).get('available', False),
                 'url': services.get('qdrant', {}).get('url', None)
             },
-            'neo4j': {
-                'enabled': services.get('neo4j', {}).get('available', False),
-                'uri': services.get('neo4j', {}).get('uri', None)
+            'arangodb': {
+                'enabled': services.get('arangodb', {}).get('available', False),
+                'url': services.get('arangodb', {}).get('url', None)
             }
         },
         'features': {
@@ -139,9 +140,9 @@ def generate_config_overrides(services: Dict[str, bool]) -> Dict[str, any]:
             'vector_search': any([
                 services.get('pinecone', {}).get('available', False),
                 services.get('qdrant', {}).get('available', False),
-                services.get('elasticsearch', {}).get('available', False)
+                services.get('meilisearch', {}).get('available', False)
             ]),
-            'knowledge_graph': services.get('neo4j', {}).get('available', False)
+            'knowledge_graph': services.get('arangodb', {}).get('available', False)
         }
     }
     
@@ -216,7 +217,7 @@ def main():
         print("⚠️  No vector database configured. Consider setting up:")
         print("   - Pinecone (cloud-based, easy setup)")
         print("   - Qdrant (self-hosted or cloud)")
-        print("   - Elasticsearch (if you already have it)")
+        print("   - Meilisearch (if you already have it)")
     
     if not config['features']['caching']:
         print("⚠️  No caching configured. Consider setting up Redis for better performance.")

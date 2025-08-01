@@ -568,7 +568,7 @@ class TestAPIHealthAndMonitoring:
         
         # Verify mock services were called
         mock_external_services["vector_db"].assert_called()
-        mock_external_services["elasticsearch"].assert_called()
+        mock_external_services["meilisearch"].assert_called()
         mock_external_services["redis"].assert_called()
 
 class TestAPICaching:

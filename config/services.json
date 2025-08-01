@@ -2,11 +2,11 @@
   "services": {
     "redis": {
       "enabled": true,
-      "url": "redis://clustercfg.ukp-redis.adjkvz.use1.cache.amazonaws.com:6379"
+      "url": "redis://localhost:6379"
     },
-    "elasticsearch": {
+    "meilisearch": {
       "enabled": true,
-      "url": "\u201dhttps://my-elasticsearch-project-acc841.es.us-east-1.aws.elastic.cloud:443\u201d"
+      "url": "http://localhost:7700"
     },
     "pinecone": {
       "enabled": true
@@ -15,108 +15,14 @@
       "enabled": true,
       "url": "http://localhost:6333"
     },
-    "neo4j": {
+    "arangodb": {
       "enabled": true,
-      "uri": "neo4j+s://a0cd8cf2.databases.neo4j.io"
+      "url": "http://localhost:8529"
     }
   },
   "features": {
     "caching": true,
     "vector_search": true,
-    "knowledge_graph": true,
-    "query_intelligence": {
-      "enabled": true,
-      "intent_classification": true,
-      "complexity_scoring": true,
-      "domain_detection": true,
-      "query_fingerprinting": true,
-      "cache_similarity_threshold": 0.85
-    },
-    "multi_agent_orchestration": {
-      "enabled": true,
-      "primary_llm_provider": "openai",
-      "fallback_llm_provider": "anthropic",
-      "circuit_breaker_threshold": 5,
-      "routing_strategy": "hybrid",
-      "available_models": [
-        "gpt-4",
-        "gpt-3.5-turbo",
-        "claude-3-opus",
-        "claude-3-sonnet",
-        "gemini-pro"
-      ]
-    },
-    "hybrid_retrieval": {
-      "enabled": true,
-      "vector_search": true,
-      "knowledge_graph": true,
-      "wikipedia": true,
-      "wikidata": true,
-      "fusion_strategy": "weighted",
-      "source_weights": {
-        "vector": 0.35,
-        "knowledge_graph": 0.25,
-        "wikipedia": 0.20,
-        "wikidata": 0.20
-      }
-    },
-    "memory_management": {
-      "enabled": true,
-      "short_term": {
-        "enabled": true,
-        "storage_type": "redis",
-        "ttl_seconds": 3600,
-        "max_size_mb": 100
-      },
-      "medium_term": {
-        "enabled": true,
-        "storage_type": "session",
-        "ttl_seconds": 86400,
-        "storage_path": "./session_storage"
-      },
-      "long_term": {
-        "enabled": true,
-        "storage_type": "knowledge_graph",
-        "consolidation_enabled": true,
-        "cleanup_interval_seconds": 3600
-      }
-    },
-    "expert_validation": {
-      "enabled": true,
-      "consensus_threshold": 0.7,
-      "validation_timeout_seconds": 30,
-      "cache_validation_results": true,
-      "expert_networks": [
-        "domain_expert",
-        "fact_checker",
-        "academic_expert",
-        "industry_expert",
-        "verification_expert"
-      ]
-    },
-    "monitoring": {
-      "enabled": true,
-      "metrics_enabled": true,
-      "metrics_interval_seconds": 60,
-      "metrics_retention_days": 30,
-      "alert_thresholds": {
-        "error_rate": 0.05,
-        "response_time_ms": 5000,
-        "cache_hit_rate": 0.8,
-        "consensus_accuracy": 0.9
-      }
-    }
-  },
-  "environment": {
-    "development": {
-      "debug": true,
-      "log_level": "INFO",
-      "test_mode": true
-    },
-    "production": {
-      "debug": false,
-      "log_level": "WARNING",
-      "test_mode": false
-    }
+    "knowledge_graph": true
   }
 }

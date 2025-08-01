@@ -147,80 +147,254 @@ class PromptTemplateManager:
     def _add_synthesis_templates(self):
         """Add synthesis agent templates."""
 
-        # Main synthesis template
+        # Main synthesis template with enhanced system message and citation instructions
         self.templates["synthesis_answer"] = PromptTemplate(
             name="synthesis_answer",
-            template="""You are an expert knowledge synthesis agent. Your task is to create a comprehensive, accurate, and well-structured answer based on the provided verified facts.
+            template="""You are an AI research assistant with expertise in providing accurate, well-sourced answers to questions. Your role is to synthesize information from provided documents and create comprehensive, factual responses.
 
-Query: {query}
+SYSTEM CONTEXT:
+- You are a knowledge synthesis expert working with verified facts and source documents
+- Your primary goal is to provide accurate, well-structured answers grounded in the provided evidence
+- You must cite sources for every factual claim you make
+- If you are unsure about any information, clearly state that you don't know
+- Maintain academic rigor and avoid speculation or unsupported claims
 
-Verified Facts:
-{facts}
+USER QUESTION: {query}
 
-Instructions:
-1. Synthesize the facts into a coherent, comprehensive answer
-2. Maintain accuracy and avoid speculation
-3. Structure the answer logically with clear sections
-4. Include relevant details from the facts
-5. If facts are contradictory, acknowledge the conflict
-6. If insufficient facts are available, state this clearly
-7. Use clear, professional language
-8. Provide a balanced perspective when multiple viewpoints exist
+RELEVANT DOCUMENTS:
+{documents}
+
+INSTRUCTIONS:
+1. **Answer the question directly and comprehensively** using only the provided documents
+2. **Cite the source for each fact** using the format [1], [2], etc. to reference the documents
+3. **Ground your answer in the retrieved content** - do not add information not supported by the documents
+4. **If the documents are insufficient** to answer the question completely, acknowledge this clearly
+5. **Structure your response logically** with clear sections and flow
+6. **Use clear, professional language** appropriate for the subject matter
+7. **If documents contain contradictory information**, acknowledge the conflict and present both perspectives
+8. **Keep the response concise but complete** (max {max_length} words)
+9. **Include a "Sources" section** at the end listing all referenced documents with their titles/URLs
+
+RESPONSE FORMAT:
+[Your comprehensive answer with inline citations like [1], [2], etc.]
+
+Sources:
+[1] [Document title/URL]
+[2] [Document title/URL]
+...
 
 Answer:""",
-            variables=["query", "facts"],
+            variables=["query", "documents", "max_length"],
             template_type=TemplateType.SYNTHESIS,
-            description="Main synthesis template for creating comprehensive answers",
-            max_tokens=1500,
-            temperature=0.3,
+            description="Enhanced synthesis template with explicit citation requirements and factuality guidelines",
+            max_tokens=2000,
+            temperature=0.2,
+        )
+
+        # Enhanced synthesis template with retrieval context
+        self.templates["synthesis_with_retrieval"] = PromptTemplate(
+            name="synthesis_with_retrieval",
+            template="""You are an AI research assistant tasked with answering questions based on retrieved documents and knowledge graph information. Your goal is to provide accurate, well-sourced answers that combine the best available information.
+
+SYSTEM CONTEXT:
+- You work with both retrieved documents and knowledge graph data
+- Every factual claim must be supported by the provided sources
+- Use citation placeholders [1], [2], etc. that will be processed by the CitationAgent
+- If information is unclear or contradictory, acknowledge this explicitly
+- Maintain high standards for factual accuracy and source attribution
+
+USER QUESTION: {query}
+
+RETRIEVED DOCUMENTS:
+{retrieved_docs}
+
+KNOWLEDGE GRAPH INFORMATION:
+{kg_info}
+
+INSTRUCTIONS:
+1. **Synthesize information** from both retrieved documents and knowledge graph data
+2. **Cite sources for every fact** using [1], [2], etc. format
+3. **Prioritize retrieved documents** when they contain relevant information
+4. **Use knowledge graph data** to supplement and enhance the answer
+5. **If sources conflict**, present both perspectives clearly
+6. **If information is insufficient**, state this explicitly
+7. **Structure the answer** with clear sections and logical flow
+8. **Keep response within** {max_length} words
+9. **Include source list** at the end for the CitationAgent to process
+
+RESPONSE FORMAT:
+[Comprehensive answer with inline citations]
+
+Sources:
+[1] [Document title/URL]
+[2] [Knowledge graph entity/relation]
+...
+
+Answer:""",
+            variables=["query", "retrieved_docs", "kg_info", "max_length"],
+            template_type=TemplateType.SYNTHESIS,
+            description="Synthesis template for combining retrieved documents and knowledge graph data",
+            max_tokens=2000,
+            temperature=0.2,
         )
 
         # Summary synthesis template
         self.templates["synthesis_summary"] = PromptTemplate(
             name="synthesis_summary",
-            template="""You are an expert summarization agent. Create a concise summary of the provided information.
+            template="""You are an expert summarization agent. Create a concise summary of the provided information with proper source attribution.
 
-Content:
+SYSTEM CONTEXT:
+- You are creating summaries that maintain factual accuracy
+- Every key point must be traceable to a source
+- Use citation placeholders for source attribution
+- Focus on the most important and relevant information
+
+CONTENT TO SUMMARIZE:
 {content}
 
-Instructions:
-1. Create a clear, concise summary
-2. Maintain key facts and insights
-3. Use bullet points for clarity
+INSTRUCTIONS:
+1. Create a clear, concise summary of the key points
+2. Maintain factual accuracy and source attribution
+3. Use bullet points for clarity when appropriate
 4. Keep summary under {max_length} words
-5. Focus on the most important information
+5. Include citation placeholders [1], [2], etc. for key facts
+6. Focus on the most important information
+7. Maintain logical structure and flow
 
 Summary:""",
             variables=["content", "max_length"],
             template_type=TemplateType.SYNTHESIS,
-            description="Summary synthesis template",
-            max_tokens=500,
+            description="Summary synthesis template with citation requirements",
+            max_tokens=800,
             temperature=0.2,
         )
 
         # Comparative synthesis template
         self.templates["synthesis_comparison"] = PromptTemplate(
             name="synthesis_comparison",
-            template="""You are an expert comparative analysis agent. Compare and contrast the provided information.
+            template="""You are an expert comparative analysis agent. Compare and contrast the provided information with proper source attribution.
 
-Topic A: {topic_a}
-Information A: {info_a}
+SYSTEM CONTEXT:
+- You are conducting comparative analysis with high factual standards
+- All claims must be supported by the provided sources
+- Use citation placeholders for source attribution
+- Present balanced, objective comparisons
 
-Topic B: {topic_b}
-Information B: {info_b}
+TOPIC A: {topic_a}
+INFORMATION A: {info_a}
 
-Instructions:
-1. Identify key similarities and differences
-2. Provide balanced analysis
-3. Use clear comparison structure
-4. Support claims with evidence
-5. Highlight important distinctions
+TOPIC B: {topic_b}
+INFORMATION B: {info_b}
+
+INSTRUCTIONS:
+1. Identify key similarities and differences between the topics
+2. Provide balanced, objective analysis
+3. Use clear comparison structure with sections
+4. Support all claims with citations [1], [2], etc.
+5. Highlight important distinctions and implications
+6. Acknowledge any limitations in the available information
+7. Present findings in a logical, organized manner
 
 Comparative Analysis:""",
             variables=["topic_a", "info_a", "topic_b", "info_b"],
             template_type=TemplateType.SYNTHESIS,
-            description="Comparative analysis template",
-            max_tokens=1000,
+            description="Comparative analysis template with citation requirements",
+            max_tokens=1500,
+            temperature=0.2,
+        )
+
+        # Hybrid retrieval synthesis template
+        self.templates["synthesis_hybrid_retrieval"] = PromptTemplate(
+            name="synthesis_hybrid_retrieval",
+            template="""You are an AI research assistant tasked with answering questions using a combination of retrieved documents and knowledge graph information. Your goal is to provide accurate, well-sourced answers that leverage the best available information from multiple sources.
+
+SYSTEM CONTEXT:
+- You work with both retrieved documents and knowledge graph data
+- Every factual claim must be supported by the provided sources
+- Use citation placeholders [1], [2], etc. that will be processed by the CitationAgent
+- If information is unclear or contradictory, acknowledge this explicitly
+- Maintain high standards for factual accuracy and source attribution
+- Prioritize retrieved documents when they contain relevant information
+- Use knowledge graph data to supplement and enhance the answer
+
+USER QUESTION: {query}
+
+RETRIEVED DOCUMENTS:
+{retrieved_docs}
+
+KNOWLEDGE GRAPH INFORMATION:
+{kg_info}
+
+INSTRUCTIONS:
+1. **Synthesize information** from both retrieved documents and knowledge graph data
+2. **Cite sources for every fact** using [1], [2], etc. format
+3. **Prioritize retrieved documents** when they contain relevant information
+4. **Use knowledge graph data** to supplement and enhance the answer
+5. **If sources conflict**, present both perspectives clearly
+6. **If information is insufficient**, state this explicitly
+7. **Structure the answer** with clear sections and logical flow
+8. **Keep response within** {max_length} words
+9. **Include source list** at the end for the CitationAgent to process
+10. **Ground your answer in the retrieved content** - do not add information not supported by the sources
+
+RESPONSE FORMAT:
+[Comprehensive answer with inline citations]
+
+Sources:
+[1] [Document title/URL]
+[2] [Knowledge graph entity/relation]
+...
+
+Answer:""",
+            variables=["query", "retrieved_docs", "kg_info", "max_length"],
+            template_type=TemplateType.SYNTHESIS,
+            description="Hybrid retrieval synthesis template combining documents and knowledge graph data",
+            max_tokens=2000,
+            temperature=0.2,
+        )
+
+        # Fact-checking synthesis template
+        self.templates["synthesis_fact_checked"] = PromptTemplate(
+            name="synthesis_fact_checked",
+            template="""You are an AI research assistant creating answers based on fact-checked information. Your role is to synthesize verified facts into coherent, well-structured responses with proper source attribution.
+
+SYSTEM CONTEXT:
+- You are working with fact-checked information that has been verified against reliable sources
+- Every claim in your answer should be supported by verified facts
+- Use citation placeholders [1], [2], etc. for source attribution
+- If facts are contradictory, acknowledge the conflict clearly
+- Maintain high standards for factual accuracy and transparency
+- If verification is incomplete or uncertain, state this explicitly
+
+USER QUESTION: {query}
+
+VERIFIED FACTS:
+{verified_facts}
+
+INSTRUCTIONS:
+1. **Synthesize verified facts** into a comprehensive answer
+2. **Cite sources for every claim** using [1], [2], etc. format
+3. **Address the question directly** using only verified information
+4. **If facts are contradictory**, present both perspectives clearly
+5. **If verification is incomplete**, acknowledge limitations
+6. **Structure the answer** logically with clear sections
+7. **Keep response within** {max_length} words
+8. **Include confidence levels** for claims when available
+9. **Provide a source list** at the end for the CitationAgent
+
+RESPONSE FORMAT:
+[Comprehensive answer with inline citations and confidence indicators]
+
+Sources:
+[1] [Verified source with confidence level]
+[2] [Verified source with confidence level]
+...
+
+Answer:""",
+            variables=["query", "verified_facts", "max_length"],
+            template_type=TemplateType.SYNTHESIS,
+            description="Synthesis template for fact-checked information with confidence indicators",
+            max_tokens=2000,
             temperature=0.2,
         )
 
@@ -430,62 +604,150 @@ Query Analysis:
     def _add_citation_templates(self):
         """Add citation agent templates."""
 
-        # Citation generation template
+        # Enhanced citation generation template
         self.templates["citation_generation"] = PromptTemplate(
             name="citation_generation",
-            template="""You are an expert citation agent. Generate proper citations for the provided answer and sources.
+            template="""You are an expert citation agent. Process the provided answer and generate proper citations for all source references.
 
-Answer: {answer}
+SYSTEM CONTEXT:
+- You are processing answers that contain citation placeholders [1], [2], etc.
+- Your task is to replace these placeholders with proper formatted citations
+- Maintain the academic rigor and accuracy of the original content
+- Ensure all citations are complete and properly formatted
 
-Sources:
+ANSWER WITH CITATION PLACEHOLDERS:
+{answer}
+
+AVAILABLE SOURCES:
 {sources}
 
-Instructions:
-1. Identify which parts of the answer are supported by which sources
-2. Generate appropriate citations in {citation_format} format
-3. Include page numbers or timestamps when available
-4. Ensure citations are accurate and complete
-5. Use consistent citation style throughout
+CITATION FORMAT: {citation_format}
 
-Citation Format: {citation_format}
+INSTRUCTIONS:
+1. **Identify all citation placeholders** [1], [2], etc. in the answer
+2. **Match placeholders to sources** based on content relevance
+3. **Generate proper citations** in the specified format ({citation_format})
+4. **Replace placeholders** with formatted citations
+5. **Ensure citation accuracy** - verify source-content matches
+6. **Add missing citations** if facts lack proper attribution
+7. **Create a comprehensive source list** at the end
+8. **Maintain answer readability** while adding citations
 
-Citations:
-[list citations with source references]""",
+PROCESSING STEPS:
+1. Parse the answer for citation placeholders
+2. Match each placeholder to the most relevant source
+3. Generate formatted citations for each source
+4. Replace placeholders with citations
+5. Create final source list
+
+FORMATTED ANSWER WITH CITATIONS:
+[Answer with proper citations replacing placeholders]
+
+SOURCES:
+[Complete list of all referenced sources with full citations]
+
+Processed Answer:""",
             variables=["answer", "sources", "citation_format"],
             template_type=TemplateType.CITATION,
-            description="Citation generation template",
-            max_tokens=500,
+            description="Enhanced citation generation template for processing synthesis outputs",
+            max_tokens=1000,
+            temperature=0.1,
+        )
+
+        # Citation validation template
+        self.templates["citation_validation"] = PromptTemplate(
+            name="citation_validation",
+            template="""You are an expert citation validation agent. Verify that all factual claims in the answer are properly supported by the provided sources.
+
+SYSTEM CONTEXT:
+- You are validating the accuracy and completeness of citations
+- Every factual claim should have a corresponding source
+- Identify any unsupported claims or missing citations
+- Ensure citation-source matches are accurate
+
+ANSWER TO VALIDATE:
+{answer}
+
+AVAILABLE SOURCES:
+{sources}
+
+INSTRUCTIONS:
+1. **Identify all factual claims** in the answer
+2. **Check each claim** against the available sources
+3. **Verify citation accuracy** - ensure citations match sources
+4. **Flag unsupported claims** that lack proper citations
+5. **Identify missing citations** for factual statements
+6. **Assess source quality** and relevance
+7. **Provide validation report** with specific issues
+8. **Suggest improvements** for citation completeness
+
+VALIDATION REPORT:
+- Total factual claims identified: [number]
+- Claims with proper citations: [number]
+- Claims missing citations: [list]
+- Citation-source mismatches: [list]
+- Overall citation quality: [excellent/good/fair/poor]
+- Recommendations: [specific improvements needed]
+
+Validation Results:""",
+            variables=["answer", "sources"],
+            template_type=TemplateType.CITATION,
+            description="Citation validation template for quality assurance",
+            max_tokens=800,
             temperature=0.1,
         )
 
         # Source relevance scoring template
         self.templates["citation_relevance_scoring"] = PromptTemplate(
             name="citation_relevance_scoring",
-            template="""You are an expert source evaluation agent. Score the relevance of sources to the query.
+            template="""You are an expert source evaluation agent. Score the relevance and reliability of sources for the given query and answer.
 
-Query: {query}
+SYSTEM CONTEXT:
+- You are evaluating source quality and relevance
+- Consider information accuracy, completeness, and recency
+- Assess source reliability and authority
+- Provide detailed scoring with justifications
 
-Sources:
+QUERY: {query}
+
+ANSWER: {answer}
+
+SOURCES TO EVALUATE:
 {sources}
 
-Instructions:
-1. Evaluate each source's relevance to the query
-2. Score relevance from 0.0 (irrelevant) to 1.0 (highly relevant)
-3. Consider information accuracy, completeness, and recency
-4. Provide brief justification for each score
-5. Identify the most relevant sources
+INSTRUCTIONS:
+1. **Evaluate each source's relevance** to the query (0.0-1.0)
+2. **Assess source reliability** and authority
+3. **Check information accuracy** and completeness
+4. **Consider source recency** and currency
+5. **Score information quality** (0.0-1.0)
+6. **Provide detailed justifications** for each score
+7. **Identify the most relevant sources** for the query
+8. **Flag any unreliable or irrelevant sources**
 
-Relevance Scores:
-[source 1]: [score] - [justification]
-[source 2]: [score] - [justification]
+EVALUATION CRITERIA:
+- Relevance to query topic
+- Information accuracy and completeness
+- Source authority and credibility
+- Information recency and currency
+- Citation quality and formatting
+
+SOURCE SCORES:
+[Source 1]: Relevance: [score] - Reliability: [score] - Justification: [details]
+[Source 2]: Relevance: [score] - Reliability: [score] - Justification: [details]
 ...
 
-Most Relevant Sources:
-[list top 3 most relevant sources]""",
-            variables=["query", "sources"],
+TOP RECOMMENDED SOURCES:
+[list top 3-5 most relevant and reliable sources]
+
+OVERALL ASSESSMENT:
+- Average relevance score: [score]
+- Average reliability score: [score]
+- Quality recommendations: [specific improvements]""",
+            variables=["query", "answer", "sources"],
             template_type=TemplateType.CITATION,
-            description="Source relevance scoring template",
-            max_tokens=400,
+            description="Enhanced source relevance scoring template",
+            max_tokens=600,
             temperature=0.2,
         )
 

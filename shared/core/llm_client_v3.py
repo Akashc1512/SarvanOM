@@ -98,6 +98,8 @@ class LLMProvider(str, Enum):
     ANTHROPIC = "anthropic"
     AZURE = "azure"
     GOOGLE = "google"
+    OLLAMA = "ollama"  # Local models
+    HUGGINGFACE = "huggingface"  # Free API
     MOCK = "mock"  # For testing
 
 
@@ -125,6 +127,21 @@ class LLMModel(str, Enum):
     # Google models
     GEMINI_PRO = "gemini-pro"
     GEMINI_PRO_VISION = "gemini-pro-vision"
+
+    # Ollama models (Local)
+    OLLAMA_LLAMA3_2_3B = "llama3.2:3b"
+    OLLAMA_LLAMA3_2_8B = "llama3.2:8b"
+    OLLAMA_CODELLAMA_7B = "codellama:7b"
+    OLLAMA_PHI3_MINI = "phi3:mini"
+    OLLAMA_LLAMA3_2_70B = "llama3.2:70b"
+    OLLAMA_MIXTRAL_8X7B = "mixtral:8x7b"
+
+    # Hugging Face models (Free API)
+    HF_DIALOGPT_MEDIUM = "microsoft/DialoGPT-medium"
+    HF_DIALOGPT_LARGE = "microsoft/DialoGPT-large"
+    HF_DISTILGPT2 = "distilgpt2"
+    HF_GPT_NEO_125M = "EleutherAI/gpt-neo-125M"
+    HF_CODEGEN_350M = "Salesforce/codegen-350M-mono"
 
 
 class EmbeddingModel(str, Enum):
@@ -207,7 +224,7 @@ class LLMResponse:
 
 
 @dataclass
-class LLMError:
+class LLMError(Exception):
     """LLM error structure with detailed information."""
 
     error_type: str
@@ -221,6 +238,9 @@ class LLMError:
     status_code: Optional[int] = None
     error_code: Optional[str] = None
     rate_limit_info: Optional[Dict[str, Any]] = None
+
+    def __str__(self):
+        return f"{self.error_type}: {self.message} (Provider: {self.provider}, Model: {self.model})"
 
 
 @dataclass
@@ -674,6 +694,446 @@ class AnthropicProvider(LLMProviderInterface):
         )
 
 
+class OllamaProvider(LLMProviderInterface):
+    """Ollama provider for local model inference."""
+
+    def __init__(self, config: LLMConfig):
+        self.config = config
+        self.base_url = config.base_url or "http://localhost:11434"
+        self.timeout = config.timeout
+        self.session = aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=self.timeout)
+        )
+        logger.info(f"Initialized Ollama provider with base URL: {self.base_url}")
+
+    async def generate_text(self, request: LLMRequest) -> LLMResponse:
+        """Generate text using Ollama."""
+        start_time = time.time()
+        
+        try:
+            # Prepare the request payload
+            payload = {
+                "model": self.config.model,
+                "prompt": request.prompt,
+                "stream": False,
+                "options": {
+                    "temperature": request.temperature or self.config.temperature,
+                    "num_predict": request.max_tokens or self.config.max_tokens,
+                    "top_p": request.top_p or 0.9,
+                    "top_k": 40,
+                    "repeat_penalty": 1.1,
+                    "stop": request.stop_sequences or []
+                }
+            }
+
+            # Add system message if provided
+            if request.system_message:
+                payload["system"] = request.system_message
+
+            # Make the API call
+            async with self.session.post(
+                f"{self.base_url}/api/generate",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    raise LLMError(
+                        error_type="API_ERROR",
+                        message=f"Ollama API error: {response.status} - {error_text}",
+                        provider=LLMProvider.OLLAMA,
+                        model=self.config.model,
+                        status_code=response.status
+                    )
+
+                result = await response.json()
+                
+                # Extract response content
+                content = result.get("response", "")
+                if not content:
+                    raise LLMError(
+                        error_type="EMPTY_RESPONSE",
+                        message="Ollama returned empty response",
+                        provider=LLMProvider.OLLAMA,
+                        model=self.config.model,
+                        retryable=False
+                    )
+
+                # Calculate response time
+                response_time = (time.time() - start_time) * 1000
+
+                # Estimate token usage (Ollama doesn't provide exact counts)
+                estimated_tokens = len(content.split()) * 1.3  # Rough estimation
+
+                return LLMResponse(
+                    content=content,
+                    provider=LLMProvider.OLLAMA,
+                    model=self.config.model,
+                    token_usage={
+                        "prompt_tokens": len(request.prompt.split()) * 1.3,
+                        "completion_tokens": estimated_tokens,
+                        "total_tokens": len(request.prompt.split()) * 1.3 + estimated_tokens
+                    },
+                    finish_reason="stop",
+                    response_time_ms=response_time,
+                    metadata={
+                        "ollama_response": result,
+                        "estimated_tokens": True
+                    }
+                )
+
+        except aiohttp.ClientError as e:
+            raise LLMError(
+                error_type="NETWORK_ERROR",
+                message=f"Network error with Ollama: {str(e)}",
+                provider=LLMProvider.OLLAMA,
+                model=self.config.model,
+                retryable=True
+            )
+        except Exception as e:
+            raise LLMError(
+                error_type="UNKNOWN_ERROR",
+                message=f"Unexpected error with Ollama: {str(e)}",
+                provider=LLMProvider.OLLAMA,
+                model=self.config.model,
+                retryable=True
+            )
+
+    async def generate_stream(self, request: LLMRequest) -> AsyncGenerator[str, None]:
+        """Generate streaming text using Ollama."""
+        try:
+            payload = {
+                "model": self.config.model,
+                "prompt": request.prompt,
+                "stream": True,
+                "options": {
+                    "temperature": request.temperature or self.config.temperature,
+                    "num_predict": request.max_tokens or self.config.max_tokens,
+                    "top_p": request.top_p or 0.9,
+                    "top_k": 40,
+                    "repeat_penalty": 1.1,
+                    "stop": request.stop_sequences or []
+                }
+            }
+
+            if request.system_message:
+                payload["system"] = request.system_message
+
+            async with self.session.post(
+                f"{self.base_url}/api/generate",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    raise LLMError(
+                        error_type="API_ERROR",
+                        message=f"Ollama streaming API error: {response.status} - {error_text}",
+                        provider=LLMProvider.OLLAMA,
+                        model=self.config.model,
+                        status_code=response.status
+                    )
+
+                async for line in response.content:
+                    if line:
+                        try:
+                            data = json.loads(line.decode().strip())
+                            if "response" in data:
+                                yield data["response"]
+                            if data.get("done", False):
+                                break
+                        except json.JSONDecodeError:
+                            continue
+
+        except Exception as e:
+            raise LLMError(
+                error_type="STREAMING_ERROR",
+                message=f"Ollama streaming error: {str(e)}",
+                provider=LLMProvider.OLLAMA,
+                model=self.config.model,
+                retryable=True
+            )
+
+    async def create_embedding(self, text: str) -> List[float]:
+        """Create embeddings using Ollama (if supported)."""
+        try:
+            payload = {
+                "model": self.config.model,
+                "prompt": text
+            }
+
+            async with self.session.post(
+                f"{self.base_url}/api/embeddings",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status != 200:
+                    # Fallback to sentence transformers if embeddings not supported
+                    logger.warning("Ollama embeddings not supported, using fallback")
+                    return await self._create_embedding_fallback(text)
+
+                result = await response.json()
+                return result.get("embedding", [])
+
+        except Exception as e:
+            logger.warning(f"Ollama embedding failed: {e}, using fallback")
+            return await self._create_embedding_fallback(text)
+
+    async def _create_embedding_fallback(self, text: str) -> List[float]:
+        """Fallback embedding using sentence transformers."""
+        try:
+            from sentence_transformers import SentenceTransformer
+            model = SentenceTransformer('all-MiniLM-L6-v2')
+            embedding = model.encode(text)
+            return embedding.tolist()
+        except ImportError:
+            logger.error("Sentence transformers not available for embedding fallback")
+            return [0.0] * 384  # Return zero vector as last resort
+
+    def get_provider_info(self) -> Dict[str, Any]:
+        """Get Ollama provider information."""
+        return {
+            "provider": "ollama",
+            "base_url": self.base_url,
+            "model": self.config.model,
+            "capabilities": ["text_generation", "streaming", "embeddings"],
+            "cost_per_1k_tokens": 0.0,  # Free local inference
+            "rate_limits": {
+                "requests_per_minute": 1000,  # Local, no real limits
+                "tokens_per_minute": 100000
+            }
+        }
+
+    async def health_check(self) -> bool:
+        """Check Ollama service health."""
+        try:
+            async with self.session.get(f"{self.base_url}/api/tags", timeout=5) as response:
+                return response.status == 200
+        except Exception:
+            return False
+
+    def _is_retryable_error(self, error: Exception) -> bool:
+        """Check if error is retryable for Ollama."""
+        if isinstance(error, LLMError):
+            return error.retryable
+        return True  # Most Ollama errors are retryable
+
+    def _estimate_cost(self, usage) -> float:
+        """Estimate cost for Ollama (always 0)."""
+        return 0.0  # Local inference is free
+
+
+class HuggingFaceProvider(LLMProviderInterface):
+    """Hugging Face provider for free API access."""
+
+    def __init__(self, config: LLMConfig):
+        self.config = config
+        self.api_key = config.api_key
+        self.base_url = "https://api-inference.huggingface.co"
+        self.timeout = config.timeout
+        self.session = aiohttp.ClientSession(
+            timeout=aiohttp.ClientTimeout(total=self.timeout),
+            headers={"Authorization": f"Bearer {self.api_key}"}
+        )
+        logger.info(f"Initialized Hugging Face provider for model: {self.config.model}")
+
+    async def generate_text(self, request: LLMRequest) -> LLMResponse:
+        """Generate text using Hugging Face API."""
+        start_time = time.time()
+        
+        try:
+            payload = {
+                "inputs": request.prompt,
+                "parameters": {
+                    "max_new_tokens": request.max_tokens or self.config.max_tokens,
+                    "temperature": request.temperature or self.config.temperature,
+                    "top_p": request.top_p or 0.9,
+                    "do_sample": True,
+                    "return_full_text": False
+                }
+            }
+
+            async with self.session.post(
+                f"{self.base_url}/models/{self.config.model}",
+                json=payload
+            ) as response:
+                if response.status == 503:
+                    # Model is loading
+                    raise LLMError(
+                        error_type="MODEL_LOADING",
+                        message="Hugging Face model is loading, please retry",
+                        provider=LLMProvider.HUGGINGFACE,
+                        model=self.config.model,
+                        retryable=True
+                    )
+                elif response.status != 200:
+                    error_text = await response.text()
+                    raise LLMError(
+                        error_type="API_ERROR",
+                        message=f"Hugging Face API error: {response.status} - {error_text}",
+                        provider=LLMProvider.HUGGINGFACE,
+                        model=self.config.model,
+                        status_code=response.status
+                    )
+
+                result = await response.json()
+                
+                # Extract response content
+                if isinstance(result, list) and len(result) > 0:
+                    content = result[0].get("generated_text", "")
+                elif isinstance(result, dict):
+                    content = result.get("generated_text", "")
+                else:
+                    content = str(result)
+
+                if not content:
+                    raise LLMError(
+                        error_type="EMPTY_RESPONSE",
+                        message="Hugging Face returned empty response",
+                        provider=LLMProvider.HUGGINGFACE,
+                        model=self.config.model,
+                        retryable=False
+                    )
+
+                response_time = (time.time() - start_time) * 1000
+                estimated_tokens = len(content.split()) * 1.3
+
+                return LLMResponse(
+                    content=content,
+                    provider=LLMProvider.HUGGINGFACE,
+                    model=self.config.model,
+                    token_usage={
+                        "prompt_tokens": len(request.prompt.split()) * 1.3,
+                        "completion_tokens": estimated_tokens,
+                        "total_tokens": len(request.prompt.split()) * 1.3 + estimated_tokens
+                    },
+                    finish_reason="stop",
+                    response_time_ms=response_time,
+                    metadata={
+                        "huggingface_response": result,
+                        "estimated_tokens": True
+                    }
+                )
+
+        except aiohttp.ClientError as e:
+            raise LLMError(
+                error_type="NETWORK_ERROR",
+                message=f"Network error with Hugging Face: {str(e)}",
+                provider=LLMProvider.HUGGINGFACE,
+                model=self.config.model,
+                retryable=True
+            )
+        except Exception as e:
+            raise LLMError(
+                error_type="UNKNOWN_ERROR",
+                message=f"Unexpected error with Hugging Face: {str(e)}",
+                provider=LLMProvider.HUGGINGFACE,
+                model=self.config.model,
+                retryable=True
+            )
+
+    async def generate_stream(self, request: LLMRequest) -> AsyncGenerator[str, None]:
+        """Generate streaming text using Hugging Face (limited support)."""
+        # Hugging Face doesn't support streaming in the same way
+        # We'll generate the full response and yield it in chunks
+        try:
+            response = await self.generate_text(request)
+            words = response.content.split()
+            for word in words:
+                yield word + " "
+                await asyncio.sleep(0.01)  # Simulate streaming
+        except Exception as e:
+            raise LLMError(
+                error_type="STREAMING_ERROR",
+                message=f"Hugging Face streaming error: {str(e)}",
+                provider=LLMProvider.HUGGINGFACE,
+                model=self.config.model,
+                retryable=True
+            )
+
+    async def create_embedding(self, text: str) -> List[float]:
+        """Create embeddings using Hugging Face."""
+        try:
+            payload = {
+                "inputs": text
+            }
+
+            async with self.session.post(
+                f"{self.base_url}/models/sentence-transformers/all-MiniLM-L6-v2",
+                json=payload
+            ) as response:
+                if response.status != 200:
+                    raise LLMError(
+                        error_type="EMBEDDING_ERROR",
+                        message=f"Hugging Face embedding error: {response.status}",
+                        provider=LLMProvider.HUGGINGFACE,
+                        model=self.config.model,
+                        status_code=response.status
+                    )
+
+                result = await response.json()
+                if isinstance(result, list) and len(result) > 0:
+                    return result[0]
+                else:
+                    return result
+
+        except Exception as e:
+            raise LLMError(
+                error_type="EMBEDDING_ERROR",
+                message=f"Hugging Face embedding error: {str(e)}",
+                provider=LLMProvider.HUGGINGFACE,
+                model=self.config.model,
+                retryable=True
+            )
+
+    def get_provider_info(self) -> Dict[str, Any]:
+        """Get Hugging Face provider information."""
+        token_type = self._get_token_type()
+        return {
+            "provider": "huggingface",
+            "model": self.config.model,
+            "token_type": token_type,
+            "capabilities": ["text_generation", "embeddings"],
+            "cost_per_1k_tokens": 0.0,  # Free tier
+            "rate_limits": {
+                "requests_per_month": 30000,  # Free tier limit
+                "requests_per_minute": 10
+            },
+            "token_permissions": {
+                "write": token_type == "write",
+                "read": token_type in ["read", "write"],
+                "legacy": token_type == "legacy"
+            }
+        }
+
+    async def health_check(self) -> bool:
+        """Check Hugging Face API health."""
+        try:
+            async with self.session.get(f"{self.base_url}/models") as response:
+                return response.status == 200
+        except Exception:
+            return False
+    
+    def _get_token_type(self) -> str:
+        """Determine the type of token being used."""
+        if os.getenv("HUGGINGFACE_WRITE_TOKEN") == self.config.api_key:
+            return "write"
+        elif os.getenv("HUGGINGFACE_READ_TOKEN") == self.config.api_key:
+            return "read"
+        else:
+            return "legacy"  # HUGGINGFACE_API_KEY
+
+    def _is_retryable_error(self, error: Exception) -> bool:
+        """Check if error is retryable for Hugging Face."""
+        if isinstance(error, LLMError):
+            return error.retryable
+        return True
+
+    def _estimate_cost(self, usage) -> float:
+        """Estimate cost for Hugging Face (always 0)."""
+        return 0.0  # Free tier
+
+
 class MockProvider(LLMProviderInterface):
     """Mock provider for testing with realistic behavior."""
 
@@ -802,6 +1262,36 @@ class EnhancedLLMClientV3:
                 )
             )
 
+        # Ollama provider (local models)
+        if os.getenv("OLLAMA_ENABLED", "true").lower() == "true":
+            providers.append(
+                LLMConfig(
+                    provider=LLMProvider.OLLAMA,
+                    model=os.getenv("OLLAMA_MODEL", "llama3.2:3b"),
+                    api_key="",  # No API key needed for local models
+                    base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+                    timeout=60,  # Longer timeout for local models
+                )
+            )
+
+        # Hugging Face provider (free API)
+        hf_write_token = os.getenv("HUGGINGFACE_WRITE_TOKEN")
+        hf_read_token = os.getenv("HUGGINGFACE_READ_TOKEN")
+        hf_api_key = os.getenv("HUGGINGFACE_API_KEY")  # Fallback for backward compatibility
+        
+        # Use write token if available, otherwise fall back to read token or legacy API key
+        hf_token = hf_write_token or hf_read_token or hf_api_key
+        
+        if hf_token:
+            providers.append(
+                LLMConfig(
+                    provider=LLMProvider.HUGGINGFACE,
+                    model=os.getenv("HUGGINGFACE_MODEL", "microsoft/DialoGPT-medium"),
+                    api_key=hf_token,
+                    timeout=30,
+                )
+            )
+
         # Mock provider for testing
         if os.getenv("USE_MOCK_LLM", "false").lower() == "true":
             providers.append(
@@ -818,6 +1308,8 @@ class EnhancedLLMClientV3:
         provider_map = {
             LLMProvider.OPENAI: OpenAIProvider,
             LLMProvider.ANTHROPIC: AnthropicProvider,
+            LLMProvider.OLLAMA: OllamaProvider,
+            LLMProvider.HUGGINGFACE: HuggingFaceProvider,
             LLMProvider.MOCK: MockProvider,
         }
 
@@ -831,15 +1323,117 @@ class EnhancedLLMClientV3:
         else:
             logger.warning(f"Unsupported provider: {config.provider}")
 
-    async def generate_text(self, prompt: str, max_tokens: int = 512, temperature: float = 0.1) -> str:
-        """Generate text with legacy interface compatibility."""
+    async def generate_text(
+        self, 
+        prompt: str, 
+        max_tokens: int = 512, 
+        temperature: float = 0.1,
+        query: Optional[str] = None,
+        use_dynamic_selection: bool = True
+    ) -> str:
+        """
+        Generate text using the configured LLM provider with optional dynamic model selection.
+        
+        Args:
+            prompt: The prompt to send to the LLM
+            max_tokens: Maximum tokens to generate
+            temperature: Sampling temperature
+            query: Original user query for dynamic model selection
+            use_dynamic_selection: Whether to use dynamic model selection
+            
+        Returns:
+            Generated text response
+        """
+        if use_dynamic_selection and query:
+            # Use dynamic model selection
+            from shared.core.model_selector import get_model_selector
+            
+            model_selector = get_model_selector()
+            selection_result = await model_selector.select_model(query, max_tokens)
+            
+            # Create request with selected model
+            request = LLMRequest(
+                prompt=prompt,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                metadata={
+                    "selected_model": selection_result.selected_model,
+                    "model_tier": selection_result.model_tier.value,
+                    "selection_reasoning": selection_result.reasoning,
+                    "estimated_cost": selection_result.estimated_cost
+                }
+            )
+            
+            logger.info(f"Using dynamically selected model: {selection_result.selected_model} "
+                       f"({selection_result.model_tier.value}) for query: {query[:50]}...")
+            
+            # Try the selected model first, then fallbacks
+            models_to_try = [selection_result.selected_model] + selection_result.fallback_models
+            
+            for model_name in models_to_try:
+                try:
+                    # Update request with specific model
+                    request.metadata["attempted_model"] = model_name
+                    
+                    # Find the provider for this model
+                    for config in self.configs:
+                        if config.model == model_name:
+                            # Temporarily switch to this model
+                            original_model = config.model
+                            config.model = model_name
+                            
+                            try:
+                                response = await self._generate_text_with_provider(config, request)
+                                logger.info(f"Successfully used model {model_name} for query")
+                                return response.content
+                            finally:
+                                # Restore original model
+                                config.model = original_model
+                    
+                except Exception as e:
+                    logger.warning(f"Model {model_name} failed: {e}, trying next model...")
+                    continue
+            
+            # If all models fail, fall back to default behavior
+            logger.warning("All dynamically selected models failed, falling back to default")
+        
+        # Default behavior without dynamic selection
         request = LLMRequest(
             prompt=prompt,
             max_tokens=max_tokens,
             temperature=temperature
         )
+        
         response = await self._generate_text(request)
         return response.content
+
+    async def _generate_text_with_provider(self, config: LLMConfig, request: LLMRequest) -> LLMResponse:
+        """Generate text with a specific provider configuration."""
+        # Find the provider instance
+        provider = None
+        for p in self.providers:
+            if p.config.provider == config.provider:
+                provider = p
+                break
+        
+        if not provider:
+            raise LLMError(
+                error_type="provider_not_found",
+                message=f"Provider {config.provider} not found",
+                provider=config.provider,
+                model=config.model,
+                retryable=False
+            )
+        
+        # Temporarily update the provider's model
+        original_model = provider.config.model
+        provider.config.model = config.model
+        
+        try:
+            return await provider.generate_text(request)
+        finally:
+            # Restore original model
+            provider.config.model = original_model
 
     @retry(
         stop=stop_after_attempt(3),

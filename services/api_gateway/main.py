@@ -801,10 +801,15 @@ async def security_check(request: Request, call_next):
                 # )
 
                 return QueryResponse(
+                    query_id=cached_result.get("query_id", str(uuid.uuid4())),
+                    status="completed",
                     answer=cached_result.get("answer", ""),
                     confidence=cached_result.get("confidence", 0.0),
-                    citations=cached_result.get("citations", []),
-                    query_id=cached_result.get("query_id", str(uuid.uuid4())),
+                    sources=cached_result.get("citations", []),
+                    processing_time=execution_time,
+                    timestamp=datetime.now().isoformat(),
+                    tokens_used=cached_result.get("metadata", {}).get("token_usage", {}).get("total_tokens", 0),
+                    cost=cached_result.get("metadata", {}).get("cost", 0.0),
                     metadata={
                         "cache_hit": True,
                         "request_id": request_id,
@@ -987,11 +992,15 @@ async def security_check(request: Request, call_next):
             query_storage[query_id] = query_record
 
             return QueryResponse(
+                query_id=query_id,
+                status="completed",
                 answer=result.get("answer", ""),
                 confidence=result.get("confidence", 0.0),
-                citations=result.get("citations", []),
-                query_id=query_id,
+                sources=result.get("citations", []),
                 processing_time=process_time,
+                timestamp=datetime.now().isoformat(),
+                tokens_used=result.get("metadata", {}).get("token_usage", {}).get("total_tokens", 0),
+                cost=result.get("metadata", {}).get("cost", 0.0),
                 metadata={
                     "request_id": request_id,
                     "execution_time_ms": int(process_time * 1000),

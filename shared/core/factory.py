@@ -69,7 +69,7 @@ class RetrievalAgentFactory(AgentFactory):
 
         # Extract retrieval-specific configuration
         vector_db_config = config.get("vector_db", {})
-        elasticsearch_config = config.get("elasticsearch", {})
+        meilisearch_config = config.get("meilisearch", {})
         cache_config = config.get("cache", {})
 
         agent = RetrievalAgent(

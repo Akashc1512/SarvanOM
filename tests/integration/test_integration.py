@@ -169,7 +169,7 @@ class TestConfigurationIntegration(unittest.TestCase):
         self.assertIn("environment", env_config)
         self.assertIn("database", env_config)
         self.assertIn("redis", env_config)
-        self.assertIn("elasticsearch", env_config)
+        self.assertIn("meilisearch", env_config)
         self.assertIn("features", env_config)
         self.assertIn("app", env_config)
 

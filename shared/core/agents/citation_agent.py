@@ -82,7 +82,7 @@ class CitationAgent(BaseAgent):
 
     async def process_task(
         self, task: Dict[str, Any], context: QueryContext
-    ) -> Dict[str, Any]:
+    ) -> AgentResult:
         """
         Process citation task by generating proper citations for content and sources.
 
@@ -91,71 +91,184 @@ class CitationAgent(BaseAgent):
             context: Query context
 
         Returns:
-            Dictionary with cited content
+            AgentResult with cited content
         """
         start_time = time.time()
 
         try:
             # Extract task data
-            content = task.get("content", "")
+            answer = task.get("answer", "")
             sources = task.get("sources", [])
-            citation_format = task.get(
-                "format",
-                (
-                    context.citation_format
-                    if hasattr(context, "citation_format")
-                    else "academic"
-                ),
-            )
+            citation_format = task.get("citation_format", "academic")
+            citation_style = task.get("citation_style", "apa")
 
-            logger.info(f"Generating citations in {citation_format} format")
-            logger.info(f"Content length: {len(content)} characters")
+            logger.info(f"Processing citations for answer of length: {len(answer)}")
             logger.info(f"Number of sources: {len(sources)}")
 
-            # Validate input
-            if not content:
-                return {
-                    "success": False,
-                    "data": {},
-                    "error": "No content provided for citation",
-                    "confidence": 0.0,
-                }
+            # Import prompt template manager
+            from shared.core.prompt_templates import get_template_manager
+            
+            template_manager = get_template_manager()
+            
+            # Use enhanced citation generation template
+            citation_template = template_manager.get_template("citation_generation")
+            
+            # Format sources for the template
+            sources_text = ""
+            for i, source in enumerate(sources, 1):
+                if isinstance(source, dict):
+                    title = source.get("title", f"Source {i}")
+                    url = source.get("url", "")
+                    author = source.get("author", "")
+                    date = source.get("date", "")
+                    source_text = f"[{i}] {title}"
+                    if author:
+                        source_text += f" by {author}"
+                    if date:
+                        source_text += f" ({date})"
+                    if url:
+                        source_text += f" - {url}"
+                else:
+                    source_text = f"[{i}] {str(source)}"
+                sources_text += source_text + "\n"
 
-            # Generate citations
-            citations = await self._generate_citations(sources, citation_format)
-
-            # Integrate citations into content
-            cited_content = await self._integrate_citations(content, sources, citations)
-
-            processing_time = time.time() - start_time
-
-            # Create standardized citation result
-            citation_data = CitationResult(
-                cited_content=cited_content,
-                citations=citations,
-                citation_format=citation_format,
-                total_sources=len(sources),
-                metadata={
-                    "agent_id": self.agent_id,
-                    "processing_time_ms": int(processing_time * 1000),
-                },
+            # Format the citation prompt using the template
+            citation_prompt = citation_template.format(
+                answer=answer,
+                sources=sources_text,
+                citation_format=citation_format
             )
 
-            return {
-                "success": True,
-                "data": citation_data.model_dump(),
-                "confidence": 1.0,  # Citations are deterministic
-                "execution_time_ms": int(processing_time * 1000),
-            }
+            # Use LLM for citation processing with dynamic model selection
+            from shared.core.agents.llm_client import LLMClient
+            from shared.core.llm_client_v3 import LLMRequest
+
+            llm_client = LLMClient()
+
+            # Create LLMRequest with system message for citation processing
+            system_message = """You are an expert citation agent specializing in academic and professional citation formatting. Your role is to process answers containing citation placeholders and generate proper, formatted citations.
+
+Your primary responsibilities:
+- Identify all citation placeholders [1], [2], etc. in the provided answer
+- Match each placeholder to the most relevant source based on content
+- Generate proper citations in the specified format (APA, MLA, Chicago, etc.)
+- Replace placeholders with formatted citations while maintaining answer readability
+- Ensure citation accuracy by verifying source-content matches
+- Add missing citations for factual statements that lack proper attribution
+- Create a comprehensive source list at the end
+- Maintain the academic rigor and accuracy of the original content
+
+Processing guidelines:
+- Be precise and accurate in citation formatting
+- Maintain consistency throughout the document
+- Ensure all factual claims have proper source attribution
+- Handle multiple citation formats appropriately
+- Provide clear, readable citations that enhance the answer's credibility"""
+
+            llm_request = LLMRequest(
+                prompt=citation_prompt,
+                system_message=system_message,
+                max_tokens=1500,
+                temperature=0.1,  # Very low temperature for precise citation formatting
+            )
+
+            # Use dynamic model selection for citation processing
+            # For citation processing, we'll use a simpler query since it's about formatting
+            citation_query = f"Format citations in {citation_format} style"
+            
+            response = await llm_client._client.generate_text(
+                prompt=citation_prompt,
+                max_tokens=1500,
+                temperature=0.1,
+                query=citation_query,  # Pass citation-specific query for model selection
+                use_dynamic_selection=True
+            )
+
+            if response and response.strip():
+                # Extract the processed answer from the response
+                # Look for the "Processed Answer:" section
+                if "Processed Answer:" in response:
+                    processed_answer = response.split("Processed Answer:")[1].strip()
+                else:
+                    processed_answer = response.strip()
+
+                processing_time = time.time() - start_time
+
+                return AgentResult(
+                    success=True,
+                    data={
+                        "cited_answer": processed_answer,
+                        "original_answer": answer,
+                        "sources": sources,
+                        "citation_format": citation_format,
+                        "processing_time_ms": int(processing_time * 1000),
+                    },
+                    confidence=0.9,  # High confidence for citation processing
+                    execution_time_ms=int(processing_time * 1000),
+                )
+            else:
+                # Fallback to basic citation formatting
+                return self._fallback_citation_processing(answer, sources, citation_format)
 
         except Exception as e:
-            logger.error(f"Citation generation failed: {str(e)}")
-            return {
-                "success": False,
-                "data": {},
-                "error": f"Citation generation failed: {str(e)}",
-                "confidence": 0.0,
-            }
+            logger.error(f"Citation processing failed: {str(e)}")
+            return AgentResult(
+                success=False,
+                data={},
+                error=f"Citation processing failed: {str(e)}",
+                confidence=0.0,
+            )
+
+    def _fallback_citation_processing(self, answer: str, sources: List[Dict], citation_format: str) -> AgentResult:
+        """
+        Fallback citation processing when LLM is unavailable.
+
+        Args:
+            answer: Original answer with citation placeholders
+            sources: List of sources
+            citation_format: Citation format to use
+
+        Returns:
+            AgentResult with basic citation processing
+        """
+        try:
+            # Simple placeholder replacement
+            processed_answer = answer
+            
+            # Replace citation placeholders with basic citations
+            for i, source in enumerate(sources, 1):
+                if isinstance(source, dict):
+                    title = source.get("title", f"Source {i}")
+                    url = source.get("url", "")
+                    citation_text = f"({title})"
+                    if url:
+                        citation_text = f"({title}, {url})"
+                else:
+                    citation_text = f"(Source {i})"
+                
+                # Replace [i] placeholders with citations
+                processed_answer = processed_answer.replace(f"[{i}]", citation_text)
+
+            return AgentResult(
+                success=True,
+                data={
+                    "cited_answer": processed_answer,
+                    "original_answer": answer,
+                    "sources": sources,
+                    "citation_format": citation_format,
+                    "processing_time_ms": 0,
+                },
+                confidence=0.7,  # Lower confidence for fallback processing
+                execution_time_ms=0,
+            )
+        except Exception as e:
+            logger.error(f"Fallback citation processing failed: {e}")
+            return AgentResult(
+                success=False,
+                data={},
+                error=f"Fallback citation processing failed: {str(e)}",
+                confidence=0.0,
+            )
 
     async def _generate_citations(
         self, sources: List[Dict], style: str

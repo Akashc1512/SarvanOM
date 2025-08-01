@@ -192,7 +192,7 @@ class KeywordSearchStrategy(BaseSearchStrategy):
 
     async def _execute_search(self, query: SearchQuery, **kwargs) -> List[SearchResult]:
         """Execute keyword search."""
-        # In production, use Elasticsearch or similar
+        # In production, use Meilisearch or similar
         keywords = query.text.split()
 
         results = []
@@ -202,7 +202,7 @@ class KeywordSearchStrategy(BaseSearchStrategy):
                     id=f"kw_{i}",
                     content=f"Keyword match {i} for: {' '.join(keywords)}",
                     score=0.85 - i * 0.1,
-                    source="elasticsearch",
+                    source="meilisearch",
                     metadata={"match_type": "BM25", "keywords": keywords},
                     timestamp=datetime.now(),
                 )
@@ -332,7 +332,7 @@ class HybridSearchStrategy(BaseSearchStrategy):
         for result in results:
             if result.source == "vector_db":
                 result.score *= self.weights["vector"]
-            elif result.source == "elasticsearch":
+            elif result.source == "meilisearch":
                 result.score *= self.weights["keyword"]
             elif result.source == "semantic_engine":
                 result.score *= self.weights["semantic"]

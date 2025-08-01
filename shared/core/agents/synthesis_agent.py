@@ -200,14 +200,19 @@ class SynthesisAgent(BaseAgent):
         self, verified_facts: List[Dict], query: str, params: Dict[str, Any]
     ) -> str:
         """
-        Synthesize answer from verified facts using LLMClient (OpenAI or Anthropic).
+        Synthesize answer from verified facts using LLMClient with enhanced prompt templates.
         """
         if not verified_facts:
             return "I don't have enough verified information to provide a comprehensive answer."
 
         try:
-            # Build comprehensive prompt for LLM synthesis with citations
-            facts_with_sources = []
+            # Import prompt template manager
+            from shared.core.prompt_templates import get_template_manager
+            
+            template_manager = get_template_manager()
+            
+            # Format documents for the enhanced template
+            documents_with_sources = []
             for i, fact in enumerate(verified_facts, 1):
                 # Handle both dictionary and object formats
                 if hasattr(fact, "source"):
@@ -220,49 +225,57 @@ class SynthesisAgent(BaseAgent):
                     source = fact.get("source", "Unknown source")
                     claim = fact.get("claim", "")
                     confidence = fact.get("confidence", 0)
-                facts_with_sources.append(
-                    f"{i}. {claim} (Source: {source}, Confidence: {confidence:.2f})"
+                
+                documents_with_sources.append(
+                    f"[{i}] {claim}\n   Source: {source}\n   Confidence: {confidence:.2f}\n"
                 )
 
-            facts_text = "\n".join(facts_with_sources)
+            documents_text = "\n".join(documents_with_sources)
+            max_length = params.get('max_length', 1000)
 
-            synthesis_prompt = f"""
-            You are an expert assistant tasked with synthesizing a comprehensive answer based on verified facts.
+            # Use the enhanced synthesis template
+            synthesis_template = template_manager.get_template("synthesis_answer")
             
-            User Question: {query}
-            
-            Verified Facts with Sources:
-            {facts_text}
-            
-            Instructions:
-            1. Synthesize a clear, coherent, and accurate answer based on the verified facts
-            2. Address the user's question directly and comprehensively
-            3. Use only the provided verified facts - do not add information not supported by the facts
-            4. Include citations in your answer using the format [1], [2], etc. to reference the sources
-            5. If the facts are insufficient to answer the question, acknowledge this clearly
-            6. Structure your response logically and make it easy to understand
-            7. Keep the response concise but complete (max {params.get('max_length', 500)} words)
-            8. At the end, include a "Sources:" section listing all referenced sources
-            
-            Answer:"""
+            # Format the prompt using the template
+            synthesis_prompt = synthesis_template.format(
+                query=query,
+                documents=documents_text,
+                max_length=max_length
+            )
 
-            # Use LLM for synthesis
-            from shared.core.agents.llm_client import LLMClient
+            # Use LLM for synthesis with enhanced system message and dynamic model selection
+            from shared.core.llm_client_v3 import EnhancedLLMClientV3, LLMRequest
 
-            llm_client = LLMClient()
+            # Initialize the enhanced LLM client (auto-detects available providers)
+            llm_client = EnhancedLLMClientV3()
 
+            # Create LLMRequest with system message
+            system_message = """You are an AI research assistant with expertise in providing accurate, well-sourced answers to questions. Your role is to synthesize information from provided documents and create comprehensive, factual responses.
+
+Your primary responsibilities:
+- Provide accurate, well-structured answers grounded in the provided evidence
+- Cite sources for every factual claim you make using [1], [2], etc. format
+- If you are unsure about any information, clearly state that you don't know
+- Maintain academic rigor and avoid speculation or unsupported claims
+- Structure responses logically with clear sections and flow
+- If documents contain contradictory information, acknowledge the conflict and present both perspectives
+- Keep responses concise but complete and include a "Sources" section at the end"""
+
+            # Use dynamic model selection based on the original query
             response = await llm_client.generate_text(
-                synthesis_prompt,
-                max_tokens=params.get("max_length", 500),
-                temperature=0.3,  # Lower temperature for more factual responses
+                prompt=synthesis_prompt,
+                max_tokens=max_length,
+                temperature=0.2,
+                query=query,  # Pass the original query for model selection
+                use_dynamic_selection=True
             )
 
             if response and response.strip():
-                # Add sources section if not already present
+                # Ensure the response has proper structure
                 if "Sources:" not in response:
+                    # Add sources section if not present
                     sources_section = "\n\nSources:\n"
                     for i, fact in enumerate(verified_facts, 1):
-                        # Handle both dictionary and object formats
                         if hasattr(fact, "source"):
                             source = getattr(fact, "source", "Unknown source")
                         else:

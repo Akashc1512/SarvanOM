@@ -26,7 +26,7 @@ PERFORMANCE_CONFIG = {
     "default_token_budget": int(os.getenv("DEFAULT_TOKEN_BUDGET", "1000")),
     "test_users": int(os.getenv("LOCUST_USERS", "1000")),
     "confidence_threshold": float(os.getenv("CONFIDENCE_THRESHOLD", "0.7")),
-    "index_name": os.getenv("ELASTICSEARCH_INDEX", "universal-knowledge-hub"),
+    "index_name": os.getenv("MEILISEARCH_INDEX", "knowledge_base"),
 }
 
 

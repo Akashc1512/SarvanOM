@@ -63,15 +63,15 @@ groups:
           summary: "Redis is down"
           description: "Redis has been down for more than 1 minute"
 
-      - alert: ElasticsearchDown
-        expr: up{job="elasticsearch"} == 0
-        for: 1m
-        labels:
-          severity: critical
-          service: elasticsearch
-        annotations:
-          summary: "Elasticsearch is down"
-          description: "Elasticsearch has been down for more than 1 minute"
+      - alert: MeilisearchDown
+  expr: up{job="meilisearch"} == 0
+  for: 1m
+  labels:
+    severity: critical
+    service: meilisearch
+  annotations:
+    summary: "Meilisearch is down"
+    description: "Meilisearch has been down for more than 1 minute"
 
       - alert: QdrantDown
         expr: up{job="qdrant"} == 0

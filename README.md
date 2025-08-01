@@ -154,8 +154,8 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/knowledge_hub
 # Redis
 REDIS_URL=redis://localhost:6379
 
-# Elasticsearch
-ELASTICSEARCH_URL=http://localhost:9200
+# Meilisearch
+MEILISEARCH_URL=http://localhost:7700
 
 # AI Services
 OPENAI_API_KEY=your_openai_key

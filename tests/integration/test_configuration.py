@@ -211,7 +211,7 @@ class TestConfigurationManager(unittest.TestCase):
         self.assertIn("environment", env_config)
         self.assertIn("database", env_config)
         self.assertIn("redis", env_config)
-        self.assertIn("elasticsearch", env_config)
+        self.assertIn("meilisearch", env_config)
         self.assertIn("features", env_config)
         self.assertIn("app", env_config)
 
@@ -308,7 +308,7 @@ class TestConfigurationSources(unittest.TestCase):
             "DATABASE_PORT": "5432",
             "DATABASE_NAME": "test_db",
             "REDIS_HOST": "test-redis",
-            "ELASTICSEARCH_HOST": "test-es",
+            "MEILISEARCH_HOST": "test-meili",
             "DEBUG": "true",
             "LOG_LEVEL": "DEBUG",
         }.get(key, default)

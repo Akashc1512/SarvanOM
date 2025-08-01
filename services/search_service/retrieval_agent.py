@@ -1034,10 +1034,16 @@ class QueryIntelligence:
             """
 
             try:
-                from shared.core.agents.llm_client import LLMClient
+                from shared.core.llm_client_v3 import EnhancedLLMClientV3
 
-                llm_client = LLMClient()
-                response = await llm_client.generate_text(llm_prompt, max_tokens=300)
+                # Initialize the enhanced LLM client (auto-detects available providers)
+                llm_client = EnhancedLLMClientV3()
+                response = await llm_client.generate_text(
+                    prompt=llm_prompt, 
+                    max_tokens=300,
+                    query=query,  # Pass the original query for optimal model selection
+                    use_dynamic_selection=True
+                )
 
                 if response:
                     import json
@@ -2094,10 +2100,16 @@ Source: {doc.source}
             """
 
             try:
-                from shared.core.agents.llm_client import LLMClient
+                from shared.core.llm_client_v3 import EnhancedLLMClientV3
 
-                llm_client = LLMClient()
-                response = await llm_client.generate_text(llm_prompt, max_tokens=300)
+                # Initialize the enhanced LLM client (auto-detects available providers)
+                llm_client = EnhancedLLMClientV3()
+                response = await llm_client.generate_text(
+                    prompt=llm_prompt, 
+                    max_tokens=300,
+                    query=query,  # Pass the original query for optimal model selection
+                    use_dynamic_selection=True
+                )
 
                 if response:
                     # Try to parse JSON response

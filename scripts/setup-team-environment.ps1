@@ -431,20 +431,18 @@ services:
       timeout: 5s
       retries: 5
 
-  # Elasticsearch for Search
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
-    container_name: ukp-elasticsearch-dev
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  # Meilisearch for Search (Zero-budget Elasticsearch alternative)
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    container_name: ukp-meilisearch-dev
     ports:
-      - "9200:9200"
+      - "7700:7700"
+    environment:
+      - MEILI_MASTER_KEY=your-master-key-here  # Optional: for production
     volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
+      - meilisearch_data:/meili_data
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
       interval: 30s
       timeout: 10s
       retries: 5

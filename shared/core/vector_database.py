@@ -1,392 +1,346 @@
 """
-Pinecone and Neo4j integration with best practices for knowledge graphs and vector search.
+Pinecone and ArangoDB integration with best practices for knowledge graphs and vector search.
 
 This module provides:
 - Pinecone vector database integration
-- Neo4j knowledge graph integration
+- ArangoDB knowledge graph integration
 - Hybrid search capabilities
-- Optimized performance and reliability
+- Best practices for vector operations
+- Connection pooling and error handling
 """
 
 import asyncio
 import logging
-from typing import List, Dict, Any, Optional, Tuple, Union, AsyncGenerator, Generator
+import time
+from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
-from datetime import datetime, timezone
-import uuid
-import json
+from datetime import datetime
 
-import numpy as np
-# Pinecone imports only
-from neo4j import AsyncGraphDatabase
-from neo4j.exceptions import ServiceUnavailable, AuthError
+import pinecone
+from pinecone import Pinecone, ServerlessSpec
 
-import structlog
+try:
+    from arango import ArangoClient
+    ARANGO_AVAILABLE = True
+except ImportError:
+    ARANGO_AVAILABLE = False
+    logging.warning("ArangoDB driver not available. Install with: pip install python-arango")
 
-logger = structlog.get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class VectorSearchResult:
-    """Vector search result with metadata."""
-
+    """Result from vector search operation."""
     id: str
     score: float
-    payload: Dict[str, Any]
-    vector: Optional[List[float]] = None
+    metadata: Dict[str, Any]
+    content: str
 
 
 @dataclass
 class KnowledgeGraphResult:
-    """Knowledge graph query result."""
-
-    nodes: List[Dict[str, Any]]
+    """Result from knowledge graph query."""
+    entities: List[Dict[str, Any]]
     relationships: List[Dict[str, Any]]
     paths: List[List[Dict[str, Any]]]
+    query_entities: List[str]
+    confidence: float
+    processing_time_ms: float
     metadata: Dict[str, Any]
 
 
-# PineconeVectorDB class only
-
+class PineconeVectorDB:
+    """Pinecone vector database integration with best practices."""
+    
     def __init__(
         self,
-        url: str,
-        api_key: Optional[str] = None,
-        timeout: int = 30,
-        prefer_grpc: bool = True,
-    ):
-        self.url = url
-        self.api_key = api_key
-        self.timeout = timeout
-        self.prefer_grpc = prefer_grpc
-        self.client: Optional[PineconeClient] = None
-        self._connection_pool = {}
-
-    async def connect(self) -> bool:
-        """Connect to Pinecone with connection pooling."""
-        try:
-            self.client = PineconeClient(api_key=self.api_key)
-            # Test connection
-            await self._test_connection()
-            logger.info("Connected to Pinecone")
-            return True
-        except Exception as e:
-            logger.error("Failed to connect to Pinecone", error=str(e))
-            return False
-
-    async def _test_connection(self) -> None:
-        """Test Pinecone connection."""
-        try:
-            # Test Pinecone connection by listing indexes
-            indexes = self.client.list_indexes()
-            logger.debug(
-                "Pinecone connection test successful",
-                indexes_count=len(indexes),
-            )
-        except Exception as e:
-            raise ConnectionError(f"Pinecone connection test failed: {e}")
-
-    async def create_collection(
-        self,
-        collection_name: str,
-        vector_size: int = 1536,
-        distance: str = "Cosine",
-        on_disk: bool = True,
-        hnsw_config: Optional[Dict[str, Any]] = None,
-    ) -> bool:
-        """Create Pinecone index with optimized settings."""
-        try:
-            # Create Pinecone index with optimized settings
-            self.client.create_index(
-                name=collection_name,
-                dimension=vector_size,
-                metric="cosine",
-            )
-
-            logger.info(
-                "Created Pinecone index",
-                collection_name=collection_name,
-                vector_size=vector_size,
-            )
-            return True
-        except Exception as e:
-            logger.error(
-                "Failed to create Pinecone index",
-                collection_name=collection_name,
-                error=str(e),
-            )
-            return False
-
-    async def upsert_vectors(
-        self,
-        collection_name: str,
-        vectors: List[Tuple[str, List[float], Dict[str, Any]]],
-        batch_size: int = 100,
-    ) -> bool:
-        """Upsert vectors in batches for optimal performance."""
-        try:
-            for i in range(0, len(vectors), batch_size):
-                batch = vectors[i : i + batch_size]
-
-                points = []
-                for vector_id, vector, payload in batch:
-                    points.append(
-                        models.PointStruct(id=vector_id, vector=vector, payload=payload)
-                    )
-
-                self.client.upsert(collection_name=collection_name, points=points)
-
-                logger.debug(
-                    "Upserted vector batch",
-                    collection_name=collection_name,
-                    batch_size=len(batch),
-                    batch_number=i // batch_size + 1,
-                )
-
-            return True
-        except Exception as e:
-            logger.error(
-                "Failed to upsert vectors",
-                collection_name=collection_name,
-                error=str(e),
-            )
-            return False
-
-    async def search_vectors(
-        self,
-        collection_name: str,
-        query_vector: List[float],
-        limit: int = 10,
-        score_threshold: float = 0.7,
-        with_payload: bool = True,
-        with_vectors: bool = False,
-        filter_conditions: Optional[Dict[str, Any]] = None,
-    ) -> List[VectorSearchResult]:
-        """Search vectors with filtering and scoring."""
-        try:
-            # Build search filter
-            search_filter = None
-            if filter_conditions:
-                search_filter = self._build_search_filter(filter_conditions)
-
-            # Perform search
-            search_result = self.client.search(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                limit=limit,
-                score_threshold=score_threshold,
-                with_payload=with_payload,
-                with_vectors=with_vectors,
-                query_filter=search_filter,
-            )
-
-            # Convert to standardized results
-            results = []
-            for point in search_result:
-                results.append(
-                    VectorSearchResult(
-                        id=point.id,
-                        score=point.score,
-                        payload=point.payload,
-                        vector=point.vector if with_vectors else None,
-                    )
-                )
-
-            logger.debug(
-                "Vector search completed",
-                collection_name=collection_name,
-                results_count=len(results),
-                query_vector_size=len(query_vector),
-            )
-            return results
-        except Exception as e:
-            logger.error(
-                "Vector search failed", collection_name=collection_name, error=str(e)
-            )
-            return []
-
-    def _build_search_filter(self, conditions: Dict[str, Any]) -> models.Filter:
-        """Build Pinecone search filter from conditions."""
-        must_conditions = []
-        should_conditions = []
-        must_not_conditions = []
-
-        for field, condition in conditions.items():
-            if isinstance(condition, dict):
-                # Handle range conditions
-                if "gte" in condition or "lte" in condition:
-                    range_filter = {}
-                    if "gte" in condition:
-                        range_filter["gte"] = condition["gte"]
-                    if "lte" in condition:
-                        range_filter["lte"] = condition["lte"]
-                    must_conditions.append(
-                        models.FieldCondition(
-                            key=field, range=models.DatetimeRange(**range_filter)
-                        )
-                    )
-                # Handle match conditions
-                elif "match" in condition:
-                    must_conditions.append(
-                        models.FieldCondition(
-                            key=field, match=models.MatchValue(value=condition["match"])
-                        )
-                    )
-            else:
-                # Simple equality
-                must_conditions.append(
-                    models.FieldCondition(
-                        key=field, match=models.MatchValue(value=condition)
-                    )
-                )
-
-        return models.Filter(
-            must=must_conditions, should=should_conditions, must_not=must_not_conditions
-        )
-
-    async def delete_vectors(self, collection_name: str, vector_ids: List[str]) -> bool:
-        """Delete vectors by IDs."""
-        try:
-            self.client.delete(
-                collection_name=collection_name,
-                points_selector=models.PointIdsList(points=vector_ids),
-            )
-
-            logger.info(
-                "Deleted vectors",
-                collection_name=collection_name,
-                count=len(vector_ids),
-            )
-            return True
-        except Exception as e:
-            logger.error(
-                "Failed to delete vectors",
-                collection_name=collection_name,
-                error=str(e),
-            )
-            return False
-
-    async def get_collection_info(
-        self, collection_name: str
-    ) -> Optional[Dict[str, Any]]:
-        """Get collection information and statistics."""
-        try:
-            info = self.client.get_collection(collection_name)
-            stats = self.client.get_collection(collection_name)
-
-            return {
-                "name": collection_name,
-                "vector_size": info.config.params.vectors.size,
-                "distance": info.config.params.vectors.distance,
-                "points_count": stats.points_count,
-                "segments_count": stats.segments_count,
-                "config": {
-                    "on_disk": info.config.params.vectors.on_disk,
-                    "hnsw_config": info.config.params.vectors.hnsw_config,
-                },
-            }
-        except Exception as e:
-            logger.error(
-                "Failed to get collection info",
-                collection_name=collection_name,
-                error=str(e),
-            )
-            return None
-
-
-class Neo4jKnowledgeGraph:
-    """Neo4j knowledge graph integration with best practices."""
-
-    def __init__(
-        self,
-        uri: str,
-        username: str,
-        password: str,
-        database: str = "neo4j",
+        api_key: str,
+        environment: str,
+        index_name: str = "knowledge-base",
+        dimension: int = 1536,
+        metric: str = "cosine",
         max_connection_lifetime: int = 3600,
         max_connection_pool_size: int = 50,
     ):
-        self.uri = uri
+        self.api_key = api_key
+        self.environment = environment
+        self.index_name = index_name
+        self.dimension = dimension
+        self.metric = metric
+        self.max_connection_lifetime = max_connection_lifetime
+        self.max_connection_pool_size = max_connection_pool_size
+        self.pc: Optional[Pinecone] = None
+        self.index = None
+        self.connected = False
+        
+        # Initialize connection
+        asyncio.create_task(self._initialize_connection())
+    
+    async def _initialize_connection(self) -> None:
+        """Initialize Pinecone connection with connection pooling."""
+        try:
+            # Initialize Pinecone
+            self.pc = Pinecone(
+                api_key=self.api_key,
+                environment=self.environment
+            )
+            
+            # Test connection
+            await self._test_connection()
+            self.connected = True
+            logger.info("Connected to Pinecone", environment=self.environment)
+            
+        except Exception as e:
+            logger.error("Failed to connect to Pinecone", error=str(e))
+            self.connected = False
+    
+    async def _test_connection(self) -> None:
+        """Test Pinecone connection."""
+        try:
+            # List indexes to test connection
+            indexes = self.pc.list_indexes()
+            if not indexes:
+                raise ConnectionError("Pinecone connection test failed")
+                
+        except Exception as e:
+            raise ConnectionError(f"Pinecone connection test failed: {e}")
+    
+    async def create_index(self) -> bool:
+        """Create Pinecone index if it doesn't exist."""
+        try:
+            # Check if index exists
+            existing_indexes = self.pc.list_indexes()
+            
+            if self.index_name not in [idx.name for idx in existing_indexes]:
+                # Create index
+                self.pc.create_index(
+                    name=self.index_name,
+                    dimension=self.dimension,
+                    metric=self.metric,
+                    spec=ServerlessSpec(
+                        cloud="aws",
+                        region="us-west-2"
+                    )
+                )
+                logger.info("Created Pinecone index", index_name=self.index_name)
+            else:
+                logger.info("Pinecone index already exists", index_name=self.index_name)
+            
+            # Get index
+            self.index = self.pc.Index(self.index_name)
+            return True
+            
+        except Exception as e:
+            logger.error("Failed to create Pinecone index", error=str(e))
+            return False
+    
+    async def upsert_vectors(
+        self, vectors: List[Tuple[str, List[float], Dict[str, Any]]]
+    ) -> bool:
+        """Upsert vectors to Pinecone index."""
+        try:
+            if not self.index:
+                await self.create_index()
+            
+            # Prepare vectors for upsert
+            upsert_data = []
+            for vector_id, vector, metadata in vectors:
+                upsert_data.append({
+                    "id": vector_id,
+                    "values": vector,
+                    "metadata": metadata
+                })
+            
+            # Upsert in batches
+            batch_size = 100
+            for i in range(0, len(upsert_data), batch_size):
+                batch = upsert_data[i:i + batch_size]
+                self.index.upsert(vectors=batch)
+            
+            logger.info("Upserted vectors to Pinecone", count=len(vectors))
+            return True
+            
+        except Exception as e:
+            logger.error("Failed to upsert vectors to Pinecone", error=str(e))
+            return False
+    
+    async def search_vectors(
+        self,
+        query_vector: List[float],
+        top_k: int = 10,
+        filter: Optional[Dict[str, Any]] = None,
+        include_metadata: bool = True
+    ) -> List[VectorSearchResult]:
+        """Search vectors in Pinecone index."""
+        try:
+            if not self.index:
+                await self.create_index()
+            
+            # Perform search
+            search_kwargs = {
+                "vector": query_vector,
+                "top_k": top_k,
+                "include_metadata": include_metadata
+            }
+            
+            if filter:
+                search_kwargs["filter"] = filter
+            
+            results = self.index.query(**search_kwargs)
+            
+            # Parse results
+            search_results = []
+            for match in results.matches:
+                search_results.append(VectorSearchResult(
+                    id=match.id,
+                    score=match.score,
+                    metadata=match.metadata or {},
+                    content=match.metadata.get("content", "") if match.metadata else ""
+                ))
+            
+            logger.info("Searched vectors in Pinecone", results_count=len(search_results))
+            return search_results
+            
+        except Exception as e:
+            logger.error("Failed to search vectors in Pinecone", error=str(e))
+            return []
+    
+    async def delete_vectors(self, vector_ids: List[str]) -> bool:
+        """Delete vectors from Pinecone index."""
+        try:
+            if not self.index:
+                await self.create_index()
+            
+            # Delete vectors
+            self.index.delete(ids=vector_ids)
+            
+            logger.info("Deleted vectors from Pinecone", count=len(vector_ids))
+            return True
+            
+        except Exception as e:
+            logger.error("Failed to delete vectors from Pinecone", error=str(e))
+            return False
+    
+    def get_health_status(self) -> Dict[str, Any]:
+        """Get health status of Pinecone vector database."""
+        return {
+            "status": "healthy" if self.connected else "disconnected",
+            "database_type": "pinecone",
+            "index_name": self.index_name,
+            "environment": self.environment,
+            "dimension": self.dimension,
+            "metric": self.metric,
+            "last_updated": datetime.now().isoformat()
+        }
+
+
+class ArangoDBKnowledgeGraph:
+    """ArangoDB knowledge graph integration with best practices."""
+    
+    def __init__(
+        self,
+        url: str,
+        username: str,
+        password: str,
+        database: str = "knowledge_graph",
+        max_connection_lifetime: int = 3600,
+        max_connection_pool_size: int = 50,
+    ):
+        self.url = url
         self.username = username
         self.password = password
         self.database = database
         self.max_connection_lifetime = max_connection_lifetime
         self.max_connection_pool_size = max_connection_pool_size
-        self.driver: Optional[AsyncGraphDatabase] = None
-
-    async def connect(self) -> bool:
-        """Connect to Neo4j with connection pooling."""
+        self.client: Optional[ArangoClient] = None
+        self.db = None
+        self.connected = False
+        
+        # Initialize connection
+        asyncio.create_task(self._initialize_connection())
+    
+    async def _initialize_connection(self) -> None:
+        """Initialize ArangoDB connection with connection pooling."""
         try:
-            self.driver = AsyncGraphDatabase.driver(
-                self.uri,
-                auth=(self.username, self.password),
-                max_connection_lifetime=self.max_connection_lifetime,
-                max_connection_pool_size=self.max_connection_pool_size,
-            )
-
+            # Create ArangoDB client
+            self.client = ArangoClient(hosts=self.url)
+            
             # Test connection
             await self._test_connection()
-            logger.info("Connected to Neo4j", uri=self.uri)
-            return True
+            self.connected = True
+            logger.info("Connected to ArangoDB", url=self.url)
+            
         except Exception as e:
-            logger.error("Failed to connect to Neo4j", error=str(e))
-            return False
-
+            logger.error("Failed to connect to ArangoDB", error=str(e))
+            self.connected = False
+    
     async def _test_connection(self) -> None:
-        """Test Neo4j connection."""
+        """Test ArangoDB connection."""
         try:
-            async with self.driver.session(database=self.database) as session:
-                result = await session.run("RETURN 1 as test")
-                record = await result.single()
-                if record["test"] != 1:
-                    raise ConnectionError("Neo4j connection test failed")
+            # Test connection by getting server info
+            self.db = self.client.db(
+                name=self.database,
+                username=self.username,
+                password=self.password
+            )
+            
+            # Test with a simple query
+            result = self.db.aql.execute("RETURN 1")
+            if not result:
+                raise ConnectionError("ArangoDB connection test failed")
+                
         except Exception as e:
-            raise ConnectionError(f"Neo4j connection test failed: {e}")
-
+            raise ConnectionError(f"ArangoDB connection test failed: {e}")
+    
     async def create_constraints(self) -> bool:
         """Create database constraints for data integrity."""
         try:
-            constraints = [
-                "CREATE CONSTRAINT unique_user_id IF NOT EXISTS FOR (u:User) REQUIRE u.id IS UNIQUE",
-                "CREATE CONSTRAINT unique_knowledge_item_id IF NOT EXISTS FOR (k:KnowledgeItem) REQUIRE k.id IS UNIQUE",
-                "CREATE CONSTRAINT unique_concept_id IF NOT EXISTS FOR (c:Concept) REQUIRE c.id IS UNIQUE",
-                "CREATE INDEX user_email_index IF NOT EXISTS FOR (u:User) ON (u.email)",
-                "CREATE INDEX knowledge_item_type_index IF NOT EXISTS FOR (k:KnowledgeItem) ON (k.type)",
-                "CREATE INDEX concept_name_index IF NOT EXISTS FOR (c:Concept) ON (c.name)",
-            ]
-
-            async with self.driver.session(database=self.database) as session:
-                for constraint in constraints:
-                    await session.run(constraint)
-
-            logger.info("Created Neo4j constraints and indexes")
+            # Create collections if they don't exist
+            if not self.db.has_collection("entities"):
+                self.db.create_collection("entities")
+            
+            if not self.db.has_collection("relationships"):
+                self.db.create_collection("relationships", edge=True)
+            
+            # Create indexes
+            entities_collection = self.db.collection("entities")
+            relationships_collection = self.db.collection("relationships")
+            
+            # Create indexes for better performance
+            entities_collection.add_index("name", "persistent")
+            entities_collection.add_index("type", "persistent")
+            relationships_collection.add_index("type", "persistent")
+            
+            logger.info("Created ArangoDB constraints and indexes")
             return True
         except Exception as e:
-            logger.error("Failed to create Neo4j constraints", error=str(e))
+            logger.error("Failed to create ArangoDB constraints", error=str(e))
             return False
-
+    
     async def create_knowledge_node(
         self, node_id: str, node_type: str, properties: Dict[str, Any]
     ) -> bool:
-        """Create knowledge graph node."""
+        """Create knowledge graph node in ArangoDB."""
         try:
-            query = f"""
-            MERGE (n:{node_type} {{id: $node_id}})
-            SET n += $properties
-            RETURN n
-            """
-
-            async with self.driver.session(database=self.database) as session:
-                await session.run(query, node_id=node_id, properties=properties)
-
-            logger.debug("Created knowledge node", node_id=node_id, node_type=node_type)
+            entities_collection = self.db.collection("entities")
+            
+            # Create node document
+            node_doc = {
+                "_key": node_id,
+                "id": node_id,
+                "type": node_type,
+                **properties
+            }
+            
+            entities_collection.insert(node_doc, overwrite=True)
+            
+            logger.debug("Created knowledge node", node_id=node_id)
             return True
         except Exception as e:
-            logger.error(
-                "Failed to create knowledge node", node_id=node_id, error=str(e)
-            )
+            logger.error("Failed to create knowledge node", node_id=node_id, error=str(e))
             return False
-
+    
     async def create_relationship(
         self,
         from_node_id: str,
@@ -394,272 +348,263 @@ class Neo4jKnowledgeGraph:
         relationship_type: str,
         properties: Optional[Dict[str, Any]] = None,
     ) -> bool:
-        """Create relationship between nodes."""
+        """Create relationship between nodes in ArangoDB."""
         try:
-            query = f"""
-            MATCH (a {{id: $from_id}})
-            MATCH (b {{id: $to_id}})
-            MERGE (a)-[r:{relationship_type}]->(b)
-            SET r += $properties
-            RETURN r
-            """
-
-            async with self.driver.session(database=self.database) as session:
-                await session.run(
-                    query,
-                    from_id=from_node_id,
-                    to_id=to_node_id,
-                    properties=properties or {},
-                )
-
-            logger.debug(
-                "Created relationship",
-                from_id=from_node_id,
-                to_id=to_node_id,
-                relationship_type=relationship_type,
-            )
+            relationships_collection = self.db.collection("relationships")
+            
+            # Create edge document
+            edge_doc = {
+                "_from": f"entities/{from_node_id}",
+                "_to": f"entities/{to_node_id}",
+                "type": relationship_type,
+                **(properties or {})
+            }
+            
+            relationships_collection.insert(edge_doc)
+            
+            logger.debug("Created relationship", from_node=from_node_id, to_node=to_node_id, type=relationship_type)
             return True
         except Exception as e:
             logger.error("Failed to create relationship", error=str(e))
             return False
-
-    async def query_knowledge_graph(
-        self, query: str, parameters: Optional[Dict[str, Any]] = None
-    ) -> KnowledgeGraphResult:
-        """Execute Cypher query and return structured results."""
+    
+    async def query_knowledge_graph(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> KnowledgeGraphResult:
+        """Execute AQL query and return structured results."""
         try:
-            async with self.driver.session(database=self.database) as session:
-                result = await session.run(query, parameters or {})
-                records = await result.data()
-
-            # Parse results into structured format
-            nodes = []
+            if not self.db:
+                raise ConnectionError("ArangoDB not connected")
+            
+            # Execute query
+            result = self.db.aql.execute(query, parameters or {})
+            
+            # Parse results
+            entities = []
             relationships = []
             paths = []
-
-            for record in records:
-                # Extract nodes
-                for key, value in record.items():
-                    if hasattr(value, "labels"):  # Node
-                        nodes.append(
-                            {
-                                "id": value.get("id"),
-                                "labels": list(value.labels),
-                                "properties": dict(value),
-                            }
-                        )
-                    elif hasattr(value, "type"):  # Relationship
-                        relationships.append(
-                            {
-                                "id": value.get("id"),
-                                "type": value.type,
-                                "start_node": value.start_node.get("id"),
-                                "end_node": value.end_node.get("id"),
-                                "properties": dict(value),
-                            }
-                        )
-                    elif isinstance(value, list):  # Path
-                        path_nodes = []
-                        path_rels = []
-                        for item in value:
-                            if hasattr(item, "labels"):
-                                path_nodes.append(
-                                    {
-                                        "id": item.get("id"),
-                                        "labels": list(item.labels),
-                                        "properties": dict(item),
-                                    }
-                                )
-                            elif hasattr(item, "type"):
-                                path_rels.append(
-                                    {
-                                        "id": item.get("id"),
-                                        "type": item.type,
-                                        "start_node": item.start_node.get("id"),
-                                        "end_node": item.end_node.get("id"),
-                                        "properties": dict(item),
-                                    }
-                                )
-                        if path_nodes or path_rels:
-                            paths.append(
-                                {"nodes": path_nodes, "relationships": path_rels}
-                            )
-
+            
+            for record in result:
+                # Extract entities and relationships from record
+                if 'entity' in record:
+                    entities.append(record['entity'])
+                if 'relationship' in record:
+                    relationships.append(record['relationship'])
+                if 'path' in record:
+                    paths.append(record['path'])
+            
             return KnowledgeGraphResult(
-                nodes=nodes,
+                entities=entities,
                 relationships=relationships,
                 paths=paths,
-                metadata={"query": query, "parameters": parameters},
+                query_entities=[],
+                confidence=0.9 if entities or relationships else 0.3,
+                processing_time_ms=0,
+                metadata={
+                    "query": query,
+                    "parameters": parameters,
+                    "entities_found": len(entities),
+                    "relationships_found": len(relationships),
+                    "paths_found": len(paths)
+                }
             )
+            
         except Exception as e:
-            logger.error("Knowledge graph query failed", error=str(e))
-            return KnowledgeGraphResult([], [], [], {"error": str(e)})
-
-    async def find_similar_concepts(
-        self, concept_id: str, relationship_type: str = "SIMILAR_TO", limit: int = 10
-    ) -> List[Dict[str, Any]]:
-        """Find similar concepts in knowledge graph."""
-        query = f"""
-        MATCH (c1 {{id: $concept_id}})-[r:{relationship_type}]-(c2)
-        RETURN c2, r.similarity as similarity
-        ORDER BY r.similarity DESC
-        LIMIT $limit
-        """
-
-        result = await self.query_knowledge_graph(
-            query, {"concept_id": concept_id, "limit": limit}
-        )
-
-        return [
-            {
-                "concept": node["properties"],
-                "similarity": rel["properties"].get("similarity", 0.0),
-            }
-            for node, rel in zip(result.nodes, result.relationships)
-        ]
-
-    async def get_knowledge_path(
-        self, start_node_id: str, end_node_id: str, max_depth: int = 3
-    ) -> List[List[Dict[str, Any]]]:
-        """Find paths between two nodes in knowledge graph."""
-        query = f"""
-        MATCH path = (start {{id: $start_id}})-[*1..{max_depth}]-(end {{id: $end_id}})
-        RETURN path
-        ORDER BY length(path)
-        LIMIT 10
-        """
-
-        result = await self.query_knowledge_graph(
-            query, {"start_id": start_node_id, "end_id": end_node_id}
-        )
-
-        return result.paths
+            logger.error("ArangoDB query failed", error=str(e))
+            return KnowledgeGraphResult(
+                entities=[],
+                relationships=[],
+                paths=[],
+                query_entities=[],
+                confidence=0.0,
+                processing_time_ms=0,
+                metadata={"error": str(e)}
+            )
+    
+    def get_health_status(self) -> Dict[str, Any]:
+        """Get health status of ArangoDB knowledge graph."""
+        return {
+            "status": "healthy" if self.connected else "disconnected",
+            "database_type": "arangodb",
+            "url": self.url,
+            "database": self.database,
+            "last_updated": datetime.now().isoformat()
+        }
 
 
 class HybridSearchEngine:
-    """Hybrid search combining vector and knowledge graph search."""
-
-    def __init__(self, vector_db: PineconeVectorDB, knowledge_graph: Neo4jKnowledgeGraph):
+    """
+    Hybrid search engine combining vector search and knowledge graph queries.
+    
+    This engine provides:
+    - Vector similarity search via Pinecone
+    - Knowledge graph traversal via ArangoDB
+    - Combined results with relevance scoring
+    - Semantic understanding of relationships
+    """
+    
+    def __init__(self, vector_db: PineconeVectorDB, knowledge_graph: ArangoDBKnowledgeGraph):
         self.vector_db = vector_db
         self.knowledge_graph = knowledge_graph
-
+        self.logger = logging.getLogger(__name__)
+    
     async def hybrid_search(
         self,
         query: str,
         query_vector: List[float],
-        collection_name: str = "knowledge_base",
+        top_k: int = 10,
         vector_weight: float = 0.7,
         graph_weight: float = 0.3,
-        limit: int = 20,
+        filter: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
-        """Perform hybrid search combining vector and graph results."""
-        try:
-            # Vector search
-            vector_results = await self.vector_db.search_vectors(
-                collection_name=collection_name,
-                query_vector=query_vector,
-                limit=limit * 2,  # Get more for re-ranking
-                score_threshold=0.5,
-            )
-
-            # Knowledge graph search
-            graph_results = await self._search_knowledge_graph(query, limit * 2)
-
-            # Combine and re-rank results
-            combined_results = self._combine_results(
-                vector_results, graph_results, vector_weight, graph_weight
-            )
-
-            # Return top results
-            return combined_results[:limit]
-        except Exception as e:
-            logger.error("Hybrid search failed", error=str(e))
-            return []
-
-    async def _search_knowledge_graph(
-        self, query: str, limit: int
-    ) -> List[Dict[str, Any]]:
-        """Search knowledge graph for relevant concepts."""
-        # This is a simplified implementation
-        # In production, you'd use more sophisticated graph queries
-        cypher_query = """
-        MATCH (c:Concept)
-        WHERE c.name CONTAINS $query OR c.description CONTAINS $query
-        RETURN c, 0.8 as score
-        LIMIT $limit
         """
-
-        result = await self.knowledge_graph.query_knowledge_graph(
-            cypher_query, {"query": query, "limit": limit}
-        )
-
-        return [
-            {
-                "id": node["properties"].get("id"),
-                "score": 0.8,  # Simplified scoring
-                "source": "knowledge_graph",
-                "content": node["properties"].get("description", ""),
-                "metadata": node["properties"],
+        Perform hybrid search combining vector similarity and knowledge graph.
+        
+        Args:
+            query: Text query for semantic understanding
+            query_vector: Vector representation of the query
+            top_k: Number of results to return
+            vector_weight: Weight for vector similarity scores
+            graph_weight: Weight for knowledge graph relevance
+            filter: Optional filter for vector search
+            
+        Returns:
+            Combined search results with relevance scores
+        """
+        start_time = time.time()
+        
+        try:
+            # Perform vector search
+            vector_results = await self.vector_db.search_vectors(
+                query_vector=query_vector,
+                top_k=top_k * 2,  # Get more results for better combination
+                filter=filter
+            )
+            
+            # Perform knowledge graph search
+            graph_results = await self._search_knowledge_graph(query)
+            
+            # Combine results
+            combined_results = await self._combine_results(
+                vector_results=vector_results,
+                graph_results=graph_results,
+                vector_weight=vector_weight,
+                graph_weight=graph_weight
+            )
+            
+            # Sort by combined score and return top_k
+            combined_results.sort(key=lambda x: x["combined_score"], reverse=True)
+            final_results = combined_results[:top_k]
+            
+            processing_time = (time.time() - start_time) * 1000
+            
+            self.logger.info(
+                "Hybrid search completed",
+                query=query[:50],
+                vector_results=len(vector_results),
+                graph_results=len(graph_results),
+                combined_results=len(final_results),
+                processing_time_ms=processing_time
+            )
+            
+            return final_results
+            
+        except Exception as e:
+            self.logger.error("Hybrid search failed", error=str(e))
+            return []
+    
+    async def _search_knowledge_graph(self, query: str) -> List[Dict[str, Any]]:
+        """Search knowledge graph for relevant entities and relationships."""
+        try:
+            # Simple AQL query to find relevant entities
+            aql_query = """
+            FOR doc IN entities
+            FILTER CONTAINS(LOWER(doc.name), LOWER(@query)) 
+               OR CONTAINS(LOWER(doc.description), LOWER(@query))
+            RETURN {
+                id: doc._key,
+                name: doc.name,
+                type: doc.type,
+                description: doc.description,
+                score: 0.8,
+                source: 'knowledge_graph'
             }
-            for node in result.nodes
-        ]
-
-    def _combine_results(
+            LIMIT 20
+            """
+            
+            result = await self.knowledge_graph.query_knowledge_graph(
+                query=aql_query,
+                parameters={"query": query}
+            )
+            
+            return result.entities
+            
+        except Exception as e:
+            self.logger.error("Knowledge graph search failed", error=str(e))
+            return []
+    
+    async def _combine_results(
         self,
         vector_results: List[VectorSearchResult],
         graph_results: List[Dict[str, Any]],
         vector_weight: float,
-        graph_weight: float,
+        graph_weight: float
     ) -> List[Dict[str, Any]]:
-        """Combine and re-rank search results."""
-        combined = {}
-
+        """Combine vector and knowledge graph results with scoring."""
+        combined_results = []
+        
         # Process vector results
         for result in vector_results:
-            combined[result.id] = {
+            combined_results.append({
                 "id": result.id,
+                "content": result.content,
+                "metadata": result.metadata,
                 "vector_score": result.score,
                 "graph_score": 0.0,
                 "combined_score": result.score * vector_weight,
-                "content": result.payload.get("content", ""),
-                "metadata": result.payload,
-                "sources": ["vector"],
-            }
-
+                "source": "vector_search"
+            })
+        
         # Process graph results
         for result in graph_results:
-            if result["id"] in combined:
-                # Update existing result
-                combined[result["id"]]["graph_score"] = result["score"]
-                combined[result["id"]]["combined_score"] += (
-                    result["score"] * graph_weight
-                )
-                combined[result["id"]]["sources"].append("graph")
+            # Check if this entity already exists in vector results
+            existing_result = next(
+                (r for r in combined_results if r["id"] == result.get("id")), None
+            )
+            
+            if existing_result:
+                # Update existing result with graph score
+                existing_result["graph_score"] = result.get("score", 0.0)
+                existing_result["combined_score"] += result.get("score", 0.0) * graph_weight
+                existing_result["source"] = "hybrid"
             else:
-                # Add new result
-                combined[result["id"]] = {
-                    "id": result["id"],
+                # Add new result from knowledge graph
+                combined_results.append({
+                    "id": result.get("id", ""),
+                    "content": result.get("description", ""),
+                    "metadata": result,
                     "vector_score": 0.0,
-                    "graph_score": result["score"],
-                    "combined_score": result["score"] * graph_weight,
-                    "content": result["content"],
-                    "metadata": result["metadata"],
-                    "sources": ["graph"],
-                }
-
-        # Sort by combined score
-        sorted_results = sorted(
-            combined.values(), key=lambda x: x["combined_score"], reverse=True
-        )
-
-        return sorted_results
+                    "graph_score": result.get("score", 0.0),
+                    "combined_score": result.get("score", 0.0) * graph_weight,
+                    "source": "knowledge_graph"
+                })
+        
+        return combined_results
+    
+    def get_health_status(self) -> Dict[str, Any]:
+        """Get health status of hybrid search engine."""
+        return {
+            "status": "healthy" if self.vector_db.connected and self.knowledge_graph.connected else "disconnected",
+            "engine_type": "hybrid_search",
+            "vector_db_status": self.vector_db.get_health_status(),
+            "knowledge_graph_status": self.knowledge_graph.get_health_status(),
+            "last_updated": datetime.now().isoformat()
+        }
 
 
 # Export main classes
 __all__ = [
     "PineconeVectorDB",
-    "Neo4jKnowledgeGraph",
+    "ArangoDBKnowledgeGraph",
     "HybridSearchEngine",
     "VectorSearchResult",
-    "KnowledgeGraphResult",
+    "KnowledgeGraphResult"
 ]

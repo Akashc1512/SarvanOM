@@ -1,0 +1,247 @@
+{
+  "model_selection": {
+    "enabled": true,
+    "default_behavior": "dynamic",
+    "fallback_behavior": "fast",
+    "cost_optimization": {
+      "enabled": true,
+      "max_cost_per_query": 0.20,
+      "prefer_fast_models": true
+    },
+    "complexity_thresholds": {
+      "simple": {
+        "max_tokens": 1000,
+        "preferred_tier": "fast",
+        "max_cost_per_query": 0.01
+      },
+      "moderate": {
+        "max_tokens": 3000,
+        "preferred_tier": "balanced",
+        "max_cost_per_query": 0.05
+      },
+      "complex": {
+        "max_tokens": 8000,
+        "preferred_tier": "powerful",
+        "max_cost_per_query": 0.20
+      }
+    },
+    "category_preferences": {
+      "general_factual": {
+        "preferred_tier": "fast",
+        "fallback_tier": "balanced"
+      },
+      "code": {
+        "preferred_tier": "balanced",
+        "fallback_tier": "powerful"
+      },
+      "knowledge_graph": {
+        "preferred_tier": "balanced",
+        "fallback_tier": "powerful"
+      },
+      "analytical": {
+        "preferred_tier": "powerful",
+        "fallback_tier": "balanced"
+      },
+      "comparative": {
+        "preferred_tier": "balanced",
+        "fallback_tier": "powerful"
+      },
+      "procedural": {
+        "preferred_tier": "balanced",
+        "fallback_tier": "fast"
+      },
+      "creative": {
+        "preferred_tier": "powerful",
+        "fallback_tier": "balanced"
+      },
+      "opinion": {
+        "preferred_tier": "balanced",
+        "fallback_tier": "fast"
+      }
+    },
+    "model_configs": {
+      "gpt-3.5-turbo": {
+        "provider": "openai",
+        "tier": "fast",
+        "cost_per_1k_tokens": 0.0015,
+        "max_tokens": 4096,
+        "capabilities": ["general", "fast", "cost-effective"],
+        "fallback_models": ["gpt-4o-mini", "claude-3-haiku"],
+        "enabled": true
+      },
+      "gpt-4o-mini": {
+        "provider": "openai",
+        "tier": "fast",
+        "cost_per_1k_tokens": 0.00015,
+        "max_tokens": 128000,
+        "capabilities": ["general", "fast", "very-cost-effective"],
+        "fallback_models": ["gpt-3.5-turbo", "claude-3-haiku"],
+        "enabled": true
+      },
+      "claude-3-haiku": {
+        "provider": "anthropic",
+        "tier": "fast",
+        "cost_per_1k_tokens": 0.00025,
+        "max_tokens": 200000,
+        "capabilities": ["general", "fast", "cost-effective"],
+        "fallback_models": ["gpt-3.5-turbo", "gpt-4o-mini"],
+        "enabled": true
+      },
+      "gpt-4": {
+        "provider": "openai",
+        "tier": "balanced",
+        "cost_per_1k_tokens": 0.03,
+        "max_tokens": 8192,
+        "capabilities": ["general", "reasoning", "analysis"],
+        "fallback_models": ["gpt-4o", "claude-3-sonnet"],
+        "enabled": true
+      },
+      "gpt-4o": {
+        "provider": "openai",
+        "tier": "balanced",
+        "cost_per_1k_tokens": 0.005,
+        "max_tokens": 128000,
+        "capabilities": ["general", "reasoning", "analysis", "vision"],
+        "fallback_models": ["gpt-4", "claude-3-sonnet"],
+        "enabled": true
+      },
+      "claude-3-sonnet": {
+        "provider": "anthropic",
+        "tier": "balanced",
+        "cost_per_1k_tokens": 0.003,
+        "max_tokens": 200000,
+        "capabilities": ["general", "reasoning", "analysis"],
+        "fallback_models": ["gpt-4", "gpt-4o"],
+        "enabled": true
+      },
+      "gpt-4-turbo": {
+        "provider": "openai",
+        "tier": "powerful",
+        "cost_per_1k_tokens": 0.01,
+        "max_tokens": 128000,
+        "capabilities": ["general", "advanced-reasoning", "complex-analysis"],
+        "fallback_models": ["gpt-4", "claude-3-opus"],
+        "enabled": true
+      },
+      "claude-3-opus": {
+        "provider": "anthropic",
+        "tier": "powerful",
+        "cost_per_1k_tokens": 0.015,
+        "max_tokens": 200000,
+        "capabilities": ["general", "advanced-reasoning", "complex-analysis"],
+        "fallback_models": ["gpt-4-turbo", "gpt-4"],
+        "enabled": true
+      },
+      "llama3.2:3b": {
+        "provider": "ollama",
+        "tier": "fast",
+        "cost_per_1k_tokens": 0.0,
+        "max_tokens": 4096,
+        "capabilities": ["general", "fast", "cost-effective"],
+        "fallback_models": ["llama3.2:8b", "phi3:mini"],
+        "enabled": true
+      },
+      "llama3.2:8b": {
+        "provider": "ollama",
+        "tier": "balanced",
+        "cost_per_1k_tokens": 0.0,
+        "max_tokens": 8192,
+        "capabilities": ["general", "reasoning", "analysis"],
+        "fallback_models": ["llama3.2:3b", "codellama:7b"],
+        "enabled": true
+      },
+      "codellama:7b": {
+        "provider": "ollama",
+        "tier": "balanced",
+        "cost_per_1k_tokens": 0.0,
+        "max_tokens": 8192,
+        "capabilities": ["code", "reasoning", "analysis"],
+        "fallback_models": ["llama3.2:8b", "llama3.2:3b"],
+        "enabled": true
+      },
+      "phi3:mini": {
+        "provider": "ollama",
+        "tier": "fast",
+        "cost_per_1k_tokens": 0.0,
+        "max_tokens": 2048,
+        "capabilities": ["general", "fast", "very-cost-effective"],
+        "fallback_models": ["llama3.2:3b", "llama3.2:8b"],
+        "enabled": true
+      },
+      "llama3.2:70b": {
+        "provider": "ollama",
+        "tier": "powerful",
+        "cost_per_1k_tokens": 0.0,
+        "max_tokens": 16384,
+        "capabilities": ["general", "advanced-reasoning", "complex-analysis"],
+        "fallback_models": ["llama3.2:8b", "mixtral:8x7b"],
+        "enabled": true
+      },
+      "mixtral:8x7b": {
+        "provider": "ollama",
+        "tier": "powerful",
+        "cost_per_1k_tokens": 0.0,
+        "max_tokens": 16384,
+        "capabilities": ["general", "advanced-reasoning", "complex-analysis"],
+        "fallback_models": ["llama3.2:70b", "llama3.2:8b"],
+        "enabled": true
+      },
+      "microsoft/DialoGPT-medium": {
+        "provider": "huggingface",
+        "tier": "fast",
+        "cost_per_1k_tokens": 0.0,
+        "max_tokens": 1024,
+        "capabilities": ["general", "fast", "conversation"],
+        "fallback_models": ["microsoft/DialoGPT-large", "distilgpt2"],
+        "enabled": true
+      },
+      "microsoft/DialoGPT-large": {
+        "provider": "huggingface",
+        "tier": "balanced",
+        "cost_per_1k_tokens": 0.0,
+        "max_tokens": 2048,
+        "capabilities": ["general", "reasoning", "conversation"],
+        "fallback_models": ["microsoft/DialoGPT-medium", "EleutherAI/gpt-neo-125M"],
+        "enabled": true
+      },
+      "distilgpt2": {
+        "provider": "huggingface",
+        "tier": "fast",
+        "cost_per_1k_tokens": 0.0,
+        "max_tokens": 1024,
+        "capabilities": ["general", "fast", "text-generation"],
+        "fallback_models": ["microsoft/DialoGPT-medium", "EleutherAI/gpt-neo-125M"],
+        "enabled": true
+      },
+      "EleutherAI/gpt-neo-125M": {
+        "provider": "huggingface",
+        "tier": "balanced",
+        "cost_per_1k_tokens": 0.0,
+        "max_tokens": 2048,
+        "capabilities": ["general", "reasoning", "text-generation"],
+        "fallback_models": ["microsoft/DialoGPT-large", "microsoft/DialoGPT-medium"],
+        "enabled": true
+      },
+      "Salesforce/codegen-350M-mono": {
+        "provider": "huggingface",
+        "tier": "balanced",
+        "cost_per_1k_tokens": 0.0,
+        "max_tokens": 2048,
+        "capabilities": ["code", "programming", "generation"],
+        "fallback_models": ["codellama:7b", "llama3.2:8b"],
+        "enabled": true
+      }
+    },
+    "monitoring": {
+      "enabled": true,
+      "log_selections": true,
+      "track_metrics": true,
+      "max_history_size": 1000
+    },
+    "fallback_strategy": {
+      "max_retries": 3,
+      "retry_delay_ms": 1000,
+      "exponential_backoff": true
+    }
+  }
+} 

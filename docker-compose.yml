@@ -128,17 +128,22 @@ services:
     networks:
       - knowledge-hub-network
 
-  # Elasticsearch
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
-    environment:
-      - discovery.type=single-node
-      - xpack.security.enabled=false
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  # Meilisearch - Zero-budget Elasticsearch alternative
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    container_name: sarvanom-meilisearch
     ports:
-      - "9200:9200"
+      - "7700:7700"
+    environment:
+      - MEILI_MASTER_KEY=your-master-key-here  # Optional: for production
     volumes:
-      - elasticsearch_data:/usr/share/elasticsearch/data
+      - meilisearch_data:/meili_data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - knowledge-hub-network
 
@@ -181,7 +186,7 @@ services:
 
 volumes:
   redis_data:
-  elasticsearch_data:
+  meilisearch_data:
   postgres_data:
   prometheus_data:
   grafana_data:

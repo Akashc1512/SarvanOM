@@ -123,7 +123,7 @@ class VectorBackendChecker:
         self.retry_manager = RetryManager()
         
         # Initialize circuit breakers for each backend
-        for backend in ["pinecone", "elasticsearch", "qdrant", "knowledge_graph"]:
+        for backend in ["pinecone", "meilisearch", "qdrant", "knowledge_graph"]:
             self.circuit_breakers[backend] = CircuitBreaker()
     
     async def check_all_backends(self) -> Dict[str, BackendStatus]:
@@ -132,137 +132,120 @@ class VectorBackendChecker:
         
         # Check each backend with circuit breaker protection
         await self._check_pinecone()
-        await self._check_elasticsearch()
+        await self._check_meilisearch()
         await self._check_qdrant()
         await self._check_knowledge_graph()
         
         return self.results
     
     @asynccontextmanager
-    async def _get_elasticsearch_client(self, url: str, username: str = None, password: str = None):
-        """Get Elasticsearch client with proper authentication."""
+    async def _get_meilisearch_client(self, url: str, api_key: str = None):
+        """Get Meilisearch client with proper authentication."""
         try:
-            from elasticsearch import AsyncElasticsearch
+            from meilisearch import AsyncClient
             
             # Build connection parameters
             connection_params = {
-                "hosts": [url],
-                "max_retries": 3,
-                "retry_on_timeout": True,
+                "url": url,
             }
             
-            # Add authentication if provided
-            if username and password:
-                connection_params["basic_auth"] = (username, password)
-            elif username:
-                # API key authentication
-                connection_params["api_key"] = username
+            # Add API key if provided
+            if api_key:
+                connection_params["api_key"] = api_key
             
-            client = AsyncElasticsearch(**connection_params)
+            client = AsyncClient(**connection_params)
             
             try:
                 yield client
             finally:
-                await client.close()
+                await client.aclose()
                 
         except ImportError:
-            raise ImportError("Elasticsearch Python client not installed. Run: pip install elasticsearch")
+            raise ImportError("Meilisearch Python client not installed. Run: pip install meilisearch")
     
-    async def _check_elasticsearch(self):
-        """Check Elasticsearch configuration and connectivity with enhanced authentication."""
-        logger.info("🔍 Checking Elasticsearch...")
+    async def _check_meilisearch(self):
+        """Check Meilisearch configuration and connectivity with enhanced authentication."""
+        logger.info("🔍 Checking Meilisearch...")
         
         start_time = time.time()
         status = BackendStatus(
-            name="Elasticsearch",
+            name="Meilisearch",
             available=False,
             configured=False,
             reachable=False
         )
         
-        circuit_breaker = self.circuit_breakers["elasticsearch"]
+        circuit_breaker = self.circuit_breakers["meilisearch"]
         
         if not circuit_breaker.can_execute():
             status.error = "Circuit breaker is OPEN - too many recent failures"
-            self.results["elasticsearch"] = status
+            self.results["meilisearch"] = status
             return
         
         try:
             # Check environment variables with fallbacks
-            es_url = os.getenv("ELASTICSEARCH_URL")
-            es_host = os.getenv("ELASTICSEARCH_HOST", "localhost")
-            es_port = os.getenv("ELASTICSEARCH_PORT", "9200")
-            es_index = os.getenv("ELASTICSEARCH_INDEX", "knowledge-base")
+            meili_url = os.getenv("MEILISEARCH_URL")
+            meili_host = os.getenv("MEILISEARCH_HOST", "localhost")
+            meili_port = os.getenv("MEILISEARCH_PORT", "7700")
+            meili_index = os.getenv("MEILISEARCH_INDEX", "knowledge-base")
             
             # Authentication credentials
-            es_username = os.getenv("ELASTICSEARCH_USERNAME")
-            es_password = os.getenv("ELASTICSEARCH_PASSWORD")
-            es_api_key = os.getenv("ELASTICSEARCH_API_KEY")
+            meili_api_key = os.getenv("MEILISEARCH_API_KEY")
+            meili_master_key = os.getenv("MEILISEARCH_MASTER_KEY")
             
-            if not es_url:
-                es_url = f"http://{es_host}:{es_port}"
+            if not meili_url:
+                meili_url = f"http://{meili_host}:{meili_port}"
             
             status.configured = True
             
-            # Try to import Elasticsearch
+            # Try to import Meilisearch
             try:
-                from elasticsearch import AsyncElasticsearch
+                from meilisearch import AsyncClient
                 status.available = True
             except ImportError:
-                status.error = "Elasticsearch Python client not installed. Run: pip install elasticsearch"
-                self.results["elasticsearch"] = status
+                status.error = "Meilisearch Python client not installed. Run: pip install meilisearch"
+                self.results["meilisearch"] = status
                 return
             
             # Test connection with retry logic
             async def test_connection():
-                async with self._get_elasticsearch_client(
-                    es_url, 
-                    es_username or es_api_key, 
-                    es_password
-                ) as es:
+                async with self._get_meilisearch_client(
+                    meili_url, 
+                    meili_api_key or meili_master_key
+                ) as client:
                     # Test basic connectivity
-                    info = await es.info()
+                    health = await client.health()
                     
                     # Check if index exists
-                    index_exists = await es.indices.exists(index=es_index)
+                    try:
+                        index = await client.get_index(meili_index)
+                        index_exists = True
+                    except Exception:
+                        index_exists = False
                     
                     if not index_exists:
-                        logger.info(f"📝 Creating Elasticsearch index: {es_index}")
+                        logger.info(f"📝 Creating Meilisearch index: {meili_index}")
                         try:
-                            # Create index with mapping
-                            await es.indices.create(
-                                index=es_index,
-                                body={
-                                    "mappings": {
-                                        "properties": {
-                                            "content": {"type": "text"},
-                                            "embedding": {"type": "dense_vector", "dims": 1536},
-                                            "metadata": {"type": "object"}
-                                        }
-                                    }
-                                }
-                            )
-                            logger.info(f"✅ Created Elasticsearch index: {es_index}")
+                            # Create index
+                            await client.create_index(meili_index)
+                            logger.info(f"✅ Created Meilisearch index: {meili_index}")
                             index_exists = True
                         except Exception as e:
                             logger.warning(f"⚠️ Failed to create index: {e}")
                     
                     # Test a simple search
                     try:
-                        search_result = await es.search(
-                            index=es_index,
-                            body={"query": {"match_all": {}}, "size": 1}
-                        )
+                        search_result = await client.index(meili_index).search("test")
                         return {
                             "index_exists": index_exists,
-                            "cluster_info": info,
+                            "health_status": health,
                             "test_search_successful": True,
-                            "total_hits": search_result["hits"]["total"]["value"]
+                            "total_hits": len(search_result.get("hits", []))
                         }
                     except Exception as e:
                         return {
                             "index_exists": index_exists,
-                            "cluster_info": info,
+                            "health_status": health,
                             "test_search_successful": False,
                             "test_error": str(e)
                         }
@@ -279,9 +262,9 @@ class VectorBackendChecker:
             error_msg = f"Connection failed: {str(e)}"
             status.error = error_msg
             circuit_breaker.record_failure()
-            logger.error(f"❌ Elasticsearch check failed: {error_msg}")
+            logger.error(f"❌ Meilisearch check failed: {error_msg}")
         
-        self.results["elasticsearch"] = status
+        self.results["meilisearch"] = status
     
     async def _check_qdrant(self):
         """Check Qdrant configuration and connectivity with enhanced authentication."""
@@ -513,8 +496,8 @@ class VectorBackendChecker:
         self.results["pinecone"] = status
     
     async def _check_knowledge_graph(self):
-        """Check Knowledge Graph (Neo4j) configuration and connectivity with enhanced authentication."""
-        logger.info("🔍 Checking Knowledge Graph (Neo4j)...")
+        """Check Knowledge Graph (ArangoDB) configuration and connectivity with enhanced authentication."""
+        logger.info("🔍 Checking Knowledge Graph (ArangoDB)...")
         
         start_time = time.time()
         status = BackendStatus(
@@ -533,78 +516,97 @@ class VectorBackendChecker:
         
         try:
             # Check environment variables with fallbacks
-            neo4j_uri = os.getenv("NEO4J_URI")
-            neo4j_host = os.getenv("NEO4J_HOST", "localhost")
-            neo4j_port = os.getenv("NEO4J_PORT", "7687")
-            neo4j_user = os.getenv("NEO4J_USER", "neo4j")
-            neo4j_password = os.getenv("NEO4J_PASSWORD")
+            arango_url = os.getenv("ARANGO_URL")
+            arango_host = os.getenv("ARANGO_HOST", "localhost")
+            arango_port = os.getenv("ARANGO_PORT", "8529")
+            arango_user = os.getenv("ARANGO_USERNAME", "root")
+            arango_password = os.getenv("ARANGO_PASSWORD")
             
             # Additional authentication options
-            neo4j_api_key = os.getenv("NEO4J_API_KEY")
-            neo4j_database = os.getenv("NEO4J_DATABASE", "neo4j")
+            arango_database = os.getenv("ARANGO_DATABASE", "knowledge_graph")
             
-            if not neo4j_uri:
-                neo4j_uri = f"bolt://{neo4j_host}:{neo4j_port}"
+            if not arango_url:
+                arango_url = f"http://{arango_host}:{arango_port}"
             
-            if not neo4j_password and not neo4j_api_key:
-                status.error = "NEO4J_PASSWORD or NEO4J_API_KEY not set"
+            if not arango_password:
+                status.error = "ARANGO_PASSWORD not set"
                 self.results["knowledge_graph"] = status
                 return
             
             status.configured = True
             
-            # Try to import Neo4j
+            # Try to import ArangoDB
             try:
-                from neo4j import AsyncGraphDatabase
+                from arango import ArangoClient
                 status.available = True
             except ImportError:
-                status.error = "Neo4j Python driver not installed. Run: pip install neo4j"
+                status.error = "ArangoDB Python driver not installed. Run: pip install python-arango"
                 self.results["knowledge_graph"] = status
                 return
             
             # Test connection with retry logic
             async def test_connection():
-                # Build authentication
-                if neo4j_api_key:
-                    auth = ("", neo4j_api_key)  # API key authentication
-                else:
-                    auth = (neo4j_user, neo4j_password)
-                
-                driver = AsyncGraphDatabase.driver(
-                    neo4j_uri,
-                    auth=auth
-                )
+                # Build client with authentication
+                client = ArangoClient(hosts=arango_url)
                 
                 # Test basic connectivity
-                async with driver.session(database=neo4j_database) as session:
-                    result = await session.run("RETURN 1 as test")
-                    record = await result.single()
-                    test_value = record["test"]
+                db = client.db(arango_database, username=arango_user, password=arango_password)
+                
+                # Test a simple query
+                try:
+                    result = db.aql.execute("RETURN 1 as test")
+                    test_value = result.next()["test"]
                     
                     if test_value == 1:
-                        # Test a simple query
+                        # Test a simple graph query
                         try:
-                            result = await session.run("MATCH (n) RETURN count(n) as node_count")
-                            record = await result.single()
-                            node_count = record["node_count"]
+                            # Check if collections exist
+                            collections = db.collections()
+                            entities_collection = None
+                            relationships_collection = None
+                            
+                            for collection in collections:
+                                if collection["name"] == "entities":
+                                    entities_collection = collection
+                                elif collection["name"] == "relationships":
+                                    relationships_collection = collection
+                            
+                            # Create collections if they don't exist
+                            if not entities_collection:
+                                logger.info("📝 Creating ArangoDB entities collection")
+                                db.create_collection("entities")
+                            
+                            if not relationships_collection:
+                                logger.info("📝 Creating ArangoDB relationships collection")
+                                db.create_collection("relationships", edge=True)
+                            
+                            # Test a simple graph query
+                            result = db.aql.execute("FOR doc IN entities RETURN COUNT(doc)")
+                            entity_count = result.next()
                             
                             return {
                                 "connection_successful": True,
-                                "node_count": node_count,
-                                "database": neo4j_database,
+                                "entity_count": entity_count,
+                                "database": arango_database,
+                                "entities_collection_exists": entities_collection is not None,
+                                "relationships_collection_exists": relationships_collection is not None,
                                 "test_query_successful": True
                             }
                         except Exception as e:
                             return {
                                 "connection_successful": True,
-                                "database": neo4j_database,
+                                "database": arango_database,
                                 "test_query_successful": False,
                                 "test_error": str(e)
                             }
                     else:
                         raise Exception("Unexpected test result")
                 
-                await driver.close()
+                except Exception as e:
+                    return {
+                        "connection_successful": False,
+                        "test_error": str(e)
+                    }
             
             # Execute with retry logic
             details = await self.retry_manager.execute_with_retry(test_connection)
@@ -618,7 +620,7 @@ class VectorBackendChecker:
             error_msg = f"Connection failed: {str(e)}"
             status.error = error_msg
             circuit_breaker.record_failure()
-            logger.error(f"❌ Neo4j check failed: {error_msg}")
+            logger.error(f"❌ ArangoDB check failed: {error_msg}")
         
         self.results["knowledge_graph"] = status
     

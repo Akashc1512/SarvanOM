@@ -238,7 +238,7 @@ The Universal Knowledge Platform (SarvanOM) is an AI-powered knowledge hub desig
 #### **AI & ML**
 - **OpenAI**: GPT-4, Embeddings API
 - **Vector DB**: Pinecone
-- **Search**: Elasticsearch 8.15.0
+- **Search**: Meilisearch (Zero-budget Elasticsearch alternative)
 - **Caching**: Redis 5.0.1
 
 #### **Development & Testing**

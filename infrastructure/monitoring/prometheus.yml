@@ -39,9 +39,9 @@ scrape_configs:
     scrape_interval: 30s
     metrics_path: '/metrics'
 
-  - job_name: 'elasticsearch'
+  - job_name: 'meilisearch'
     static_configs:
-      - targets: ['elasticsearch:9200']
+      - targets: ['meilisearch:7700']
     metrics_path: '/_prometheus/metrics'
     scrape_interval: 30s
     scrape_timeout: 10s

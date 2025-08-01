@@ -1,0 +1,72 @@
+{
+  "timestamp": "2025-08-01T15:54:38.105286",
+  "test_summary": {
+    "total_tests": 7,
+    "successful_tests": 0,
+    "failed_tests": 7,
+    "success_rate": 0.0
+  },
+  "health_results": {
+    "basic_health": {
+      "error": "HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=10)"
+    },
+    "simple_health": {
+      "error": "HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=10)"
+    }
+  },
+  "query_results": [
+    {
+      "test_name": "Normal Query Processing",
+      "success": false,
+      "response_time": 24.617936849594116,
+      "error": "HTTP 500",
+      "response_text": "Internal Server Error"
+    },
+    {
+      "test_name": "Empty Retrieval Handling",
+      "success": false,
+      "response_time": 20.824926137924194,
+      "error": "HTTP 500",
+      "response_text": "Internal Server Error"
+    },
+    {
+      "test_name": "Complex Technical Query",
+      "success": false,
+      "response_time": 32.0408718585968,
+      "error": "HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=30)"
+    },
+    {
+      "test_name": "Very Short Query",
+      "success": false,
+      "response_time": 25.41053056716919,
+      "error": "HTTP 500",
+      "response_text": "Internal Server Error"
+    },
+    {
+      "test_name": "Very Long Query",
+      "success": false,
+      "response_time": 32.10438394546509,
+      "error": "HTTPConnectionPool(host='localhost', port=8000): Read timed out. (read timeout=30)"
+    },
+    {
+      "test_name": "Query with Special Characters",
+      "success": false,
+      "response_time": 26.978261470794678,
+      "error": "HTTP 500",
+      "response_text": "Internal Server Error"
+    },
+    {
+      "test_name": "Non-English Query",
+      "success": false,
+      "response_time": 26.394657850265503,
+      "error": "HTTP 500",
+      "response_text": "Internal Server Error"
+    }
+  ],
+  "recommendations": [
+    "Fix basic health endpoint - system may not be running properly",
+    "Low success rate - investigate pipeline issues",
+    "Empty retrieval handling not working as expected",
+    "High response times - consider performance optimization"
+  ]
+}

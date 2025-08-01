@@ -1,0 +1,71 @@
+{
+  "timestamp": "2025-08-01T16:01:03.121699",
+  "total_tests": 5,
+  "passed_tests": 4,
+  "failed_tests": 1,
+  "success_rate": "80.0%",
+  "results": [
+    {
+      "name": "QueryResponse Model Fix",
+      "success": true,
+      "duration": 2.209350347518921,
+      "error": null,
+      "details": {
+        "query_id": "test_123",
+        "status": "completed",
+        "sources_count": 2,
+        "has_timestamp": true
+      }
+    },
+    {
+      "name": "Orchestrator Improvements",
+      "success": false,
+      "duration": 0.407764196395874,
+      "error": "No module named 'shared.core.models'",
+      "details": null
+    },
+    {
+      "name": "Pipeline Error Handling",
+      "success": true,
+      "duration": 31.346099376678467,
+      "error": null,
+      "details": {
+        "has_error_handling": true,
+        "has_metadata": true,
+        "response_structure": [
+          "success",
+          "answer",
+          "confidence",
+          "citations",
+          "metadata",
+          "partial_failure",
+          "warnings"
+        ]
+      }
+    },
+    {
+      "name": "Context Passing Improvements",
+      "success": true,
+      "duration": 19.73960852622986,
+      "error": null,
+      "details": {
+        "has_context": false,
+        "has_trace_id": true,
+        "has_user_id": true
+      }
+    },
+    {
+      "name": "Response Aggregation Improvements",
+      "success": true,
+      "duration": 24.99664568901062,
+      "error": null,
+      "details": {
+        "has_answer": true,
+        "has_confidence": true,
+        "has_citations": true,
+        "has_metadata": true,
+        "has_partial_failure_info": true
+      }
+    }
+  ]
+}

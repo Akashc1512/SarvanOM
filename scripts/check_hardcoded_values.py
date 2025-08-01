@@ -26,7 +26,9 @@ def find_hardcoded_values(file_path: str) -> List[Dict[str, Any]]:
         # URLs and endpoints
         (r"http://localhost:\d+", "URL", "Database/Service URL"),
         (r"https://localhost:\d+", "URL", "Database/Service URL"),
-        (r"bolt://localhost:\d+", "URL", "Neo4j connection URL"),
+        (r"bolt://localhost:\d+", "URL", "ArangoDB connection URL"),
+        (r"neo4j://localhost:\d+", "URL", "ArangoDB connection URL"),
+        (r"http://localhost:8529", "URL", "ArangoDB connection URL"),
         (r"redis://localhost:\d+", "URL", "Redis connection URL"),
         (r"postgresql://.*@localhost:\d+", "URL", "PostgreSQL connection URL"),
         # Port numbers
@@ -35,7 +37,8 @@ def find_hardcoded_values(file_path: str) -> List[Dict[str, Any]]:
         (r":8000", "PORT", "Development port"),
         (r":6333", "PORT", "Vector DB port"),
         (r":9200", "PORT", "Elasticsearch port"),
-        (r":7687", "PORT", "Neo4j port"),
+        (r":7687", "PORT", "ArangoDB port"),
+        (r":8529", "PORT", "ArangoDB port"),
         (r":8890", "PORT", "SPARQL endpoint port"),
         (r":7200", "PORT", "Knowledge Graph port"),
         (r":6379", "PORT", "Redis port"),

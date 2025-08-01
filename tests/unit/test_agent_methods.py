@@ -330,7 +330,7 @@ class TestRetrievalAgent:
     @pytest.mark.asyncio
     async def test_keyword_search(self, retrieval_agent, sample_query):
         """Test keyword search functionality."""
-        with patch.object(retrieval_agent, '_search_elasticsearch') as mock_search:
+        with patch.object(retrieval_agent, '_search_meilisearch') as mock_search:
             mock_search.return_value = [
                 {"content": "Keyword search result", "score": 0.88}
             ]

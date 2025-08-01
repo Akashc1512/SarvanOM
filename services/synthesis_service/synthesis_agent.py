@@ -246,15 +246,18 @@ class SynthesisAgent(BaseAgent):
             
             Answer:"""
 
-            # Use LLM for synthesis
-            from shared.core.agents.llm_client import LLMClient
+            # Use LLM for synthesis with enhanced client (supports Ollama and Hugging Face)
+            from shared.core.llm_client_v3 import EnhancedLLMClientV3
 
-            llm_client = LLMClient()
+            # Initialize the enhanced LLM client (auto-detects available providers)
+            llm_client = EnhancedLLMClientV3()
 
             response = await llm_client.generate_text(
-                synthesis_prompt,
+                prompt=synthesis_prompt,
                 max_tokens=params.get("max_length", 500),
                 temperature=0.3,  # Lower temperature for more factual responses
+                query=query,  # Pass the original query for optimal model selection
+                use_dynamic_selection=True
             )
 
             if response and response.strip():

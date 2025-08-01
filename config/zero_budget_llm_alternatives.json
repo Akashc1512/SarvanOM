@@ -1,0 +1,218 @@
+{
+  "zero_budget_alternatives": {
+    "enabled": true,
+    "primary_strategy": "ollama_local",
+    "fallback_strategy": "huggingface_free",
+    "providers": {
+      "ollama": {
+        "enabled": true,
+        "base_url": "http://localhost:11434",
+        "timeout": 30,
+        "models": {
+          "fast_tier": {
+            "llama3.2:3b": {
+              "cost_per_1k_tokens": 0.0,
+              "max_tokens": 4096,
+              "capabilities": ["general", "fast", "cost-effective"],
+              "local_ram_required": "2GB",
+              "performance": "fast"
+            },
+            "phi3:mini": {
+              "cost_per_1k_tokens": 0.0,
+              "max_tokens": 2048,
+              "capabilities": ["general", "fast", "very-cost-effective"],
+              "local_ram_required": "1GB",
+              "performance": "very_fast"
+            }
+          },
+          "balanced_tier": {
+            "llama3.2:8b": {
+              "cost_per_1k_tokens": 0.0,
+              "max_tokens": 8192,
+              "capabilities": ["general", "reasoning", "analysis"],
+              "local_ram_required": "8GB",
+              "performance": "balanced"
+            },
+            "codellama:7b": {
+              "cost_per_1k_tokens": 0.0,
+              "max_tokens": 8192,
+              "capabilities": ["code", "reasoning", "analysis"],
+              "local_ram_required": "8GB",
+              "performance": "balanced"
+            }
+          },
+          "powerful_tier": {
+            "llama3.2:70b": {
+              "cost_per_1k_tokens": 0.0,
+              "max_tokens": 16384,
+              "capabilities": ["general", "advanced-reasoning", "complex-analysis"],
+              "local_ram_required": "40GB",
+              "performance": "powerful"
+            },
+            "mixtral:8x7b": {
+              "cost_per_1k_tokens": 0.0,
+              "max_tokens": 16384,
+              "capabilities": ["general", "advanced-reasoning", "complex-analysis"],
+              "local_ram_required": "32GB",
+              "performance": "powerful"
+            }
+          }
+        }
+      },
+      "huggingface": {
+        "enabled": true,
+        "api_key_required": true,
+        "free_tier_limits": {
+          "requests_per_month": 30000,
+          "requests_per_minute": 10
+        },
+        "models": {
+          "fast_tier": {
+            "microsoft/DialoGPT-medium": {
+              "cost_per_1k_tokens": 0.0,
+              "max_tokens": 1024,
+              "capabilities": ["general", "fast", "conversation"],
+              "performance": "fast"
+            },
+            "distilgpt2": {
+              "cost_per_1k_tokens": 0.0,
+              "max_tokens": 1024,
+              "capabilities": ["general", "fast", "text-generation"],
+              "performance": "fast"
+            }
+          },
+          "balanced_tier": {
+            "microsoft/DialoGPT-large": {
+              "cost_per_1k_tokens": 0.0,
+              "max_tokens": 2048,
+              "capabilities": ["general", "reasoning", "conversation"],
+              "performance": "balanced"
+            },
+            "EleutherAI/gpt-neo-125M": {
+              "cost_per_1k_tokens": 0.0,
+              "max_tokens": 2048,
+              "capabilities": ["general", "reasoning", "text-generation"],
+              "performance": "balanced"
+            }
+          },
+          "code_tier": {
+            "Salesforce/codegen-350M-mono": {
+              "cost_per_1k_tokens": 0.0,
+              "max_tokens": 2048,
+              "capabilities": ["code", "programming", "generation"],
+              "performance": "balanced"
+            }
+          }
+        }
+      },
+      "groq": {
+        "enabled": true,
+        "api_key_required": true,
+        "free_tier_limits": {
+          "requests_per_day": 10000,
+          "requests_per_minute": 100
+        },
+        "models": {
+          "fast_tier": {
+            "llama3.2:3b": {
+              "cost_per_1k_tokens": 0.0,
+              "max_tokens": 4096,
+              "capabilities": ["general", "fast", "ultra-fast"],
+              "performance": "ultra_fast"
+            }
+          },
+          "balanced_tier": {
+            "llama3.2:8b": {
+              "cost_per_1k_tokens": 0.0,
+              "max_tokens": 8192,
+              "capabilities": ["general", "reasoning", "analysis"],
+              "performance": "ultra_fast"
+            }
+          }
+        }
+      }
+    },
+    "task_mapping": {
+      "general_factual": {
+        "preferred_provider": "ollama",
+        "preferred_model": "llama3.2:3b",
+        "fallback_provider": "huggingface",
+        "fallback_model": "microsoft/DialoGPT-medium"
+      },
+      "code": {
+        "preferred_provider": "ollama",
+        "preferred_model": "codellama:7b",
+        "fallback_provider": "huggingface",
+        "fallback_model": "Salesforce/codegen-350M-mono"
+      },
+      "knowledge_graph": {
+        "preferred_provider": "ollama",
+        "preferred_model": "llama3.2:8b",
+        "fallback_provider": "huggingface",
+        "fallback_model": "microsoft/DialoGPT-large"
+      },
+      "analytical": {
+        "preferred_provider": "ollama",
+        "preferred_model": "llama3.2:70b",
+        "fallback_provider": "groq",
+        "fallback_model": "llama3.2:8b"
+      },
+      "comparative": {
+        "preferred_provider": "ollama",
+        "preferred_model": "llama3.2:8b",
+        "fallback_provider": "huggingface",
+        "fallback_model": "microsoft/DialoGPT-large"
+      },
+      "procedural": {
+        "preferred_provider": "ollama",
+        "preferred_model": "phi3:mini",
+        "fallback_provider": "huggingface",
+        "fallback_model": "distilgpt2"
+      },
+      "creative": {
+        "preferred_provider": "ollama",
+        "preferred_model": "mixtral:8x7b",
+        "fallback_provider": "groq",
+        "fallback_model": "llama3.2:8b"
+      },
+      "opinion": {
+        "preferred_provider": "ollama",
+        "preferred_model": "llama3.2:8b",
+        "fallback_provider": "huggingface",
+        "fallback_model": "microsoft/DialoGPT-large"
+      }
+    },
+    "deployment_guide": {
+      "ollama_setup": {
+        "install_command": "curl -fsSL https://ollama.ai/install.sh | sh",
+        "required_models": [
+          "ollama pull llama3.2:3b",
+          "ollama pull llama3.2:8b",
+          "ollama pull codellama:7b",
+          "ollama pull phi3:mini"
+        ],
+        "system_requirements": {
+          "minimum_ram": "8GB",
+          "recommended_ram": "16GB",
+          "storage": "10GB free space"
+        }
+      },
+      "huggingface_setup": {
+        "api_key_url": "https://huggingface.co/settings/tokens",
+        "rate_limit_handling": "implement_exponential_backoff",
+        "fallback_strategy": "switch_to_ollama_on_limit"
+      },
+      "groq_setup": {
+        "api_key_url": "https://console.groq.com/keys",
+        "rate_limit_handling": "implement_circuit_breaker",
+        "fallback_strategy": "switch_to_ollama_on_limit"
+      }
+    },
+    "monitoring": {
+      "enabled": true,
+      "track_usage": true,
+      "alert_on_limits": true,
+      "performance_metrics": true
+    }
+  }
+} 

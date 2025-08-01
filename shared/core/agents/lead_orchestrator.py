@@ -24,6 +24,8 @@ from shared.core.agents.retrieval_agent import RetrievalAgent
 from shared.core.agents.factcheck_agent import FactCheckAgent
 from shared.core.agents.synthesis_agent import SynthesisAgent
 from shared.core.agents.citation_agent import CitationAgent
+from shared.core.agents.knowledge_graph_agent import KnowledgeGraphAgent
+from shared.core.query_classifier import QueryClassifier, QueryClassification, QueryCategory
 import importlib
 # Import fixes module
 lead_orchestrator_fixes = importlib.import_module("services.api_gateway.lead_orchestrator_fixes")
@@ -44,7 +46,7 @@ logger = logging.getLogger(__name__)
 class LeadOrchestrator:
     """
     Refactored LeadOrchestrator that uses proper agent implementations
-    and provides clean coordination patterns.
+    and provides clean coordination patterns with comprehensive error handling.
     """
 
     def __init__(self):
@@ -60,16 +62,38 @@ class LeadOrchestrator:
             AgentType.SYNTHESIS: SynthesisAgent(),
             AgentType.CITATION: CitationAgent(),
         }
+        
+        # Initialize specialized agents
+        self.knowledge_graph_agent = KnowledgeGraphAgent()
 
         # Initialize supporting components
         self.token_budget = TokenBudgetController()
         self.semantic_cache = SemanticCacheManager()
         self.response_aggregator = ResponseAggregator()
+        
+        # Initialize QueryClassifier for intelligent routing
+        self.query_classifier = QueryClassifier()
 
         # Initialize shutdown state tracking
         self._shutdown_initiated = False
         self._shutdown_completed = False
         self._active_tasks = {}
+
+        # Enhanced error handling configuration
+        self.retry_config = {
+            AgentType.RETRIEVAL: {"max_retries": 2, "timeout": 30, "backoff_factor": 1.5},
+            AgentType.FACT_CHECK: {"max_retries": 1, "timeout": 20, "backoff_factor": 1.0},
+            AgentType.SYNTHESIS: {"max_retries": 2, "timeout": 15, "backoff_factor": 1.5},
+            AgentType.CITATION: {"max_retries": 1, "timeout": 10, "backoff_factor": 1.0},
+        }
+
+        # Fallback strategies configuration
+        self.fallback_strategies = {
+            AgentType.RETRIEVAL: ["broaden_query", "keyword_search", "knowledge_graph"],
+            AgentType.FACT_CHECK: ["skip_verification", "basic_validation"],
+            AgentType.SYNTHESIS: ["template_response", "concatenation", "error_message"],
+            AgentType.CITATION: ["skip_citations", "basic_formatting"],
+        }
 
         logger.info("✅ LeadOrchestrator initialized successfully")
 
@@ -78,6 +102,7 @@ class LeadOrchestrator:
     ) -> Dict[str, Any]:
         """
         Main entry point for processing queries through the multi-agent pipeline.
+        Enhanced with comprehensive error handling and fallback strategies.
 
         Args:
             query: The user's question
@@ -98,106 +123,13 @@ class LeadOrchestrator:
                 "ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY"),
                 "DATABASE_URL": os.getenv("DATABASE_URL"),
                 "REDIS_URL": os.getenv("REDIS_URL"),
-                "LLM_PROVIDER": os.getenv("LLM_PROVIDER", "Not set"),
-                "OPENAI_LLM_MODEL": os.getenv("OPENAI_LLM_MODEL", "Not set"),
-                "ANTHROPIC_MODEL": os.getenv("ANTHROPIC_MODEL", "Not set"),
             }
-            
-            for var_name, var_value in env_vars.items():
-                if var_value:
-                    # Mask sensitive values for security
-                    if "KEY" in var_name or "URL" in var_name:
-                        masked_value = var_value[:8] + "..." if len(var_value) > 8 else "***"
-                        logger.info(f"  ✅ {var_name}: {masked_value}")
-                    else:
-                        logger.info(f"  ✅ {var_name}: {var_value}")
+            for key, value in env_vars.items():
+                if value:
+                    masked_value = value[:4] + "..." + value[-4:] if len(value) > 8 else "***"
+                    logger.info(f"  {key}: {masked_value}")
                 else:
-                    logger.warning(f"  ⚠️ {var_name}: NOT SET")
-
-            # SANITY CHECK: Validate critical environment variables
-            missing_critical = []
-            for var_name in ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DATABASE_URL", "REDIS_URL"]:
-                if not os.getenv(var_name):
-                    missing_critical.append(var_name)
-            
-            if missing_critical:
-                error_msg = f"Critical environment variables missing: {', '.join(missing_critical)}"
-                logger.error(f"❌ {error_msg}")
-                return {
-                    "success": False,
-                    "error": error_msg,
-                    "error_type": "configuration_error",
-                    "missing_vars": missing_critical,
-                    "suggestion": "Please check your environment configuration",
-                    "trace_id": trace_id
-                }
-
-            # DEEP DEBUG: Test LLM client initialization with detailed error surface
-            logger.info("🔍 DEEP DEBUG: Testing LLM Client Initialization")
-            try:
-                from shared.core.agents.llm_client import LLMClient
-                llm_client = LLMClient()
-                logger.info(f"✅ LLM Client initialized successfully")
-                logger.info(f"Provider: {llm_client.get_provider()}")
-                logger.info(f"Model: {llm_client.get_model()}")
-                logger.info(f"LLM Name: {llm_client.get_llm_name()}")
-                
-                # Test basic LLM call with detailed error surface
-                logger.info("🔍 DEEP DEBUG: Testing basic LLM call")
-                try:
-                    test_response = await llm_client.generate_text("Test", max_tokens=10, temperature=0.1)
-                    logger.info(f"✅ LLM test call successful: {test_response[:50]}...")
-                except Exception as api_error:
-                    logger.error(f"❌ LLM API call failed: {api_error}")
-                    logger.error(f"API Error type: {type(api_error).__name__}")
-                    logger.error(f"API Error details: {str(api_error)}")
-                    
-                    # Surface specific API errors
-                    if "authentication" in str(api_error).lower() or "unauthorized" in str(api_error).lower():
-                        return {
-                            "success": False,
-                            "error": f"LLM API authentication failed. Check your API keys: {str(api_error)}",
-                            "error_type": "authentication_error",
-                            "suggestion": "Please verify your API keys are correct and have sufficient credits",
-                            "trace_id": trace_id
-                        }
-                    elif "quota" in str(api_error).lower() or "rate limit" in str(api_error).lower():
-                        return {
-                            "success": False,
-                            "error": f"LLM API quota exceeded or rate limited: {str(api_error)}",
-                            "error_type": "rate_limit_error",
-                            "suggestion": "Please try again later or upgrade your API plan",
-                            "trace_id": trace_id
-                        }
-                    elif "model" in str(api_error).lower():
-                        return {
-                            "success": False,
-                            "error": f"LLM model not found or invalid: {str(api_error)}",
-                            "error_type": "model_error",
-                            "suggestion": "Please check your model configuration",
-                            "trace_id": trace_id
-                        }
-                    else:
-                        return {
-                            "success": False,
-                            "error": f"LLM API call failed: {str(api_error)}",
-                            "error_type": "api_error",
-                            "suggestion": "Please check your network connection and try again",
-                            "trace_id": trace_id
-                        }
-                
-            except Exception as e:
-                logger.error(f"❌ LLM Client initialization failed: {e}")
-                logger.error(f"Error type: {type(e).__name__}")
-                import traceback
-                logger.error(f"Traceback: {traceback.format_exc()}")
-                return {
-                    "success": False,
-                    "error": f"LLM Client initialization failed: {str(e)}",
-                    "error_type": "initialization_error",
-                    "suggestion": "Please check your environment configuration",
-                    "trace_id": trace_id
-                }
+                    logger.warning(f"  {key}: NOT SET")
 
             # Create query context
             context = QueryContext(
@@ -205,146 +137,448 @@ class LeadOrchestrator:
             )
 
             # Check cache first
-            logger.info("🔍 Checking semantic cache...")
             cached_result = await self.semantic_cache.get_cached_response(query)
             if cached_result:
-                logger.info(f"✅ Cache HIT for query: {query[:50]}...")
+                logger.info(f"Cache HIT for query: {query[:50]}...")
                 return cached_result
 
             # Allocate token budget
-            logger.info("🔍 Allocating token budget...")
             query_budget = await self.token_budget.allocate_budget_for_query(query)
-            logger.info(f"✅ Allocated {query_budget} tokens for query")
+            logger.info(f"Allocated {query_budget} tokens for query")
 
-            # Analyze and plan
-            logger.info("🔍 Starting query analysis and planning...")
-            try:
-                plan = await self.analyze_and_plan(context)
-                logger.info(f"✅ Query analysis completed: {plan}")
-            except Exception as e:
-                logger.error(f"❌ Query analysis failed: {e}")
-                return {
-                    "success": False,
-                    "error": f"Query analysis failed: {str(e)}",
-                    "error_type": "analysis_error",
-                    "suggestion": "Please try rephrasing your query",
-                    "trace_id": trace_id
-                }
+            # Analyze and plan execution
+            plan = await self.analyze_and_plan(context)
 
-            # Execute pipeline
-            logger.info("🔍 Starting pipeline execution...")
-            try:
-                results = await self.execute_pipeline(context, plan, query_budget)
-                logger.info(f"✅ Pipeline execution completed with {len(results)} agent results")
-            except Exception as e:
-                logger.error(f"❌ Pipeline execution failed: {e}")
-                return {
-                    "success": False,
-                    "error": f"Pipeline execution failed: {str(e)}",
-                    "error_type": "pipeline_error",
-                    "suggestion": "Please try again or contact support",
-                    "trace_id": trace_id
-                }
+            # Execute based on plan with intelligent routing
+            result = await self.execute_with_intelligent_routing(context, plan, query_budget)
 
-            # Aggregate results
-            logger.info("🔍 Starting result aggregation...")
-            try:
-                final_result = self.response_aggregator.aggregate_pipeline_results(results, context)
-                logger.info(f"✅ Result aggregation completed")
-            except Exception as e:
-                logger.error(f"❌ Result aggregation failed: {e}")
-                return {
-                    "success": False,
-                    "error": f"Result aggregation failed: {str(e)}",
-                    "error_type": "aggregation_error",
-                    "suggestion": "Please try again or contact support",
-                    "trace_id": trace_id
-                }
+            # Aggregate results with enhanced aggregator
+            final_response = self.response_aggregator.aggregate_pipeline_results(
+                result, context
+            )
+
+            # Track token usage
+            total_tokens = final_response.get("metadata", {}).get("token_usage", {})
+            await self.token_budget.track_usage(AgentType.SYNTHESIS, total_tokens.get("total", 0))
 
             # Cache the result
-            logger.info("🔍 Caching result...")
-            try:
-                await self.semantic_cache.cache_response(query, final_result)
-                logger.info("✅ Result cached successfully")
-            except Exception as e:
-                logger.warning(f"⚠️ Failed to cache result: {e}")
+            await self.semantic_cache.cache_response(query, final_response)
 
-            process_time = time.time() - start_time
-            logger.info(f"✅ Query processing completed in {process_time:.3f}s")
+            processing_time = (time.time() - start_time) * 1000
+            final_response["processing_time_ms"] = processing_time
+            final_response["trace_id"] = trace_id
 
-            return final_result
+            logger.info(f"✅ Query processing completed in {processing_time:.2f}ms")
+            return final_response
 
         except Exception as e:
-            process_time = time.time() - start_time
-            logger.error(f"❌ Query processing failed after {process_time:.3f}s: {str(e)}")
+            processing_time = (time.time() - start_time) * 1000
+            logger.error(f"❌ Query processing failed after {processing_time:.2f}ms: {e}")
             logger.error(f"Error type: {type(e).__name__}")
-            logger.error(f"Trace ID: {trace_id}")
             import traceback
-            logger.error(f"Full traceback: {traceback.format_exc()}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             
-            # Return graceful error response with detailed information
+            # Return comprehensive error response
             return {
                 "success": False,
-                "error": f"Unable to generate a complete answer due to processing errors: {str(e)}",
-                "error_type": "processing_error",
-                "answer": "I apologize, but I encountered an error while processing your query. Please try again or contact support if the issue persists.",
-                "confidence": 0.0,
-                "citations": [],
+                "error": f"Query processing failed: {str(e)}",
+                "error_type": "orchestrator_error",
+                "suggestion": "Please try rephrasing your query or contact support if the issue persists.",
+                "trace_id": trace_id,
+                "processing_time_ms": processing_time,
                 "metadata": {
-                    "error_type": type(e).__name__,
-                    "error_message": str(e),
-                    "processing_time": process_time,
-                    "trace_id": trace_id,
-                    "debug_info": {
-                        "env_vars_checked": bool(env_vars.get("OPENAI_API_KEY")),
-                        "llm_client_initialized": "llm_client" in locals(),
-                        "pipeline_stage": "unknown"
+                    "error_details": {
+                        "error_type": type(e).__name__,
+                        "error_message": str(e),
+                        "trace_id": trace_id
                     }
                 }
             }
 
     async def analyze_and_plan(self, context: QueryContext) -> Dict[str, Any]:
-        """
-        Analyze query and create execution plan.
+        """Analyze query and create execution plan with intelligent classification."""
+        try:
+            # Use QueryClassifier for intelligent analysis
+            classification = await self.query_classifier.classify_query(context.query)
+            
+            logger.info(f"🔍 Query Classification Results:")
+            logger.info(f"  Category: {classification.category.value}")
+            logger.info(f"  Confidence: {classification.confidence:.2f}")
+            logger.info(f"  Complexity: {classification.complexity.value}")
+            logger.info(f"  Suggested Agents: {classification.suggested_agents}")
+            
+            # Use classification results for planning
+            execution_pattern = classification.routing_hints.get("execution_strategy", "pipeline")
+            complexity_score = classification.confidence
+            estimated_tokens = classification.routing_hints.get("estimated_tokens", 1000)
+            
+            # Enhanced plan with classification insights
+            plan = {
+                "execution_pattern": execution_pattern,
+                "complexity_score": complexity_score,
+                "estimated_tokens": estimated_tokens,
+                "classification": classification.to_dict(),
+                "primary_category": classification.category.value,
+                "suggested_agents": classification.suggested_agents,
+                "routing_hints": classification.routing_hints,
+                "priority_level": classification.routing_hints.get("priority_level", "normal"),
+                "cache_strategy": classification.routing_hints.get("cache_strategy", "conservative")
+            }
+            
+            logger.info(f"📋 Execution Plan Created:")
+            logger.info(f"  Pattern: {execution_pattern}")
+            logger.info(f"  Priority: {plan['priority_level']}")
+            logger.info(f"  Cache Strategy: {plan['cache_strategy']}")
+            
+            return plan
+            
+        except Exception as e:
+            logger.error(f"Query analysis failed: {e}")
+            # Return safe default plan with basic classification
+            return {
+                "execution_pattern": "pipeline",
+                "complexity_score": 0.5,
+                "estimated_tokens": 1000,
+                "classification": {
+                    "category": "unknown",
+                    "confidence": 0.3,
+                    "complexity": "moderate"
+                },
+                "primary_category": "unknown",
+                "suggested_agents": ["retrieval", "synthesis"],
+                "routing_hints": {
+                    "execution_strategy": "pipeline",
+                    "priority_level": "normal",
+                    "cache_strategy": "conservative"
+                },
+                "priority_level": "normal",
+                "cache_strategy": "conservative"
+            }
 
+    async def execute_with_intelligent_routing(
+        self, context: QueryContext, plan: Dict[str, Any], query_budget: int
+    ) -> Dict[AgentType, Dict[str, Any]]:
+        """
+        Execute query with intelligent routing based on classification.
+        
         Args:
             context: Query context
-
+            plan: Execution plan with classification
+            query_budget: Token budget for the query
+            
         Returns:
-            Execution plan
+            Dictionary mapping agent types to their results
         """
-        # Simple planning based on query characteristics
-        query_lower = context.query.lower()
-
-        # Determine execution pattern
-        if any(
-            word in query_lower for word in ["compare", "versus", "vs", "difference"]
-        ):
-            execution_pattern = "fork_join"
-        elif any(word in query_lower for word in ["research", "study", "analysis"]):
-            execution_pattern = "scatter_gather"
+        start_time = time.time()
+        results: Dict[AgentType, Dict[str, Any]] = {}
+        
+        try:
+            # Get classification from plan
+            classification_data = plan.get("classification", {})
+            category = classification_data.get("category", "unknown")
+            confidence = classification_data.get("confidence", 0.0)
+            
+            logger.info(f"🎯 Intelligent Routing - Category: {category}, Confidence: {confidence:.2f}")
+            
+            # Route based on category
+            if category == QueryCategory.KNOWLEDGE_GRAPH.value:
+                logger.info("🔗 Routing to Knowledge Graph Agent")
+                results = await self._execute_knowledge_graph_route(context, plan, query_budget)
+                
+            elif category == QueryCategory.CODE.value:
+                logger.info("💻 Routing to Code-Specific Processing")
+                results = await self._execute_code_route(context, plan, query_budget)
+                
+            elif category == QueryCategory.ANALYTICAL.value:
+                logger.info("📊 Routing to Analytical Processing")
+                results = await self._execute_analytical_route(context, plan, query_budget)
+                
+            elif category == QueryCategory.COMPARATIVE.value:
+                logger.info("⚖️ Routing to Comparative Processing")
+                results = await self._execute_comparative_route(context, plan, query_budget)
+                
+            else:
+                # Default to general factual processing
+                logger.info("📚 Routing to General Factual Processing")
+                results = await self._execute_general_factual_route(context, plan, query_budget)
+            
+            # Apply fallback logic for low-confidence results
+            if confidence < 0.4:
+                logger.info("🔄 Applying fallback logic due to low confidence")
+                results = await self._apply_fallback_logic(context, results, plan, query_budget)
+            
+            processing_time = (time.time() - start_time) * 1000
+            logger.info(f"✅ Intelligent routing completed in {processing_time:.2f}ms")
+            
+            return results
+            
+        except Exception as e:
+            processing_time = (time.time() - start_time) * 1000
+            logger.error(f"❌ Intelligent routing failed after {processing_time:.2f}ms: {e}")
+            return self._handle_routing_failure(context, str(e))
+    
+    async def _execute_knowledge_graph_route(
+        self, context: QueryContext, plan: Dict[str, Any], query_budget: int
+    ) -> Dict[AgentType, Dict[str, Any]]:
+        """Execute knowledge graph route for entity-relationship queries."""
+        results: Dict[AgentType, Dict[str, Any]] = {}
+        
+        try:
+            # Query knowledge graph agent
+            kg_result = await self.knowledge_graph_agent.query(context.query)
+            
+            # Convert knowledge graph results to document format for synthesis
+            documents = []
+            if kg_result.entities:
+                for entity in kg_result.entities:
+                    doc = {
+                        "content": f"{entity.name}: {entity.properties.get('description', '')}",
+                        "source": "knowledge_graph",
+                        "metadata": {
+                            "entity_id": entity.id,
+                            "entity_type": entity.type,
+                            "properties": entity.properties
+                        }
+                    }
+                    documents.append(doc)
+            
+            if kg_result.relationships:
+                for rel in kg_result.relationships:
+                    source_entity = next((e for e in kg_result.entities if e.id == rel.source_id), None)
+                    target_entity = next((e for e in kg_result.entities if e.id == rel.target_id), None)
+                    
+                    if source_entity and target_entity:
+                        doc = {
+                            "content": f"{source_entity.name} {rel.relationship_type} {target_entity.name}: {rel.properties.get('description', '')}",
+                            "source": "knowledge_graph",
+                            "metadata": {
+                                "relationship_type": rel.relationship_type,
+                                "source_entity": source_entity.name,
+                                "target_entity": target_entity.name,
+                                "properties": rel.properties
+                            }
+                        }
+                        documents.append(doc)
+            
+            # Store knowledge graph results
+            results[AgentType.RETRIEVAL] = {
+                "success": True,
+                "documents": documents,
+                "source": "knowledge_graph",
+                "confidence": kg_result.confidence,
+                "metadata": {
+                    "entities_found": len(kg_result.entities),
+                    "relationships_found": len(kg_result.relationships),
+                    "paths_found": len(kg_result.paths),
+                    "query_entities": kg_result.query_entities
+                }
+            }
+            
+            # Proceed with synthesis
+            results = await self._execute_synthesis_phase_with_retries(context, results)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Knowledge graph route failed: {e}")
+            # Fallback to general retrieval
+            return await self._execute_general_factual_route(context, plan, query_budget)
+    
+    async def _execute_code_route(
+        self, context: QueryContext, plan: Dict[str, Any], query_budget: int
+    ) -> Dict[AgentType, Dict[str, Any]]:
+        """Execute code-specific route for programming queries."""
+        results: Dict[AgentType, Dict[str, Any]] = {}
+        
+        try:
+            # For code queries, we can use specialized processing
+            # For now, use standard retrieval but with code-specific hints
+            retrieval_task = {
+                "query": context.query,
+                "search_type": "code_specific",
+                "top_k": 15,
+                "code_focus": True
+            }
+            
+            # Execute retrieval with code focus
+            retrieval_result = await self.agents[AgentType.RETRIEVAL].process_task(
+                retrieval_task, context
+            )
+            
+            results[AgentType.RETRIEVAL] = retrieval_result
+            
+            # Proceed with synthesis
+            results = await self._execute_synthesis_phase_with_retries(context, results)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Code route failed: {e}")
+            # Fallback to general retrieval
+            return await self._execute_general_factual_route(context, plan, query_budget)
+    
+    async def _execute_analytical_route(
+        self, context: QueryContext, plan: Dict[str, Any], query_budget: int
+    ) -> Dict[AgentType, Dict[str, Any]]:
+        """Execute analytical route for analysis queries."""
+        results: Dict[AgentType, Dict[str, Any]] = {}
+        
+        try:
+            # For analytical queries, use enhanced retrieval with fact checking
+            retrieval_task = {
+                "query": context.query,
+                "search_type": "analytical",
+                "top_k": 20,
+                "analytical_focus": True
+            }
+            
+            # Execute retrieval
+            retrieval_result = await self.agents[AgentType.RETRIEVAL].process_task(
+                retrieval_task, context
+            )
+            
+            results[AgentType.RETRIEVAL] = retrieval_result
+            
+            # Add fact checking for analytical queries
+            results = await self._execute_fact_checking_phase_with_fallbacks(context, results)
+            
+            # Proceed with synthesis
+            results = await self._execute_synthesis_phase_with_retries(context, results)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Analytical route failed: {e}")
+            # Fallback to general retrieval
+            return await self._execute_general_factual_route(context, plan, query_budget)
+    
+    async def _execute_comparative_route(
+        self, context: QueryContext, plan: Dict[str, Any], query_budget: int
+    ) -> Dict[AgentType, Dict[str, Any]]:
+        """Execute comparative route for comparison queries."""
+        results: Dict[AgentType, Dict[str, Any]] = {}
+        
+        try:
+            # For comparative queries, use enhanced retrieval
+            retrieval_task = {
+                "query": context.query,
+                "search_type": "comparative",
+                "top_k": 25,
+                "comparative_focus": True
+            }
+            
+            # Execute retrieval
+            retrieval_result = await self.agents[AgentType.RETRIEVAL].process_task(
+                retrieval_task, context
+            )
+            
+            results[AgentType.RETRIEVAL] = retrieval_result
+            
+            # Proceed with synthesis
+            results = await self._execute_synthesis_phase_with_retries(context, results)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Comparative route failed: {e}")
+            # Fallback to general retrieval
+            return await self._execute_general_factual_route(context, plan, query_budget)
+    
+    async def _execute_general_factual_route(
+        self, context: QueryContext, plan: Dict[str, Any], query_budget: int
+    ) -> Dict[AgentType, Dict[str, Any]]:
+        """Execute general factual route for standard queries."""
+        # Use the standard pipeline execution
+        if plan["execution_pattern"] == "pipeline":
+            return await self.execute_pipeline(context, plan, query_budget)
+        elif plan["execution_pattern"] == "fork_join":
+            return await self.execute_fork_join(context, plan, query_budget)
+        elif plan["execution_pattern"] == "scatter_gather":
+            return await self.execute_scatter_gather(context, plan, query_budget)
         else:
-            execution_pattern = "pipeline"
-
-        # Define agent sequence
-        agents_sequence = [
-            AgentType.RETRIEVAL,
-            AgentType.FACT_CHECK,
-            AgentType.SYNTHESIS,
-            AgentType.CITATION,
-        ]
-
+            return await self.execute_pipeline(context, plan, query_budget)
+    
+    async def _apply_fallback_logic(
+        self, context: QueryContext, results: Dict[AgentType, Dict[str, Any]], 
+        plan: Dict[str, Any], query_budget: int
+    ) -> Dict[AgentType, Dict[str, Any]]:
+        """Apply fallback logic for low-confidence classifications."""
+        
+        # Check if retrieval yielded no results
+        retrieval_result = results.get(AgentType.RETRIEVAL, {})
+        documents = retrieval_result.get("documents", [])
+        
+        if not documents or len(documents) == 0:
+            logger.info("🔄 No retrieval results, trying knowledge graph as fallback")
+            
+            # Try knowledge graph as fallback
+            try:
+                kg_result = await self.knowledge_graph_agent.query(context.query)
+                
+                if kg_result.entities:
+                    logger.info(f"✅ Knowledge graph fallback found {len(kg_result.entities)} entities")
+                    
+                    # Convert to document format
+                    documents = []
+                    for entity in kg_result.entities:
+                        doc = {
+                            "content": f"{entity.name}: {entity.properties.get('description', '')}",
+                            "source": "knowledge_graph_fallback",
+                            "metadata": {
+                                "entity_id": entity.id,
+                                "entity_type": entity.type,
+                                "properties": entity.properties
+                            }
+                        }
+                        documents.append(doc)
+                    
+                    # Update retrieval results
+                    results[AgentType.RETRIEVAL] = {
+                        "success": True,
+                        "documents": documents,
+                        "source": "knowledge_graph_fallback",
+                        "confidence": kg_result.confidence,
+                        "metadata": {
+                            "entities_found": len(kg_result.entities),
+                            "relationships_found": len(kg_result.relationships),
+                            "fallback_used": True
+                        }
+                    }
+                    
+                    # Re-run synthesis with new documents
+                    results = await self._execute_synthesis_phase_with_retries(context, results)
+                    
+            except Exception as e:
+                logger.error(f"Knowledge graph fallback failed: {e}")
+        
+        return results
+    
+    def _handle_routing_failure(
+        self, context: QueryContext, error_message: str
+    ) -> Dict[AgentType, Dict[str, Any]]:
+        """Handle routing failures with fallback to general processing."""
+        logger.error(f"Routing failure: {error_message}")
+        
         return {
-            "execution_pattern": execution_pattern,
-            "agents_sequence": agents_sequence,
-            "estimated_tokens": len(context.query.split()) * 10,
+            AgentType.RETRIEVAL: {
+                "success": False,
+                "error": error_message,
+                "documents": [],
+                "source": "fallback"
+            },
+            AgentType.SYNTHESIS: {
+                "success": False,
+                "error": "Routing failed, no synthesis possible",
+                "answer": "I apologize, but I encountered an error while processing your query. Please try rephrasing your question.",
+                "source": "fallback"
+            }
         }
 
     async def execute_pipeline(
         self, context: QueryContext, plan: Dict[str, Any], query_budget: int
     ) -> Dict[AgentType, Dict[str, Any]]:
         """
-        Execute the multi-agent pipeline with the given plan.
+        Execute the multi-agent pipeline with comprehensive error handling and fallback strategies.
 
         Args:
             context: Query context
@@ -355,209 +589,521 @@ class LeadOrchestrator:
             Dictionary mapping agent types to their results
         """
         results: Dict[AgentType, Dict[str, Any]] = {}
+        pipeline_start_time = time.time()
 
         try:
-            # Execute retrieval phase
-            results = await self._execute_retrieval_phase(context, results)
+            # Phase 1: Retrieval with enhanced error handling
+            results = await self._execute_retrieval_phase_with_fallbacks(context, results)
 
-            # Execute fact checking phase
-            results = await self._execute_fact_checking_phase(context, results)
+            # Phase 2: Fact checking with graceful degradation
+            results = await self._execute_fact_checking_phase_with_fallbacks(context, results)
 
-            # Execute synthesis phase
-            results = await self._execute_synthesis_phase(context, results)
+            # Phase 3: Synthesis with retry logic
+            results = await self._execute_synthesis_phase_with_retries(context, results)
 
-            # Execute citation phase
-            results = await self._execute_citation_phase(context, results)
+            # Phase 4: Citation with fallback options
+            results = await self._execute_citation_phase_with_fallbacks(context, results)
+
+            # Log pipeline completion
+            total_time = time.time() - pipeline_start_time
+            logger.info(
+                f"Pipeline completed in {total_time:.2f}s",
+                extra={"context": context.query, "total_agents": len(results)},
+            )
 
             return results
 
         except Exception as e:
             logger.error(f"Pipeline execution failed: {e}")
-            # Return partial results if available
-            return results
+            # Return partial results with error information
+            return self._handle_pipeline_failure(results, str(e))
 
-    async def _execute_retrieval_phase(
+    async def _execute_retrieval_phase_with_fallbacks(
         self, context: QueryContext, results: Dict[AgentType, Dict[str, Any]]
     ) -> Dict[AgentType, Dict[str, Any]]:
-        """Execute the retrieval phase."""
+        """Execute retrieval phase with comprehensive fallback strategies."""
         phase_start = time.time()
-        logger.info("🚀 Phase 1: Starting Retrieval")
+        logger.info("🚀 Phase 1: Starting Retrieval with Fallbacks")
         logger.info(f"  Query: {context.query[:100]}...")
         logger.info(f"  Trace ID: {context.trace_id}")
 
-        try:
-            # Extract entities for retrieval
-            logger.info("  🔍 Extracting entities...")
-            entities = await self._extract_entities_parallel(context.query)
-            logger.info(f"  ✅ Extracted {len(entities)} entities")
+        retrieval_config = self.retry_config[AgentType.RETRIEVAL]
+        max_retries = retrieval_config["max_retries"]
+        timeout = retrieval_config["timeout"]
+        backoff_factor = retrieval_config["backoff_factor"]
 
-            # Prepare retrieval task
-            retrieval_task = {
-                "query": context.query,
-                "entities": entities,
-                "search_type": "hybrid",
-                "top_k": 20,
-            }
-            logger.info("  🔍 Preparing retrieval task...")
+        for attempt in range(max_retries + 1):
+            try:
+                # Extract entities for retrieval
+                logger.info(f"  🔍 Retrieval attempt {attempt + 1}/{max_retries + 1}")
+                entities = await self._extract_entities_parallel(context.query)
+                logger.info(f"  ✅ Extracted {len(entities)} entities")
 
-            logger.info("  🔍 Executing retrieval agent...")
-            retrieval_result = await asyncio.wait_for(
-                self.agents[AgentType.RETRIEVAL].process_task(
-                    retrieval_task, context
-                ),
-                timeout=30,
-            )
-            
-            # Ensure result is a dictionary
-            retrieval_result = self._ensure_dict_result(retrieval_result, "RETRIEVAL")
-            results[AgentType.RETRIEVAL] = retrieval_result
+                # Prepare retrieval task
+                retrieval_task = {
+                    "query": context.query,
+                    "entities": entities,
+                    "search_type": "hybrid",
+                    "top_k": 20,
+                }
 
-            phase_time = time.time() - phase_start
-            if retrieval_result.get("success", False):
-                docs_count = len(retrieval_result.get("data", {}).get("documents", []))
-                logger.info(f"  ✅ Retrieval completed successfully in {phase_time:.2f}s")
-                logger.info(f"  📄 Retrieved {docs_count} documents")
-            else:
-                logger.error(f"  ❌ Retrieval failed in {phase_time:.2f}s: {retrieval_result.get('error', 'Unknown error')}")
+                # Execute retrieval with timeout
+                retrieval_result = await asyncio.wait_for(
+                    self.agents[AgentType.RETRIEVAL].process_task(retrieval_task, context),
+                    timeout=timeout,
+                )
+                
+                # Validate and ensure result is a dictionary
+                retrieval_result = self._ensure_dict_result(retrieval_result, "RETRIEVAL")
+                
+                # Check for empty retrieval results
+                documents = retrieval_result.get("data", {}).get("documents", [])
+                if not documents:
+                    logger.warning("  ⚠️ Retrieval returned no documents - trying fallback strategies")
+                    
+                    # Try fallback strategies
+                    fallback_result = await self._try_retrieval_fallbacks(context, entities)
+                    if fallback_result:
+                        retrieval_result = fallback_result
+                        documents = retrieval_result.get("data", {}).get("documents", [])
+                
+                results[AgentType.RETRIEVAL] = retrieval_result
 
-        except asyncio.TimeoutError:
-            phase_time = time.time() - phase_start
-            logger.error(f"  ❌ Retrieval timed out after {phase_time:.2f}s")
-            results[AgentType.RETRIEVAL] = self._create_timeout_result(
-                "Retrieval timed out", 30000
-            )
-        except Exception as e:
-            phase_time = time.time() - phase_start
-            logger.error(f"  ❌ Retrieval failed after {phase_time:.2f}s: {e}")
-            logger.error(f"  Error type: {type(e).__name__}")
-            import traceback
-            logger.error(f"  Traceback: {traceback.format_exc()}")
-            results[AgentType.RETRIEVAL] = self._create_error_result(
-                f"Retrieval failed: {str(e)}"
-            )
+                phase_time = time.time() - phase_start
+                if retrieval_result.get("success", False):
+                    docs_count = len(documents)
+                    logger.info(f"  ✅ Retrieval completed successfully in {phase_time:.2f}s")
+                    logger.info(f"  📄 Retrieved {docs_count} documents")
+                    
+                    # Store retrieval context for downstream use
+                    results["retrieval_context"] = {
+                        "documents_count": docs_count,
+                        "entities_found": len(entities),
+                        "search_strategy": "hybrid",
+                        "has_results": docs_count > 0,
+                        "attempts_used": attempt + 1
+                    }
+                    return results
+                else:
+                    logger.warning(f"  ⚠️ Retrieval attempt {attempt + 1} failed: {retrieval_result.get('error', 'Unknown error')}")
+                    if attempt < max_retries:
+                        wait_time = timeout * (backoff_factor ** attempt)
+                        logger.info(f"  ⏳ Waiting {wait_time:.1f}s before retry...")
+                        await asyncio.sleep(wait_time)
 
+            except asyncio.TimeoutError:
+                phase_time = time.time() - phase_start
+                logger.error(f"  ❌ Retrieval attempt {attempt + 1} timed out after {phase_time:.2f}s")
+                if attempt < max_retries:
+                    wait_time = timeout * (backoff_factor ** attempt)
+                    logger.info(f"  ⏳ Waiting {wait_time:.1f}s before retry...")
+                    await asyncio.sleep(wait_time)
+            except Exception as e:
+                phase_time = time.time() - phase_start
+                logger.error(f"  ❌ Retrieval attempt {attempt + 1} failed after {phase_time:.2f}s: {e}")
+                if attempt < max_retries:
+                    wait_time = timeout * (backoff_factor ** attempt)
+                    logger.info(f"  ⏳ Waiting {wait_time:.1f}s before retry...")
+                    await asyncio.sleep(wait_time)
+
+        # All attempts failed - create fallback response
+        logger.error("  ❌ All retrieval attempts failed - using fallback response")
+        results[AgentType.RETRIEVAL] = self._create_retrieval_fallback_result(context)
         return results
 
-    async def _execute_fact_checking_phase(
+    async def _try_retrieval_fallbacks(
+        self, context: QueryContext, entities: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        """Try alternative retrieval strategies when primary retrieval fails."""
+        fallback_strategies = self.fallback_strategies[AgentType.RETRIEVAL]
+        
+        for strategy in fallback_strategies:
+            try:
+                logger.info(f"  🔄 Trying fallback strategy: {strategy}")
+                
+                if strategy == "broaden_query":
+                    # Try with broader search terms
+                    broadened_query = self._broaden_query(context.query)
+                    fallback_task = {
+                        "query": broadened_query,
+                        "entities": entities,
+                        "search_type": "keyword",
+                        "top_k": 30,
+                    }
+                elif strategy == "keyword_search":
+                    # Fall back to keyword search
+                    fallback_task = {
+                        "query": context.query,
+                        "entities": entities,
+                        "search_type": "keyword",
+                        "top_k": 15,
+                    }
+                elif strategy == "knowledge_graph":
+                    # Try knowledge graph search
+                    fallback_task = {
+                        "query": context.query,
+                        "entities": entities,
+                        "search_type": "graph",
+                        "top_k": 10,
+                    }
+                else:
+                    continue
+
+                fallback_result = await asyncio.wait_for(
+                    self.agents[AgentType.RETRIEVAL].process_task(fallback_task, context),
+                    timeout=15,
+                )
+                
+                fallback_result = self._ensure_dict_result(fallback_result, "RETRIEVAL")
+                documents = fallback_result.get("data", {}).get("documents", [])
+                
+                if documents:
+                    logger.info(f"  ✅ Fallback strategy '{strategy}' succeeded with {len(documents)} documents")
+                    fallback_result["fallback_strategy_used"] = strategy
+                    return fallback_result
+                else:
+                    logger.warning(f"  ⚠️ Fallback strategy '{strategy}' returned no documents")
+                    
+            except Exception as e:
+                logger.warning(f"  ⚠️ Fallback strategy '{strategy}' failed: {e}")
+                continue
+        
+        return None
+
+    def _broaden_query(self, query: str) -> str:
+        """Broaden the query by removing specific terms and keeping core concepts."""
+        # Simple broadening - remove specific terms and keep core concepts
+        words = query.split()
+        if len(words) > 3:
+            # Keep first 3 words as core concepts
+            return " ".join(words[:3])
+        return query
+
+    def _create_retrieval_fallback_result(self, context: QueryContext) -> Dict[str, Any]:
+        """Create a fallback result when all retrieval attempts fail."""
+        return {
+            "success": False,
+            "data": {
+                "documents": [],
+                "search_performed": True,
+                "fallback": True,
+                "error": "No relevant documents found"
+            },
+            "error": "Retrieval failed after all attempts and fallback strategies",
+            "confidence": 0.0,
+            "execution_time_ms": 0,
+            "fallback_message": "I couldn't find specific information about your query. Please try rephrasing or asking a different question."
+        }
+
+    async def _execute_fact_checking_phase_with_fallbacks(
         self, context: QueryContext, results: Dict[AgentType, Dict[str, Any]]
     ) -> Dict[AgentType, Dict[str, Any]]:
-        """Execute the fact checking phase."""
+        """Execute fact checking phase with graceful degradation."""
         phase_start = time.time()
-        logger.info("🚀 Phase 2: Starting Fact checking")
+        logger.info("🚀 Phase 2: Starting Fact Checking with Fallbacks")
         logger.info(f"  Query: {context.query[:100]}...")
         logger.info(f"  Trace ID: {context.trace_id}")
 
-        # Skip if retrieval failed
-        if (
-            AgentType.RETRIEVAL not in results
-            or not results[AgentType.RETRIEVAL].get("success", False)
-        ):
+        # Check if retrieval failed or returned no results
+        retrieval_result = results.get(AgentType.RETRIEVAL, {})
+        if not retrieval_result.get("success", False):
             logger.warning("  ⚠️ Skipping fact checking due to retrieval failure")
-            results[AgentType.FACT_CHECK] = self._create_error_result(
-                "Skipped due to retrieval failure"
-            )
+            results[AgentType.FACT_CHECK] = self._create_fact_check_skip_result("Retrieval failure")
             return results
 
-        try:
-            fact_check_task = {
-                "documents": results[AgentType.RETRIEVAL].get("data", {}).get("documents", []),
-                "query": context.query,
-            }
-            logger.info(f"  🔍 Preparing fact check task with {len(fact_check_task['documents'])} documents...")
+        # Handle empty retrieval results
+        documents = retrieval_result.get("data", {}).get("documents", [])
+        if not documents:
+            logger.warning("  ⚠️ No documents to fact-check - creating fallback result")
+            results[AgentType.FACT_CHECK] = self._create_fact_check_skip_result("No documents available")
+            return results
 
-            logger.info("  🔍 Executing fact check agent...")
-            fact_check_result = await asyncio.wait_for(
-                self.agents[AgentType.FACT_CHECK].process_task(
-                    fact_check_task, context
-                ),
-                timeout=20,
-            )
-            
-            # Ensure result is a dictionary
-            fact_check_result = self._ensure_dict_result(fact_check_result, "FACT_CHECK")
-            results[AgentType.FACT_CHECK] = fact_check_result
+        fact_check_config = self.retry_config[AgentType.FACT_CHECK]
+        max_retries = fact_check_config["max_retries"]
+        timeout = fact_check_config["timeout"]
 
-            phase_time = time.time() - phase_start
-            if fact_check_result.get("success", False):
-                facts_count = len(fact_check_result.get("data", {}).get("verified_facts", []))
-                logger.info(f"  ✅ Fact checking completed successfully in {phase_time:.2f}s")
-                logger.info(f"  ✅ Verified {facts_count} facts")
-            else:
-                logger.error(f"  ❌ Fact checking failed in {phase_time:.2f}s: {fact_check_result.get('error', 'Unknown error')}")
+        for attempt in range(max_retries + 1):
+            try:
+                logger.info(f"  🔍 Fact checking attempt {attempt + 1}/{max_retries + 1}")
+                
+                fact_check_task = {
+                    "documents": documents,
+                    "query": context.query,
+                    "verification_level": "standard",
+                }
 
-        except asyncio.TimeoutError:
-            phase_time = time.time() - phase_start
-            logger.error(f"  ❌ Fact checking timed out after {phase_time:.2f}s")
-            results[AgentType.FACT_CHECK] = self._create_timeout_result(
-                "Fact checking timed out", 20000
-            )
-        except Exception as e:
-            phase_time = time.time() - phase_start
-            logger.error(f"  ❌ Fact checking failed after {phase_time:.2f}s: {e}")
-            logger.error(f"  Error type: {type(e).__name__}")
-            import traceback
-            logger.error(f"  Traceback: {traceback.format_exc()}")
-            results[AgentType.FACT_CHECK] = self._create_error_result(
-                f"Fact checking failed: {str(e)}"
-            )
+                fact_check_result = await asyncio.wait_for(
+                    self.agents[AgentType.FACT_CHECK].process_task(fact_check_task, context),
+                    timeout=timeout,
+                )
+                
+                fact_check_result = self._ensure_dict_result(fact_check_result, "FACT_CHECK")
+                results[AgentType.FACT_CHECK] = fact_check_result
 
+                phase_time = time.time() - phase_start
+                if fact_check_result.get("success", False):
+                    verified_facts = fact_check_result.get("data", {}).get("verified_facts", [])
+                    logger.info(f"  ✅ Fact checking completed successfully in {phase_time:.2f}s")
+                    logger.info(f"  ✅ Verified {len(verified_facts)} facts")
+                    
+                    # Store fact check context
+                    results["fact_check_context"] = {
+                        "verified_facts_count": len(verified_facts),
+                        "verification_level": "standard",
+                        "attempts_used": attempt + 1
+                    }
+                    return results
+                else:
+                    logger.warning(f"  ⚠️ Fact checking attempt {attempt + 1} failed: {fact_check_result.get('error', 'Unknown error')}")
+                    if attempt < max_retries:
+                        logger.info("  ⏳ Waiting before retry...")
+                        await asyncio.sleep(2)
+
+            except asyncio.TimeoutError:
+                phase_time = time.time() - phase_start
+                logger.error(f"  ❌ Fact checking attempt {attempt + 1} timed out after {phase_time:.2f}s")
+                if attempt < max_retries:
+                    await asyncio.sleep(2)
+            except Exception as e:
+                phase_time = time.time() - phase_start
+                logger.error(f"  ❌ Fact checking attempt {attempt + 1} failed after {phase_time:.2f}s: {e}")
+                if attempt < max_retries:
+                    await asyncio.sleep(2)
+
+        # All attempts failed - create fallback result
+        logger.error("  ❌ All fact checking attempts failed - using fallback")
+        results[AgentType.FACT_CHECK] = self._create_fact_check_fallback_result(documents)
         return results
 
-    async def _execute_synthesis_phase(
+    def _create_fact_check_skip_result(self, reason: str) -> Dict[str, Any]:
+        """Create a result when fact checking is skipped."""
+        return {
+            "success": False,
+            "data": {
+                "verified_facts": [],
+                "contested_claims": [],
+                "verification_method": "skipped",
+                "total_claims": 0,
+                "skip_reason": reason,
+                "metadata": {
+                    "agent_id": "factcheck_agent",
+                    "processing_time_ms": 0,
+                    "skip_reason": reason
+                },
+            },
+            "confidence": 0.0,
+            "execution_time_ms": 0,
+            "skip_reason": reason
+        }
+
+    def _create_fact_check_fallback_result(self, documents: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Create a fallback result when fact checking fails."""
+        # Convert documents to basic facts without verification
+        basic_facts = [
+            {
+                "content": doc.get("content", "")[:200],
+                "source": doc.get("source", "Unknown"),
+                "confidence": 0.5,  # Lower confidence since not verified
+                "verified": False,
+                "fallback": True
+            }
+            for doc in documents[:5]  # Limit to top 5
+        ]
+        
+        return {
+            "success": False,
+            "data": {
+                "verified_facts": basic_facts,
+                "contested_claims": [],
+                "verification_method": "fallback",
+                "total_claims": len(basic_facts),
+                "fallback": True,
+                "metadata": {
+                    "agent_id": "factcheck_agent",
+                    "processing_time_ms": 0,
+                    "fallback_used": True
+                },
+            },
+            "confidence": 0.3,
+            "execution_time_ms": 0,
+            "fallback_message": "Fact verification was incomplete, but I've provided available information."
+        }
+
+    async def _execute_synthesis_phase_with_retries(
         self, context: QueryContext, results: Dict[AgentType, Dict[str, Any]]
     ) -> Dict[AgentType, Dict[str, Any]]:
-        """Execute the synthesis phase."""
+        """Execute synthesis phase with retry logic and fallback strategies."""
         phase_start = time.time()
-        logger.info("🚀 Phase 3: Starting Synthesis")
+        logger.info("🚀 Phase 3: Starting Synthesis with Retries")
         logger.info(f"  Query: {context.query[:100]}...")
         logger.info(f"  Trace ID: {context.trace_id}")
 
-        try:
-            synthesis_input = self._prepare_synthesis_input(results, context)
-            logger.info("  🔍 Preparing synthesis input...")
+        synthesis_config = self.retry_config[AgentType.SYNTHESIS]
+        max_retries = synthesis_config["max_retries"]
+        timeout = synthesis_config["timeout"]
+        backoff_factor = synthesis_config["backoff_factor"]
 
-            logger.info("  🔍 Executing synthesis agent...")
-            synthesis_result = await asyncio.wait_for(
-                self.agents[AgentType.SYNTHESIS].process_task(synthesis_input, context),
-                timeout=15,
-            )
-            
-            # Ensure result is a dictionary
-            synthesis_result = self._ensure_dict_result(synthesis_result, "SYNTHESIS")
-            results[AgentType.SYNTHESIS] = synthesis_result
+        # Prepare synthesis input with fallback handling
+        synthesis_input = await self._prepare_synthesis_input_with_fallbacks(results, context)
 
-            phase_time = time.time() - phase_start
-            if synthesis_result.get("success", False):
-                answer_length = len(synthesis_result.get("data", {}).get("answer", ""))
-                logger.info(f"  ✅ Synthesis completed successfully in {phase_time:.2f}s")
-                logger.info(f"  📝 Generated answer with {answer_length} characters")
-            else:
-                logger.error(f"  ❌ Synthesis failed in {phase_time:.2f}s: {synthesis_result.get('error', 'Unknown error')}")
+        for attempt in range(max_retries + 1):
+            try:
+                logger.info(f"  🔍 Synthesis attempt {attempt + 1}/{max_retries + 1}")
+                
+                synthesis_result = await asyncio.wait_for(
+                    self.agents[AgentType.SYNTHESIS].process_task(synthesis_input, context),
+                    timeout=timeout,
+                )
+                
+                synthesis_result = self._ensure_dict_result(synthesis_result, "SYNTHESIS")
+                results[AgentType.SYNTHESIS] = synthesis_result
 
-        except asyncio.TimeoutError:
-            phase_time = time.time() - phase_start
-            logger.error(f"  ❌ Synthesis timed out after {phase_time:.2f}s")
-            results[AgentType.SYNTHESIS] = self._create_timeout_result(
-                "Synthesis timed out", 15000
-            )
-        except Exception as e:
-            phase_time = time.time() - phase_start
-            logger.error(f"  ❌ Synthesis failed after {phase_time:.2f}s: {e}")
-            logger.error(f"  Error type: {type(e).__name__}")
-            import traceback
-            logger.error(f"  Traceback: {traceback.format_exc()}")
-            results[AgentType.SYNTHESIS] = self._create_error_result(
-                f"Synthesis failed: {str(e)}"
-            )
+                phase_time = time.time() - phase_start
+                if synthesis_result.get("success", False):
+                    answer = synthesis_result.get("data", {}).get("answer", "")
+                    answer_length = len(answer)
+                    logger.info(f"  ✅ Synthesis completed successfully in {phase_time:.2f}s")
+                    logger.info(f"  📝 Generated answer with {answer_length} characters")
+                    
+                    # Store synthesis context for citation
+                    results["synthesis_context"] = {
+                        "answer_length": answer_length,
+                        "synthesis_style": synthesis_input.get("synthesis_params", {}).get("style", "comprehensive"),
+                        "fallback_mode": synthesis_input.get("synthesis_params", {}).get("fallback_mode", False),
+                        "attempts_used": attempt + 1
+                    }
+                    return results
+                else:
+                    logger.warning(f"  ⚠️ Synthesis attempt {attempt + 1} failed: {synthesis_result.get('error', 'Unknown error')}")
+                    if attempt < max_retries:
+                        wait_time = timeout * (backoff_factor ** attempt)
+                        logger.info(f"  ⏳ Waiting {wait_time:.1f}s before retry...")
+                        await asyncio.sleep(wait_time)
 
+            except asyncio.TimeoutError:
+                phase_time = time.time() - phase_start
+                logger.error(f"  ❌ Synthesis attempt {attempt + 1} timed out after {phase_time:.2f}s")
+                if attempt < max_retries:
+                    wait_time = timeout * (backoff_factor ** attempt)
+                    logger.info(f"  ⏳ Waiting {wait_time:.1f}s before retry...")
+                    await asyncio.sleep(wait_time)
+            except Exception as e:
+                phase_time = time.time() - phase_start
+                logger.error(f"  ❌ Synthesis attempt {attempt + 1} failed after {phase_time:.2f}s: {e}")
+                if attempt < max_retries:
+                    wait_time = timeout * (backoff_factor ** attempt)
+                    logger.info(f"  ⏳ Waiting {wait_time:.1f}s before retry...")
+                    await asyncio.sleep(wait_time)
+
+        # All attempts failed - create fallback response
+        logger.error("  ❌ All synthesis attempts failed - using fallback response")
+        results[AgentType.SYNTHESIS] = self._create_synthesis_fallback_result(context, results)
         return results
 
-    async def _execute_citation_phase(
+    async def _prepare_synthesis_input_with_fallbacks(
+        self, results: Dict[AgentType, Dict[str, Any]], context: QueryContext
+    ) -> Dict[str, Any]:
+        """Prepare synthesis input with comprehensive fallback handling."""
+        # Check if fact-checking failed or returned no verified facts
+        fact_check_result = results.get(AgentType.FACT_CHECK, {})
+        verified_facts = fact_check_result.get("data", {}).get("verified_facts", [])
+        
+        if not fact_check_result.get("success", False):
+            logger.warning("  ⚠️ Fact-checking failed - proceeding with limited synthesis")
+            synthesis_input = {
+                "verified_facts": [],
+                "query": context.query,
+                "synthesis_params": {
+                    "style": "limited",
+                    "confidence_threshold": 0.0,
+                    "fallback_mode": True
+                },
+                "context": {
+                    "fact_check_failed": True,
+                    "retrieval_context": results.get("retrieval_context", {}),
+                    "available_documents": results.get(AgentType.RETRIEVAL, {}).get("data", {}).get("documents", [])
+                }
+            }
+        elif not verified_facts:
+            logger.warning("  ⚠️ No verified facts available - proceeding with limited synthesis")
+            synthesis_input = {
+                "verified_facts": [],
+                "query": context.query,
+                "synthesis_params": {
+                    "style": "limited",
+                    "confidence_threshold": 0.0,
+                    "fallback_mode": True
+                },
+                "context": {
+                    "no_verified_facts": True,
+                    "retrieval_context": results.get("retrieval_context", {}),
+                    "fact_check_context": results.get("fact_check_context", {})
+                }
+            }
+        else:
+            # Normal synthesis with verified facts
+            synthesis_input = self._prepare_synthesis_input(results, context)
+            # Add context from previous phases
+            synthesis_input["context"] = {
+                "retrieval_context": results.get("retrieval_context", {}),
+                "fact_check_context": results.get("fact_check_context", {}),
+                "verified_facts_count": len(verified_facts)
+            }
+
+        return synthesis_input
+
+    def _create_synthesis_fallback_result(
+        self, context: QueryContext, results: Dict[AgentType, Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Create a fallback synthesis result when all attempts fail."""
+        # Try to salvage information from previous phases
+        facts = []
+        documents = []
+        
+        # Get facts from fact checker
+        fact_check_result = results.get(AgentType.FACT_CHECK, {})
+        if fact_check_result.get("success", False):
+            facts = fact_check_result.get("data", {}).get("verified_facts", [])
+        
+        # Get documents from retrieval
+        retrieval_result = results.get(AgentType.RETRIEVAL, {})
+        if retrieval_result.get("success", False):
+            documents = retrieval_result.get("data", {}).get("documents", [])
+        
+        # Create a basic response
+        if facts:
+            answer = "Based on available information:\n\n"
+            for i, fact in enumerate(facts[:3], 1):
+                content = fact.get("content", "")[:200]
+                answer += f"{i}. {content}...\n"
+        elif documents:
+            answer = "I found some relevant information:\n\n"
+            for i, doc in enumerate(documents[:3], 1):
+                content = doc.get("content", "")[:200]
+                answer += f"{i}. {content}...\n"
+        else:
+            answer = f"I apologize, but I couldn't process your query about '{context.query}'. Please try rephrasing your question or breaking it into smaller parts."
+        
+        return {
+            "success": False,
+            "data": {
+                "answer": answer,
+                "response": answer,
+                "fallback": True,
+                "synthesis_method": "fallback_concatenation"
+            },
+            "error": "Synthesis failed after all retry attempts",
+            "confidence": 0.2,
+            "execution_time_ms": 0,
+            "fallback_message": "I've provided available information, but the response may be incomplete."
+        }
+
+    async def _execute_citation_phase_with_fallbacks(
         self, context: QueryContext, results: Dict[AgentType, Dict[str, Any]]
     ) -> Dict[AgentType, Dict[str, Any]]:
-        """Execute the citation phase."""
+        """Execute citation phase with fallback options."""
         phase_start = time.time()
-        logger.info("🚀 Phase 4: Starting Citation")
+        logger.info("🚀 Phase 4: Starting Citation with Fallbacks")
         logger.info(f"  Query: {context.query[:100]}...")
         logger.info(f"  Trace ID: {context.trace_id}")
 
@@ -567,58 +1113,119 @@ class LeadOrchestrator:
             or not results[AgentType.SYNTHESIS].get("success", False)
         ):
             logger.warning("  ⚠️ Skipping citation due to synthesis failure")
-            results[AgentType.CITATION] = self._create_error_result(
-                "Skipped due to synthesis failure"
-            )
+            results[AgentType.CITATION] = self._create_citation_skip_result("Synthesis failure")
             return results
 
-        try:
-            # Prepare citation task with synthesis result and retrieval documents
-            synthesis_data = results[AgentType.SYNTHESIS].get("data", {})
-            retrieval_data = results[AgentType.RETRIEVAL].get("data", {})
-            
-            citation_task = {
-                "content": synthesis_data.get("answer", ""),
-                "sources": retrieval_data.get("documents", []),
-                "format": "academic",
-            }
-            logger.info("  🔍 Preparing citation task...")
+        citation_config = self.retry_config[AgentType.CITATION]
+        max_retries = citation_config["max_retries"]
+        timeout = citation_config["timeout"]
 
-            logger.info("  🔍 Executing citation agent...")
-            citation_result = await asyncio.wait_for(
-                self.agents[AgentType.CITATION].process_task(citation_task, context),
-                timeout=10,
-            )
-            
-            # Ensure result is a dictionary
-            citation_result = self._ensure_dict_result(citation_result, "CITATION")
-            results[AgentType.CITATION] = citation_result
+        for attempt in range(max_retries + 1):
+            try:
+                logger.info(f"  🔍 Citation attempt {attempt + 1}/{max_retries + 1}")
+                
+                # Prepare citation task with synthesis result and retrieval documents
+                synthesis_data = results[AgentType.SYNTHESIS].get("data", {})
+                retrieval_data = results[AgentType.RETRIEVAL].get("data", {})
+                
+                citation_task = {
+                    "content": synthesis_data.get("answer", ""),
+                    "sources": retrieval_data.get("documents", []),
+                    "format": "academic",
+                }
 
-            phase_time = time.time() - phase_start
-            if citation_result.get("success", False):
-                citations_count = len(citation_result.get("data", {}).get("citations", []))
-                logger.info(f"  ✅ Citation completed successfully in {phase_time:.2f}s")
-                logger.info(f"  📚 Generated {citations_count} citations")
-            else:
-                logger.error(f"  ❌ Citation failed in {phase_time:.2f}s: {citation_result.get('error', 'Unknown error')}")
+                citation_result = await asyncio.wait_for(
+                    self.agents[AgentType.CITATION].process_task(citation_task, context),
+                    timeout=timeout,
+                )
+                
+                citation_result = self._ensure_dict_result(citation_result, "CITATION")
+                results[AgentType.CITATION] = citation_result
 
-        except asyncio.TimeoutError:
-            phase_time = time.time() - phase_start
-            logger.error(f"  ❌ Citation timed out after {phase_time:.2f}s")
-            results[AgentType.CITATION] = self._create_timeout_result(
-                "Citation timed out", 10000
-            )
-        except Exception as e:
-            phase_time = time.time() - phase_start
-            logger.error(f"  ❌ Citation failed after {phase_time:.2f}s: {e}")
-            logger.error(f"  Error type: {type(e).__name__}")
-            import traceback
-            logger.error(f"  Traceback: {traceback.format_exc()}")
-            results[AgentType.CITATION] = self._create_error_result(
-                f"Citation failed: {str(e)}"
-            )
+                phase_time = time.time() - phase_start
+                if citation_result.get("success", False):
+                    citations_count = len(citation_result.get("data", {}).get("citations", []))
+                    logger.info(f"  ✅ Citation completed successfully in {phase_time:.2f}s")
+                    logger.info(f"  📚 Generated {citations_count} citations")
+                    return results
+                else:
+                    logger.warning(f"  ⚠️ Citation attempt {attempt + 1} failed: {citation_result.get('error', 'Unknown error')}")
+                    if attempt < max_retries:
+                        logger.info("  ⏳ Waiting before retry...")
+                        await asyncio.sleep(1)
 
+            except asyncio.TimeoutError:
+                phase_time = time.time() - phase_start
+                logger.error(f"  ❌ Citation attempt {attempt + 1} timed out after {phase_time:.2f}s")
+                if attempt < max_retries:
+                    await asyncio.sleep(1)
+            except Exception as e:
+                phase_time = time.time() - phase_start
+                logger.error(f"  ❌ Citation attempt {attempt + 1} failed after {phase_time:.2f}s: {e}")
+                if attempt < max_retries:
+                    await asyncio.sleep(1)
+
+        # All attempts failed - create fallback result
+        logger.error("  ❌ All citation attempts failed - using fallback")
+        results[AgentType.CITATION] = self._create_citation_fallback_result(results)
         return results
+
+    def _create_citation_skip_result(self, reason: str) -> Dict[str, Any]:
+        """Create a result when citation is skipped."""
+        return {
+            "success": False,
+            "data": {
+                "citations": [],
+                "bibliography": [],
+                "citation_method": "skipped",
+                "skip_reason": reason,
+                "metadata": {
+                    "agent_id": "citation_agent",
+                    "processing_time_ms": 0,
+                    "skip_reason": reason
+                },
+            },
+            "confidence": 0.0,
+            "execution_time_ms": 0,
+            "skip_reason": reason
+        }
+
+    def _create_citation_fallback_result(self, results: Dict[AgentType, Dict[str, Any]]) -> Dict[str, Any]:
+        """Create a fallback citation result when all attempts fail."""
+        # Extract basic citation information from available sources
+        synthesis_data = results.get(AgentType.SYNTHESIS, {}).get("data", {})
+        retrieval_data = results.get(AgentType.RETRIEVAL, {}).get("data", {})
+        
+        answer = synthesis_data.get("answer", "")
+        documents = retrieval_data.get("documents", [])
+        
+        # Create basic citations from documents
+        basic_citations = []
+        for i, doc in enumerate(documents[:5], 1):
+            basic_citations.append({
+                "id": f"source_{i}",
+                "content": doc.get("content", "")[:100],
+                "source": doc.get("source", "Unknown"),
+                "format": "basic"
+            })
+        
+        return {
+            "success": False,
+            "data": {
+                "citations": basic_citations,
+                "bibliography": [doc.get("source", "Unknown") for doc in documents[:5]],
+                "citation_method": "fallback",
+                "fallback": True,
+                "metadata": {
+                    "agent_id": "citation_agent",
+                    "processing_time_ms": 0,
+                    "fallback_used": True
+                },
+            },
+            "confidence": 0.3,
+            "execution_time_ms": 0,
+            "fallback_message": "Citations were generated using available sources, but may be incomplete."
+        }
 
     def _create_timeout_result(
         self, message: str, execution_time_ms: int
@@ -1383,7 +1990,7 @@ class SemanticCacheManager:
 
 
 class ResponseAggregator:
-    """Enhanced response aggregator with proper citation integration."""
+    """Enhanced response aggregator with comprehensive error handling and fallback support."""
 
     def __init__(self):
         # Weighted confidence calculation based on agent importance
@@ -1394,101 +2001,357 @@ class ResponseAggregator:
             AgentType.CITATION: 0.10,  # Citations add credibility but less weight
         }
 
+        # Fallback message templates
+        self.fallback_messages = {
+            "retrieval_failure": "I couldn't find specific information about your query. Please try rephrasing or asking a different question.",
+            "fact_check_failure": "I found some information but couldn't fully verify all claims. Please use this information with caution.",
+            "synthesis_failure": "I encountered some issues while processing your query. Here's what I could determine based on the available information.",
+            "citation_failure": "I've provided an answer but couldn't generate complete citations. The information may still be useful.",
+            "partial_failure": "Some parts of the processing encountered issues, but I've provided the best available information.",
+            "complete_failure": "I apologize, but I encountered significant issues while processing your query. Please try again or contact support."
+        }
+
     def aggregate_pipeline_results(
         self, results: Dict[AgentType, Dict[str, Any]], context: QueryContext
     ) -> Dict[str, Any]:
         """
-        Aggregate results from all agents with enhanced citation handling.
+        Aggregate results from all pipeline stages into a final response.
+        Enhanced with comprehensive error handling and fallback strategies.
 
         Args:
-            results: Results from each agent
+            results: Dictionary mapping agent types to their results
             context: Query context
 
         Returns:
-            Aggregated response with proper citations
+            Final response with answer, confidence, citations, and metadata
         """
-        # Defensive check: ensure all results are valid
-        for agent_type, result in results.items():
-            if not isinstance(result, dict):
-                logger.warning(f"Non-dict result from {agent_type}: {type(result)}")
-                # Wrap non-dict results as safe dict
-                results[agent_type] = {
-                    "success": False,
-                    "result": result,
-                    "error": f"Non-dict result from {agent_type}",
-                    "data": {}
-                }
-            elif not isinstance(result.get("data"), dict):
-                logger.warning(f"Non-dict data from {agent_type}: {type(result.get('data'))}")
-                # Ensure data is a dict
-                if result.get("data") is None:
-                    result["data"] = {}
-                else:
-                    result["data"] = {"raw_data": result.get("data")}
-
-        # Check if synthesis succeeded
-        synthesis_result = results.get(AgentType.SYNTHESIS)
-        if not synthesis_result or not synthesis_result.get("success", False):
-            return self._create_partial_response(results, context)
-
-        # Convert to standardized data models
         try:
+            # Analyze pipeline health and determine response strategy
+            pipeline_health = self._analyze_pipeline_health(results)
+            
+            # Check for complete pipeline failure
+            if pipeline_health["status"] == "complete_failure":
+                logger.error("❌ Complete pipeline failure - no agents succeeded")
+                return self._create_complete_failure_response(context, results)
+            
+            # Extract synthesis result (most important)
+            synthesis_result = results.get(AgentType.SYNTHESIS, {})
             synthesis_data = synthesis_result.get("data", {})
-            answer = synthesis_data.get("answer", synthesis_data.get("response", ""))
+            
+            # Extract answer with fallback handling
+            answer = self._extract_answer_with_fallbacks(synthesis_result, results, context)
+            
+            # Calculate weighted confidence with degradation for failures
+            confidence = self._calculate_weighted_confidence_with_degradation(results, pipeline_health)
+            
+            # Extract citations from citation agent if available
+            citations = self._extract_citations_with_fallbacks(results)
+            
+            # Compile comprehensive metadata with error details
+            metadata = self._compile_enhanced_metadata(results, context, pipeline_health)
+            
+            # Determine response type and warnings
+            response_type = self._determine_response_type(pipeline_health)
+            warnings = self._generate_warnings(pipeline_health, results)
+            
+            # Add fallback messages if needed
+            fallback_messages = self._generate_fallback_messages(pipeline_health, results)
+            
+            return {
+                "success": True,
+                "answer": answer,
+                "confidence": confidence,
+                "citations": citations,
+                "metadata": metadata,
+                "response_type": response_type,
+                "warnings": warnings,
+                "fallback_messages": fallback_messages,
+                "pipeline_health": pipeline_health["status"]
+            }
+            
         except Exception as e:
-            logger.warning(f"Failed to convert synthesis data: {e}")
-            answer = synthesis_result.get("data", {}).get(
-                "answer", synthesis_result.get("data", {}).get("response", "")
-            )
+            logger.error(f"Response aggregation failed: {e}")
+            return self._create_aggregation_error_response(context, str(e))
 
-        # Integrate citations if available
-        citation_result = results.get(AgentType.CITATION)
-        bibliography = []
-        citations = []
-        cited_content = None
-        if citation_result and citation_result.get("success", False):
-            try:
-                citation_data = citation_result.get("data", {})
-                # Handle both old and new field names
-                cited_content = citation_data.get("cited_content", "")
-                citations = citation_data.get("citations", [])
-                bibliography = citation_data.get("bibliography", citations)
-                # Use cited content if available, otherwise use original answer
-                if cited_content:
-                    answer = cited_content
-            except Exception as e:
-                logger.warning(f"Failed to extract citation data: {e}")
-                # Fallback to direct dictionary access
-                citation_data = citation_result.get("data", {})
-                cited_content = citation_data.get("cited_content", "")
-                citations = citation_data.get("citations", [])
-                bibliography = citation_data.get("bibliography", citations)
-                if cited_content:
-                    answer = cited_content
-
-        # Calculate weighted confidence
-        confidence = self._calculate_weighted_confidence(results)
-
-        # Compile token usage
-        total_tokens = self._compile_token_usage(results)
-
+    def _analyze_pipeline_health(self, results: Dict[AgentType, Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze the overall health of the pipeline and identify issues."""
+        successful_agents = []
+        failed_agents = []
+        partial_failures = []
+        fallback_used = []
+        
+        for agent_type, result in results.items():
+            if isinstance(agent_type, AgentType):
+                if result.get("success", False):
+                    successful_agents.append(agent_type.value)
+                    if result.get("fallback", False):
+                        fallback_used.append(agent_type.value)
+                else:
+                    failed_agents.append(agent_type.value)
+                    if result.get("fallback", False):
+                        partial_failures.append(agent_type.value)
+        
+        # Determine overall status
+        if not successful_agents:
+            status = "complete_failure"
+        elif failed_agents and successful_agents:
+            status = "partial_failure"
+        elif fallback_used:
+            status = "fallback_used"
+        else:
+            status = "success"
+        
         return {
-            "success": True,
-            "answer": answer,
-            "cited_content": cited_content if cited_content else answer,
-            "confidence": confidence,
-            "citations": citations,  # Include raw citations
-            "bibliography": bibliography,  # Formatted bibliography
-            "metadata": {
-                "agent_results": {
-                    agent.value: result.get("success", False) for agent, result in results.items()
-                },
-                "token_usage": total_tokens,
-                "processing_time_ms": sum(
-                    result.get("execution_time_ms", 0) for result in results.values()
-                ),
-                "trace_id": context.trace_id,
+            "status": status,
+            "successful_agents": successful_agents,
+            "failed_agents": failed_agents,
+            "partial_failures": partial_failures,
+            "fallback_used": fallback_used,
+            "total_agents": len([k for k in results.keys() if isinstance(k, AgentType)])
+        }
+
+    def _extract_answer_with_fallbacks(
+        self, synthesis_result: Dict[str, Any], results: Dict[AgentType, Dict[str, Any]], context: QueryContext
+    ) -> str:
+        """Extract answer with comprehensive fallback handling."""
+        # Try to get answer from synthesis
+        answer = synthesis_result.get("data", {}).get("answer", "")
+        
+        if not answer:
+            # Check if synthesis failed but has fallback
+            if synthesis_result.get("fallback", False):
+                answer = synthesis_result.get("data", {}).get("response", "")
+            
+            # If still no answer, try to construct from other sources
+            if not answer:
+                answer = self._construct_answer_from_fallbacks(results, context)
+        
+        return answer
+
+    def _construct_answer_from_fallbacks(
+        self, results: Dict[AgentType, Dict[str, Any]], context: QueryContext
+    ) -> str:
+        """Construct an answer from available fallback sources."""
+        # Try to get facts from fact checker
+        facts = []
+        fact_check_result = results.get(AgentType.FACT_CHECK, {})
+        if fact_check_result.get("success", False) or fact_check_result.get("fallback", False):
+            facts = fact_check_result.get("data", {}).get("verified_facts", [])
+        
+        # Try to get documents from retrieval
+        documents = []
+        retrieval_result = results.get(AgentType.RETRIEVAL, {})
+        if retrieval_result.get("success", False) or retrieval_result.get("fallback", False):
+            documents = retrieval_result.get("data", {}).get("documents", [])
+        
+        # Construct answer from available sources
+        if facts:
+            answer = "Based on available information:\n\n"
+            for i, fact in enumerate(facts[:3], 1):
+                content = fact.get("content", "")[:200]
+                answer += f"{i}. {content}...\n"
+        elif documents:
+            answer = "I found some relevant information:\n\n"
+            for i, doc in enumerate(documents[:3], 1):
+                content = doc.get("content", "")[:200]
+                answer += f"{i}. {content}...\n"
+        else:
+            answer = f"I apologize, but I couldn't process your query about '{context.query}'. Please try rephrasing your question or breaking it into smaller parts."
+        
+        return answer
+
+    def _calculate_weighted_confidence_with_degradation(
+        self, results: Dict[AgentType, Dict[str, Any]], pipeline_health: Dict[str, Any]
+    ) -> float:
+        """Calculate weighted confidence with degradation for failures."""
+        weights = {
+            AgentType.RETRIEVAL: 0.2,
+            AgentType.FACT_CHECK: 0.3,
+            AgentType.SYNTHESIS: 0.4,
+            AgentType.CITATION: 0.1,
+        }
+
+        total_confidence = 0.0
+        total_weight = 0.0
+        degradation_factor = 1.0
+
+        # Apply degradation based on pipeline health
+        if pipeline_health["status"] == "partial_failure":
+            degradation_factor = 0.7
+        elif pipeline_health["status"] == "fallback_used":
+            degradation_factor = 0.8
+        elif pipeline_health["status"] == "complete_failure":
+            degradation_factor = 0.3
+
+        for agent_type, result in results.items():
+            if agent_type in weights:
+                if result.get("success", False):
+                    confidence = result.get("confidence", 0.0)
+                    weight = weights[agent_type]
+                    total_confidence += confidence * weight
+                    total_weight += weight
+                elif result.get("fallback", False):
+                    # Apply reduced confidence for fallback results
+                    confidence = result.get("confidence", 0.0) * 0.6
+                    weight = weights[agent_type]
+                    total_confidence += confidence * weight
+                    total_weight += weight
+
+        base_confidence = total_confidence / max(total_weight, 0.1)
+        return min(base_confidence * degradation_factor, 1.0)
+
+    def _extract_citations_with_fallbacks(self, results: Dict[AgentType, Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Extract citations with fallback handling."""
+        citations = []
+        citation_result = results.get(AgentType.CITATION, {})
+        
+        if citation_result.get("success", False):
+            citations = citation_result.get("data", {}).get("citations", [])
+        elif citation_result.get("fallback", False):
+            # Use fallback citations if available
+            citations = citation_result.get("data", {}).get("citations", [])
+        
+        return citations
+
+    def _compile_enhanced_metadata(
+        self, results: Dict[AgentType, Dict[str, Any]], context: QueryContext, pipeline_health: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Compile comprehensive metadata with error details."""
+        metadata = {
+            "pipeline_status": pipeline_health["status"],
+            "successful_agents": pipeline_health["successful_agents"],
+            "failed_agents": pipeline_health["failed_agents"],
+            "fallback_used": pipeline_health["fallback_used"],
+            "agent_results": {
+                agent_type.value: {
+                    "success": result.get("success", False),
+                    "confidence": result.get("confidence", 0.0),
+                    "execution_time_ms": result.get("execution_time_ms", 0),
+                    "fallback_used": result.get("fallback", False),
+                    "error": result.get("error", None),
+                    "attempts_used": result.get("attempts_used", 1)
+                }
+                for agent_type, result in results.items()
+                if isinstance(agent_type, AgentType)
             },
+            "token_usage": self._compile_token_usage(results),
+            "retrieval_context": results.get("retrieval_context", {}),
+            "fact_check_context": results.get("fact_check_context", {}),
+            "synthesis_context": results.get("synthesis_context", {}),
+            "trace_id": context.trace_id,
+            "query_complexity": len(context.query.split()),
+            "user_context_keys": list(context.user_context.keys()) if context.user_context else []
+        }
+        
+        # Add error details for failed agents
+        error_details = {}
+        for agent_type, result in results.items():
+            if isinstance(agent_type, AgentType) and not result.get("success", False):
+                error_details[agent_type.value] = {
+                    "error": result.get("error", "Unknown error"),
+                    "fallback_message": result.get("fallback_message", None),
+                    "skip_reason": result.get("skip_reason", None)
+                }
+        
+        if error_details:
+            metadata["error_details"] = error_details
+        
+        return metadata
+
+    def _determine_response_type(self, pipeline_health: Dict[str, Any]) -> str:
+        """Determine the type of response based on pipeline health."""
+        if pipeline_health["status"] == "success":
+            return "complete"
+        elif pipeline_health["status"] == "fallback_used":
+            return "fallback"
+        elif pipeline_health["status"] == "partial_failure":
+            return "partial"
+        else:
+            return "error"
+
+    def _generate_warnings(self, pipeline_health: Dict[str, Any], results: Dict[AgentType, Dict[str, Any]]) -> List[str]:
+        """Generate warnings based on pipeline health and results."""
+        warnings = []
+        
+        # Add warnings for failed agents
+        for agent in pipeline_health["failed_agents"]:
+            warnings.append(f"Agent {agent} failed during processing")
+        
+        # Add specific warnings for critical failures
+        if AgentType.RETRIEVAL.value in pipeline_health["failed_agents"]:
+            warnings.append("Limited information available due to retrieval issues")
+        if AgentType.FACT_CHECK.value in pipeline_health["failed_agents"]:
+            warnings.append("Fact verification was incomplete")
+        if AgentType.SYNTHESIS.value in pipeline_health["failed_agents"]:
+            warnings.append("Answer synthesis may be incomplete")
+        
+        # Add warnings for fallback usage
+        for agent in pipeline_health["fallback_used"]:
+            warnings.append(f"Agent {agent} used fallback processing")
+        
+        # Add warnings for empty retrieval
+        retrieval_result = results.get(AgentType.RETRIEVAL, {})
+        if retrieval_result.get("empty_retrieval", False):
+            warnings.append("No relevant documents found for this query")
+        
+        return warnings
+
+    def _generate_fallback_messages(
+        self, pipeline_health: Dict[str, Any], results: Dict[AgentType, Dict[str, Any]]
+    ) -> List[str]:
+        """Generate fallback messages for user communication."""
+        messages = []
+        
+        # Add agent-specific fallback messages
+        for agent_type, result in results.items():
+            if isinstance(agent_type, AgentType) and result.get("fallback", False):
+                fallback_msg = result.get("fallback_message")
+                if fallback_msg:
+                    messages.append(f"{agent_type.value}: {fallback_msg}")
+        
+        # Add general fallback messages based on pipeline health
+        if pipeline_health["status"] == "partial_failure":
+            messages.append(self.fallback_messages["partial_failure"])
+        elif pipeline_health["status"] == "complete_failure":
+            messages.append(self.fallback_messages["complete_failure"])
+        
+        return messages
+
+    def _create_complete_failure_response(
+        self, context: QueryContext, results: Dict[AgentType, Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Create response for complete pipeline failure."""
+        return {
+            "success": False,
+            "answer": self.fallback_messages["complete_failure"],
+            "confidence": 0.0,
+            "citations": [],
+            "metadata": {
+                "pipeline_status": "complete_failure",
+                "failed_agents": [agent_type.value for agent_type in results.keys() if isinstance(agent_type, AgentType)],
+                "error": "All pipeline agents failed",
+                "trace_id": context.trace_id
+            },
+            "response_type": "error",
+            "warnings": ["All processing agents failed"],
+            "fallback_messages": [self.fallback_messages["complete_failure"]]
+        }
+
+    def _create_aggregation_error_response(self, context: QueryContext, error: str) -> Dict[str, Any]:
+        """Create response when aggregation itself fails."""
+        return {
+            "success": False,
+            "answer": "I apologize, but I encountered an error while processing your query. Please try again.",
+            "confidence": 0.0,
+            "citations": [],
+            "metadata": {
+                "error": error,
+                "error_type": "aggregation_error",
+                "trace_id": context.trace_id
+            },
+            "response_type": "error",
+            "warnings": ["Response aggregation failed"],
+            "fallback_messages": ["Please try again or contact support"]
         }
 
     def _create_partial_response(

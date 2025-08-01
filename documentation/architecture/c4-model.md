@@ -207,12 +207,12 @@
 - **Primary**: PostgreSQL 15
 - **Cache**: Redis 7
 - **Vector**: Pinecone
-- **Search**: Elasticsearch 8.15.0
+- **Search**: Meilisearch
 
 ### **AI & ML Stack**
 - **OpenAI**: GPT-4, Embeddings API
 - **Vector DB**: Pinecone
-- **Search**: Elasticsearch
+- **Search**: Meilisearch
 - **Caching**: Redis
 
 ### **Development & Testing**

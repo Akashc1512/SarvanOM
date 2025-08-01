@@ -71,7 +71,7 @@ class TestProductionReadiness:
         assert "orchestrator" in components
         assert "cache" in components
         assert "vector_database" in components
-        assert "elasticsearch" in components
+        assert "meilisearch" in components
         assert "knowledge_graph" in components
         assert "llm_api" in components
 
@@ -113,7 +113,7 @@ class TestProductionReadiness:
         # Test integration status tracking
         status = await monitor.get_integration_status()
         assert "vector_database" in status
-        assert "elasticsearch" in status
+        assert "meilisearch" in status
         assert "knowledge_graph" in status
         assert "llm_api" in status
         assert "redis_cache" in status
