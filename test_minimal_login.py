@@ -10,7 +10,7 @@ def test_minimal_login():
     headers = {"Content-Type": "application/json"}
     
     # Test with a simple payload
-    data = {"username": "testuser_simple", "password": "simplepass123"}
+    data = {"username": "testuser_simple", "password": "test_password"}
     
     print(f"Testing login with: {json.dumps(data)}")
     

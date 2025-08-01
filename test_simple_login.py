@@ -10,7 +10,7 @@ def test_simple_login():
     headers = {"Content-Type": "application/json"}
     
     # Test with existing user
-    data = {"username": "testuser_simple", "password": "simplepass123"}
+    data = {"username": "testuser_simple", "password": "test_password"}
     
     print(f"Testing login with data: {json.dumps(data, indent=2)}")
     
@@ -37,7 +37,7 @@ def test_register_new_user():
     data = {
         "username": "testuser_simple2",
         "email": "simple2@test.com",
-        "password": "simplepass123",
+        "password": "test_password",
         "role": "user"
     }
     
@@ -56,7 +56,7 @@ def test_raw_request():
     headers = {"Content-Type": "application/json"}
     
     # Test with raw JSON string
-    data = '{"username": "testuser_simple", "password": "simplepass123"}'
+    data = '{"username": "testuser_simple", "password": "test_password"}'
     
     print(f"Testing with raw data: {data}")
     

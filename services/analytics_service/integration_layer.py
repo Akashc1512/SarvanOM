@@ -61,7 +61,7 @@ from shared.core.security import get_security_manager
 from shared.core.cache import get_cache_manager
 from shared.core.rate_limiter import get_rate_limiter
 from shared.core.performance import get_performance_monitor
-from services.analytics-service.analytics_v2 import get_analytics_processor
+from services.analytics_service.analytics_v2 import get_analytics_processor
 from shared.core.ml_integration import get_model_manager, get_nlp_models
 from services.api-gateway.realtime import (
     get_connection_manager,
@@ -69,7 +69,7 @@ from services.api-gateway.realtime import (
     start_realtime_services,
     stop_realtime_services,
 )
-from services.auth-service.user_management_v2 import get_user_manager
+from services.auth_service.user_management_v2 import get_user_manager
 from shared.core.database.models import get_database_manager
 from services.api-gateway.versioning_v2 import get_version_manager
 

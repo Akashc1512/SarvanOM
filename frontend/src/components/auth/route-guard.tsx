@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { LoadingSpinner } from "@/components/atoms/loading-spinner";
+import { useAuth } from "@/hooks/use-auth";
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -10,57 +11,17 @@ interface RouteGuardProps {
   fallback?: React.ReactNode;
 }
 
-interface User {
-  id: string;
-  email: string;
-  role: "user" | "admin" | "expert";
-  permissions: string[];
-}
-
-// Mock authentication hook - replace with real auth
-function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Simulate auth check
-    const checkAuth = async () => {
-      try {
-        // Check for auth token
-        const token = localStorage.getItem("auth_token");
-        if (token) {
-          // Mock user data - replace with real API call
-          setUser({
-            id: "1",
-            email: "user@example.com",
-            role: "user",
-            permissions: ["read", "write"],
-          });
-        }
-      } catch (error) {
-        console.error("Auth check failed:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
-
-  return { user, loading };
-}
-
 export function RouteGuard({
   children,
   requiredRole,
   fallback,
 }: RouteGuardProps) {
-  const { user, loading } = useAuth();
+  const { user, isLoading, hasRole } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!loading) {
+    if (!isLoading) {
       // Check if user is authenticated
       if (!user) {
         // Redirect to login if not authenticated
@@ -69,16 +30,16 @@ export function RouteGuard({
       }
 
       // Check role-based access
-      if (requiredRole && user.role !== requiredRole && user.role !== "admin") {
+      if (requiredRole && !hasRole(requiredRole)) {
         // Redirect to unauthorized page
         router.push("/unauthorized");
         return;
       }
     }
-  }, [user, loading, requiredRole, router, pathname]);
+  }, [user, isLoading, requiredRole, router, pathname, hasRole]);
 
   // Show loading spinner while checking auth
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -104,7 +65,7 @@ export function RouteGuard({
   }
 
   // Check role-based access
-  if (requiredRole && user.role !== requiredRole && user.role !== "admin") {
+  if (requiredRole && !hasRole(requiredRole)) {
     return (
       fallback || (
         <div className="flex items-center justify-center min-h-screen">

@@ -33,7 +33,7 @@ from typing import Dict, Any, List
 from unittest.mock import patch, AsyncMock
 
 from fastapi.testclient import TestClient
-from services.api-gateway.main import app
+from services.api_gateway.main import app
 from shared.core.api.exceptions import ValidationError, RateLimitError
 from shared.core.security import sanitize_input, validate_email, validate_password
 

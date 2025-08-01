@@ -1,0 +1,87 @@
+{
+  "timestamp": 1754024027.8878348,
+  "validation_duration_seconds": 3.0285558700561523,
+  "total_components": 8,
+  "passed_components": 8,
+  "failed_components": 0,
+  "success_rate": 100.0,
+  "overall_status": "passed",
+  "component_results": {
+    "query_intelligence": {
+      "status": "passed",
+      "file_exists": true,
+      "import_successful": true,
+      "initialization_successful": true,
+      "query_processing_successful": true,
+      "result_structure_valid": true,
+      "processing_time_ms": 6.313562393188477
+    },
+    "multi_agent_orchestration": {
+      "status": "passed",
+      "file_exists": true,
+      "import_successful": true,
+      "initialization_successful": true,
+      "request_processing_successful": true,
+      "result_structure_valid": true,
+      "processing_time_ms": 101.11188888549805
+    },
+    "hybrid_retrieval": {
+      "status": "passed",
+      "file_exists": true,
+      "import_successful": true,
+      "initialization_successful": true,
+      "retrieval_successful": true,
+      "result_structure_valid": true,
+      "results_count": 16,
+      "processing_time_ms": 263.6585235595703
+    },
+    "memory_management": {
+      "status": "passed",
+      "file_exists": true,
+      "import_successful": true,
+      "initialization_successful": true,
+      "store_operation_successful": true,
+      "retrieve_operation_successful": true,
+      "delete_operation_successful": true,
+      "stats_retrieval_successful": true
+    },
+    "expert_validation": {
+      "status": "passed",
+      "file_exists": true,
+      "import_successful": true,
+      "initialization_successful": true,
+      "validation_successful": true,
+      "result_structure_valid": true,
+      "processing_time_ms": 0.11563301086425781
+    },
+    "integration_layer": {
+      "status": "passed",
+      "file_exists": true,
+      "import_successful": true,
+      "initialization_successful": true,
+      "query_processing_successful": true,
+      "result_structure_valid": true,
+      "processing_time_ms": 385.913610458374
+    },
+    "health_endpoints": {
+      "status": "passed",
+      "file_exists": true,
+      "health_endpoint_exists": true,
+      "metrics_endpoint_exists": true,
+      "diagnostics_endpoint_exists": true
+    },
+    "configuration": {
+      "status": "passed",
+      "config_file_exists": true,
+      "has_services_section": true,
+      "has_features_section": true,
+      "has_environment_section": true,
+      "query_intelligence_enabled": true,
+      "orchestration_enabled": true,
+      "hybrid_retrieval_enabled": true,
+      "memory_management_enabled": true,
+      "expert_validation_enabled": true,
+      "monitoring_enabled": true
+    }
+  }
+}

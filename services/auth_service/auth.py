@@ -453,12 +453,12 @@ async def get_current_user(
     # Import here to avoid circular import
     try:
         import importlib
-        user_management_v2 = importlib.import_module("services.auth-service.user_management_v2")
+        user_management_v2 = importlib.import_module("services.auth_service.user_management_v2")
         get_user_manager = user_management_v2.get_user_manager
     except ImportError:
         # Fallback to legacy user management
         import importlib
-        user_management = importlib.import_module("services.auth-service.user_management")
+        user_management = importlib.import_module("services.auth_service.user_management")
         get_user_manager = user_management.get_user_manager
 
     # Check for API key in headers

@@ -8,6 +8,7 @@ This script:
 3. Validates environment variables and configurations
 4. Creates missing indices/collections
 5. Performs test queries to verify functionality
+6. Implements MAANG standards for external service integration
 """
 
 import asyncio
@@ -15,9 +16,11 @@ import logging
 import os
 import sys
 import time
+import random
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
+from contextlib import asynccontextmanager
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -47,17 +50,87 @@ class BackendStatus:
     details: Optional[Dict[str, Any]] = None
 
 
+class CircuitBreaker:
+    """Circuit breaker for external service calls."""
+    
+    def __init__(self, failure_threshold: int = 3, timeout: float = 60.0):
+        self.failure_threshold = failure_threshold
+        self.timeout = timeout
+        self.failure_count = 0
+        self.last_failure_time = None
+        self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
+    
+    def record_success(self):
+        """Record successful call."""
+        self.failure_count = 0
+        self.state = "CLOSED"
+    
+    def record_failure(self):
+        """Record failed call."""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        
+        if self.failure_count >= self.failure_threshold:
+            self.state = "OPEN"
+    
+    def can_execute(self) -> bool:
+        """Check if circuit breaker allows execution."""
+        if self.state == "CLOSED":
+            return True
+        
+        if self.state == "OPEN":
+            if time.time() - self.last_failure_time > self.timeout:
+                self.state = "HALF_OPEN"
+                return True
+            return False
+        
+        return True  # HALF_OPEN
+
+
+class RetryManager:
+    """Retry manager with exponential backoff."""
+    
+    def __init__(self, max_retries: int = 3, base_delay: float = 1.0):
+        self.max_retries = max_retries
+        self.base_delay = base_delay
+    
+    async def execute_with_retry(self, func, *args, **kwargs):
+        """Execute function with retry logic."""
+        last_exception = None
+        
+        for attempt in range(self.max_retries + 1):
+            try:
+                return await func(*args, **kwargs)
+            except Exception as e:
+                last_exception = e
+                
+                if attempt == self.max_retries:
+                    raise last_exception
+                
+                delay = self.base_delay * (2 ** attempt) + random.uniform(0, 1)
+                logger.warning(f"Attempt {attempt + 1} failed: {e}. Retrying in {delay:.2f}s...")
+                await asyncio.sleep(delay)
+        
+        raise last_exception
+
+
 class VectorBackendChecker:
-    """Comprehensive vector backend checker and configurator."""
+    """Comprehensive vector backend checker and configurator with MAANG standards."""
     
     def __init__(self):
         self.results: Dict[str, BackendStatus] = {}
+        self.circuit_breakers: Dict[str, CircuitBreaker] = {}
+        self.retry_manager = RetryManager()
         
+        # Initialize circuit breakers for each backend
+        for backend in ["pinecone", "elasticsearch", "qdrant", "knowledge_graph"]:
+            self.circuit_breakers[backend] = CircuitBreaker()
+    
     async def check_all_backends(self) -> Dict[str, BackendStatus]:
         """Check all vector backends and search services."""
         logger.info("🔍 Starting comprehensive vector backend check...")
         
-        # Check each backend
+        # Check each backend with circuit breaker protection
         await self._check_pinecone()
         await self._check_elasticsearch()
         await self._check_qdrant()
@@ -65,8 +138,270 @@ class VectorBackendChecker:
         
         return self.results
     
+    @asynccontextmanager
+    async def _get_elasticsearch_client(self, url: str, username: str = None, password: str = None):
+        """Get Elasticsearch client with proper authentication."""
+        try:
+            from elasticsearch import AsyncElasticsearch
+            
+            # Build connection parameters
+            connection_params = {
+                "hosts": [url],
+                "max_retries": 3,
+                "retry_on_timeout": True,
+            }
+            
+            # Add authentication if provided
+            if username and password:
+                connection_params["basic_auth"] = (username, password)
+            elif username:
+                # API key authentication
+                connection_params["api_key"] = username
+            
+            client = AsyncElasticsearch(**connection_params)
+            
+            try:
+                yield client
+            finally:
+                await client.close()
+                
+        except ImportError:
+            raise ImportError("Elasticsearch Python client not installed. Run: pip install elasticsearch")
+    
+    async def _check_elasticsearch(self):
+        """Check Elasticsearch configuration and connectivity with enhanced authentication."""
+        logger.info("🔍 Checking Elasticsearch...")
+        
+        start_time = time.time()
+        status = BackendStatus(
+            name="Elasticsearch",
+            available=False,
+            configured=False,
+            reachable=False
+        )
+        
+        circuit_breaker = self.circuit_breakers["elasticsearch"]
+        
+        if not circuit_breaker.can_execute():
+            status.error = "Circuit breaker is OPEN - too many recent failures"
+            self.results["elasticsearch"] = status
+            return
+        
+        try:
+            # Check environment variables with fallbacks
+            es_url = os.getenv("ELASTICSEARCH_URL")
+            es_host = os.getenv("ELASTICSEARCH_HOST", "localhost")
+            es_port = os.getenv("ELASTICSEARCH_PORT", "9200")
+            es_index = os.getenv("ELASTICSEARCH_INDEX", "knowledge-base")
+            
+            # Authentication credentials
+            es_username = os.getenv("ELASTICSEARCH_USERNAME")
+            es_password = os.getenv("ELASTICSEARCH_PASSWORD")
+            es_api_key = os.getenv("ELASTICSEARCH_API_KEY")
+            
+            if not es_url:
+                es_url = f"http://{es_host}:{es_port}"
+            
+            status.configured = True
+            
+            # Try to import Elasticsearch
+            try:
+                from elasticsearch import AsyncElasticsearch
+                status.available = True
+            except ImportError:
+                status.error = "Elasticsearch Python client not installed. Run: pip install elasticsearch"
+                self.results["elasticsearch"] = status
+                return
+            
+            # Test connection with retry logic
+            async def test_connection():
+                async with self._get_elasticsearch_client(
+                    es_url, 
+                    es_username or es_api_key, 
+                    es_password
+                ) as es:
+                    # Test basic connectivity
+                    info = await es.info()
+                    
+                    # Check if index exists
+                    index_exists = await es.indices.exists(index=es_index)
+                    
+                    if not index_exists:
+                        logger.info(f"📝 Creating Elasticsearch index: {es_index}")
+                        try:
+                            # Create index with mapping
+                            await es.indices.create(
+                                index=es_index,
+                                body={
+                                    "mappings": {
+                                        "properties": {
+                                            "content": {"type": "text"},
+                                            "embedding": {"type": "dense_vector", "dims": 1536},
+                                            "metadata": {"type": "object"}
+                                        }
+                                    }
+                                }
+                            )
+                            logger.info(f"✅ Created Elasticsearch index: {es_index}")
+                            index_exists = True
+                        except Exception as e:
+                            logger.warning(f"⚠️ Failed to create index: {e}")
+                    
+                    # Test a simple search
+                    try:
+                        search_result = await es.search(
+                            index=es_index,
+                            body={"query": {"match_all": {}}, "size": 1}
+                        )
+                        return {
+                            "index_exists": index_exists,
+                            "cluster_info": info,
+                            "test_search_successful": True,
+                            "total_hits": search_result["hits"]["total"]["value"]
+                        }
+                    except Exception as e:
+                        return {
+                            "index_exists": index_exists,
+                            "cluster_info": info,
+                            "test_search_successful": False,
+                            "test_error": str(e)
+                        }
+            
+            # Execute with retry logic
+            details = await self.retry_manager.execute_with_retry(test_connection)
+            
+            status.reachable = True
+            status.response_time = time.time() - start_time
+            status.details = details
+            circuit_breaker.record_success()
+            
+        except Exception as e:
+            error_msg = f"Connection failed: {str(e)}"
+            status.error = error_msg
+            circuit_breaker.record_failure()
+            logger.error(f"❌ Elasticsearch check failed: {error_msg}")
+        
+        self.results["elasticsearch"] = status
+    
+    async def _check_qdrant(self):
+        """Check Qdrant configuration and connectivity with enhanced authentication."""
+        logger.info("🔍 Checking Qdrant...")
+        
+        start_time = time.time()
+        status = BackendStatus(
+            name="Qdrant",
+            available=False,
+            configured=False,
+            reachable=False
+        )
+        
+        circuit_breaker = self.circuit_breakers["qdrant"]
+        
+        if not circuit_breaker.can_execute():
+            status.error = "Circuit breaker is OPEN - too many recent failures"
+            self.results["qdrant"] = status
+            return
+        
+        try:
+            # Check environment variables with fallbacks
+            qdrant_url = os.getenv("QDRANT_URL")
+            qdrant_host = os.getenv("QDRANT_HOST", "localhost")
+            qdrant_port = os.getenv("QDRANT_PORT", "6333")
+            collection_name = os.getenv("QDRANT_COLLECTION", "knowledge-base")
+            
+            # Authentication credentials
+            qdrant_api_key = os.getenv("QDRANT_API_KEY")
+            qdrant_username = os.getenv("QDRANT_USERNAME")
+            qdrant_password = os.getenv("QDRANT_PASSWORD")
+            
+            if not qdrant_url:
+                qdrant_url = f"http://{qdrant_host}:{qdrant_port}"
+            
+            status.configured = True
+            
+            # Try to import Qdrant
+            try:
+                from qdrant_client import QdrantClient
+                from qdrant_client.models import Distance, VectorParams
+                status.available = True
+            except ImportError:
+                status.error = "Qdrant Python client not installed. Run: pip install qdrant-client"
+                self.results["qdrant"] = status
+                return
+            
+            # Test connection with retry logic
+            async def test_connection():
+                # Build client with authentication
+                client_params = {"url": qdrant_url}
+                
+                if qdrant_api_key:
+                    client_params["api_key"] = qdrant_api_key
+                elif qdrant_username and qdrant_password:
+                    client_params["username"] = qdrant_username
+                    client_params["password"] = qdrant_password
+                
+                client = QdrantClient(**client_params)
+                
+                # Test basic connectivity
+                collections = client.get_collections()
+                
+                # Check if collection exists
+                collection_names = [col.name for col in collections.collections]
+                collection_exists = collection_name in collection_names
+                
+                if not collection_exists:
+                    logger.info(f"📝 Creating Qdrant collection: {collection_name}")
+                    try:
+                        client.create_collection(
+                            collection_name=collection_name,
+                            vectors_config=VectorParams(
+                                size=1536,
+                                distance=Distance.COSINE
+                            )
+                        )
+                        logger.info(f"✅ Created Qdrant collection: {collection_name}")
+                        collection_exists = True
+                    except Exception as e:
+                        logger.warning(f"⚠️ Failed to create collection: {e}")
+                
+                # Test a simple search
+                try:
+                    search_result = client.search(
+                        collection_name=collection_name,
+                        query_vector=[0.1] * 1536,
+                        limit=1
+                    )
+                    return {
+                        "collection_exists": collection_exists,
+                        "collections_available": len(collection_names),
+                        "test_search_successful": True
+                    }
+                except Exception as e:
+                    return {
+                        "collection_exists": collection_exists,
+                        "collections_available": len(collection_names),
+                        "test_search_successful": False,
+                        "test_error": str(e)
+                    }
+            
+            # Execute with retry logic
+            details = await self.retry_manager.execute_with_retry(test_connection)
+            
+            status.reachable = True
+            status.response_time = time.time() - start_time
+            status.details = details
+            circuit_breaker.record_success()
+            
+        except Exception as e:
+            error_msg = f"Connection failed: {str(e)}"
+            status.error = error_msg
+            circuit_breaker.record_failure()
+            logger.error(f"❌ Qdrant check failed: {error_msg}")
+        
+        self.results["qdrant"] = status
+    
     async def _check_pinecone(self):
-        """Check Pinecone configuration and connectivity."""
+        """Check Pinecone configuration and connectivity with enhanced authentication."""
         logger.info("🔍 Checking Pinecone...")
         
         start_time = time.time()
@@ -76,6 +411,13 @@ class VectorBackendChecker:
             configured=False,
             reachable=False
         )
+        
+        circuit_breaker = self.circuit_breakers["pinecone"]
+        
+        if not circuit_breaker.can_execute():
+            status.error = "Circuit breaker is OPEN - too many recent failures"
+            self.results["pinecone"] = status
+            return
         
         try:
             # Check environment variables
@@ -104,14 +446,12 @@ class VectorBackendChecker:
                 self.results["pinecone"] = status
                 return
             
-            # Test connection
-            try:
+            # Test connection with retry logic
+            async def test_connection():
                 pc = Pinecone(api_key=api_key)
                 
                 # List indexes to test connection
                 indexes = pc.list_indexes()
-                status.reachable = True
-                status.response_time = time.time() - start_time
                 
                 # Check if our index exists
                 index_exists = index_name in [idx.name for idx in indexes.indexes]
@@ -129,6 +469,7 @@ class VectorBackendChecker:
                             )
                         )
                         logger.info(f"✅ Created Pinecone index: {index_name}")
+                        index_exists = True
                     except Exception as e:
                         logger.warning(f"⚠️ Failed to create index: {e}")
                 
@@ -142,215 +483,37 @@ class VectorBackendChecker:
                         top_k=1,
                         include_metadata=False
                     )
-                    status.details = {
+                    return {
                         "index_exists": index_exists,
                         "indexes_available": len(indexes.indexes),
                         "test_query_successful": True
                     }
                 except Exception as e:
-                    status.details = {
+                    return {
                         "index_exists": index_exists,
                         "indexes_available": len(indexes.indexes),
                         "test_query_successful": False,
                         "test_error": str(e)
                     }
-                
-            except Exception as e:
-                status.error = f"Connection failed: {str(e)}"
-                
+            
+            # Execute with retry logic
+            details = await self.retry_manager.execute_with_retry(test_connection)
+            
+            status.reachable = True
+            status.response_time = time.time() - start_time
+            status.details = details
+            circuit_breaker.record_success()
+            
         except Exception as e:
-            status.error = f"Unexpected error: {str(e)}"
+            error_msg = f"Connection failed: {str(e)}"
+            status.error = error_msg
+            circuit_breaker.record_failure()
+            logger.error(f"❌ Pinecone check failed: {error_msg}")
         
         self.results["pinecone"] = status
     
-    async def _check_elasticsearch(self):
-        """Check Elasticsearch configuration and connectivity."""
-        logger.info("🔍 Checking Elasticsearch...")
-        
-        start_time = time.time()
-        status = BackendStatus(
-            name="Elasticsearch",
-            available=False,
-            configured=False,
-            reachable=False
-        )
-        
-        try:
-            # Check environment variables
-            es_url = os.getenv("ELASTICSEARCH_URL")
-            es_host = os.getenv("ELASTICSEARCH_HOST", "localhost")
-            es_port = os.getenv("ELASTICSEARCH_PORT", "9200")
-            es_index = os.getenv("ELASTICSEARCH_INDEX", "knowledge-base")
-            
-            if not es_url:
-                es_url = f"http://{es_host}:{es_port}"
-            
-            status.configured = True
-            
-            # Try to import Elasticsearch
-            try:
-                from elasticsearch import AsyncElasticsearch
-                status.available = True
-            except ImportError:
-                status.error = "Elasticsearch Python client not installed. Run: pip install elasticsearch"
-                self.results["elasticsearch"] = status
-                return
-            
-            # Test connection
-            try:
-                es = AsyncElasticsearch([es_url])
-                
-                # Test basic connectivity
-                info = await es.info()
-                status.reachable = True
-                status.response_time = time.time() - start_time
-                
-                # Check if index exists
-                index_exists = await es.indices.exists(index=es_index)
-                
-                if not index_exists:
-                    logger.info(f"📝 Creating Elasticsearch index: {es_index}")
-                    try:
-                        # Create index with mapping
-                        await es.indices.create(
-                            index=es_index,
-                            body={
-                                "mappings": {
-                                    "properties": {
-                                        "content": {"type": "text"},
-                                        "embedding": {"type": "dense_vector", "dims": 1536},
-                                        "metadata": {"type": "object"}
-                                    }
-                                }
-                            }
-                        )
-                        logger.info(f"✅ Created Elasticsearch index: {es_index}")
-                        index_exists = True
-                    except Exception as e:
-                        logger.warning(f"⚠️ Failed to create index: {e}")
-                
-                # Test a simple search
-                try:
-                    search_result = await es.search(
-                        index=es_index,
-                        body={"query": {"match_all": {}}, "size": 1}
-                    )
-                    status.details = {
-                        "index_exists": index_exists,
-                        "cluster_info": info,
-                        "test_search_successful": True,
-                        "total_hits": search_result["hits"]["total"]["value"]
-                    }
-                except Exception as e:
-                    status.details = {
-                        "index_exists": index_exists,
-                        "cluster_info": info,
-                        "test_search_successful": False,
-                        "test_error": str(e)
-                    }
-                
-                await es.close()
-                
-            except Exception as e:
-                status.error = f"Connection failed: {str(e)}"
-                
-        except Exception as e:
-            status.error = f"Unexpected error: {str(e)}"
-        
-        self.results["elasticsearch"] = status
-    
-    async def _check_qdrant(self):
-        """Check Qdrant configuration and connectivity."""
-        logger.info("🔍 Checking Qdrant...")
-        
-        start_time = time.time()
-        status = BackendStatus(
-            name="Qdrant",
-            available=False,
-            configured=False,
-            reachable=False
-        )
-        
-        try:
-            # Check environment variables
-            qdrant_url = os.getenv("QDRANT_URL")
-            qdrant_host = os.getenv("QDRANT_HOST", "localhost")
-            qdrant_port = os.getenv("QDRANT_PORT", "6333")
-            collection_name = os.getenv("QDRANT_COLLECTION", "knowledge-base")
-            
-            if not qdrant_url:
-                qdrant_url = f"http://{qdrant_host}:{qdrant_port}"
-            
-            status.configured = True
-            
-            # Try to import Qdrant
-            try:
-                from qdrant_client import QdrantClient
-                from qdrant_client.models import Distance, VectorParams
-                status.available = True
-            except ImportError:
-                status.error = "Qdrant Python client not installed. Run: pip install qdrant-client"
-                self.results["qdrant"] = status
-                return
-            
-            # Test connection
-            try:
-                client = QdrantClient(url=qdrant_url)
-                
-                # Test basic connectivity
-                collections = client.get_collections()
-                status.reachable = True
-                status.response_time = time.time() - start_time
-                
-                # Check if collection exists
-                collection_names = [col.name for col in collections.collections]
-                collection_exists = collection_name in collection_names
-                
-                if not collection_exists:
-                    logger.info(f"📝 Creating Qdrant collection: {collection_name}")
-                    try:
-                        client.create_collection(
-                            collection_name=collection_name,
-                            vectors_config=VectorParams(
-                                size=1536,
-                                distance=Distance.COSINE
-                            )
-                        )
-                        logger.info(f"✅ Created Qdrant collection: {collection_name}")
-                        collection_exists = True
-                    except Exception as e:
-                        logger.warning(f"⚠️ Failed to create collection: {e}")
-                
-                # Test a simple search
-                try:
-                    search_result = client.search(
-                        collection_name=collection_name,
-                        query_vector=[0.1] * 1536,
-                        limit=1
-                    )
-                    status.details = {
-                        "collection_exists": collection_exists,
-                        "collections_available": len(collection_names),
-                        "test_search_successful": True
-                    }
-                except Exception as e:
-                    status.details = {
-                        "collection_exists": collection_exists,
-                        "collections_available": len(collection_names),
-                        "test_search_successful": False,
-                        "test_error": str(e)
-                    }
-                
-            except Exception as e:
-                status.error = f"Connection failed: {str(e)}"
-                
-        except Exception as e:
-            status.error = f"Unexpected error: {str(e)}"
-        
-        self.results["qdrant"] = status
-    
     async def _check_knowledge_graph(self):
-        """Check Knowledge Graph (Neo4j) configuration and connectivity."""
+        """Check Knowledge Graph (Neo4j) configuration and connectivity with enhanced authentication."""
         logger.info("🔍 Checking Knowledge Graph (Neo4j)...")
         
         start_time = time.time()
@@ -361,19 +524,30 @@ class VectorBackendChecker:
             reachable=False
         )
         
+        circuit_breaker = self.circuit_breakers["knowledge_graph"]
+        
+        if not circuit_breaker.can_execute():
+            status.error = "Circuit breaker is OPEN - too many recent failures"
+            self.results["knowledge_graph"] = status
+            return
+        
         try:
-            # Check environment variables
+            # Check environment variables with fallbacks
             neo4j_uri = os.getenv("NEO4J_URI")
             neo4j_host = os.getenv("NEO4J_HOST", "localhost")
             neo4j_port = os.getenv("NEO4J_PORT", "7687")
             neo4j_user = os.getenv("NEO4J_USER", "neo4j")
             neo4j_password = os.getenv("NEO4J_PASSWORD")
             
+            # Additional authentication options
+            neo4j_api_key = os.getenv("NEO4J_API_KEY")
+            neo4j_database = os.getenv("NEO4J_DATABASE", "neo4j")
+            
             if not neo4j_uri:
                 neo4j_uri = f"bolt://{neo4j_host}:{neo4j_port}"
             
-            if not neo4j_password:
-                status.error = "NEO4J_PASSWORD not set"
+            if not neo4j_password and not neo4j_api_key:
+                status.error = "NEO4J_PASSWORD or NEO4J_API_KEY not set"
                 self.results["knowledge_graph"] = status
                 return
             
@@ -388,48 +562,63 @@ class VectorBackendChecker:
                 self.results["knowledge_graph"] = status
                 return
             
-            # Test connection
-            try:
+            # Test connection with retry logic
+            async def test_connection():
+                # Build authentication
+                if neo4j_api_key:
+                    auth = ("", neo4j_api_key)  # API key authentication
+                else:
+                    auth = (neo4j_user, neo4j_password)
+                
                 driver = AsyncGraphDatabase.driver(
                     neo4j_uri,
-                    auth=(neo4j_user, neo4j_password)
+                    auth=auth
                 )
                 
                 # Test basic connectivity
-                async with driver.session() as session:
+                async with driver.session(database=neo4j_database) as session:
                     result = await session.run("RETURN 1 as test")
                     record = await result.single()
                     test_value = record["test"]
-                
-                status.reachable = True
-                status.response_time = time.time() - start_time
-                
-                # Test a simple query
-                try:
-                    async with driver.session() as session:
-                        result = await session.run("MATCH (n) RETURN count(n) as node_count")
-                        record = await result.single()
-                        node_count = record["node_count"]
                     
-                    status.details = {
-                        "connection_successful": True,
-                        "node_count": node_count,
-                        "test_query_successful": True
-                    }
-                except Exception as e:
-                    status.details = {
-                        "connection_successful": True,
-                        "test_query_successful": False,
-                        "test_error": str(e)
-                    }
+                    if test_value == 1:
+                        # Test a simple query
+                        try:
+                            result = await session.run("MATCH (n) RETURN count(n) as node_count")
+                            record = await result.single()
+                            node_count = record["node_count"]
+                            
+                            return {
+                                "connection_successful": True,
+                                "node_count": node_count,
+                                "database": neo4j_database,
+                                "test_query_successful": True
+                            }
+                        except Exception as e:
+                            return {
+                                "connection_successful": True,
+                                "database": neo4j_database,
+                                "test_query_successful": False,
+                                "test_error": str(e)
+                            }
+                    else:
+                        raise Exception("Unexpected test result")
                 
                 await driver.close()
-                
-            except Exception as e:
-                status.error = f"Connection failed: {str(e)}"
-                
+            
+            # Execute with retry logic
+            details = await self.retry_manager.execute_with_retry(test_connection)
+            
+            status.reachable = True
+            status.response_time = time.time() - start_time
+            status.details = details
+            circuit_breaker.record_success()
+            
         except Exception as e:
-            status.error = f"Unexpected error: {str(e)}"
+            error_msg = f"Connection failed: {str(e)}"
+            status.error = error_msg
+            circuit_breaker.record_failure()
+            logger.error(f"❌ Neo4j check failed: {error_msg}")
         
         self.results["knowledge_graph"] = status
     

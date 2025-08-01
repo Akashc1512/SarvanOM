@@ -10,7 +10,7 @@ import logging
 import asyncio
 import json
 
-from services.api-gateway.main import (
+from services.api_gateway.main import (
     QueryRequestValidator,
     FeedbackRequestValidator,
     QueryResponse,
@@ -19,8 +19,8 @@ from services.api-gateway.main import (
     submit_feedback,
     orchestrator,
 )
-from services.auth-service.auth import get_current_user
-from services.api-gateway.versioning import get_feature_flag, VersionedResponse
+from services.auth_service.auth import get_current_user
+from services.api_gateway.versioning import get_feature_flag, VersionedResponse
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +174,7 @@ async def get_advanced_analytics_v2(
         )
 
     # Import analytics handler
-    from services.analytics-service.analytics_v2 import get_advanced_analytics
+    from services.analytics_service.analytics_v2 import get_advanced_analytics
 
     analytics_data = await get_advanced_analytics(
         start_date=start_date,

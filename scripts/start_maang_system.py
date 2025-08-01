@@ -42,7 +42,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import MAANG components
-from services.analytics-service.integration_layer import (
+from services.analytics_service.integration_layer import (
     get_system_manager,
     start_system,
     stop_system,
@@ -51,7 +51,7 @@ from services.analytics-service.integration_layer import (
 from shared.core.api.config import get_settings
 from shared.core.api.monitoring import get_monitoring_manager
 from shared.core.performance import get_performance_monitor
-from services.analytics-service.analytics_v2 import get_analytics_processor
+from services.analytics_service.analytics_v2 import get_analytics_processor
 from services.api-gateway.realtime import start_realtime_services, stop_realtime_services
 
 # Configure logging

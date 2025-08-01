@@ -12,7 +12,7 @@ def test_oauth2_login():
     # OAuth2 form data format
     data = {
         "username": "testuser_simple",
-        "password": "simplepass123",
+        "password": "test_password",
         "grant_type": "password"
     }
     
@@ -41,7 +41,7 @@ def test_register():
     data = {
         "username": "testuser_oauth2",
         "email": "oauth2@test.com",
-        "password": "oauth2pass123",
+        "password": "test_password",
         "full_name": "Test User OAuth2"
     }
     

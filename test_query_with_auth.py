@@ -11,7 +11,7 @@ def get_auth_token():
     
     data = {
         "username": "testuser_simple",
-        "password": "simplepass123",
+        "password": "test_password",
         "grant_type": "password"
     }
     

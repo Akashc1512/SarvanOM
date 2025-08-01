@@ -66,6 +66,11 @@ class LeadOrchestrator:
         self.semantic_cache = SemanticCacheManager()
         self.response_aggregator = ResponseAggregator()
 
+        # Initialize shutdown state tracking
+        self._shutdown_initiated = False
+        self._shutdown_completed = False
+        self._active_tasks = {}
+
         logger.info("✅ LeadOrchestrator initialized successfully")
 
     async def process_query(
@@ -214,7 +219,7 @@ class LeadOrchestrator:
             # Analyze and plan
             logger.info("🔍 Starting query analysis and planning...")
             try:
-            plan = await self.analyze_and_plan(context)
+                plan = await self.analyze_and_plan(context)
                 logger.info(f"✅ Query analysis completed: {plan}")
             except Exception as e:
                 logger.error(f"❌ Query analysis failed: {e}")
@@ -949,6 +954,174 @@ class LeadOrchestrator:
                 "confidence": 0.0,
                 "execution_time_ms": 0
             }
+
+    async def shutdown(self) -> None:
+        """
+        Gracefully shutdown the LeadOrchestrator following MAANG standards.
+        
+        This method ensures:
+        1. All active agents are stopped gracefully
+        2. Pending tasks are canceled
+        3. All connections (Redis, database, etc.) are closed
+        4. Cleanup is completed before returning
+        5. Comprehensive logging of the shutdown process
+        6. Exception handling for robust shutdown
+        
+        Follows MAANG standards for graceful shutdown patterns.
+        """
+        logger.info("🔄 Starting LeadOrchestrator graceful shutdown")
+        shutdown_start_time = time.time()
+        shutdown_errors = []
+        
+        try:
+            # Phase 1: Stop accepting new tasks
+            logger.info("📋 Phase 1: Stopping new task acceptance")
+            self._shutdown_initiated = True
+            
+            # Phase 2: Cancel any pending tasks
+            logger.info("📋 Phase 2: Canceling pending tasks")
+            try:
+                # Cancel any running tasks
+                if hasattr(self, '_active_tasks'):
+                    for task_id, task in list(self._active_tasks.items()):
+                        if not task.done():
+                            task.cancel()
+                            logger.info(f"✅ Canceled task: {task_id}")
+                
+                # Wait for tasks to complete cancellation
+                if hasattr(self, '_active_tasks') and self._active_tasks:
+                    await asyncio.sleep(0.5)  # Give tasks time to cancel
+                    logger.info(f"✅ Canceled {len(self._active_tasks)} pending tasks")
+            except Exception as e:
+                error_msg = f"Error canceling pending tasks: {e}"
+                logger.warning(f"⚠️ {error_msg}")
+                shutdown_errors.append(error_msg)
+            
+            # Phase 3: Shutdown all agents gracefully
+            logger.info("📋 Phase 3: Shutting down agents")
+            agent_shutdown_tasks = []
+            
+            for agent_type, agent in self.agents.items():
+                try:
+                    # Check if agent has shutdown method
+                    if hasattr(agent, 'shutdown'):
+                        logger.info(f"🔄 Shutting down {agent_type.value} agent")
+                        shutdown_task = asyncio.create_task(agent.shutdown())
+                        agent_shutdown_tasks.append((agent_type, shutdown_task))
+                    else:
+                        logger.info(f"ℹ️ {agent_type.value} agent has no shutdown method")
+                except Exception as e:
+                    error_msg = f"Error initiating shutdown for {agent_type.value} agent: {e}"
+                    logger.warning(f"⚠️ {error_msg}")
+                    shutdown_errors.append(error_msg)
+            
+            # Wait for all agents to shutdown with timeout
+            if agent_shutdown_tasks:
+                try:
+                    await asyncio.wait_for(
+                        asyncio.gather(*[task for _, task in agent_shutdown_tasks], return_exceptions=True),
+                        timeout=10.0  # 10 second timeout for agent shutdown
+                    )
+                    logger.info(f"✅ All agents shutdown completed")
+                except asyncio.TimeoutError:
+                    logger.warning("⚠️ Agent shutdown timeout - some agents may not have shut down gracefully")
+                    shutdown_errors.append("Agent shutdown timeout")
+                except Exception as e:
+                    error_msg = f"Error during agent shutdown: {e}"
+                    logger.error(f"❌ {error_msg}")
+                    shutdown_errors.append(error_msg)
+            
+            # Phase 4: Close all connections
+            logger.info("📋 Phase 4: Closing connections")
+            
+            # Close Redis connections
+            try:
+                if hasattr(self, 'semantic_cache') and hasattr(self.semantic_cache, '_redis_client'):
+                    if self.semantic_cache._redis_client:
+                        await self.semantic_cache._redis_client.close()
+                        logger.info("✅ Redis cache connection closed")
+            except Exception as e:
+                error_msg = f"Error closing Redis connection: {e}"
+                logger.warning(f"⚠️ {error_msg}")
+                shutdown_errors.append(error_msg)
+            
+            # Close database connections
+            try:
+                if hasattr(self, '_db_pool'):
+                    await self._db_pool.close()
+                    logger.info("✅ Database connection pool closed")
+            except Exception as e:
+                error_msg = f"Error closing database connections: {e}"
+                logger.warning(f"⚠️ {error_msg}")
+                shutdown_errors.append(error_msg)
+            
+            # Close HTTP connections
+            try:
+                if hasattr(self, '_http_session') and self._http_session:
+                    await self._http_session.close()
+                    logger.info("✅ HTTP session closed")
+            except Exception as e:
+                error_msg = f"Error closing HTTP session: {e}"
+                logger.warning(f"⚠️ {error_msg}")
+                shutdown_errors.append(error_msg)
+            
+            # Phase 5: Cleanup supporting components
+            logger.info("📋 Phase 5: Cleaning up supporting components")
+            
+            # Shutdown token budget controller
+            try:
+                if hasattr(self, 'token_budget') and hasattr(self.token_budget, 'shutdown'):
+                    await self.token_budget.shutdown()
+                    logger.info("✅ Token budget controller shutdown")
+            except Exception as e:
+                error_msg = f"Error shutting down token budget controller: {e}"
+                logger.warning(f"⚠️ {error_msg}")
+                shutdown_errors.append(error_msg)
+            
+            # Shutdown semantic cache
+            try:
+                if hasattr(self, 'semantic_cache') and hasattr(self.semantic_cache, 'shutdown'):
+                    await self.semantic_cache.shutdown()
+                    logger.info("✅ Semantic cache shutdown")
+            except Exception as e:
+                error_msg = f"Error shutting down semantic cache: {e}"
+                logger.warning(f"⚠️ {error_msg}")
+                shutdown_errors.append(error_msg)
+            
+            # Phase 6: Final cleanup
+            logger.info("📋 Phase 6: Final cleanup")
+            
+            # Clear any remaining references
+            try:
+                self.agents.clear()
+                logger.info("✅ Agent references cleared")
+            except Exception as e:
+                error_msg = f"Error clearing agent references: {e}"
+                logger.warning(f"⚠️ {error_msg}")
+                shutdown_errors.append(error_msg)
+            
+            # Wait for any remaining async operations
+            await asyncio.sleep(0.1)
+            
+        except Exception as e:
+            error_msg = f"Critical error during shutdown: {e}"
+            logger.error(f"❌ {error_msg}")
+            shutdown_errors.append(error_msg)
+        
+        finally:
+            # Phase 7: Log shutdown completion
+            shutdown_duration = time.time() - shutdown_start_time
+            logger.info(f"📊 Shutdown completed in {shutdown_duration:.2f} seconds")
+            
+            if shutdown_errors:
+                logger.error(f"❌ Shutdown completed with {len(shutdown_errors)} errors:")
+                for i, error in enumerate(shutdown_errors, 1):
+                    logger.error(f"  {i}. {error}")
+            else:
+                logger.info("✅ LeadOrchestrator shutdown completed successfully")
+            
+            # Set shutdown flag
+            self._shutdown_completed = True
 
 
 # ============================================================================

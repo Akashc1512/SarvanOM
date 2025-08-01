@@ -48,7 +48,7 @@ from fastapi import (
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, EmailStr, validator
 
-from services.auth-service.user_management_v2 import (
+from services.auth_service.user_management_v2 import (
     UserService,
     get_user_service,
     UserCreateRequest,

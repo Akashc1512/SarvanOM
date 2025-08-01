@@ -1,15 +1,33 @@
-import axios, { AxiosInstance } from "axios";
+import axios, { AxiosInstance, AxiosError, AxiosResponse } from "axios";
 import { QueryDetailResponse, QuerySummary } from "@/types/api";
 
 // API Configuration
-const API_BASE_URL = process.env["NEXT_PUBLIC_API_URL"] || "http://localhost:8002";
+const API_BASE_URL = process.env["NEXT_PUBLIC_API_URL"] || "http://localhost:8000";
 
-// Types for API responses
+// Enhanced error types
+export interface APIError {
+  message: string;
+  code: string;
+  details?: any;
+  timestamp: string;
+}
+
+export interface APIResponse<T = any> {
+  data: T;
+  success: boolean;
+  message?: string;
+  timestamp: string;
+}
+
+// Request/Response types
 export interface QueryRequest {
   query: string;
   context?: string;
   user_id?: string;
   workspace_id?: string;
+  priority?: "low" | "medium" | "high";
+  max_tokens?: number;
+  temperature?: number;
 }
 
 export interface QueryResponse {
@@ -23,6 +41,8 @@ export interface QueryResponse {
   llm_provider?: string;
   llm_model?: string;
   processing_time?: number;
+  error?: string;
+  progress?: number;
 }
 
 export interface Source {
@@ -30,6 +50,8 @@ export interface Source {
   url: string;
   snippet: string;
   relevance_score: number;
+  source_type: "web" | "document" | "database" | "api";
+  credibility_score?: number;
 }
 
 export interface FeedbackRequest {
@@ -37,13 +59,17 @@ export interface FeedbackRequest {
   rating: number;
   feedback_text?: string;
   helpful: boolean;
+  category?: string;
 }
 
 export interface User {
   user_id: string;
   username: string;
+  email: string;
   role: string;
   permissions: string[];
+  created_at: string;
+  last_login?: string;
 }
 
 export interface AuthResponse {
@@ -53,14 +79,90 @@ export interface AuthResponse {
   user_id: string;
   role: string;
   permissions: string[];
+  expires_in: number;
+  refresh_token?: string;
 }
 
-// API Client Class
+// Circuit Breaker Implementation
+class CircuitBreaker {
+  private failures = 0;
+  private lastFailureTime = 0;
+  private state: "CLOSED" | "OPEN" | "HALF_OPEN" = "CLOSED";
+  private readonly failureThreshold = 5;
+  private readonly resetTimeout = 60000; // 1 minute
+
+  canExecute(): boolean {
+    if (this.state === "CLOSED") return true;
+    
+    if (this.state === "OPEN") {
+      if (Date.now() - this.lastFailureTime > this.resetTimeout) {
+        this.state = "HALF_OPEN";
+        return true;
+      }
+      return false;
+    }
+    
+    return true; // HALF_OPEN
+  }
+
+  recordSuccess(): void {
+    this.failures = 0;
+    this.state = "CLOSED";
+  }
+
+  recordFailure(): void {
+    this.failures++;
+    this.lastFailureTime = Date.now();
+    
+    if (this.failures >= this.failureThreshold) {
+      this.state = "OPEN";
+    }
+  }
+}
+
+// Retry Logic Implementation
+class RetryManager {
+  private readonly maxRetries = 3;
+  private readonly baseDelay = 1000;
+
+  async executeWithRetry<T>(
+    operation: () => Promise<T>,
+    retries = this.maxRetries
+  ): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (retries > 0 && this.isRetryableError(error)) {
+        const delay = this.baseDelay * (this.maxRetries - retries + 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.executeWithRetry(operation, retries - 1);
+      }
+      throw error;
+    }
+  }
+
+  private isRetryableError(error: any): boolean {
+    if (error instanceof AxiosError) {
+      const status = error.response?.status;
+      return status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+    }
+    return false;
+  }
+}
+
+// Enhanced API Client Class
 class APIClient {
   private client: AxiosInstance;
   private token: string | null = null;
+  private circuitBreaker: CircuitBreaker;
+  private retryManager: RetryManager;
+  private requestQueue: Array<() => Promise<any>> = [];
+  private isProcessingQueue = false;
 
   constructor() {
+    this.circuitBreaker = new CircuitBreaker();
+    this.retryManager = new RetryManager();
+    
     this.client = axios.create({
       baseURL: API_BASE_URL,
       timeout: 30000,
@@ -82,23 +184,63 @@ class APIClient {
       },
     );
 
-    // Add response interceptor for error handling
+    // Add response interceptor for enhanced error handling
     this.client.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        console.error("API Error:", error.response?.data || error.message);
-        return Promise.reject(error);
+      (response: AxiosResponse) => {
+        this.circuitBreaker.recordSuccess();
+        return response;
+      },
+      (error: AxiosError) => {
+        this.circuitBreaker.recordFailure();
+        
+        // Enhanced error logging
+        const errorInfo = {
+          message: error.message,
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          url: error.config?.url,
+          method: error.config?.method,
+          timestamp: new Date().toISOString(),
+        };
+        
+        console.error("API Error:", errorInfo);
+        
+        // Transform error for better handling
+        const apiError: APIError = {
+          message: error.response?.data?.detail || error.message,
+          code: error.response?.status?.toString() || "UNKNOWN",
+          details: error.response?.data,
+          timestamp: new Date().toISOString(),
+        };
+        
+        return Promise.reject(apiError);
       },
     );
   }
 
+  // Enhanced API methods with circuit breaker and retry logic
+  private async executeRequest<T>(
+    operation: () => Promise<AxiosResponse<T>>
+  ): Promise<T> {
+    if (!this.circuitBreaker.canExecute()) {
+      throw new Error("Service temporarily unavailable. Please try again later.");
+    }
+
+    return this.retryManager.executeWithRetry(async () => {
+      const response = await operation();
+      return response.data;
+    });
+  }
+
   // Authentication methods
   async login(username: string, password: string): Promise<AuthResponse> {
-    const response = await this.client.post("/auth/login", {
-      username,
-      password,
-    });
-    const authData = response.data;
+    const authData = await this.executeRequest(() =>
+      this.client.post("/auth/login", {
+        username,
+        password,
+      })
+    );
     this.token = authData.access_token;
     localStorage.setItem("auth_token", authData.access_token);
     return authData;
@@ -109,12 +251,13 @@ class APIClient {
     password: string,
     role: string = "user",
   ): Promise<AuthResponse> {
-    const response = await this.client.post("/auth/register", {
-      username,
-      password,
-      role,
-    });
-    const authData = response.data;
+    const authData = await this.executeRequest(() =>
+      this.client.post("/auth/register", {
+        username,
+        password,
+        role,
+      })
+    );
     this.token = authData.access_token;
     localStorage.setItem("auth_token", authData.access_token);
     return authData;
@@ -123,6 +266,7 @@ class APIClient {
   logout(): void {
     this.token = null;
     localStorage.removeItem("auth_token");
+    sessionStorage.removeItem("auth_token");
   }
 
   setToken(token: string): void {
@@ -132,36 +276,45 @@ class APIClient {
 
   // Query methods
   async submitQuery(request: QueryRequest): Promise<QueryResponse> {
-    const response = await this.client.post("/query", request);
-    return response.data;
+    return this.executeRequest(() =>
+      this.client.post("/query/comprehensive", request)
+    );
   }
 
   async getQueryStatus(queryId: string): Promise<QueryResponse> {
-    const response = await this.client.get(`/queries/${queryId}/status`);
-    return response.data;
+    return this.executeRequest(() =>
+      this.client.get(`/queries/${queryId}/status`)
+    );
   }
 
   async getQueryDetails(queryId: string): Promise<QueryResponse> {
-    const response = await this.client.get(`/queries/${queryId}`);
-    return response.data;
+    return this.executeRequest(() =>
+      this.client.get(`/queries/${queryId}`)
+    );
   }
 
   async getQuery(queryId: string): Promise<QueryDetailResponse> {
-    const response = await this.client.get(`/queries/${queryId}`);
-    return response.data;
+    return this.executeRequest(() =>
+      this.client.get(`/queries/${queryId}`)
+    );
   }
 
   async updateQuery(queryId: string, data: any): Promise<QueryDetailResponse> {
-    const response = await this.client.put(`/queries/${queryId}`, data);
-    return response.data;
+    return this.executeRequest(() =>
+      this.client.put(`/queries/${queryId}`, data)
+    );
   }
 
   async deleteQuery(queryId: string): Promise<void> {
-    await this.client.delete(`/queries/${queryId}`);
+    return this.executeRequest(() =>
+      this.client.delete(`/queries/${queryId}`)
+    );
   }
 
   async reprocessQuery(queryId: string): Promise<void> {
-    await this.client.patch(`/queries/${queryId}/reprocess`);
+    return this.executeRequest(() =>
+      this.client.patch(`/queries/${queryId}/reprocess`)
+    );
   }
 
   async listQueries(

@@ -43,7 +43,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import MAANG components
-from services.analytics-service.integration_layer import get_system_manager, start_system, stop_system
+from services.analytics_service.integration_layer import get_system_manager, start_system, stop_system
 from shared.core.api.config import get_settings
 from shared.core.api.monitoring import get_monitoring_manager
 from shared.core.performance import get_performance_monitor

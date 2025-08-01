@@ -9,7 +9,7 @@ from typing import List
 import logging
 
 import importlib
-user_management = importlib.import_module("services.auth-service.user_management")
+user_management = importlib.import_module("services.auth_service.user_management")
 UserManager = user_management.UserManager
 get_user_manager = user_management.get_user_manager
 UserCreate = user_management.UserCreate
@@ -17,7 +17,7 @@ UserResponse = user_management.UserResponse
 Token = user_management.Token
 UserRole = user_management.UserRole
 
-auth_module = importlib.import_module("services.auth-service.auth")
+auth_module = importlib.import_module("services.auth_service.auth")
 get_current_user = auth_module.get_current_user
 
 logger = logging.getLogger(__name__)

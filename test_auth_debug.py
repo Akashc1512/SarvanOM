@@ -12,7 +12,7 @@ def test_register():
     data = {
         "username": "debuguser2",
         "email": "debug2@test.com",
-        "password": "debugpass123",
+        "password": "test_password",
         "role": "user"
     }
     
@@ -30,7 +30,7 @@ def test_login():
     print("\nTesting login...")
     data = {
         "username": "debuguser2",
-        "password": "debugpass123"
+        "password": "test_password"
     }
     
     try:
@@ -47,7 +47,7 @@ def test_login_existing():
     print("\nTesting login with existing user...")
     data = {
         "username": "debuguser",
-        "password": "debugpass123"
+        "password": "test_password"
     }
     
     try:
