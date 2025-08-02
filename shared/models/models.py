@@ -347,7 +347,12 @@ class Role(Base):
 
     # Relationships
     users = relationship(
-        "User", secondary=user_roles, back_populates="roles", lazy="dynamic"
+        "User", 
+        secondary=user_roles, 
+        back_populates="roles", 
+        lazy="dynamic",
+        primaryjoin="Role.id == user_roles.c.role_id",
+        secondaryjoin="user_roles.c.user_id == User.id"
     )
 
     @validates("name")
@@ -451,7 +456,12 @@ class User(Base):
 
     # Relationships
     roles = relationship(
-        "Role", secondary=user_roles, back_populates="users", lazy="joined"
+        "Role", 
+        secondary=user_roles, 
+        back_populates="users", 
+        lazy="joined",
+        primaryjoin="User.id == user_roles.c.user_id",
+        secondaryjoin="user_roles.c.role_id == Role.id"
     )
 
     sessions = relationship(

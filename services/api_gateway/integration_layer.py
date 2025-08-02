@@ -522,59 +522,53 @@ class UniversalKnowledgePlatformIntegration:
     async def _record_comprehensive_metrics(self, request: IntegrationRequest, query_analysis: MockProcessedQuery, orchestration_result: MockOrchestrationResult, retrieval_result: MockHybridRetrievalResult, validation_result: Optional[MockConsensusResult]) -> None:
         """Record comprehensive metrics for all components."""
         try:
-            # Record query intelligence metrics
-            record_query_intelligence_metrics(
-                intent=query_analysis.intent.value if hasattr(query_analysis.intent, 'value') else str(query_analysis.intent),
-                complexity=query_analysis.complexity.value if hasattr(query_analysis.complexity, 'value') else str(query_analysis.complexity),
-                domain=query_analysis.domain.value if hasattr(query_analysis.domain, 'value') else str(query_analysis.domain),
-                processing_time_ms=query_analysis.processing_time_ms,
-                cache_hit=False  # TODO: Implement cache hit detection
+            # Import the new metrics collector
+            from shared.core.metrics_collector import (
+                record_query_metrics, record_error_metrics,
+                ResponseTimeBreakdown, LLMProvider
             )
             
-            # Record orchestration metrics
-            record_orchestration_metrics(
-                model_used=orchestration_result.model_used.value if hasattr(orchestration_result.model_used, 'value') else str(orchestration_result.model_used),
-                routing_strategy="hybrid",
-                fallback_used=orchestration_result.fallback_used,
-                circuit_breaker_triggered=orchestration_result.circuit_breaker_triggered,
-                response_time_ms=orchestration_result.processing_time_ms,
-                status="success" if orchestration_result.success else "failed"
-            )
-            
-            # Record retrieval metrics
-            record_retrieval_metrics(
-                source_type="hybrid",
-                fusion_strategy=retrieval_result.fusion_strategy.value if hasattr(retrieval_result.fusion_strategy, 'value') else str(retrieval_result.fusion_strategy),
+            # Create response time breakdown
+            response_breakdown = ResponseTimeBreakdown(
                 retrieval_time_ms=retrieval_result.processing_time_ms,
-                results_count=len(retrieval_result.results),
-                accuracy_score=retrieval_result.confidence_scores.get("overall", 0.8),
-                status="success"
+                llm_time_ms=orchestration_result.processing_time_ms * 0.7,  # Estimate LLM time
+                synthesis_time_ms=orchestration_result.processing_time_ms * 0.3,  # Estimate synthesis time
+                total_time_ms=orchestration_result.processing_time_ms
             )
             
-            # Record memory metrics
-            record_memory_metrics(
-                memory_type="short_term",
-                operation_type="store",
-                usage_bytes=1024,  # TODO: Calculate actual usage
-                hit_rate=0.85,  # TODO: Calculate actual hit rate
-                status="success"
+            # Determine LLM provider from orchestration result
+            model_used = orchestration_result.model_used.value if hasattr(orchestration_result.model_used, 'value') else str(orchestration_result.model_used)
+            
+            # Map model to provider
+            if "gpt" in model_used.lower():
+                provider = LLMProvider.OPENAI
+            elif "claude" in model_used.lower():
+                provider = LLMProvider.ANTHROPIC
+            elif "llama" in model_used.lower() or "mistral" in model_used.lower():
+                provider = LLMProvider.OLLAMA
+            else:
+                provider = LLMProvider.HUGGINGFACE
+            
+            # Record cache hits/misses (mock data for now)
+            cache_hits = {
+                "query_cache": False,  # TODO: Implement actual cache checking
+                "retrieval_cache": True,  # Mock cache hit
+                "llm_cache": False  # Mock cache miss
+            }
+            
+            # Record comprehensive query metrics
+            await record_query_metrics(
+                response_time_breakdown=response_breakdown,
+                provider=provider,
+                cache_hits=cache_hits
             )
             
-            # Record validation metrics if available
-            if validation_result:
-                record_expert_validation_metrics(
-                    network_type="domain_expert",
-                    validation_status=validation_result.overall_status.value if hasattr(validation_result.overall_status, 'value') else str(validation_result.overall_status),
-                    duration_seconds=validation_result.processing_time_ms / 1000.0,
-                    consensus_score=validation_result.consensus_score,
-                    consensus_level=validation_result.consensus_level.value if hasattr(validation_result.consensus_level, 'value') else str(validation_result.consensus_level),
-                    agreement_ratio=validation_result.final_confidence
-                )
-            
-            logger.info("📊 Comprehensive metrics recorded")
+            logger.info("📊 Comprehensive metrics recorded using new metrics collector")
             
         except Exception as e:
             logger.error(f"Metrics recording failed: {e}")
+            # Record error metrics
+            await record_error_metrics("metrics_recording_failed")
     
     async def get_system_health(self) -> Dict[str, Any]:
         """Get comprehensive system health status."""

@@ -11,6 +11,13 @@ from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    logging.warning("python-dotenv not available. Install with: pip install python-dotenv")
+
 try:
     from arango import ArangoClient
     ARANGO_AVAILABLE = True
@@ -65,24 +72,21 @@ class KnowledgeGraphAgent(BaseAgent):
     def __init__(self):
         """Initialize the ArangoDB KnowledgeGraphAgent."""
         super().__init__("knowledge_graph_agent", AgentType.RETRIEVAL)
-        self.llm_client = EnhancedLLMClientV3()
         
-        # ArangoDB connection configuration
+        # Initialize LLM client lazily to avoid async loop issues
+        self.llm_client = None
+        
+        # ArangoDB connection configuration using environment variables
         self.arango_url = os.getenv("ARANGO_URL", "http://localhost:8529")
-        self.arango_username = os.getenv("ARANGO_USERNAME", "root")
-        self.arango_password = os.getenv("ARANGO_PASSWORD", "")
-        self.arango_database = os.getenv("ARANGO_DATABASE", "knowledge_graph")
+        self.arango_username = os.getenv("ARANGO_USER", "root")
+        self.arango_password = os.getenv("ARANGO_PASS", "")
+        self.arango_database = os.getenv("ARANGO_DB", "knowledge_graph")
         
         # ArangoDB client
         self.client: Optional[ArangoClient] = None
         self.db = None
         self.connected = False
-        
-        # Initialize connection if ArangoDB is available
-        if ARANGO_AVAILABLE:
-            asyncio.create_task(self._initialize_arangodb_connection())
-        else:
-            logger.warning("Using mock knowledge graph data - ArangoDB driver not available")
+        self._connection_initialized = False
         
         # Initialize mock data as fallback
         self.mock_knowledge_graph = self._initialize_mock_knowledge_graph()
@@ -90,19 +94,28 @@ class KnowledgeGraphAgent(BaseAgent):
         logger.info("✅ ArangoDB KnowledgeGraphAgent initialized successfully")
     
     async def _initialize_arangodb_connection(self) -> None:
-        """Initialize ArangoDB connection."""
+        """Initialize ArangoDB connection when needed."""
+        if self._connection_initialized:
+            return
+            
         try:
+            if not ARANGO_AVAILABLE:
+                logger.warning("ArangoDB driver not available")
+                return
+            
             # Create ArangoDB client
             self.client = ArangoClient(hosts=self.arango_url)
             
             # Test connection
             await self._test_arangodb_connection()
             self.connected = True
+            self._connection_initialized = True
             logger.info(f"✅ Connected to ArangoDB at {self.arango_url}")
             
         except Exception as e:
             logger.error(f"❌ Failed to connect to ArangoDB: {e}")
             self.connected = False
+            self._connection_initialized = True
     
     async def _test_arangodb_connection(self) -> None:
         """Test ArangoDB connection."""
@@ -415,36 +428,48 @@ class KnowledgeGraphAgent(BaseAgent):
             ).to_dict()
     
     async def _extract_entities(self, query: str) -> List[str]:
-        """Extract entities from the query using LLM."""
+        """Extract entities from query using LLM or fallback to simple extraction."""
         try:
-            # Use LLM to extract entities
-            prompt = f"""
-            Extract the main entities (concepts, technologies, tools, people, organizations) from this query:
-            "{query}"
+            llm_client = await self._get_llm_client()
+            if llm_client is None:
+                # Fallback to simple entity extraction
+                return self._simple_entity_extraction(query)
             
-            Return only the entity names, one per line, without explanations.
+            prompt = f"""
+            Extract entity names from the following query. Return only the entity names, one per line:
+            
+            Query: {query}
+            
+            Entities:
             """
             
-            response = await self.llm_client.generate_text(prompt, max_tokens=50)
+            response = await llm_client.generate_text(prompt, max_tokens=50)
             entities = [line.strip() for line in response.strip().split('\n') if line.strip()]
             
-            logger.info(f"Extracted entities: {entities}")
             return entities
             
         except Exception as e:
-            logger.warning(f"Entity extraction failed: {e}")
-            # Fallback: simple keyword extraction
-            keywords = ["machine learning", "artificial intelligence", "deep learning", 
-                       "neural networks", "python", "javascript", "react", "docker", 
-                       "kubernetes", "blockchain", "cloud computing"]
-            
-            found_entities = []
-            query_lower = query.lower()
-            for keyword in keywords:
-                if keyword in query_lower:
-                    found_entities.append(keyword)
-            
-            return found_entities
+            logger.warning(f"LLM entity extraction failed: {e}, using fallback")
+            return self._simple_entity_extraction(query)
+    
+    def _simple_entity_extraction(self, query: str) -> List[str]:
+        """Simple entity extraction as fallback when LLM is not available."""
+        # Simple keyword-based extraction
+        keywords = [
+            "Python", "JavaScript", "React", "Vue", "Angular", "Node.js",
+            "Machine Learning", "AI", "Artificial Intelligence", "Data Science",
+            "Docker", "Kubernetes", "AWS", "Azure", "Google Cloud",
+            "MongoDB", "PostgreSQL", "MySQL", "Redis", "Elasticsearch"
+        ]
+        
+        entities = []
+        query_lower = query.lower()
+        
+        for keyword in keywords:
+            if keyword.lower() in query_lower:
+                entities.append(keyword)
+        
+        return entities
     
     async def _process_entity_relationship_query(self, query: str, entities: List[str]) -> KnowledgeGraphResult:
         """Process entity-relationship queries using ArangoDB."""
@@ -918,6 +943,316 @@ class KnowledgeGraphAgent(BaseAgent):
             result = await self._process_general_query(query, entities)
         
         return result
+    
+    async def query_relationships(self, entity1: str, entity2: str = None) -> KnowledgeGraphResult:
+        """
+        Query relationships between entities using ArangoDB AQL.
+        
+        Args:
+            entity1: First entity name or ID
+            entity2: Second entity name or ID (optional for single entity queries)
+            
+        Returns:
+            KnowledgeGraphResult with entities, relationships, and paths
+        """
+        try:
+            # Initialize ArangoDB connection if needed
+            await self._initialize_arangodb_connection()
+            
+            if not self.connected:
+                logger.warning("ArangoDB not connected, using mock data")
+                return await self._query_mock_relationships(entity1, entity2)
+            
+            if entity2 is None:
+                # Single entity query - get entity properties and immediate relationships
+                aql_query = """
+                FOR entity IN entities
+                FILTER CONTAINS(LOWER(entity.name), LOWER(@entity)) 
+                   OR CONTAINS(LOWER(entity.id), LOWER(@entity))
+                LET relationships = (
+                    FOR rel IN relationships
+                    FILTER rel._from == entity._id OR rel._to == entity._id
+                    FOR related_entity IN entities
+                    FILTER related_entity._id == rel._from OR related_entity._id == rel._to
+                    FILTER related_entity._id != entity._id
+                    RETURN {
+                        relationship: rel,
+                        related_entity: related_entity
+                    }
+                )
+                RETURN {
+                    entity: entity,
+                    relationships: relationships
+                }
+                LIMIT 1
+                """
+                parameters = {"entity": entity1}
+            else:
+                # Two entity query - find shortest path or direct relationships
+                aql_query = """
+                FOR v, e IN ANY SHORTEST_PATH
+                    DOCUMENT("entities/" + @entity1) TO DOCUMENT("entities/" + @entity2)
+                    GRAPH "KnowledgeGraph"
+                    OPTIONS {weightAttribute: "weight", defaultWeight: 1}
+                    RETURN {vertex: v, edge: e}
+                """
+                parameters = {"entity1": entity1, "entity2": entity2}
+            
+            result = self.db.aql.execute(aql_query, parameters)
+            
+            # Parse results
+            found_entities = []
+            found_relationships = []
+            found_paths = []
+            
+            if entity2 is None:
+                # Single entity query
+                for record in result:
+                    if 'entity' in record:
+                        entity = record['entity']
+                        found_entities.append(EntityNode(
+                            id=entity.get('id', entity.get('_key', '')),
+                            name=entity.get('name', ''),
+                            type=entity.get('type', 'Node'),
+                            properties=entity
+                        ))
+                    
+                    if 'relationships' in record:
+                        for rel_data in record['relationships']:
+                            rel = rel_data['relationship']
+                            related_entity = rel_data['related_entity']
+                            
+                            # Add related entity
+                            found_entities.append(EntityNode(
+                                id=related_entity.get('id', related_entity.get('_key', '')),
+                                name=related_entity.get('name', ''),
+                                type=related_entity.get('type', 'Node'),
+                                properties=related_entity
+                            ))
+                            
+                            # Add relationship
+                            found_relationships.append(Relationship(
+                                source_id=rel.get('_from', ''),
+                                target_id=rel.get('_to', ''),
+                                relationship_type=rel.get('type', ''),
+                                properties=rel
+                            ))
+            else:
+                # Two entity query - path finding
+                current_path = []
+                for record in result:
+                    if 'vertex' in record and record['vertex'] is not None:
+                        vertex = record['vertex']
+                        entity = EntityNode(
+                            id=vertex.get('id', vertex.get('_key', '')),
+                            name=vertex.get('name', ''),
+                            type=vertex.get('type', 'Node'),
+                            properties=vertex
+                        )
+                        found_entities.append(entity)
+                        current_path.append(entity)
+                    
+                    if 'edge' in record and record['edge'] is not None:
+                        edge = record['edge']
+                        found_relationships.append(Relationship(
+                            source_id=edge.get('_from', ''),
+                            target_id=edge.get('_to', ''),
+                            relationship_type=edge.get('type', ''),
+                            properties=edge
+                        ))
+                
+                # Group entities into paths
+                if current_path:
+                    found_paths = [current_path]
+            
+            # Remove duplicates
+            unique_entities = list({entity.id: entity for entity in found_entities}.values())
+            unique_relationships = list({f"{rel.source_id}-{rel.target_id}-{rel.relationship_type}": rel 
+                                      for rel in found_relationships}.values())
+            
+            # Format results as pseudo-documents for downstream processing
+            pseudo_documents = self._format_as_pseudo_documents(unique_entities, unique_relationships, found_paths)
+            
+            return KnowledgeGraphResult(
+                entities=unique_entities,
+                relationships=unique_relationships,
+                paths=found_paths,
+                query_entities=[entity1] + ([entity2] if entity2 else []),
+                confidence=0.9 if unique_entities else 0.3,
+                processing_time_ms=0,
+                metadata={
+                    "query_type": "relationship_query",
+                    "entities_found": len(unique_entities),
+                    "relationships_found": len(unique_relationships),
+                    "paths_found": len(found_paths),
+                    "pseudo_documents": pseudo_documents,
+                    "arangodb_query": aql_query
+                }
+            )
+            
+        except Exception as e:
+            logger.error(f"ArangoDB relationship query failed: {e}")
+            return KnowledgeGraphResult(
+                entities=[],
+                relationships=[],
+                paths=[],
+                query_entities=[entity1] + ([entity2] if entity2 else []),
+                confidence=0.0,
+                processing_time_ms=0,
+                metadata={"error": str(e)}
+            )
+    
+    def _format_as_pseudo_documents(self, entities: List[EntityNode], relationships: List[Relationship], paths: List[List[EntityNode]]) -> List[Dict[str, Any]]:
+        """
+        Format knowledge graph results as pseudo-documents for downstream processing.
+        
+        Args:
+            entities: List of entities
+            relationships: List of relationships
+            paths: List of entity paths
+            
+        Returns:
+            List of pseudo-documents
+        """
+        documents = []
+        
+        # Create documents for entities
+        for entity in entities:
+            doc = {
+                "id": entity.id,
+                "title": entity.name,
+                "content": f"Entity: {entity.name} (Type: {entity.type})",
+                "snippet": f"Information about {entity.name}",
+                "score": 1.0,
+                "source_type": "knowledge_graph",
+                "metadata": {
+                    "entity_type": entity.type,
+                    "properties": entity.properties,
+                    "source": "knowledge_graph"
+                }
+            }
+            documents.append(doc)
+        
+        # Create documents for relationships
+        for rel in relationships:
+            # Find source and target entities
+            source_entity = next((e for e in entities if e.id in rel.source_id), None)
+            target_entity = next((e for e in entities if e.id in rel.target_id), None)
+            
+            if source_entity and target_entity:
+                doc = {
+                    "id": f"rel_{rel.source_id}_{rel.target_id}",
+                    "title": f"Relationship: {source_entity.name} -> {target_entity.name}",
+                    "content": f"{source_entity.name} {rel.relationship_type} {target_entity.name}",
+                    "snippet": f"Relationship between {source_entity.name} and {target_entity.name}",
+                    "score": 0.8,
+                    "source_type": "knowledge_graph",
+                    "metadata": {
+                        "relationship_type": rel.relationship_type,
+                        "source_entity": source_entity.name,
+                        "target_entity": target_entity.name,
+                        "properties": rel.properties,
+                        "source": "knowledge_graph"
+                    }
+                }
+                documents.append(doc)
+        
+        # Create documents for paths
+        for i, path in enumerate(paths):
+            if len(path) > 1:
+                path_names = [entity.name for entity in path]
+                doc = {
+                    "id": f"path_{i}",
+                    "title": f"Path: {' -> '.join(path_names)}",
+                    "content": f"Path connecting: {' -> '.join(path_names)}",
+                    "snippet": f"Connection path between {path_names[0]} and {path_names[-1]}",
+                    "score": 0.9,
+                    "source_type": "knowledge_graph",
+                    "metadata": {
+                        "path_length": len(path),
+                        "path_entities": path_names,
+                        "source": "knowledge_graph"
+                    }
+                }
+                documents.append(doc)
+        
+        return documents
+    
+    async def _query_mock_relationships(self, entity1: str, entity2: str = None) -> KnowledgeGraphResult:
+        """Mock implementation for relationship queries when ArangoDB is not available."""
+        try:
+            # Handle None inputs gracefully
+            if entity1 is None:
+                entity1 = ""
+            if entity2 is None:
+                entity2 = ""
+            
+            found_entities = []
+            found_relationships = []
+            
+            # Search for entities in mock data (entities is a dict with entity IDs as keys)
+            for entity_id, entity_data in self.mock_knowledge_graph["entities"].items():
+                if (entity1.lower() in entity_data["name"].lower() or 
+                    entity1.lower() in entity_data["id"].lower()):
+                    found_entities.append(EntityNode(
+                        id=entity_data["id"],
+                        name=entity_data["name"],
+                        type=entity_data["type"],
+                        properties=entity_data
+                    ))
+                
+                if entity2 and (entity2.lower() in entity_data["name"].lower() or 
+                               entity2.lower() in entity_data["id"].lower()):
+                    found_entities.append(EntityNode(
+                        id=entity_data["id"],
+                        name=entity_data["name"],
+                        type=entity_data["type"],
+                        properties=entity_data
+                    ))
+            
+            # Find relationships between entities (relationships is a list)
+            for rel_data in self.mock_knowledge_graph["relationships"]:
+                source_found = any(e.id == rel_data["source"] for e in found_entities)
+                target_found = any(e.id == rel_data["target"] for e in found_entities)
+                
+                if source_found and target_found:
+                    found_relationships.append(Relationship(
+                        source_id=rel_data["source"],
+                        target_id=rel_data["target"],
+                        relationship_type=rel_data["type"],
+                        properties=rel_data
+                    ))
+            
+            # Format as pseudo-documents
+            pseudo_documents = self._format_as_pseudo_documents(found_entities, found_relationships, [])
+            
+            return KnowledgeGraphResult(
+                entities=found_entities,
+                relationships=found_relationships,
+                paths=[],
+                query_entities=[entity1] + ([entity2] if entity2 else []),
+                confidence=0.7 if found_entities else 0.3,
+                processing_time_ms=0,
+                metadata={
+                    "query_type": "mock_relationship_query",
+                    "entities_found": len(found_entities),
+                    "relationships_found": len(found_relationships),
+                    "pseudo_documents": pseudo_documents
+                }
+            )
+            
+        except Exception as e:
+            logger.error(f"Mock relationship query failed: {e}")
+            # Return empty result on error
+            return KnowledgeGraphResult(
+                entities=[],
+                relationships=[],
+                paths=[],
+                query_entities=[entity1] + ([entity2] if entity2 else []),
+                confidence=0.0,
+                processing_time_ms=0,
+                metadata={"error": str(e)}
+            )
     
     def get_health_status(self) -> Dict[str, Any]:
         """Get health status of the ArangoDB knowledge graph agent."""

@@ -128,74 +128,6 @@ class SynthesisAgent(BaseAgent):
         super().__init__(agent_id="synthesis_agent", agent_type=AgentType.SYNTHESIS)
         logger.info("✅ SynthesisAgent initialized successfully")
 
-    async def process_task(
-        self, task: Dict[str, Any], context: QueryContext
-    ) -> AgentResult:
-        """
-        Process synthesis task by combining verified facts into a coherent answer.
-
-        Args:
-            task: Task data containing verified facts and query
-            context: Query context
-
-        Returns:
-            AgentResult with synthesized answer
-        """
-        start_time = time.time()
-
-        try:
-            # Extract task data
-            verified_facts = task.get("verified_facts", [])
-            query = task.get("query", "")
-            synthesis_params = task.get("synthesis_params", {})
-
-            logger.info(f"Synthesizing answer for query: {query[:50]}...")
-            logger.info(f"Number of verified facts: {len(verified_facts)}")
-
-            # Validate input
-            if not verified_facts:
-                return AgentResult(
-                    success=False,
-                    data={},
-                    error="No verified facts provided for synthesis",
-                    confidence=0.0,
-                )
-
-            # Synthesize answer
-            synthesis_result = await self._synthesize_answer(
-                verified_facts, query, synthesis_params
-            )
-
-            # Calculate confidence based on fact quality
-            confidence = self._calculate_synthesis_confidence(verified_facts)
-
-            processing_time = time.time() - start_time
-
-            # Create standardized synthesis result
-            synthesis_data = SynthesisResult(
-                answer=synthesis_result,
-                synthesis_method="rule_based",
-                fact_count=len(verified_facts),
-                processing_time_ms=int(processing_time * 1000),
-                metadata={"agent_id": self.agent_id},
-            )
-
-            return AgentResult(
-                success=True,
-                data=synthesis_data.model_dump(),
-                confidence=confidence,
-                execution_time_ms=int(processing_time * 1000),
-            )
-
-        except Exception as e:
-            logger.error(f"Synthesis failed: {str(e)}")
-            return AgentResult(
-                success=False,
-                data={},
-                error=f"Synthesis failed: {str(e)}",
-                confidence=0.0,
-            )
-
     async def _synthesize_answer(
         self, verified_facts: List[Dict], query: str, params: Dict[str, Any]
     ) -> str:
@@ -282,6 +214,138 @@ class SynthesisAgent(BaseAgent):
             logger.error(f"LLM synthesis error: {e}")
             # Fallback to rule-based synthesis
             return self._fallback_synthesis(verified_facts, query)
+
+    async def _verify_synthesized_answer(
+        self, answer_text: str, source_docs: List[Dict[str, Any]]
+    ):
+        """
+        Verify the synthesized answer against source documents using enhanced FactCheckerAgent.
+        
+        Args:
+            answer_text: The synthesized answer to verify
+            source_docs: Source documents to check against
+            
+        Returns:
+            VerificationResult from fact checker with temporal validation
+        """
+        try:
+            from services.factcheck_service.factcheck_agent import FactCheckAgent
+            from datetime import datetime
+            
+            fact_checker = FactCheckAgent()
+            
+            # Use enhanced verification with temporal validation
+            query_timestamp = datetime.now()
+            verification_result = await fact_checker.verify_answer_with_temporal_validation(
+                answer_text, source_docs, query_timestamp
+            )
+            
+            logger.info(f"Enhanced answer verification completed: {verification_result.summary}")
+            
+            # Log temporal and authenticity information
+            if verification_result.temporal_validation:
+                temporal_info = verification_result.temporal_validation
+                if temporal_info.get("is_current") == False:
+                    logger.warning(f"Temporal validation: {temporal_info.get('outdated_warning', 'Sources may be outdated')}")
+                else:
+                    logger.info(f"Temporal validation: Sources are current (age: {temporal_info.get('source_age_days', 'unknown')} days)")
+            
+            if verification_result.source_authenticity:
+                auth_info = verification_result.source_authenticity
+                logger.info(f"Source authenticity: {auth_info.get('authentic_sources', 0)}/{auth_info.get('total_sources', 0)} authentic sources (score: {auth_info.get('authenticity_score', 0.0):.2f})")
+            
+            return verification_result
+            
+        except Exception as e:
+            logger.error(f"Enhanced answer verification failed: {str(e)}")
+            # Return a default verification result
+            from services.factcheck_service.factcheck_agent import VerificationResult
+            return VerificationResult(
+                summary="Verification failed",
+                verified_sentences=[],
+                unsupported_sentences=[],
+                total_sentences=0,
+                verification_confidence=0.0,
+                verification_method="error",
+                temporal_validation={"error": str(e)},
+                source_authenticity={"error": str(e)}
+            )
+
+    def _append_verification_disclaimer(
+        self, answer_text: str, verification_result
+    ) -> str:
+        """
+        Append a disclaimer to the answer if unsupported facts exist or sources have issues.
+        Enhanced to handle outdated sentences and source freshness concerns.
+        
+        Args:
+            answer_text: Original answer text
+            verification_result: Result from fact verification
+            
+        Returns:
+            Answer with disclaimer if needed
+        """
+        disclaimers = []
+        
+        # Check for unsupported facts
+        if verification_result.unsupported_sentences:
+            unsupported_count = len(verification_result.unsupported_sentences)
+            total_factual = verification_result.total_sentences
+            
+            if unsupported_count > 0:
+                disclaimers.append(f"⚠️ **Verification Notice**: {unsupported_count} out of {total_factual} factual statements in this answer could not be verified against our sources. Some information may require additional verification.")
+        
+        # Check for outdated sentences
+        if verification_result.outdated_sentences:
+            outdated_count = len(verification_result.outdated_sentences)
+            total_factual = verification_result.total_sentences
+            
+            if outdated_count > 0:
+                # Get the oldest source date for the warning
+                oldest_date = None
+                for outdated_sentence in verification_result.outdated_sentences:
+                    if outdated_sentence.get("oldest_source_date"):
+                        oldest_date = outdated_sentence["oldest_source_date"]
+                        break
+                
+                if oldest_date:
+                    disclaimers.append(f"⚠️ **Outdated Information Notice**: {outdated_count} out of {total_factual} factual statements are based on older data as of {oldest_date}. This information may not reflect the most current state.")
+                else:
+                    disclaimers.append(f"⚠️ **Outdated Information Notice**: {outdated_count} out of {total_factual} factual statements are based on older data (over 6 months old). This information may not reflect the most current state.")
+        
+        # Check for temporal issues
+        if verification_result.temporal_validation:
+            temporal_info = verification_result.temporal_validation
+            if temporal_info.get("is_current") == False:
+                outdated_warning = temporal_info.get("outdated_warning", "Sources may be outdated")
+                disclaimers.append(f"⚠️ **Temporal Notice**: {outdated_warning}. Information may not reflect the most current state.")
+        
+        # Check for source freshness issues
+        if verification_result.source_freshness:
+            freshness_info = verification_result.source_freshness
+            freshness_score = freshness_info.get("freshness_score", 1.0)
+            outdated_sources = freshness_info.get("outdated_sources_count", 0)
+            total_sources = freshness_info.get("outdated_sources_count", 0) + freshness_info.get("fresh_sources_count", 0)
+            
+            if freshness_score < 0.5:  # More than half of sources are outdated
+                disclaimers.append(f"⚠️ **Source Freshness Notice**: {outdated_sources} out of {total_sources} sources are older than 6 months. Please verify critical information independently.")
+            elif freshness_score < 1.0:  # Some sources are outdated
+                disclaimers.append(f"⚠️ **Source Freshness Notice**: Some sources are older than 6 months. Information may not reflect the most current state.")
+        
+        # Check for authenticity issues
+        if verification_result.source_authenticity:
+            auth_info = verification_result.source_authenticity
+            authenticity_score = auth_info.get("authenticity_score", 1.0)
+            
+            if authenticity_score < 0.7:
+                disclaimers.append(f"⚠️ **Source Quality Notice**: Some sources may not meet our highest authenticity standards (score: {authenticity_score:.2f}). Please verify critical information independently.")
+        
+        # Combine all disclaimers
+        if disclaimers:
+            disclaimer_text = "\n\n" + "\n\n".join(disclaimers)
+            return answer_text + disclaimer_text
+        
+        return answer_text
 
     def _fallback_synthesis(self, verified_facts: List[Dict], query: str) -> str:
         """
@@ -376,6 +440,224 @@ class SynthesisAgent(BaseAgent):
         final_confidence = min(1.0, avg_confidence + fact_count_boost + high_conf_boost)
 
         return final_confidence
+
+    async def _add_citations_to_answer(
+        self, 
+        answer_text: str, 
+        source_docs: List[Dict[str, Any]], 
+        verification_result
+    ) -> str:
+        """
+        Add inline citations to the answer using CitationAgent.
+        
+        Args:
+            answer_text: The answer text to annotate
+            source_docs: Source documents
+            verification_result: Result from fact verification
+            
+        Returns:
+            Answer with inline citations
+        """
+        try:
+            from services.synthesis_service.citation_agent import CitationAgent
+            
+            citation_agent = CitationAgent()
+            
+            # Extract verified sentences from verification result
+            verified_sentences = verification_result.verified_sentences if verification_result else []
+            
+            # Generate citations
+            citation_result = await citation_agent.generate_citations(
+                answer_text, source_docs, verified_sentences
+            )
+            
+            logger.info(f"Citation generation completed: {citation_result.total_citations} citations added")
+            
+            # Return the annotated answer
+            return citation_result.annotated_answer
+            
+        except Exception as e:
+            logger.error(f"Citation generation failed: {str(e)}")
+            return answer_text  # Return original answer if citation fails
+
+    async def process_task(
+        self, task: Dict[str, Any], context: QueryContext
+    ) -> AgentResult:
+        """
+        Process synthesis task by generating coherent answer from verified facts.
+        Enhanced with fact verification, citation generation, and source freshness prioritization.
+        """
+        start_time = time.time()
+
+        try:
+            # Extract task data
+            verified_facts = task.get("verified_facts", [])
+            query = task.get("query", "")
+            source_docs = task.get("source_docs", [])
+            synthesis_params = task.get("synthesis_params", {})
+
+            logger.info(f"Synthesizing answer for query: {query}...")
+            logger.info(f"Number of verified facts: {len(verified_facts)}")
+
+            # Prioritize recent sources for synthesis
+            prioritized_source_docs = self._prioritize_recent_sources(source_docs)
+            logger.info(f"Prioritized {len(prioritized_source_docs)} recent sources out of {len(source_docs)} total sources")
+
+            # Synthesize initial answer using prioritized sources
+            synthesis_result = await self._synthesize_answer(
+                verified_facts, query, synthesis_params
+            )
+
+            # Verify the synthesized answer against source documents
+            verification_result = await self._verify_synthesized_answer(
+                synthesis_result, source_docs
+            )
+
+            # Append disclaimer if unsupported facts exist or sources are outdated
+            final_answer = self._append_verification_disclaimer(
+                synthesis_result, verification_result
+            )
+
+            # Add inline citations to the answer
+            cited_answer = await self._add_citations_to_answer(
+                final_answer, source_docs, verification_result
+            )
+
+            # Calculate confidence based on fact quality and verification
+            confidence = self._calculate_synthesis_confidence(verified_facts)
+            # Adjust confidence based on verification results
+            if verification_result.total_sentences > 0:
+                verification_confidence = verification_result.verification_confidence
+                confidence = (confidence + verification_confidence) / 2
+
+            processing_time = time.time() - start_time
+
+            # Create standardized synthesis result with verification and citation info
+            synthesis_data = SynthesisResult(
+                answer=cited_answer,
+                synthesis_method="rule_based_with_verification_and_citations",
+                fact_count=len(verified_facts),
+                processing_time_ms=int(processing_time * 1000),
+                metadata={
+                    "agent_id": self.agent_id,
+                    "verification_summary": verification_result.summary,
+                    "verification_confidence": verification_result.verification_confidence,
+                    "verified_sentences_count": len(verification_result.verified_sentences),
+                    "unsupported_sentences_count": len(verification_result.unsupported_sentences),
+                    "outdated_sentences_count": len(verification_result.outdated_sentences) if verification_result.outdated_sentences else 0,
+                    "citation_style": "inline",
+                    "has_citations": "[1]" in cited_answer or "[2]" in cited_answer,
+                    "source_freshness_score": verification_result.source_freshness.get("freshness_score", 1.0) if verification_result.source_freshness else 1.0,
+                    "prioritized_recent_sources": len(prioritized_source_docs),
+                },
+            )
+
+            return AgentResult(
+                success=True,
+                data=synthesis_data.model_dump(),
+                confidence=confidence,
+                processing_time_ms=int(processing_time * 1000),
+                metadata={
+                    "verification_summary": verification_result.summary,
+                    "verification_confidence": verification_result.verification_confidence,
+                    "verified_sentences_count": len(verification_result.verified_sentences),
+                    "unsupported_sentences_count": len(verification_result.unsupported_sentences),
+                    "outdated_sentences_count": len(verification_result.outdated_sentences) if verification_result.outdated_sentences else 0,
+                    "source_freshness_score": verification_result.source_freshness.get("freshness_score", 1.0) if verification_result.source_freshness else 1.0,
+                },
+            )
+
+        except Exception as e:
+            logger.error(f"Synthesis task failed: {str(e)}")
+            return AgentResult(
+                success=False,
+                data={"error": str(e)},
+                confidence=0.0,
+                processing_time_ms=int((time.time() - start_time) * 1000),
+            )
+
+    def _prioritize_recent_sources(self, source_docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Prioritize recent sources for synthesis.
+        
+        Args:
+            source_docs: List of source documents
+            
+        Returns:
+            Prioritized list of source documents with recent sources first
+        """
+        if not source_docs:
+            return source_docs
+        
+        current_time = datetime.now()
+        max_freshness_days = 180  # 6 months
+        
+        def get_source_age(doc):
+            """Calculate the age of a source document in days."""
+            published_date = None
+            
+            # Try to extract published_date from various possible fields
+            if "published_date" in doc:
+                published_date = self._parse_date(doc["published_date"])
+            elif "timestamp" in doc:
+                published_date = self._parse_date(doc["timestamp"])
+            elif "date" in doc:
+                published_date = self._parse_date(doc["date"])
+            elif "created_at" in doc:
+                published_date = self._parse_date(doc["created_at"])
+            
+            if published_date:
+                return (current_time - published_date).days
+            else:
+                return max_freshness_days + 1  # Treat as outdated if no date found
+        
+        # Sort sources by age (recent first)
+        sorted_sources = sorted(source_docs, key=get_source_age)
+        
+        # Prioritize recent sources (within 6 months)
+        recent_sources = [doc for doc in sorted_sources if get_source_age(doc) <= max_freshness_days]
+        outdated_sources = [doc for doc in sorted_sources if get_source_age(doc) > max_freshness_days]
+        
+        # Return recent sources first, then outdated sources
+        prioritized_sources = recent_sources + outdated_sources
+        
+        logger.info(f"Prioritized sources: {len(recent_sources)} recent, {len(outdated_sources)} outdated")
+        
+        return prioritized_sources
+
+    def _parse_date(self, date_str: str) -> Optional[datetime]:
+        """
+        Parse date string in various formats.
+        
+        Args:
+            date_str: Date string to parse
+            
+        Returns:
+            Parsed datetime object or None if parsing fails
+        """
+        if not date_str:
+            return None
+        
+        # Common date formats to try
+        date_formats = [
+            "%Y-%m-%dT%H:%M:%SZ",  # ISO format with Z
+            "%Y-%m-%dT%H:%M:%S",   # ISO format without Z
+            "%Y-%m-%d %H:%M:%S",   # Space separated
+            "%Y-%m-%d",            # Date only
+            "%d/%m/%Y",            # DD/MM/YYYY
+            "%m/%d/%Y",            # MM/DD/YYYY
+            "%Y-%m-%dT%H:%M:%S.%fZ",  # ISO with milliseconds
+            "%Y-%m-%dT%H:%M:%S.%f",   # ISO with milliseconds without Z
+        ]
+        
+        for fmt in date_formats:
+            try:
+                return datetime.strptime(date_str, fmt)
+            except ValueError:
+                continue
+        
+        logger.warning(f"Could not parse date: {date_str}")
+        return None
 
 
 # Example usage

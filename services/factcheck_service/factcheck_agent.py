@@ -1,5 +1,6 @@
 """
 Advanced fact-checking agent that verifies claims against retrieved documents.
+Enhanced with temporal validation and source authenticity checking.
 """
 
 import asyncio
@@ -10,7 +11,8 @@ import re
 from typing import Dict, List, Any, Optional, Callable
 from dataclasses import dataclass
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timedelta
+import json
 
 from dotenv import load_dotenv
 
@@ -34,6 +36,8 @@ logger = logging.getLogger(__name__)
 DEFAULT_TOKEN_BUDGET = int(os.getenv("DEFAULT_TOKEN_BUDGET", "1000"))
 CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.7"))
 DATABASE_NAME = os.getenv("DATABASE_NAME", "knowledge_base")
+MAX_SOURCE_AGE_DAYS = int(os.getenv("MAX_SOURCE_AGE_DAYS", "365"))  # Default 1 year
+MIN_SOURCE_CONFIDENCE = float(os.getenv("MIN_SOURCE_CONFIDENCE", "0.6"))
 
 
 @dataclass
@@ -59,20 +63,887 @@ class Verification:
     verification_method: str
 
 
+@dataclass
+class VerificationResult:
+    """Represents the result of answer verification."""
+    
+    summary: str
+    verified_sentences: List[Dict[str, Any]]
+    unsupported_sentences: List[Dict[str, Any]]
+    total_sentences: int
+    verification_confidence: float
+    verification_method: str
+    outdated_sentences: List[Dict[str, Any]] = None  # New field for outdated sentences
+    temporal_validation: Dict[str, Any] = None
+    source_authenticity: Dict[str, Any] = None
+    source_freshness: Dict[str, Any] = None  # New field for freshness validation
+
+
+@dataclass
+class TemporalValidation:
+    """Represents temporal validation results."""
+    
+    query_timestamp: datetime
+    latest_source_date: Optional[datetime]
+    source_age_days: Optional[int]
+    is_current: bool
+    temporal_confidence: float
+    outdated_warning: Optional[str] = None
+
+
+@dataclass
+class SourceAuthenticity:
+    """Represents source authenticity validation."""
+    
+    total_sources: int
+    authentic_sources: int
+    high_confidence_sources: int
+    average_confidence: float
+    authenticity_score: float
+    reliability_indicators: List[str] = None
+
+
+@dataclass
+class SourceFreshness:
+    """Represents source freshness validation results."""
+    
+    query_timestamp: datetime
+    max_freshness_days: int = 180  # 6 months default
+    outdated_sources_count: int = 0
+    fresh_sources_count: int = 0
+    oldest_source_date: Optional[datetime] = None
+    newest_source_date: Optional[datetime] = None
+    freshness_warning: Optional[str] = None
+    freshness_score: float = 1.0
+
+
 class FactCheckAgent(BaseAgent):
     """
-    FactCheckAgent that verifies claims against retrieved documents.
+    Enhanced FactCheckAgent that verifies claims against retrieved documents
+    with temporal validation and source authenticity checking.
     """
 
     def __init__(self):
         """Initialize the fact-checking agent."""
         super().__init__(agent_id="factcheck_agent", agent_type=AgentType.FACT_CHECK)
         self.manual_review_callback: Optional[Callable] = None
-        logger.info("✅ FactCheckAgent initialized successfully")
+        self._embedding_model = None
+        self.max_source_age_days = MAX_SOURCE_AGE_DAYS
+        self.min_source_confidence = MIN_SOURCE_CONFIDENCE
+        logger.info("✅ Enhanced FactCheckAgent initialized successfully")
 
     def set_manual_review_callback(self, callback: Callable):
         """Set callback for manual review of contested claims."""
         self.manual_review_callback = callback
+
+    async def verify_answer_with_temporal_validation(
+        self, 
+        answer_text: str, 
+        source_docs: List[Dict[str, Any]], 
+        query_timestamp: Optional[datetime] = None
+    ) -> VerificationResult:
+        """
+        Verify answer with enhanced temporal validation and source authenticity checking.
+        
+        Args:
+            answer_text: The LLM-generated answer to verify
+            source_docs: List of source documents to check against
+            query_timestamp: Timestamp when the query was made (defaults to now)
+            
+        Returns:
+            VerificationResult with temporal validation and authenticity info
+        """
+        start_time = time.time()
+        
+        if query_timestamp is None:
+            query_timestamp = datetime.now()
+        
+        try:
+            # Perform temporal validation
+            temporal_validation = await self._validate_temporal_relevance(
+                source_docs, query_timestamp
+            )
+            
+            # Perform source authenticity validation
+            source_authenticity = await self._validate_source_authenticity(source_docs)
+            
+            # Perform source freshness validation
+            source_freshness = await self._validate_source_freshness(source_docs, query_timestamp)
+            
+            # Filter sources based on temporal and authenticity criteria
+            filtered_sources = await self._filter_sources_by_criteria(
+                source_docs, temporal_validation, source_authenticity
+            )
+            
+            # Perform standard verification with filtered sources
+            base_result = await self.verify_answer(answer_text, filtered_sources)
+            
+            # Enhance result with temporal and authenticity information
+            enhanced_result = VerificationResult(
+                summary=base_result.summary,
+                verified_sentences=base_result.verified_sentences,
+                unsupported_sentences=base_result.unsupported_sentences,
+                total_sentences=base_result.total_sentences,
+                verification_confidence=base_result.verification_confidence,
+                verification_method=base_result.verification_method,
+                temporal_validation=temporal_validation.__dict__,
+                source_authenticity=source_authenticity.__dict__,
+                source_freshness=source_freshness.__dict__
+            )
+            
+            # Add temporal warnings if needed
+            if not temporal_validation.is_current:
+                enhanced_result.summary += f" (⚠️ Sources may be outdated: {temporal_validation.outdated_warning})"
+            
+            # Add authenticity warnings if needed
+            if source_authenticity.authenticity_score < 0.7:
+                enhanced_result.summary += f" (⚠️ Source authenticity concerns: {source_authenticity.authenticity_score:.2f})"
+            
+            # Add freshness warnings if needed
+            if source_freshness.freshness_warning:
+                enhanced_result.summary += f" (⚠️ Source freshness concerns: {source_freshness.freshness_warning})"
+            
+            return enhanced_result
+            
+        except Exception as e:
+            logger.error(f"Enhanced answer verification failed: {str(e)}")
+            return VerificationResult(
+                summary="Verification failed due to error",
+                verified_sentences=[],
+                unsupported_sentences=[],
+                total_sentences=0,
+                verification_confidence=0.0,
+                verification_method="error",
+                temporal_validation={"error": str(e)},
+                source_authenticity={"error": str(e)},
+                source_freshness={"error": str(e)}
+            )
+
+    async def _validate_temporal_relevance(
+        self, source_docs: List[Dict[str, Any]], query_timestamp: datetime
+    ) -> TemporalValidation:
+        """
+        Validate temporal relevance of sources.
+        
+        Args:
+            source_docs: Source documents to validate
+            query_timestamp: When the query was made
+            
+        Returns:
+            TemporalValidation result
+        """
+        if not source_docs:
+            return TemporalValidation(
+                query_timestamp=query_timestamp,
+                latest_source_date=None,
+                source_age_days=None,
+                is_current=False,
+                temporal_confidence=0.0,
+                outdated_warning="No sources available"
+            )
+        
+        # Extract dates from sources
+        source_dates = []
+        for doc in source_docs:
+            date_str = doc.get("timestamp") or doc.get("date") or doc.get("created_at")
+            if date_str:
+                try:
+                    # Try multiple date formats
+                    for fmt in ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"]:
+                        try:
+                            source_date = datetime.strptime(date_str, fmt)
+                            source_dates.append(source_date)
+                            break
+                        except ValueError:
+                            continue
+                except Exception as e:
+                    logger.warning(f"Could not parse date '{date_str}': {e}")
+        
+        if not source_dates:
+            return TemporalValidation(
+                query_timestamp=query_timestamp,
+                latest_source_date=None,
+                source_age_days=None,
+                is_current=False,
+                temporal_confidence=0.3,  # Low confidence without dates
+                outdated_warning="No source dates available"
+            )
+        
+        # Find latest source date
+        latest_source_date = max(source_dates)
+        source_age_days = (query_timestamp - latest_source_date).days
+        
+        # Determine if sources are current
+        is_current = source_age_days <= self.max_source_age_days
+        
+        # Calculate temporal confidence
+        if source_age_days <= 30:
+            temporal_confidence = 1.0
+        elif source_age_days <= 90:
+            temporal_confidence = 0.9
+        elif source_age_days <= 180:
+            temporal_confidence = 0.7
+        elif source_age_days <= 365:
+            temporal_confidence = 0.5
+        else:
+            temporal_confidence = 0.3
+        
+        # Generate warning for outdated sources
+        outdated_warning = None
+        if not is_current:
+            if source_age_days > 365:
+                outdated_warning = f"Sources are over {source_age_days//365} year(s) old"
+            else:
+                outdated_warning = f"Sources are {source_age_days} days old"
+        
+        return TemporalValidation(
+            query_timestamp=query_timestamp,
+            latest_source_date=latest_source_date,
+            source_age_days=source_age_days,
+            is_current=is_current,
+            temporal_confidence=temporal_confidence,
+            outdated_warning=outdated_warning
+        )
+
+    async def _validate_source_authenticity(self, source_docs: List[Dict[str, Any]]) -> SourceAuthenticity:
+        """
+        Validate authenticity and reliability of sources.
+        
+        Args:
+            source_docs: Source documents to validate
+            
+        Returns:
+            SourceAuthenticity result
+        """
+        if not source_docs:
+            return SourceAuthenticity(
+                total_sources=0,
+                authentic_sources=0,
+                high_confidence_sources=0,
+                average_confidence=0.0,
+                authenticity_score=0.0,
+                reliability_indicators=[]
+            )
+        
+        total_sources = len(source_docs)
+        authentic_sources = 0
+        high_confidence_sources = 0
+        reliability_indicators = []
+        confidence_scores = []
+        
+        # Define reliable domain patterns
+        reliable_domains = [
+            "wikipedia.org", "gov", "edu", "ac.uk", "org",
+            "researchgate.net", "arxiv.org", "scholar.google.com",
+            "ieee.org", "acm.org", "springer.com", "sciencedirect.com"
+        ]
+        
+        for doc in source_docs:
+            source_url = doc.get("url", "").lower()
+            source_domain = doc.get("domain", "").lower()
+            score = doc.get("score", 0.0)
+            
+            # Check if source is from reliable domain
+            is_reliable_domain = any(domain in source_url or domain in source_domain 
+                                   for domain in reliable_domains)
+            
+            # Check for authenticity indicators
+            has_author = "author" in doc or "author" in str(doc.get("metadata", {}))
+            has_citations = "citations" in doc or "references" in doc
+            has_peer_review = "peer_review" in str(doc.get("metadata", {})).lower()
+            
+            # Calculate source confidence
+            source_confidence = score
+            if is_reliable_domain:
+                source_confidence += 0.2
+            if has_author:
+                source_confidence += 0.1
+            if has_citations:
+                source_confidence += 0.1
+            if has_peer_review:
+                source_confidence += 0.2
+            
+            source_confidence = min(1.0, source_confidence)
+            confidence_scores.append(source_confidence)
+            
+            # Count authentic sources
+            if source_confidence >= self.min_source_confidence:
+                authentic_sources += 1
+            
+            # Count high confidence sources
+            if source_confidence >= 0.8:
+                high_confidence_sources += 1
+            
+            # Collect reliability indicators
+            if is_reliable_domain:
+                reliability_indicators.append("reliable_domain")
+            if has_author:
+                reliability_indicators.append("has_author")
+            if has_citations:
+                reliability_indicators.append("has_citations")
+            if has_peer_review:
+                reliability_indicators.append("peer_reviewed")
+        
+        # Calculate authenticity score
+        average_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0.0
+        authenticity_score = (authentic_sources / total_sources) * average_confidence if total_sources > 0 else 0.0
+        
+        return SourceAuthenticity(
+            total_sources=total_sources,
+            authentic_sources=authentic_sources,
+            high_confidence_sources=high_confidence_sources,
+            average_confidence=average_confidence,
+            authenticity_score=authenticity_score,
+            reliability_indicators=list(set(reliability_indicators))
+        )
+
+    async def _validate_source_freshness(
+        self, source_docs: List[Dict[str, Any]], query_timestamp: datetime
+    ) -> SourceFreshness:
+        """
+        Validate the freshness of source documents based on published_date.
+        
+        Args:
+            source_docs: List of source documents
+            query_timestamp: Timestamp of the query
+            
+        Returns:
+            SourceFreshness object with freshness validation results
+        """
+        max_freshness_days = 180  # 6 months default
+        outdated_sources_count = 0
+        fresh_sources_count = 0
+        source_dates = []
+        
+        for doc in source_docs:
+            # Try to extract published_date from various possible fields
+            published_date = None
+            
+            # Check for published_date field first
+            if "published_date" in doc:
+                published_date = self._parse_date(doc["published_date"])
+            
+            # Fallback to timestamp field
+            elif "timestamp" in doc:
+                published_date = self._parse_date(doc["timestamp"])
+            
+            # Fallback to date field
+            elif "date" in doc:
+                published_date = self._parse_date(doc["date"])
+            
+            # Fallback to created_at field
+            elif "created_at" in doc:
+                published_date = self._parse_date(doc["created_at"])
+            
+            if published_date:
+                source_dates.append(published_date)
+                age_days = (query_timestamp - published_date).days
+                
+                if age_days > max_freshness_days:
+                    outdated_sources_count += 1
+                    logger.info(f"Outdated source found: {doc.get('doc_id', 'unknown')} - {age_days} days old")
+                else:
+                    fresh_sources_count += 1
+                    logger.info(f"Fresh source found: {doc.get('doc_id', 'unknown')} - {age_days} days old")
+            else:
+                # If no date found, count as outdated for safety
+                outdated_sources_count += 1
+                logger.warning(f"No published_date found for source: {doc.get('doc_id', 'unknown')}")
+        
+        # Calculate freshness metrics
+        total_sources = len(source_docs)
+        oldest_source_date = min(source_dates) if source_dates else None
+        newest_source_date = max(source_dates) if source_dates else None
+        
+        # Calculate freshness score
+        if total_sources > 0:
+            freshness_score = fresh_sources_count / total_sources
+        else:
+            freshness_score = 1.0  # No sources means no freshness concerns
+        
+        # Generate warning if needed
+        freshness_warning = None
+        if outdated_sources_count > 0:
+            if fresh_sources_count == 0:
+                freshness_warning = f"All sources are older than {max_freshness_days} days"
+            else:
+                freshness_warning = f"{outdated_sources_count} out of {total_sources} sources are older than {max_freshness_days} days"
+        
+        return SourceFreshness(
+            query_timestamp=query_timestamp,
+            max_freshness_days=max_freshness_days,
+            outdated_sources_count=outdated_sources_count,
+            fresh_sources_count=fresh_sources_count,
+            oldest_source_date=oldest_source_date,
+            newest_source_date=newest_source_date,
+            freshness_warning=freshness_warning,
+            freshness_score=freshness_score
+        )
+
+    def _parse_date(self, date_str: str) -> Optional[datetime]:
+        """
+        Parse date string in various formats.
+        
+        Args:
+            date_str: Date string to parse
+            
+        Returns:
+            Parsed datetime object or None if parsing fails
+        """
+        if not date_str:
+            return None
+        
+        # Common date formats to try
+        date_formats = [
+            "%Y-%m-%dT%H:%M:%SZ",  # ISO format with Z
+            "%Y-%m-%dT%H:%M:%S",   # ISO format without Z
+            "%Y-%m-%d %H:%M:%S",   # Space separated
+            "%Y-%m-%d",            # Date only
+            "%d/%m/%Y",            # DD/MM/YYYY
+            "%m/%d/%Y",            # MM/DD/YYYY
+            "%Y-%m-%dT%H:%M:%S.%fZ",  # ISO with milliseconds
+            "%Y-%m-%dT%H:%M:%S.%f",   # ISO with milliseconds without Z
+        ]
+        
+        for fmt in date_formats:
+            try:
+                return datetime.strptime(date_str, fmt)
+            except ValueError:
+                continue
+        
+        logger.warning(f"Could not parse date: {date_str}")
+        return None
+
+    async def _filter_sources_by_criteria(
+        self, 
+        source_docs: List[Dict[str, Any]], 
+        temporal_validation: TemporalValidation,
+        source_authenticity: SourceAuthenticity
+    ) -> List[Dict[str, Any]]:
+        """
+        Filter sources based on temporal and authenticity criteria.
+        
+        Args:
+            source_docs: Original source documents
+            temporal_validation: Temporal validation results
+            source_authenticity: Source authenticity results
+            
+        Returns:
+            Filtered source documents
+        """
+        if not source_docs:
+            return []
+        
+        filtered_sources = []
+        
+        for doc in source_docs:
+            # Check temporal relevance
+            date_str = doc.get("timestamp") or doc.get("date") or doc.get("created_at")
+            is_temporally_relevant = True
+            
+            if date_str and temporal_validation.latest_source_date:
+                try:
+                    for fmt in ["%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%SZ"]:
+                        try:
+                            doc_date = datetime.strptime(date_str, fmt)
+                            # Prefer recent sources, but don't exclude older ones completely
+                            if (temporal_validation.query_timestamp - doc_date).days > self.max_source_age_days * 2:
+                                is_temporally_relevant = False
+                            break
+                        except ValueError:
+                            continue
+                except Exception:
+                    pass  # Keep source if date parsing fails
+            
+            # Check authenticity
+            score = doc.get("score", 0.0)
+            is_authentic = score >= self.min_source_confidence
+            
+            # Include source if it meets basic criteria
+            if is_temporally_relevant and is_authentic:
+                filtered_sources.append(doc)
+            elif is_temporally_relevant:  # Include temporally relevant sources even if lower confidence
+                filtered_sources.append(doc)
+        
+        # If no sources meet strict criteria, include some lower-quality sources
+        if not filtered_sources:
+            logger.warning("No sources meet strict criteria, including lower-quality sources")
+            filtered_sources = source_docs[:3]  # Take top 3 sources
+        
+        return filtered_sources
+
+    async def verify_answer(self, answer_text: str, source_docs: List[Dict[str, Any]]) -> VerificationResult:
+        """
+        Verify key statements from LLM answer against retrieved documents.
+        Enhanced with source freshness validation.
+        
+        Args:
+            answer_text: The LLM-generated answer to verify
+            source_docs: List of source documents to check against
+            
+        Returns:
+            VerificationResult with verification details including freshness validation
+        """
+        start_time = time.time()
+        
+        try:
+            # Split answer into sentences
+            sentences = self._split_into_sentences(answer_text)
+            
+            verified_sentences = []
+            unsupported_sentences = []
+            outdated_sentences = []
+            
+            # Get current timestamp for freshness validation
+            query_timestamp = datetime.now()
+            
+            # Validate source freshness
+            source_freshness = await self._validate_source_freshness(source_docs, query_timestamp)
+            
+            for sentence in sentences:
+                if len(sentence.strip()) < 10:  # Skip very short sentences
+                    continue
+                    
+                # Check if sentence is factual
+                if not self._is_factual_statement(sentence):
+                    continue
+                
+                # Verify sentence against source documents
+                verification = await self._verify_sentence_against_docs(sentence, source_docs)
+                
+                if verification["is_supported"]:
+                    # Check if the supporting sources are outdated
+                    is_outdated = self._check_sentence_source_freshness(
+                        sentence, verification["source_docs"], source_docs, query_timestamp
+                    )
+                    
+                    if is_outdated:
+                        outdated_sentences.append({
+                            "sentence": sentence,
+                            "confidence": verification["confidence"],
+                            "evidence": verification["evidence"],
+                            "source_docs": verification["source_docs"],
+                            "freshness_status": "outdated",
+                            "oldest_source_date": source_freshness.oldest_source_date.isoformat() if source_freshness.oldest_source_date else None
+                        })
+                    else:
+                        verified_sentences.append({
+                            "sentence": sentence,
+                            "confidence": verification["confidence"],
+                            "evidence": verification["evidence"],
+                            "source_docs": verification["source_docs"],
+                            "freshness_status": "fresh"
+                        })
+                else:
+                    unsupported_sentences.append({
+                        "sentence": sentence,
+                        "confidence": verification["confidence"],
+                        "reason": verification["reason"]
+                    })
+            
+            # Calculate summary
+            total_factual = len(verified_sentences) + len(unsupported_sentences) + len(outdated_sentences)
+            verified_count = len(verified_sentences)
+            outdated_count = len(outdated_sentences)
+            
+            if total_factual == 0:
+                summary = "No factual statements found to verify"
+                verification_confidence = 1.0  # No facts to verify
+            else:
+                summary = f"{verified_count}/{total_factual} statements verified"
+                if outdated_count > 0:
+                    summary += f" ({outdated_count} outdated)"
+                verification_confidence = verified_count / total_factual
+            
+            processing_time = time.time() - start_time
+            
+            return VerificationResult(
+                summary=summary,
+                verified_sentences=verified_sentences,
+                unsupported_sentences=unsupported_sentences,
+                outdated_sentences=outdated_sentences,
+                total_sentences=total_factual,
+                verification_confidence=verification_confidence,
+                verification_method="embedding_similarity_with_freshness",
+                source_freshness=source_freshness.__dict__
+            )
+            
+        except Exception as e:
+            logger.error(f"Answer verification failed: {str(e)}")
+            return VerificationResult(
+                summary="Verification failed due to error",
+                verified_sentences=[],
+                unsupported_sentences=[],
+                outdated_sentences=[],
+                total_sentences=0,
+                verification_confidence=0.0,
+                verification_method="error",
+                source_freshness={"error": str(e)}
+            )
+
+    def _split_into_sentences(self, text: str) -> List[str]:
+        """
+        Split text into sentences using regex.
+        
+        Args:
+            text: Text to split
+            
+        Returns:
+            List of sentences
+        """
+        # Split on sentence endings, but be careful with abbreviations
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        
+        # Clean up sentences
+        cleaned_sentences = []
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if sentence:
+                cleaned_sentences.append(sentence)
+        
+        return cleaned_sentences
+
+    async def _verify_sentence_against_docs(self, sentence: str, source_docs: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Verify a single sentence against source documents using embedding similarity.
+        
+        Args:
+            sentence: Sentence to verify
+            source_docs: Source documents to check against
+            
+        Returns:
+            Verification result dictionary
+        """
+        if not source_docs:
+            return {
+                "is_supported": False,
+                "confidence": 0.0,
+                "evidence": [],
+                "source_docs": [],
+                "reason": "No source documents available"
+            }
+        
+        try:
+            # Get sentence embedding
+            sentence_embedding = await self._get_sentence_embedding(sentence)
+            
+            best_match_score = 0.0
+            best_match_content = ""
+            best_match_doc_id = ""
+            all_evidence = []
+            all_source_docs = []
+            
+            # Check each source document
+            for doc in source_docs:
+                doc_content = doc.get("content", "")
+                doc_id = doc.get("doc_id", "unknown")
+                
+                if not doc_content:
+                    continue
+                
+                # Split document into chunks for better matching
+                doc_chunks = self._split_document_into_chunks(doc_content)
+                
+                for chunk in doc_chunks:
+                    # Get chunk embedding
+                    chunk_embedding = await self._get_sentence_embedding(chunk)
+                    
+                    # Calculate similarity
+                    similarity = self._calculate_cosine_similarity(sentence_embedding, chunk_embedding)
+                    
+                    if similarity > best_match_score:
+                        best_match_score = similarity
+                        best_match_content = chunk
+                        best_match_doc_id = doc_id
+                    
+                    # Collect evidence if similarity is above threshold
+                    if similarity > 0.3:  # Lower threshold for evidence collection
+                        all_evidence.append(chunk[:200])  # Limit evidence length
+                        all_source_docs.append(doc_id)
+            
+            # Determine if sentence is supported
+            support_threshold = 0.5  # Adjustable threshold
+            is_supported = best_match_score >= support_threshold
+            
+            # Calculate confidence based on similarity and evidence quantity
+            confidence = min(1.0, best_match_score + (len(all_evidence) * 0.1))
+            
+            return {
+                "is_supported": is_supported,
+                "confidence": confidence,
+                "evidence": all_evidence[:3],  # Limit to top 3 pieces of evidence
+                "source_docs": list(set(all_source_docs)),  # Remove duplicates
+                "reason": f"Best match similarity: {best_match_score:.3f}" if not is_supported else "Supported by evidence"
+            }
+            
+        except Exception as e:
+            logger.error(f"Error verifying sentence: {str(e)}")
+            return {
+                "is_supported": False,
+                "confidence": 0.0,
+                "evidence": [],
+                "source_docs": [],
+                "reason": f"Verification error: {str(e)}"
+            }
+
+    async def _get_sentence_embedding(self, text: str) -> List[float]:
+        """
+        Get embedding for a sentence using local HuggingFace model.
+        
+        Args:
+            text: Text to embed
+            
+        Returns:
+            Embedding vector
+        """
+        try:
+            # Lazy load the embedding model
+            if self._embedding_model is None:
+                await self._load_embedding_model()
+            
+            # If embedding model failed to load, use fallback
+            if self._embedding_model is None:
+                return self._fallback_embedding(text)
+            
+            # Import torch here to avoid import issues
+            import torch
+            
+            # Tokenize and get embeddings
+            inputs = self._embedding_tokenizer(
+                text, 
+                return_tensors="pt", 
+                max_length=512, 
+                truncation=True, 
+                padding=True
+            )
+            
+            with torch.no_grad():
+                outputs = self._embedding_model(**inputs)
+                # Use mean pooling for sentence embedding
+                embeddings = outputs.last_hidden_state.mean(dim=1)
+                return embeddings[0].numpy().tolist()
+                
+        except Exception as e:
+            logger.error(f"Error getting embedding: {str(e)}")
+            # Fallback to simple keyword-based approach
+            return self._fallback_embedding(text)
+
+    async def _load_embedding_model(self):
+        """Load the embedding model lazily."""
+        try:
+            import torch
+            from transformers import AutoTokenizer, AutoModel
+            
+            model_name = "sentence-transformers/all-MiniLM-L6-v2"
+            
+            logger.info(f"Loading embedding model: {model_name}")
+            
+            self._embedding_tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self._embedding_model = AutoModel.from_pretrained(model_name)
+            
+            # Set to evaluation mode
+            self._embedding_model.eval()
+            
+            logger.info("✅ Embedding model loaded successfully")
+            
+        except ImportError:
+            logger.warning("Transformers not available, using fallback embedding")
+            self._embedding_model = None
+        except Exception as e:
+            logger.error(f"Failed to load embedding model: {str(e)}")
+            self._embedding_model = None
+
+    def _fallback_embedding(self, text: str) -> List[float]:
+        """
+        Fallback embedding method using simple TF-IDF approach.
+        
+        Args:
+            text: Text to embed
+            
+        Returns:
+            Simple embedding vector
+        """
+        # Simple fallback: create a basic vector based on word frequency
+        words = re.findall(r'\b\w+\b', text.lower())
+        
+        # Create a simple frequency-based vector
+        word_freq = {}
+        for word in words:
+            if len(word) > 2:  # Skip very short words
+                word_freq[word] = word_freq.get(word, 0) + 1
+        
+        # Normalize to create a simple embedding
+        total_words = sum(word_freq.values())
+        if total_words == 0:
+            return [0.0] * 100  # Return zero vector
+        
+        # Create a simple 100-dimensional vector
+        embedding = [0.0] * 100
+        for i, (word, freq) in enumerate(list(word_freq.items())[:100]):
+            embedding[i] = freq / total_words
+        
+        return embedding
+
+    def _calculate_cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
+        """
+        Calculate cosine similarity between two vectors.
+        
+        Args:
+            vec1: First vector
+            vec2: Second vector
+            
+        Returns:
+            Cosine similarity score
+        """
+        try:
+            import numpy as np
+            
+            # Convert to numpy arrays
+            v1 = np.array(vec1)
+            v2 = np.array(vec2)
+            
+            # Calculate cosine similarity
+            dot_product = np.dot(v1, v2)
+            norm1 = np.linalg.norm(v1)
+            norm2 = np.linalg.norm(v2)
+            
+            if norm1 == 0 or norm2 == 0:
+                return 0.0
+            
+            return dot_product / (norm1 * norm2)
+            
+        except ImportError:
+            # Fallback calculation without numpy
+            dot_product = sum(a * b for a, b in zip(vec1, vec2))
+            norm1 = sum(a * a for a in vec1) ** 0.5
+            norm2 = sum(b * b for b in vec2) ** 0.5
+            
+            if norm1 == 0 or norm2 == 0:
+                return 0.0
+            
+            return dot_product / (norm1 * norm2)
+
+    def _split_document_into_chunks(self, content: str, chunk_size: int = 200) -> List[str]:
+        """
+        Split document content into overlapping chunks.
+        
+        Args:
+            content: Document content
+            chunk_size: Size of each chunk in characters
+            
+        Returns:
+            List of document chunks
+        """
+        chunks = []
+        words = content.split()
+        
+        for i in range(0, len(words), chunk_size // 5):  # Overlap chunks
+            chunk_words = words[i:i + chunk_size // 5]
+            chunk = " ".join(chunk_words)
+            if chunk.strip():
+                chunks.append(chunk)
+        
+        return chunks
 
     async def process_task(
         self, task: Dict[str, Any], context: QueryContext
@@ -875,6 +1746,57 @@ class FactCheckAgent(BaseAgent):
         final_confidence = min(1.0, avg_confidence + high_conf_boost)
 
         return final_confidence
+
+    def _check_sentence_source_freshness(
+        self, 
+        sentence: str, 
+        source_doc_ids: List[str], 
+        source_docs: List[Dict[str, Any]], 
+        query_timestamp: datetime
+    ) -> bool:
+        """
+        Check if the sources supporting a sentence are outdated.
+        
+        Args:
+            sentence: The sentence being checked
+            source_doc_ids: List of source document IDs supporting the sentence
+            source_docs: All available source documents
+            query_timestamp: Current query timestamp
+            
+        Returns:
+            True if all supporting sources are outdated, False otherwise
+        """
+        max_freshness_days = 180  # 6 months
+        supporting_sources = [doc for doc in source_docs if doc.get("doc_id") in source_doc_ids]
+        
+        if not supporting_sources:
+            return True  # No sources means outdated
+        
+        # Check if all supporting sources are outdated
+        all_outdated = True
+        for doc in supporting_sources:
+            published_date = None
+            
+            # Try to extract published_date from various possible fields
+            if "published_date" in doc:
+                published_date = self._parse_date(doc["published_date"])
+            elif "timestamp" in doc:
+                published_date = self._parse_date(doc["timestamp"])
+            elif "date" in doc:
+                published_date = self._parse_date(doc["date"])
+            elif "created_at" in doc:
+                published_date = self._parse_date(doc["created_at"])
+            
+            if published_date:
+                age_days = (query_timestamp - published_date).days
+                if age_days <= max_freshness_days:
+                    all_outdated = False
+                    break
+            else:
+                # If no date found, assume it's outdated for safety
+                logger.warning(f"No published_date found for source: {doc.get('doc_id', 'unknown')}")
+        
+        return all_outdated
 
 
 # Example usage

@@ -1,4 +1,4 @@
-# Universal Knowledge Hub
+# SarvanOM Universal Knowledge Platform
 
 > **MAANG-Level AI-Powered Knowledge Platform**
 > 
@@ -8,6 +8,36 @@
 [![Code Coverage](https://codecov.io/gh/your-org/universal-knowledge-hub/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/universal-knowledge-hub)
 [![Security](https://img.shields.io/badge/security-audited-brightgreen.svg)](SECURITY.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+## 🎯 Project Overview
+
+SarvanOM is a Universal Knowledge Platform designed for founders with zero coding background who are completely dependent on AI agents for all code. This project follows the most robust, industry-standard, and defensively programmed architecture.
+
+### 🏗️ Architecture & Design Priorities
+
+**Microservices Architecture:**
+- **API Gateway** - Main entry point & orchestration
+- **Search Service** - Query intelligence & vector search
+- **Synthesis Service** - Multi-model LLM orchestration
+- **Fact-check Service** - Expert validation & verification
+- **Auth Service** - Authentication & authorization
+- **Analytics Service** - Metrics & monitoring
+
+**Feature MUST-HAVES:**
+- Query intent detection
+- Complexity scoring
+- Domain routing
+- Vector + KG + keyword search (hybrid RAG)
+- Multi-agent orchestration
+- Expert LLM validation
+
+### 🔒 Security & Compliance
+
+- All credentials and API keys in `.env`, never in code
+- Every push/update to clean GitHub repo
+- No credentials or secrets in code or history
+- Robust, modular, and secure architecture
+- Defensive programming principles
 
 ## 🚀 Quick Start (5 minutes)
 
@@ -19,26 +49,30 @@
 ### One-Command Setup
 ```bash
 # Clone and setup in one command
-git clone https://github.com/your-org/universal-knowledge-hub.git && \
-cd universal-knowledge-hub && \
-.\dev.bat setup && \
-.\dev.bat dev
+git clone https://github.com/Akashc1512/SarvanOM.git && \
+cd SarvanOM && \
+python scripts/setup_sarvanom.py && \
+python run_server.py
 ```
 
 ### Manual Setup
 ```bash
 # 1. Clone repository
-git clone https://github.com/your-org/universal-knowledge-hub.git
-cd universal-knowledge-hub
+git clone https://github.com/Akashc1512/SarvanOM.git
+cd SarvanOM
 
 # 2. Install dependencies
-.\dev.bat install
+pip install -r requirements.txt
 
 # 3. Configure environment
-.\dev.bat setup
+cp env.template .env
+# Edit .env with your actual credentials
 
-# 4. Start development servers
-.\dev.bat dev
+# 4. Run setup validation
+python scripts/setup_sarvanom.py
+
+# 5. Start development servers
+python run_server.py
 ```
 
 **🎉 You're ready!** 
@@ -49,18 +83,20 @@ cd universal-knowledge-hub
 ## 🏗️ Architecture Overview
 
 ```
-universal-knowledge-hub/
+sarvanom/
 ├── services/                    # Microservices Architecture
-│   ├── api-gateway/            # 🚪 Main entry point & orchestration
-│   ├── auth-service/           # 🔐 Authentication & authorization
-│   ├── search-service/         # 🔍 Knowledge retrieval & vector search
-│   ├── synthesis-service/      # 🤖 AI synthesis & recommendations
-│   ├── factcheck-service/      # ✅ Fact verification & validation
-│   └── analytics-service/      # 📊 Metrics & monitoring
+│   ├── api_gateway/            # 🚪 Main entry point & orchestration
+│   ├── auth_service/           # 🔐 Authentication & authorization
+│   ├── search_service/         # 🔍 Knowledge retrieval & vector search
+│   ├── synthesis_service/      # 🤖 AI synthesis & recommendations
+│   ├── factcheck_service/      # ✅ Fact verification & validation
+│   └── analytics_service/      # 📊 Metrics & monitoring
 ├── shared/                     # 📚 Shared libraries & utilities
 │   ├── core/                   # Core functionality
+│   │   ├── agent_pattern.py    # Agent strategy patterns
+│   │   ├── logging_config.py   # Structured logging
+│   │   └── api/config.py       # Configuration management
 │   ├── models/                 # Data models
-│   ├── config/                 # Configuration management
 │   └── middleware/             # Shared middleware
 ├── frontend/                   # ⚛️ Next.js application
 ├── infrastructure/             # 🏗️ Infrastructure as Code
@@ -68,235 +104,228 @@ universal-knowledge-hub/
 └── scripts/                    # 🔧 Build & deployment scripts
 ```
 
-## 🛠️ Development Commands
+## 🔧 Development Commands
 
 ### Essential Commands
 ```bash
 # Development
-.\dev.bat dev                   # Start all services
-.\dev.bat dev:frontend         # Frontend only
-.\dev.bat dev:backend          # Backend only
+python run_server.py             # Start all services
+python scripts/setup_sarvanom.py # Validate setup
 
 # Testing
-.\dev.bat test                 # All tests
-.\dev.bat test:unit           # Unit tests
-.\dev.bat test:integration    # Integration tests
-.\dev.bat test:e2e            # End-to-end tests
+python -m pytest tests/         # All tests
+python -m pytest tests/unit/    # Unit tests
+python -m pytest tests/integration/ # Integration tests
 
 # Code Quality
-.\dev.bat lint                 # Linting
-.\dev.bat format              # Code formatting
+python scripts/verify_env_config.py # Validate environment
+python scripts/check_hardcoded_values.py # Security audit
 ```
 
 ### Service-Specific Development
 ```bash
 # Start individual services
-.\dev.bat start:api-gateway
-.\dev.bat start:auth-service
-.\dev.bat start:search-service
-.\dev.bat start:synthesis-service
-.\dev.bat start:factcheck-service
-.\dev.bat start:analytics-service
+python services/api_gateway/main.py
+python services/auth_service/auth_endpoints.py
+python services/search_service/retrieval_agent.py
 ```
 
-## 🧪 Testing Strategy
+## 🔒 Security Configuration
 
-### Test Coverage
-- **Unit Tests**: 90%+ coverage required
-- **Integration Tests**: Service communication
-- **E2E Tests**: Full user workflows
-- **Performance Tests**: Load testing & benchmarks
+### Environment Variables
+All sensitive configuration is managed through environment variables:
 
-### Running Tests
 ```bash
-# All tests with coverage
-.\dev.bat test
+# Copy template and configure
+cp env.template .env
 
-# Specific test types
-.\dev.bat test:unit
-.\dev.bat test:integration
-.\dev.bat test:e2e
-.\dev.bat test:performance
+# Required variables for basic setup
+ENVIRONMENT=development
+SERVICE_NAME=sarvanom-api
+SECRET_KEY=your-super-secret-key-change-this-in-production
+JWT_SECRET_KEY=your-jwt-secret-key-change-this-in-production
 
-# With coverage report
-pytest --cov=services --cov=shared --cov-report=html
+# Database configuration
+DATABASE_URL=postgresql://username:password@localhost:5432/sarvanom_db
+REDIS_URL=redis://localhost:6379/0
+
+# Zero Budget LLM Configuration
+OLLAMA_ENABLED=true
+OLLAMA_BASE_URL=http://localhost:11434
+HUGGINGFACE_WRITE_TOKEN=your-huggingface-write-token
+USE_DYNAMIC_SELECTION=true
+PRIORITIZE_FREE_MODELS=true
 ```
 
-## 📊 Monitoring & Observability
+### Security Best Practices
+- ✅ Never commit `.env` files to version control
+- ✅ Use strong, unique secrets for production
+- ✅ Rotate secrets regularly
+- ✅ Enable all security features in production
+- ✅ Monitor for security vulnerabilities
+
+## 🤖 Agent Architecture
+
+### Agent Pattern Requirements
+- All agents return only Python dictionaries (no custom classes, no None, no bool)
+- All logging uses the `extra={}` pattern (never custom keyword args)
+- Vector backend checker always runs at startup and validates all DBs
+- All vector DB credentials and config loaded from `.env`, never hardcoded
+
+### Agent Types
+- **Synthesis Agent** - Creates comprehensive answers from verified facts
+- **Fact-check Agent** - Validates claims against knowledge base
+- **Retrieval Agent** - Hybrid search across vector, KG, and keyword
+- **Knowledge Graph Agent** - Manages relationships and connections
+
+## 📊 Monitoring & Analytics
 
 ### Health Checks
 ```bash
-# Check all service health
-.\dev.bat monitor:health
+# Basic health check
+curl http://localhost:8000/health
 
-# View application logs
-.\dev.bat monitor:logs
+# Comprehensive diagnostics
+curl http://localhost:8000/system/diagnostics
+
+# Metrics (Prometheus format)
+curl http://localhost:8000/metrics
 ```
 
-### Metrics & Dashboards
-- **Service Metrics**: `/metrics` endpoints
-- **Health Checks**: `/health` endpoints
-- **Real-time Monitoring**: Grafana dashboards
+### Logging
+- Structured JSON logging with `extra={}` pattern
+- Automatic secret masking
+- Performance metrics tracking
+- Audit trail for compliance
 
-## 🔧 Configuration
+## 🧪 Testing
 
-### Environment Variables
-Copy `.env.template` to `.env` and configure:
+### Test Categories
+- **Unit Tests** - Individual component testing
+- **Integration Tests** - Service interaction testing
+- **End-to-End Tests** - Complete user journey testing
+- **Security Tests** - Vulnerability and penetration testing
 
+### Running Tests
 ```bash
-# Core Configuration
-ENVIRONMENT=development
-LOG_LEVEL=DEBUG
+# All tests
+python -m pytest
 
-# Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/knowledge_hub
+# Specific test categories
+python -m pytest tests/unit/
+python -m pytest tests/integration/
+python -m pytest tests/e2e/
 
-# Redis
-REDIS_URL=redis://localhost:6379
-
-# Meilisearch
-MEILISEARCH_URL=http://localhost:7700
-
-# AI Services
-OPENAI_API_KEY=your_openai_key
-ANTHROPIC_API_KEY=your_anthropic_key
-
-# Security
-JWT_SECRET_KEY=your_jwt_secret
-SECRET_KEY=your_secret_key
+# With coverage
+python -m pytest --cov=services --cov=shared
 ```
 
 ## 🚀 Deployment
 
-### Production Deployment
-```bash
-# Build for production
-.\dev.bat build
+### Production Checklist
+- [ ] All environment variables configured
+- [ ] Security audit completed
+- [ ] Performance testing passed
+- [ ] Monitoring configured
+- [ ] Backup strategy implemented
+- [ ] SSL certificates installed
+- [ ] Rate limiting configured
+- [ ] Error handling tested
 
-# Deploy to production
-.\scripts\enterprise-deploy.sh deploy
+### Docker Deployment
+```bash
+# Build and run with Docker
+docker-compose up -d
+
+# Production deployment
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
-### Infrastructure
-- **Kubernetes**: `infrastructure/kubernetes/`
-- **Terraform**: `infrastructure/terraform/`
-- **Monitoring**: `infrastructure/monitoring/`
+### Kubernetes Deployment
+```bash
+# Apply Kubernetes manifests
+kubectl apply -f infrastructure/kubernetes/
+
+# Check deployment status
+kubectl get pods -n sarvanom
+```
 
 ## 📚 Documentation
 
-### Quick Links
-- **API Documentation**: http://localhost:8000/docs
-- **Architecture**: [docs/architecture/](docs/architecture/)
-- **Migration Guide**: [MIGRATION.md](MIGRATION.md)
-- **Setup Instructions**: [SETUP_GUIDE.md](SETUP_GUIDE.md)
-- **Security**: [SECURITY.md](SECURITY.md)
+### Architecture Documentation
+- [C4 Model](documentation/architecture/c4-model.md)
+- [API Documentation](http://localhost:8000/docs)
+- [Security Guide](SECURITY.md)
+- [Deployment Guide](documentation/ENTERPRISE_DEPLOYMENT_GUIDE.md)
 
-### Developer Guides
-- [Getting Started](docs/getting-started.md)
-- [Architecture Deep Dive](docs/architecture/README.md)
-- [API Reference](docs/api/README.md)
-- [Testing Guide](docs/testing/README.md)
-- [Deployment Guide](docs/deployment/README.md)
+### Development Guides
+- [Zero Budget LLM Guide](ZERO_BUDGET_LLM_GUIDE.md)
+- [Agent Pattern Guide](QUERY_CLASSIFIER_GUIDE.md)
+- [Knowledge Graph Guide](KNOWLEDGE_GRAPH_AGENT_GUIDE.md)
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+**Environment Configuration**
+```bash
+# Validate environment setup
+python scripts/verify_env_config.py
+
+# Check for hardcoded secrets
+python scripts/check_hardcoded_values.py
+```
+
+**Database Connectivity**
+```bash
+# Test database connection
+python scripts/test_database_connectivity.py
+
+# Verify vector database
+python verify_meilisearch_setup.py
+```
+
+**Agent Issues**
+```bash
+# Test agent patterns
+python test_agent_patterns.py
+
+# Validate agent returns
+python test_agent_returns.py
+```
 
 ## 🤝 Contributing
 
 ### Development Workflow
-1. **Fork the repository**
-2. **Create a feature branch**
-   ```bash
-   git checkout -b feature/your-feature
-   ```
-3. **Make changes and test**
-   ```bash
-   .\dev.bat test
-   .\dev.bat lint
-   ```
-4. **Commit with conventional commits**
-   ```bash
-   git commit -m "feat: add new feature"
-   ```
-5. **Push and create a pull request**
+1. Fork the repository
+2. Create a feature branch
+3. Make changes following defensive programming principles
+4. Add comprehensive tests
+5. Update documentation
+6. Submit pull request
 
 ### Code Standards
-- **Python**: Black, flake8, mypy
-- **TypeScript**: ESLint, Prettier
-- **Testing**: pytest with 90%+ coverage
-- **Documentation**: Comprehensive docstrings
-
-## 🔒 Security
-
-### Security Features
-- **Authentication**: JWT-based with refresh tokens
-- **Authorization**: Role-based access control
-- **Input Validation**: Pydantic models with strict validation
-- **Rate Limiting**: Per-user and per-endpoint limits
-- **Security Headers**: CORS, CSP, HSTS
-- **Audit Logging**: Comprehensive security event logging
-
-### Security Audit
-```bash
-# Run security audit
-.\dev.bat security:audit
-```
-
-## 📈 Performance
-
-### Optimization Features
-- **Caching**: Redis-based caching with TTL
-- **Connection Pooling**: Database and HTTP connection pooling
-- **Async Processing**: Non-blocking I/O operations
-- **Load Balancing**: Service-level load balancing
-- **Monitoring**: Real-time performance metrics
-
-### Performance Testing
-```bash
-# Run performance tests
-.\dev.bat test:performance
-```
-
-## 🆘 Troubleshooting
-
-### Common Issues
-
-#### 1. Service won't start
-```bash
-# Check service health
-.\dev.bat monitor:health
-
-# View logs
-.\dev.bat monitor:logs
-```
-
-#### 2. Import errors
-```bash
-# Check import paths
-python -c "import services.api_gateway.main"
-```
-
-#### 3. Environment issues
-```bash
-# Verify environment
-.\dev.bat setup
-```
-
-#### 4. PowerShell execution policy
-```powershell
-# If you get execution policy errors
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-### Getting Help
-- **Documentation**: Check [docs/](docs/) directory
-- **Issues**: Create [GitHub issue](https://github.com/your-org/universal-knowledge-hub/issues)
-- **Discussions**: Use [GitHub Discussions](https://github.com/your-org/universal-knowledge-hub/discussions)
+- All code must follow defensive programming principles
+- All agents must return dictionaries
+- All logging must use `extra={}` pattern
+- No hardcoded secrets or credentials
+- Comprehensive error handling required
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 🆘 Support
 
-- Built with FastAPI, Next.js, and modern Python
-- Follows MAANG-level engineering practices
-- Comprehensive testing and monitoring
-- Production-ready microservices architecture
+### Getting Help
+- Check the [documentation](documentation/)
+- Review [troubleshooting guide](#troubleshooting)
+- Open an [issue](https://github.com/Akashc1512/SarvanOM/issues)
+
+### Security Issues
+- Report security vulnerabilities to security@yourdomain.com
+- Do not disclose security issues publicly
+
+---
+
+**Built with ❤️ for founders who believe in AI-powered knowledge platforms**

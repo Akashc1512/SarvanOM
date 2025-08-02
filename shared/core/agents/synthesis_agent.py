@@ -243,13 +243,13 @@ class SynthesisAgent(BaseAgent):
                 max_length=max_length
             )
 
-            # Use LLM for synthesis with enhanced system message and dynamic model selection
-            from shared.core.llm_client_v3 import EnhancedLLMClientV3, LLMRequest
+            # Use enhanced LLM client for synthesis with intelligent provider selection
+            from shared.core.llm_client_enhanced import EnhancedLLMClient, LLMRequest
 
-            # Initialize the enhanced LLM client (auto-detects available providers)
-            llm_client = EnhancedLLMClientV3()
+            # Initialize the enhanced LLM client
+            llm_client = EnhancedLLMClient()
 
-            # Create LLMRequest with system message
+            # Create system message for synthesis
             system_message = """You are an AI research assistant with expertise in providing accurate, well-sourced answers to questions. Your role is to synthesize information from provided documents and create comprehensive, factual responses.
 
 Your primary responsibilities:
@@ -261,18 +261,22 @@ Your primary responsibilities:
 - If documents contain contradictory information, acknowledge the conflict and present both perspectives
 - Keep responses concise but complete and include a "Sources" section at the end"""
 
-            # Use dynamic model selection based on the original query
-            response = await llm_client.generate_text(
-                prompt=synthesis_prompt,
+            # Use enhanced LLM client with intelligent provider selection
+            response = await llm_client.dispatch(
+                query=synthesis_prompt,
+                context=None,
                 max_tokens=max_length,
                 temperature=0.2,
-                query=query,  # Pass the original query for model selection
-                use_dynamic_selection=True
+                system_message=system_message,
+                query_id=f"synthesis_{hash(query) % 10000}"
             )
+            
+            # Extract content from response
+            response_text = response.content if hasattr(response, 'content') else str(response)
 
-            if response and response.strip():
+            if response_text and response_text.strip():
                 # Ensure the response has proper structure
-                if "Sources:" not in response:
+                if "Sources:" not in response_text:
                     # Add sources section if not present
                     sources_section = "\n\nSources:\n"
                     for i, fact in enumerate(verified_facts, 1):
@@ -281,9 +285,9 @@ Your primary responsibilities:
                         else:
                             source = fact.get("source", "Unknown source")
                         sources_section += f"[{i}] {source}\n"
-                    response += sources_section
+                    response_text += sources_section
 
-                return response.strip()
+                return response_text.strip()
             else:
                 # Fallback to rule-based synthesis if LLM fails
                 return self._fallback_synthesis(verified_facts, query)

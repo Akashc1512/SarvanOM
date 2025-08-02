@@ -1,5 +1,5 @@
 """
-Advanced citation agent that generates proper citations for sources.
+Enhanced citation agent that generates proper citations for sources with inline citation support.
 """
 
 import asyncio
@@ -60,9 +60,20 @@ class Citation:
         }
 
 
+@dataclass
+class CitationResult:
+    """Represents the result of citation generation."""
+    
+    annotated_answer: str
+    citations: List[Dict[str, Any]]
+    citation_map: Dict[str, List[int]]  # Maps citation IDs to sentence indices
+    total_citations: int
+    citation_style: str
+
+
 class CitationAgent(BaseAgent):
     """
-    CitationAgent that generates proper citations and integrates them into the answer text.
+    Enhanced CitationAgent that generates proper citations and integrates them into the answer text.
     """
 
     def __init__(self):
@@ -78,7 +89,302 @@ class CitationAgent(BaseAgent):
             "url": self._format_citation,
         }
 
-        logger.info("✅ CitationAgent initialized successfully")
+        logger.info("✅ Enhanced CitationAgent initialized successfully")
+
+    async def generate_citations(
+        self, 
+        answer_text: str, 
+        source_docs: List[Dict[str, Any]], 
+        verified_sentences: Optional[List[Dict[str, Any]]] = None
+    ) -> CitationResult:
+        """
+        Generate inline citations for the answer text based on source documents.
+        
+        Args:
+            answer_text: The answer text to annotate with citations
+            source_docs: List of source documents
+            verified_sentences: Optional list of verified sentences from fact checker
+            
+        Returns:
+            CitationResult with annotated answer and citation list
+        """
+        start_time = time.time()
+        
+        try:
+            # Split answer into sentences
+            sentences = self._split_into_sentences(answer_text)
+            
+            # Create citation list from source documents
+            citations = await self._create_citation_list(source_docs)
+            
+            # Map sentences to supporting sources
+            sentence_citations = await self._map_sentences_to_sources(
+                sentences, source_docs, verified_sentences
+            )
+            
+            # Generate annotated answer with inline citations
+            annotated_answer = self._add_inline_citations(
+                sentences, sentence_citations, citations
+            )
+            
+            # Create citation list for the end
+            citation_list = self._create_citation_list_for_output(citations)
+            
+            # Create citation map for tracking
+            citation_map = self._create_citation_map(sentence_citations, citations)
+            
+            processing_time = time.time() - start_time
+            
+            return CitationResult(
+                annotated_answer=annotated_answer,
+                citations=citation_list,
+                citation_map=citation_map,
+                total_citations=len(citations),
+                citation_style="inline"
+            )
+            
+        except Exception as e:
+            logger.error(f"Citation generation failed: {str(e)}")
+            return CitationResult(
+                annotated_answer=answer_text,
+                citations=[],
+                citation_map={},
+                total_citations=0,
+                citation_style="error"
+            )
+
+    def _split_into_sentences(self, text: str) -> List[str]:
+        """
+        Split text into sentences using regex.
+        
+        Args:
+            text: Text to split
+            
+        Returns:
+            List of sentences
+        """
+        # Split on sentence endings, but be careful with abbreviations
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        
+        # Clean up sentences
+        cleaned_sentences = []
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if sentence:
+                cleaned_sentences.append(sentence)
+        
+        return cleaned_sentences
+
+    async def _create_citation_list(self, source_docs: List[Dict[str, Any]]) -> List[Citation]:
+        """
+        Create citation list from source documents.
+        
+        Args:
+            source_docs: Source documents
+            
+        Returns:
+            List of Citation objects
+        """
+        citations = []
+        
+        for i, doc in enumerate(source_docs, 1):
+            citation = Citation(
+                id=str(i),
+                text=doc.get("content", "")[:100] + "...",
+                url=doc.get("url", ""),
+                title=doc.get("title", f"Source {i}"),
+                author=doc.get("author", ""),
+                date=doc.get("timestamp", doc.get("date", "")),
+                source=doc.get("source", ""),
+                confidence=doc.get("score", 1.0)
+            )
+            citations.append(citation)
+        
+        return citations
+
+    async def _map_sentences_to_sources(
+        self, 
+        sentences: List[str], 
+        source_docs: List[Dict[str, Any]], 
+        verified_sentences: Optional[List[Dict[str, Any]]] = None
+    ) -> Dict[int, List[str]]:
+        """
+        Map sentences to supporting source citations.
+        
+        Args:
+            sentences: List of sentences from answer
+            source_docs: Source documents
+            verified_sentences: Optional verified sentences from fact checker
+            
+        Returns:
+            Dictionary mapping sentence index to list of citation IDs
+        """
+        sentence_citations = {}
+        
+        for i, sentence in enumerate(sentences):
+            supporting_citations = []
+            
+            # If we have verified sentences from fact checker, use that information
+            if verified_sentences:
+                # Check if this sentence is in verified sentences
+                sentence_text = sentence.lower().strip()
+                for verified in verified_sentences:
+                    verified_text = verified.get("sentence", "").lower().strip()
+                    if self._sentences_match(sentence_text, verified_text):
+                        # Use the source documents from verified sentence
+                        source_doc_ids = verified.get("source_docs", [])
+                        for doc_id in source_doc_ids:
+                            # Find the corresponding citation ID
+                            for j, doc in enumerate(source_docs, 1):
+                                if doc.get("doc_id") == doc_id:
+                                    supporting_citations.append(str(j))
+                                    break
+                        break
+            else:
+                # Fallback to semantic similarity matching
+                for j, doc in enumerate(source_docs, 1):
+                    if self._sentence_supported_by_source(sentence, doc):
+                        supporting_citations.append(str(j))
+            
+            if supporting_citations:
+                sentence_citations[i] = supporting_citations
+        
+        return sentence_citations
+
+    def _sentences_match(self, sentence1: str, sentence2: str) -> bool:
+        """
+        Check if two sentences match (for verified sentence mapping).
+        
+        Args:
+            sentence1: First sentence
+            sentence2: Second sentence
+            
+        Returns:
+            True if sentences match
+        """
+        # Simple similarity check
+        words1 = set(re.findall(r'\b\w+\b', sentence1.lower()))
+        words2 = set(re.findall(r'\b\w+\b', sentence2.lower()))
+        
+        if not words1 or not words2:
+            return False
+        
+        # Calculate overlap
+        overlap = len(words1.intersection(words2))
+        total_words = len(words1.union(words2))
+        
+        similarity = overlap / total_words if total_words > 0 else 0
+        return similarity > 0.6  # 60% similarity threshold
+
+    def _sentence_supported_by_source(self, sentence: str, source_doc: Dict[str, Any]) -> bool:
+        """
+        Check if a sentence is supported by a source document.
+        
+        Args:
+            sentence: Sentence to check
+            source_doc: Source document
+            
+        Returns:
+            True if sentence is supported by source
+        """
+        sentence_lower = sentence.lower()
+        source_content = source_doc.get("content", "").lower()
+        
+        # Extract key terms from sentence
+        sentence_terms = set(re.findall(r'\b\w+\b', sentence_lower))
+        sentence_terms = {term for term in sentence_terms if len(term) > 3}
+        
+        if not sentence_terms:
+            return False
+        
+        # Check if key terms appear in source content
+        matches = sum(1 for term in sentence_terms if term in source_content)
+        match_ratio = matches / len(sentence_terms) if sentence_terms else 0
+        
+        return match_ratio > 0.3  # 30% of key terms must match
+
+    def _add_inline_citations(
+        self, 
+        sentences: List[str], 
+        sentence_citations: Dict[int, List[str]], 
+        citations: List[Citation]
+    ) -> str:
+        """
+        Add inline citations to sentences.
+        
+        Args:
+            sentences: List of sentences
+            sentence_citations: Mapping of sentence index to citation IDs
+            citations: List of citation objects
+            
+        Returns:
+            Annotated answer with inline citations
+        """
+        annotated_sentences = []
+        
+        for i, sentence in enumerate(sentences):
+            if i in sentence_citations:
+                # Add citation tags to the sentence
+                citation_ids = sentence_citations[i]
+                citation_tags = [f"[{cid}]" for cid in citation_ids]
+                annotated_sentence = f"{sentence} {' '.join(citation_tags)}"
+                annotated_sentences.append(annotated_sentence)
+            else:
+                # No citations for this sentence
+                annotated_sentences.append(sentence)
+        
+        return " ".join(annotated_sentences)
+
+    def _create_citation_list_for_output(self, citations: List[Citation]) -> List[Dict[str, Any]]:
+        """
+        Create citation list for output format.
+        
+        Args:
+            citations: List of citation objects
+            
+        Returns:
+            List of citation dictionaries
+        """
+        citation_list = []
+        
+        for citation in citations:
+            citation_dict = {
+                "id": int(citation.id),
+                "title": citation.title or f"Source {citation.id}",
+                "url": citation.url or "",
+                "author": citation.author or "",
+                "date": citation.date or "",
+                "source": citation.source or "",
+                "confidence": citation.confidence
+            }
+            citation_list.append(citation_dict)
+        
+        return citation_list
+
+    def _create_citation_map(
+        self, 
+        sentence_citations: Dict[int, List[str]], 
+        citations: List[Citation]
+    ) -> Dict[str, List[int]]:
+        """
+        Create citation map for tracking which sentences use which citations.
+        
+        Args:
+            sentence_citations: Mapping of sentence index to citation IDs
+            citations: List of citation objects
+            
+        Returns:
+            Dictionary mapping citation ID to list of sentence indices
+        """
+        citation_map = {}
+        
+        for sentence_idx, citation_ids in sentence_citations.items():
+            for citation_id in citation_ids:
+                if citation_id not in citation_map:
+                    citation_map[citation_id] = []
+                citation_map[citation_id].append(sentence_idx)
+        
+        return citation_map
 
     async def process_task(
         self, task: Dict[str, Any], context: QueryContext
@@ -99,52 +405,34 @@ class CitationAgent(BaseAgent):
             # Extract task data
             content = task.get("content", "")
             sources = task.get("sources", [])
-            citation_format = task.get(
-                "format",
-                (
-                    context.citation_format
-                    if hasattr(context, "citation_format")
-                    else "academic"
-                ),
-            )
+            verified_sentences = task.get("verified_sentences", None)
+            citation_style = task.get("citation_style", "inline")
 
-            logger.info(f"Generating citations in {citation_format} format")
-            logger.info(f"Content length: {len(content)} characters")
+            logger.info(f"Generating citations for content: {content[:50]}...")
             logger.info(f"Number of sources: {len(sources)}")
 
-            # Validate input
-            if not content:
-                return AgentResult(
-                    success=False,
-                    data={},
-                    error="No content provided for citation",
-                    confidence=0.0,
-                )
-
-            # Generate citations
-            citations = await self._generate_citations(sources, citation_format)
-
-            # Integrate citations into content
-            cited_content = await self._integrate_citations(content, sources, citations)
+            # Generate citations using the new method
+            citation_result = await self.generate_citations(content, sources, verified_sentences)
 
             processing_time = time.time() - start_time
 
             # Create standardized citation result
             citation_data = CitationResult(
-                cited_content=cited_content,
-                citations=citations,
-                citation_format=citation_format,
-                total_sources=len(sources),
+                cited_content=citation_result.annotated_answer,
+                bibliography=[f"{c['id']}. {c['title']} - {c['url']}" for c in citation_result.citations],
+                in_text_citations=citation_result.citations,
+                citation_style=citation_style,
                 metadata={
                     "agent_id": self.agent_id,
-                    "processing_time_ms": int(processing_time * 1000),
+                    "total_citations": citation_result.total_citations,
+                    "citation_map": citation_result.citation_map,
                 },
             )
 
             return AgentResult(
                 success=True,
                 data=citation_data.model_dump(),
-                confidence=1.0,  # Citations are deterministic
+                confidence=1.0,
                 execution_time_ms=int(processing_time * 1000),
             )
 

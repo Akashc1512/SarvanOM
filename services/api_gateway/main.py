@@ -269,7 +269,7 @@ class APIKeyResponse(BaseModel):
 
 # Global variables
 orchestrator = None
-startup_time = None
+startup_time = time.time()  # Initialize with current time as fallback
 app_version = "1.0.0"
 
 # Request concurrency control
@@ -1128,13 +1128,16 @@ from services.api_gateway.integration_layer import (
 # Update the health endpoint to use the integration layer
 @app.get("/health")
 async def health_check():
-    """Enhanced health check using integration layer."""
+    """Comprehensive health check for all platform components."""
     try:
-        # Get integration layer instance
-        integration = await get_integration_layer()
+        # Import the new health checker
+        from shared.core.health_checker import get_health_checker
         
-        # Get comprehensive system health
-        health_status = await integration.get_system_health()
+        # Get health checker instance
+        health_checker = await get_health_checker()
+        
+        # Run comprehensive health check
+        health_status = await health_checker.run_comprehensive_health_check()
         
         # Add API Gateway specific health info
         health_status.update({
@@ -1151,21 +1154,29 @@ async def health_check():
         
     except Exception as e:
         logger.error(f"Health check failed: {e}")
-        # Return a basic health response even if integration layer fails
+        # Return a basic health response even if health checker fails
         return {
-            "status": "degraded",
+            "timestamp": datetime.now().isoformat(),
+            "overall_status": "degraded",
             "api_gateway": {
                 "status": "healthy",
                 "version": "1.0.0",
                 "timestamp": datetime.now().isoformat()
             },
-            "integration_layer": {
+            "health_checker": {
                 "status": "unhealthy",
                 "error": str(e)
             },
             "environment": os.getenv("ENVIRONMENT", "development"),
             "uptime_seconds": time.time() - startup_time,
-            "timestamp": datetime.now().isoformat()
+            "components": {},
+            "summary": {
+                "total_components": 0,
+                "healthy_components": 0,
+                "degraded_components": 0,
+                "unhealthy_components": 1,
+                "unknown_components": 0
+            }
         }
 
 @app.get("/health/simple")
@@ -1183,46 +1194,43 @@ async def simple_health_check():
         "timestamp": datetime.now().isoformat()
     }
 
-# Update the metrics endpoint to include knowledge platform metrics
+# Enhanced metrics endpoint with comprehensive platform metrics
 @app.get("/metrics")
-async def get_metrics(admin: bool = False):
-    """Enhanced metrics endpoint with knowledge platform metrics."""
+async def get_metrics(admin: bool = False, format: str = "json"):
+    """Enhanced metrics endpoint with comprehensive platform metrics."""
     if admin:
         return JSONResponse(status_code=403, content={"error": "Admin metrics not enabled"})
     
     try:
-        # Get integration layer instance
-        integration = await get_integration_layer()
+        # Import the new metrics collector
+        from shared.core.metrics_collector import get_metrics_summary, get_prometheus_metrics
         
-        # Get comprehensive metrics
-        from services.analytics_service.metrics.knowledge_platform_metrics import KnowledgePlatformMetricsCollector
-        
-        metrics_collector = KnowledgePlatformMetricsCollector()
-        metrics_data = metrics_collector.get_metrics_dict()
-        
-        # Add system health metrics
-        health_status = await integration.get_system_health()
-        metrics_data["system_health"] = health_status
-        
-        # Try to get Prometheus metrics
-        try:
-            import prometheus_client
-            from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-            
-            prometheus_metrics = generate_latest()
-            
-            # Return both JSON and Prometheus formats
+        if format.lower() == "prometheus":
+            # Return Prometheus format
+            prometheus_metrics = get_prometheus_metrics()
             return Response(
                 content=prometheus_metrics,
-                media_type=CONTENT_TYPE_LATEST,
+                media_type="text/plain; version=0.0.4; charset=utf-8",
                 headers={
                     "Cache-Control": "no-cache",
                     "X-Metrics-Type": "prometheus"
                 }
             )
+        else:
+            # Return JSON format with comprehensive metrics
+            metrics_data = get_metrics_summary()
             
-        except ImportError:
-            # Return JSON metrics if Prometheus is not available
+            # Add additional system metrics
+            import psutil
+            system_metrics = {
+                "system": {
+                    "cpu_percent": psutil.cpu_percent(interval=1),
+                    "memory_percent": psutil.virtual_memory().percent,
+                    "disk_percent": psutil.disk_usage('/').percent
+                }
+            }
+            metrics_data["system_metrics"] = system_metrics
+            
             return JSONResponse(
                 status_code=200,
                 content={
@@ -1235,9 +1243,9 @@ async def get_metrics(admin: bool = False):
     except Exception as e:
         logger.error(f"Metrics generation failed: {e}")
         return JSONResponse(
-            status_code=200,
+            status_code=500,
             content={
-                "status": "degraded",
+                "status": "error",
                 "message": "Metrics generation failed",
                 "error": str(e),
                 "error_type": type(e).__name__,
@@ -1896,6 +1904,13 @@ async def reprocess_query(
         raise HTTPException(
             status_code=500, detail=f"Failed to reprocess query: {str(e)}"
         )
+
+
+# Add frontend state endpoints (include after query endpoints to avoid route conflicts)
+frontend_state_endpoints = importlib.import_module("services.api_gateway.frontend_state_endpoints")
+frontend_state_router = frontend_state_endpoints.router
+
+app.include_router(frontend_state_router)
 
 
 @app.post("/tasks", response_model=Dict[str, Any])

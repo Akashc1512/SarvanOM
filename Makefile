@@ -157,6 +157,12 @@ format:
 # Docker
 docker-setup:
 	@echo "Setting up Docker environment..."
+	@if [ ! -f .env.docker ]; then \
+		cp env.docker.template .env.docker; \
+		echo "Created .env.docker file from template. Please configure your environment variables."; \
+	else \
+		echo ".env.docker file already exists."; \
+	fi
 	docker-compose down -v
 	docker-compose build --no-cache
 
@@ -166,7 +172,7 @@ docker-build:
 
 docker-up:
 	@echo "Starting Docker services..."
-	docker-compose up -d
+	docker-compose --env-file .env.docker up --build -d
 
 docker-down:
 	@echo "Stopping Docker services..."
@@ -175,6 +181,22 @@ docker-down:
 logs:
 	@echo "Showing Docker logs..."
 	docker-compose logs -f
+
+# Docker health check
+docker-health:
+	@echo "Checking Docker service health..."
+	python test_docker_health.py
+
+# Docker with environment file
+up:
+	docker-compose --env-file .env.docker up --build -d
+
+down:
+	docker-compose down
+
+restart:
+	docker-compose down
+	docker-compose --env-file .env.docker up --build -d
 
 # Utilities
 clean:

@@ -1,12 +1,6 @@
 """
-Pinecone and ArangoDB integration with best practices for knowledge graphs and vector search.
-
-This module provides:
-- Pinecone vector database integration
-- ArangoDB knowledge graph integration
-- Hybrid search capabilities
-- Best practices for vector operations
-- Connection pooling and error handling
+Vector database integration for hybrid search.
+Supports Pinecone, Qdrant, and other vector databases.
 """
 
 import asyncio
@@ -15,6 +9,13 @@ import time
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    logging.warning("python-dotenv not available. Install with: pip install python-dotenv")
 
 import pinecone
 from pinecone import Pinecone, ServerlessSpec
@@ -81,18 +82,17 @@ class PineconeVectorDB:
         """Initialize Pinecone connection with connection pooling."""
         try:
             # Initialize Pinecone
-            self.pc = Pinecone(
-                api_key=self.api_key,
-                environment=self.environment
-            )
+            import pinecone
+            pinecone.init(api_key=self.api_key, environment=self.environment)
+            self.pc = pinecone
             
             # Test connection
             await self._test_connection()
             self.connected = True
-            logger.info("Connected to Pinecone", environment=self.environment)
+            logger.info(f"Connected to Pinecone (environment: {self.environment})")
             
         except Exception as e:
-            logger.error("Failed to connect to Pinecone", error=str(e))
+            logger.error(f"Failed to connect to Pinecone: {e}")
             self.connected = False
     
     async def _test_connection(self) -> None:
@@ -123,16 +123,16 @@ class PineconeVectorDB:
                         region="us-west-2"
                     )
                 )
-                logger.info("Created Pinecone index", index_name=self.index_name)
+                logger.info(f"Created Pinecone index: {self.index_name}")
             else:
-                logger.info("Pinecone index already exists", index_name=self.index_name)
+                logger.info(f"Pinecone index already exists: {self.index_name}")
             
             # Get index
             self.index = self.pc.Index(self.index_name)
             return True
             
         except Exception as e:
-            logger.error("Failed to create Pinecone index", error=str(e))
+            logger.error(f"Failed to create Pinecone index: {e}")
             return False
     
     async def upsert_vectors(
@@ -158,11 +158,11 @@ class PineconeVectorDB:
                 batch = upsert_data[i:i + batch_size]
                 self.index.upsert(vectors=batch)
             
-            logger.info("Upserted vectors to Pinecone", count=len(vectors))
+            logger.info(f"Upserted vectors to Pinecone: {len(vectors)} vectors")
             return True
             
         except Exception as e:
-            logger.error("Failed to upsert vectors to Pinecone", error=str(e))
+            logger.error(f"Failed to upsert vectors to Pinecone: {e}")
             return False
     
     async def search_vectors(
@@ -203,7 +203,7 @@ class PineconeVectorDB:
             return search_results
             
         except Exception as e:
-            logger.error("Failed to search vectors in Pinecone", error=str(e))
+            logger.error(f"Failed to search vectors in Pinecone: {e}")
             return []
     
     async def delete_vectors(self, vector_ids: List[str]) -> bool:
@@ -219,7 +219,7 @@ class PineconeVectorDB:
             return True
             
         except Exception as e:
-            logger.error("Failed to delete vectors from Pinecone", error=str(e))
+            logger.error(f"Failed to delete vectors from Pinecone: {e}")
             return False
     
     def get_health_status(self) -> Dict[str, Any]:
@@ -272,7 +272,7 @@ class ArangoDBKnowledgeGraph:
             logger.info("Connected to ArangoDB", url=self.url)
             
         except Exception as e:
-            logger.error("Failed to connect to ArangoDB", error=str(e))
+            logger.error(f"Failed to connect to ArangoDB: {e}")
             self.connected = False
     
     async def _test_connection(self) -> None:
@@ -315,7 +315,7 @@ class ArangoDBKnowledgeGraph:
             logger.info("Created ArangoDB constraints and indexes")
             return True
         except Exception as e:
-            logger.error("Failed to create ArangoDB constraints", error=str(e))
+            logger.error(f"Failed to create ArangoDB constraints: {e}")
             return False
     
     async def create_knowledge_node(
@@ -338,7 +338,7 @@ class ArangoDBKnowledgeGraph:
             logger.debug("Created knowledge node", node_id=node_id)
             return True
         except Exception as e:
-            logger.error("Failed to create knowledge node", node_id=node_id, error=str(e))
+            logger.error(f"Failed to create knowledge node {node_id}: {e}")
             return False
     
     async def create_relationship(
@@ -365,7 +365,7 @@ class ArangoDBKnowledgeGraph:
             logger.debug("Created relationship", from_node=from_node_id, to_node=to_node_id, type=relationship_type)
             return True
         except Exception as e:
-            logger.error("Failed to create relationship", error=str(e))
+            logger.error(f"Failed to create relationship: {e}")
             return False
     
     async def query_knowledge_graph(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> KnowledgeGraphResult:
@@ -408,16 +408,8 @@ class ArangoDBKnowledgeGraph:
             )
             
         except Exception as e:
-            logger.error("ArangoDB query failed", error=str(e))
-            return KnowledgeGraphResult(
-                entities=[],
-                relationships=[],
-                paths=[],
-                query_entities=[],
-                confidence=0.0,
-                processing_time_ms=0,
-                metadata={"error": str(e)}
-            )
+            logger.error(f"ArangoDB query failed: {e}")
+            return []
     
     def get_health_status(self) -> Dict[str, Any]:
         """Get health status of ArangoDB knowledge graph."""
@@ -508,7 +500,7 @@ class HybridSearchEngine:
             return final_results
             
         except Exception as e:
-            self.logger.error("Hybrid search failed", error=str(e))
+            self.logger.error(f"Hybrid search failed: {e}")
             return []
     
     async def _search_knowledge_graph(self, query: str) -> List[Dict[str, Any]]:
@@ -538,7 +530,7 @@ class HybridSearchEngine:
             return result.entities
             
         except Exception as e:
-            self.logger.error("Knowledge graph search failed", error=str(e))
+            self.logger.error(f"Knowledge graph search failed: {e}")
             return []
     
     async def _combine_results(

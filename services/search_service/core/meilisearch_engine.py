@@ -11,7 +11,28 @@ from typing import Dict, List, Optional, Any
 import aiohttp
 import json
 
-from .hybrid_retrieval import RetrievalResult, RetrievalSource
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    logging.warning("python-dotenv not available. Install with: pip install python-dotenv")
+
+# Define local RetrievalResult to avoid circular import
+@dataclass
+class RetrievalResult:
+    """Simple retrieval result for internal use."""
+    content: str
+    source: str
+    score: float
+    metadata: Dict[str, Any]
+
+
+class RetrievalSource:
+    """Enumeration of retrieval sources."""
+    MEILISEARCH = "meilisearch"
+    VECTOR_DB = "vector_db"
+    KNOWLEDGE_GRAPH = "knowledge_graph"
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -71,6 +92,8 @@ class MeilisearchEngine:
             async with session.get(f"{self.meilisearch_url}/indexes/{self.index_name}") as response:
                 if response.status == 200:
                     logger.info(f"Index {self.index_name} already exists")
+                    # Configure the existing index
+                    await self._configure_index()
                     return True
             
             # Create index
@@ -85,8 +108,7 @@ class MeilisearchEngine:
             ) as response:
                 if response.status == 201:
                     logger.info(f"Created index {self.index_name}")
-                    
-                    # Configure searchable attributes
+                    # Configure the new index
                     await self._configure_index()
                     return True
                 else:
@@ -98,7 +120,7 @@ class MeilisearchEngine:
             return False
     
     async def _configure_index(self):
-        """Configure index settings for optimal search."""
+        """Configure searchable attributes and ranking rules."""
         try:
             session = await self._get_session()
             
@@ -108,8 +130,24 @@ class MeilisearchEngine:
                 f"{self.meilisearch_url}/indexes/{self.index_name}/settings/searchable-attributes",
                 json=searchable_attributes
             ) as response:
-                if response.status == 200:
-                    logger.info("Configured searchable attributes")
+                if response.status != 202:
+                    logger.warning(f"Failed to configure searchable attributes: {response.status}")
+            
+            # Configure ranking rules
+            ranking_rules = [
+                "words",
+                "typo",
+                "proximity",
+                "attribute",
+                "sort",
+                "exactness"
+            ]
+            async with session.put(
+                f"{self.meilisearch_url}/indexes/{self.index_name}/settings/ranking-rules",
+                json=ranking_rules
+            ) as response:
+                if response.status != 202:
+                    logger.warning(f"Failed to configure ranking rules: {response.status}")
             
             # Configure filterable attributes
             filterable_attributes = ["tags", "created_at"]
@@ -117,18 +155,11 @@ class MeilisearchEngine:
                 f"{self.meilisearch_url}/indexes/{self.index_name}/settings/filterable-attributes",
                 json=filterable_attributes
             ) as response:
-                if response.status == 200:
-                    logger.info("Configured filterable attributes")
+                if response.status != 202:
+                    logger.warning(f"Failed to configure filterable attributes: {response.status}")
             
-            # Configure sortable attributes
-            sortable_attributes = ["created_at", "updated_at"]
-            async with session.put(
-                f"{self.meilisearch_url}/indexes/{self.index_name}/settings/sortable-attributes",
-                json=sortable_attributes
-            ) as response:
-                if response.status == 200:
-                    logger.info("Configured sortable attributes")
-                    
+            logger.info("Index configuration completed")
+            
         except Exception as e:
             logger.error(f"Failed to configure index: {e}")
     
@@ -138,30 +169,25 @@ class MeilisearchEngine:
             session = await self._get_session()
             
             # Convert documents to Meilisearch format
-            docs_data = []
+            meilisearch_docs = []
             for doc in documents:
-                doc_dict = {
+                meilisearch_docs.append({
                     "id": doc.id,
                     "title": doc.title,
                     "content": doc.content,
-                    "tags": doc.tags
-                }
-                if doc.url:
-                    doc_dict["url"] = doc.url
-                if doc.created_at:
-                    doc_dict["created_at"] = doc.created_at
-                if doc.updated_at:
-                    doc_dict["updated_at"] = doc.updated_at
-                
-                docs_data.append(doc_dict)
+                    "url": doc.url,
+                    "tags": doc.tags,
+                    "created_at": doc.created_at,
+                    "updated_at": doc.updated_at
+                })
             
             # Add documents
             async with session.post(
                 f"{self.meilisearch_url}/indexes/{self.index_name}/documents",
-                json=docs_data
+                json=meilisearch_docs
             ) as response:
                 if response.status == 202:
-                    logger.info(f"Added {len(documents)} documents to Meilisearch")
+                    logger.info(f"Added {len(documents)} documents to index")
                     return True
                 else:
                     logger.error(f"Failed to add documents: {response.status}")
@@ -170,11 +196,6 @@ class MeilisearchEngine:
         except Exception as e:
             logger.error(f"Failed to add documents: {e}")
             return False
-        finally:
-            # Ensure session is properly closed
-            if self.session:
-                await self.session.close()
-                self.session = None
     
     async def search(self, query: str, top_k: int = 10, 
                     filters: Optional[str] = None) -> List[RetrievalResult]:
@@ -208,8 +229,33 @@ class MeilisearchEngine:
                         # Meilisearch returns _score as a string, convert to float
                         score = float(hit.get("_score", 0.0))
                         
-                        # Normalize score to 0-1 range (Meilisearch scores are typically 0-1)
-                        normalized_score = min(score, 1.0)
+                        # Debug: Print raw score
+                        logger.info(f"Meilisearch raw score for '{hit.get('title', 'Unknown')}': {score}")
+                        
+                        # Calculate a more meaningful score based on content relevance
+                        # If Meilisearch returns 0.0, calculate a score based on query match
+                        if score == 0.0:
+                            # Calculate a simple relevance score based on query terms in content
+                            query_terms = query.lower().split()
+                            title = hit.get("title", "").lower()
+                            content = hit.get("content", "").lower()
+                            
+                            # Count matching terms in title (weighted higher)
+                            title_matches = sum(1 for term in query_terms if term in title)
+                            content_matches = sum(1 for term in query_terms if term in content)
+                            
+                            # Calculate relevance score (0.1 to 0.9)
+                            total_terms = len(query_terms)
+                            if total_terms > 0:
+                                title_score = (title_matches / total_terms) * 0.6
+                                content_score = (content_matches / total_terms) * 0.4
+                                calculated_score = title_score + content_score
+                                normalized_score = max(0.1, min(0.9, calculated_score))
+                            else:
+                                normalized_score = 0.1
+                        else:
+                            # Use Meilisearch score if it's not 0.0
+                            normalized_score = min(score, 1.0)
                         
                         results.append(RetrievalResult(
                             content=hit.get("content", ""),
@@ -221,6 +267,7 @@ class MeilisearchEngine:
                                 "url": hit.get("url"),
                                 "tags": hit.get("tags", []),
                                 "raw_score": score,
+                                "calculated_score": normalized_score,
                                 "search_engine": "meilisearch"
                             }
                         ))
@@ -284,38 +331,39 @@ class MeilisearchEngine:
         try:
             session = await self._get_session()
             
-            async with session.get(
-                f"{self.meilisearch_url}/indexes/{self.index_name}/stats"
-            ) as response:
+            async with session.get(f"{self.meilisearch_url}/indexes/{self.index_name}/stats") as response:
                 if response.status == 200:
                     return await response.json()
                 else:
-                    return {"error": f"Failed to get stats: {response.status}"}
+                    logger.error(f"Failed to get stats: {response.status}")
+                    return {}
                     
         except Exception as e:
-            return {"error": f"Failed to get stats: {e}"}
+            logger.error(f"Failed to get stats: {e}")
+            return {}
     
     async def close(self):
-        """Close HTTP session."""
+        """Close the HTTP session."""
         if self.session:
             await self.session.close()
+            self.session = None
 
 
-# Factory function for easy integration
 async def create_meilisearch_engine(
     meilisearch_url: str = "http://localhost:7700",
     master_key: Optional[str] = None
 ) -> MeilisearchEngine:
-    """Create and initialize a Meilisearch engine."""
+    """Create and configure a Meilisearch engine instance."""
     engine = MeilisearchEngine(meilisearch_url, master_key)
     
-    # Check if Meilisearch is running
+    # Check health
     if not await engine.health_check():
-        logger.warning("Meilisearch is not running. Please start it first.")
-        logger.info("To start Meilisearch: docker run -p 7700:7700 getmeili/meilisearch:latest")
-        return engine
+        logger.error("Meilisearch is not running")
+        return None
     
     # Create index if it doesn't exist
-    await engine.create_index()
+    if not await engine.create_index():
+        logger.error("Failed to create Meilisearch index")
+        return None
     
     return engine 

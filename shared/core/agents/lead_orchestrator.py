@@ -26,6 +26,7 @@ from shared.core.agents.synthesis_agent import SynthesisAgent
 from shared.core.agents.citation_agent import CitationAgent
 from shared.core.agents.knowledge_graph_agent import KnowledgeGraphAgent
 from shared.core.query_classifier import QueryClassifier, QueryClassification, QueryCategory
+from shared.core.llm_client_enhanced import EnhancedLLMClient, LLMProvider
 import importlib
 # Import fixes module
 lead_orchestrator_fixes = importlib.import_module("services.api_gateway.lead_orchestrator_fixes")
@@ -73,6 +74,9 @@ class LeadOrchestrator:
         
         # Initialize QueryClassifier for intelligent routing
         self.query_classifier = QueryClassifier()
+        
+        # Initialize enhanced LLM client for intelligent provider selection
+        self.enhanced_llm_client = EnhancedLLMClient()
 
         # Initialize shutdown state tracking
         self._shutdown_initiated = False
@@ -96,6 +100,19 @@ class LeadOrchestrator:
         }
 
         logger.info("✅ LeadOrchestrator initialized successfully")
+
+    async def select_llm_provider(self, query: str, context_size: int = 0) -> LLMProvider:
+        """
+        Select the best LLM provider based on query classification and context size.
+        
+        Args:
+            query: The user query
+            context_size: Size of context in tokens
+            
+        Returns:
+            Selected LLM provider
+        """
+        return await self.enhanced_llm_client.select_llm_provider(query, context_size)
 
     async def process_query(
         self, query: str, user_context: Dict[str, Any] = None

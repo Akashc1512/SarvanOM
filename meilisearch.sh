@@ -1,0 +1,3 @@
+#!binbash
+export MEILI_MASTER_KEY=Ygp9SAWhC8pHqhiosaNUiLG11WKFyYlPr4dAoZVqslUwk
+.meilisearch

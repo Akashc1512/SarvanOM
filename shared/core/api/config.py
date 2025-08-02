@@ -175,8 +175,8 @@ class DatabaseSettings(SecureSettings):
     """Database configuration settings."""
 
     # Primary database
-    database_url: Optional[PostgresDsn] = Field(
-        default=None, description="PostgreSQL connection URL"
+    database_url: Optional[str] = Field(
+        default=None, description="Database connection URL (PostgreSQL or SQLite)"
     )
     database_pool_size: conint(ge=1) = Field(
         default=20, description="Connection pool size"
@@ -570,13 +570,6 @@ class Settings(
 
         # Validate on assignment
         validate_assignment = True
-
-        # Custom field names
-        fields = {
-            "database_url": {"env": ["DATABASE_URL", "UKP_DATABASE_URL"]},
-            "redis_url": {"env": ["REDIS_URL", "UKP_REDIS_URL"]},
-            "sentry_dsn": {"env": ["SENTRY_DSN", "UKP_SENTRY_DSN"]},
-        }
 
 
 # Global settings instance

@@ -467,6 +467,11 @@ class LeadOrchestrator:
                 "verified_facts", []
             )
 
+        # Get source documents from retrieval phase for fact checking
+        source_docs = []
+        if AgentType.RETRIEVAL in results and results[AgentType.RETRIEVAL].success:
+            source_docs = results[AgentType.RETRIEVAL].data.get("documents", [])
+
         # Use prepared synthesis data if available
         synthesis_prep = None
         for key, result in results.items():
@@ -477,6 +482,7 @@ class LeadOrchestrator:
         return {
             "verified_facts": verified_facts,
             "query": context.query,
+            "source_docs": source_docs,  # Add source documents for fact checking
             "synthesis_params": {
                 "style": "concise",
                 "max_length": 1000,
