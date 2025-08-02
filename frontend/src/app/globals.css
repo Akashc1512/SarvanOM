@@ -407,3 +407,28 @@
   --shadow-xl:
     0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
+
+/* SarvanOM Loader Animations */
+@keyframes sarvanom-spin {
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes sarvanom-orbit1 {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg);}
+}
+
+@keyframes sarvanom-orbit2 {
+  0% { transform: rotate(120deg);}
+  100% { transform: rotate(480deg);}
+}
+
+@keyframes sarvanom-orbit3 {
+  0% { transform: rotate(240deg);}
+  100% { transform: rotate(600deg);}
+}
+
+@keyframes sarvanom-pulse {
+  0%,100% { r: 2px; opacity: 1; }
+  50% { r: 4px; opacity: 0.65;}
+}

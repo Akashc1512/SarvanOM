@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Recommendation service for knowledge synthesis.
 """
@@ -35,10 +37,10 @@ class RecommendationService:
         database: str = None
     ):
         """Initialize recommendation service with ArangoDB connection."""
-        self.uri = uri or os.getenv("ARANGO_URL", "http://localhost:8529")
-        self.username = username or os.getenv("ARANGO_USERNAME", "root")
-        self.password = password or os.getenv("ARANGO_PASSWORD", "")
-        self.database = database or os.getenv("ARANGO_DATABASE", "knowledge_graph")
+        self.uri = uri or settings.arango_url or "http://localhost:8529"
+        self.username = username or settings.arango_username or "root"
+        self.password = password or settings.arango_password or ""
+        self.database = database or settings.arango_database or "knowledge_graph"
         
         # Initialize ArangoDB knowledge graph
         self.knowledge_graph = ArangoDBKnowledgeGraph(

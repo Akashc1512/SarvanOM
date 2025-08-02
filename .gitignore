@@ -42,6 +42,7 @@ venv.bak/
 .env.production.local
 .env.development
 .env.test
+.env.docker
 
 # IDE and Editor files
 .vscode/

@@ -1,286 +1,150 @@
-# Universal Knowledge Hub - Development Makefile
-# 
-# This Makefile provides comprehensive development commands for the Universal
-# Knowledge Hub platform. It includes setup, development, testing, building,
-# and deployment commands with proper error handling and documentation.
-#
-# Features:
-# - One-command setup and installation
-# - Development server management
-# - Comprehensive testing suite
-# - Code quality tools (linting, formatting)
-# - Docker container management
-# - Database operations
-# - Security auditing
-# - Monitoring and health checks
-# - Production deployment
-# - Documentation generation
-#
-# Usage:
-#   make help                    # Show all available commands
-#   make setup                   # Complete project setup
-#   make dev                     # Start development servers
-#   make test                    # Run all tests
-#   make docker-up               # Start Docker services
-#
-# Environment Variables:
-#   ENVIRONMENT: Set to 'development', 'staging', or 'production'
-#   LOG_LEVEL: Logging level (DEBUG, INFO, WARNING, ERROR)
-#   DOCKER_COMPOSE_FILE: Custom docker-compose file path
-#
-# Dependencies:
-#   - Node.js >= 18.0.0
-#   - Python >= 3.13.5
-#   - Docker and Docker Compose
-#   - Git
-#
-# Authors: Universal Knowledge Platform Engineering Team
-# Version: 1.0.0 (2024-12-28)
-# License: MIT
+# =============================================================================
+# SarvanOM Docker Compose Management
+# Optimized for Windows 11 Docker Desktop (WSL2 backend)
+# =============================================================================
 
-.PHONY: help install dev build test lint format clean docker-setup docker-build docker-up docker-down logs setup
+.PHONY: help up down build logs clean restart health-check test-docker-health
 
 # Default target
 help:
-	@echo "Universal Knowledge Hub - Available Commands:"
+	@echo "SarvanOM Docker Compose Management"
+	@echo "=================================="
 	@echo ""
-	@echo "Setup & Installation:"
-	@echo "  install     - Install all dependencies (Node.js and Python)"
-	@echo "  setup       - Complete project setup with environment configuration"
+	@echo "Available commands:"
+	@echo "  up          - Start all services with .env.docker"
+	@echo "  down         - Stop all services"
+	@echo "  build        - Build all services"
+	@echo "  logs         - Show logs for all services"
+	@echo "  clean        - Remove all containers, networks, and volumes"
+	@echo "  restart      - Restart all services"
+	@echo "  health-check - Check health of all services"
+	@echo "  test-docker-health - Run comprehensive Docker health tests"
 	@echo ""
-	@echo "Development:"
-	@echo "  dev         - Start development servers (frontend + backend)"
-	@echo "  dev:frontend- Start frontend development server"
-	@echo "  dev:backend - Start backend development server"
-	@echo ""
-	@echo "Building:"
-	@echo "  build       - Build all services"
-	@echo "  build:frontend - Build frontend application"
-	@echo "  build:backend  - Build backend services"
-	@echo ""
-	@echo "Testing:"
-	@echo "  test        - Run all tests"
-	@echo "  test:unit   - Run unit tests"
-	@echo "  test:integration - Run integration tests"
-	@echo "  test:e2e    - Run end-to-end tests"
-	@echo "  test:performance - Run performance tests"
-	@echo ""
-	@echo "Code Quality:"
-	@echo "  lint        - Run linting for all code"
-	@echo "  format      - Format all code"
-	@echo ""
-	@echo "Docker:"
-	@echo "  docker-setup - Setup Docker environment"
-	@echo "  docker-build - Build all Docker images"
-	@echo "  docker-up   - Start all services with Docker Compose"
-	@echo "  docker-down - Stop all Docker services"
-	@echo "  logs        - Show Docker logs"
-	@echo ""
-	@echo "Utilities:"
-	@echo "  clean       - Clean all build artifacts"
-	@echo "  logs        - Show application logs"
 
-# Installation
-install:
-	@echo "Installing Node.js dependencies..."
-	npm install
-	@echo "Installing Python dependencies..."
-	pip install -e .[dev,test,security]
-	@echo "Installation complete!"
+# Start all services with .env.docker
+up:
+	@echo "Starting SarvanOM services with .env.docker..."
+	docker compose --env-file .env.docker up --build -d
+	@echo "Services started. Check logs with 'make logs'"
 
-setup: install
-	@echo "Setting up environment..."
-	@if [ ! -f .env ]; then \
-		cp .env.template .env; \
-		echo "Created .env file from template. Please configure your environment variables."; \
-	else \
-		echo ".env file already exists."; \
-	fi
-	@echo "Setup complete!"
+# Stop all services
+down:
+	@echo "Stopping SarvanOM services..."
+	docker compose down
+	@echo "Services stopped."
 
-# Development
-dev:
-	@echo "Starting development servers..."
-	npm run dev
-
-dev:frontend:
-	@echo "Starting frontend development server..."
-	npm run dev:frontend
-
-dev:backend:
-	@echo "Starting backend development server..."
-	npm run dev:backend
-
-# Building
+# Build all services
 build:
-	@echo "Building all services..."
-	npm run build
+	@echo "Building SarvanOM services..."
+	docker compose --env-file .env.docker build
+	@echo "Build completed."
 
-build:frontend:
-	@echo "Building frontend..."
-	npm run build:frontend
-
-build:backend:
-	@echo "Building backend services..."
-	npm run build:backend
-
-# Testing
-test:
-	@echo "Running all tests..."
-	npm run test
-
-test:unit:
-	@echo "Running unit tests..."
-	npm run test:unit
-
-test:integration:
-	@echo "Running integration tests..."
-	npm run test:integration
-
-test:e2e:
-	@echo "Running end-to-end tests..."
-	npm run test:e2e
-
-test:performance:
-	@echo "Running performance tests..."
-	npm run test:performance
-
-# Code Quality
-lint:
-	@echo "Running linting..."
-	npm run lint
-
-format:
-	@echo "Formatting code..."
-	npm run format
-
-# Docker
-docker-setup:
-	@echo "Setting up Docker environment..."
-	@if [ ! -f .env.docker ]; then \
-		cp env.docker.template .env.docker; \
-		echo "Created .env.docker file from template. Please configure your environment variables."; \
-	else \
-		echo ".env.docker file already exists."; \
-	fi
-	docker-compose down -v
-	docker-compose build --no-cache
-
-docker-build:
-	@echo "Building Docker images..."
-	docker-compose build
-
-docker-up:
-	@echo "Starting Docker services..."
-	docker-compose --env-file .env.docker up --build -d
-
-docker-down:
-	@echo "Stopping Docker services..."
-	docker-compose down
-
+# Show logs for all services
 logs:
-	@echo "Showing Docker logs..."
-	docker-compose logs -f
+	@echo "Showing logs for all services..."
+	docker compose logs -f
 
-# Docker health check
-docker-health:
-	@echo "Checking Docker service health..."
+# Clean up everything
+clean:
+	@echo "Cleaning up Docker resources..."
+	docker compose down -v --remove-orphans
+	docker system prune -f
+	@echo "Cleanup completed."
+
+# Restart all services
+restart:
+	@echo "Restarting all services..."
+	docker compose restart
+	@echo "Services restarted."
+
+# Health check for all services
+health-check:
+	@echo "Checking health of all services..."
+	@echo "Backend:"
+	@curl -f http://localhost:8000/health/basic || echo "Backend not healthy"
+	@echo "Frontend:"
+	@curl -f http://localhost:3000 || echo "Frontend not healthy"
+	@echo "Ollama:"
+	@curl -f http://localhost:11434/api/tags || echo "Ollama not healthy"
+	@echo "Meilisearch:"
+	@curl -f http://localhost:7700/version || echo "Meilisearch not healthy"
+	@echo "ArangoDB:"
+	@curl -f http://localhost:8529/_api/version || echo "ArangoDB not healthy"
+	@echo "Qdrant:"
+	@curl -f http://localhost:6333/health || echo "Qdrant not healthy"
+	@echo "PostgreSQL:"
+	@docker exec sarvanom-postgres pg_isready -U postgres -d sarvanom_db || echo "PostgreSQL not healthy"
+	@echo "Redis:"
+	@docker exec sarvanom-redis redis-cli ping || echo "Redis not healthy"
+
+# Test Docker health with Python script
+test-docker-health:
+	@echo "Running comprehensive Docker health tests..."
 	python test_docker_health.py
 
-# Docker with environment file
-up:
-	docker-compose --env-file .env.docker up --build -d
+# Windows-specific commands
+windows-up:
+	@echo "Starting services for Windows 11..."
+	docker compose --env-file .env.docker up --build -d
+	@echo "Services started. Access at:"
+	@echo "  Frontend: http://localhost:3000"
+	@echo "  Backend:  http://localhost:8000"
+	@echo "  Ollama:   http://localhost:11434"
 
-down:
-	docker-compose down
+windows-down:
+	@echo "Stopping services for Windows 11..."
+	docker compose down
+	@echo "Services stopped."
 
-restart:
-	docker-compose down
-	docker-compose --env-file .env.docker up --build -d
+# Development commands
+dev-up:
+	@echo "Starting development environment..."
+	docker compose --env-file .env.docker up --build -d
+	@echo "Development environment started."
 
-# Utilities
-clean:
-	@echo "Cleaning build artifacts..."
-	npm run clean
-	@echo "Removing Python cache..."
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete 2>/dev/null || true
-	@echo "Removing test artifacts..."
-	rm -rf .pytest_cache/ 2>/dev/null || true
-	rm -rf .coverage 2>/dev/null || true
-	@echo "Clean complete!"
+dev-logs:
+	@echo "Showing development logs..."
+	docker compose logs -f sarvanom_backend frontend
 
-# Service-specific commands
-start:api-gateway:
-	@echo "Starting API Gateway..."
-	cd services/api-gateway && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# Production commands
+prod-up:
+	@echo "Starting production environment..."
+	docker compose --env-file .env.docker -f docker-compose.yml up --build -d
+	@echo "Production environment started."
 
-start:auth-service:
-	@echo "Starting Auth Service..."
-	cd services/auth-service && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8001
+# Utility commands
+status:
+	@echo "Service Status:"
+	docker compose ps
 
-start:search-service:
-	@echo "Starting Search Service..."
-	cd services/search-service && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8002
+volumes:
+	@echo "Docker Volumes:"
+	docker volume ls
 
-start:synthesis-service:
-	@echo "Starting Synthesis Service..."
-	cd services/synthesis-service && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8003
+networks:
+	@echo "Docker Networks:"
+	docker network ls
 
-start:factcheck-service:
-	@echo "Starting Fact Check Service..."
-	cd services/factcheck-service && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8004
+# Data directory setup
+setup-data-dirs:
+	@echo "Setting up data directories..."
+	mkdir -p data/postgres data/redis data/meilisearch data/arangodb data/arangodb-apps data/qdrant data/ollama
+	@echo "Data directories created."
 
-start:analytics-service:
-	@echo "Starting Analytics Service..."
-	cd services/analytics-service && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8005
+# Pre-flight checks
+preflight:
+	@echo "Running pre-flight checks..."
+	@echo "Checking Docker Desktop..."
+	docker version || (echo "Docker Desktop not running. Please start Docker Desktop." && exit 1)
+	@echo "Checking .env.docker file..."
+	test -f .env.docker || (echo ".env.docker file not found. Please create it from env.docker.template." && exit 1)
+	@echo "Checking data directories..."
+	make setup-data-dirs
+	@echo "Pre-flight checks completed."
 
-# Database commands
-db:migrate:
-	@echo "Running database migrations..."
-	python -m alembic upgrade head
-
-db:seed:
-	@echo "Seeding database..."
-	python scripts/seed_database.py
-
-# Security
-security:audit:
-	@echo "Running security audit..."
-	bandit -r services/ shared/
-	pip-audit
-
-# Monitoring
-monitor:logs:
-	@echo "Showing application logs..."
-	tail -f logs/*.log
-
-monitor:health:
-	@echo "Checking service health..."
-	curl -f http://localhost:8000/health || echo "API Gateway not responding"
-	curl -f http://localhost:8001/health || echo "Auth Service not responding"
-	curl -f http://localhost:8002/health || echo "Search Service not responding"
-	curl -f http://localhost:8003/health || echo "Synthesis Service not responding"
-	curl -f http://localhost:8004/health || echo "Fact Check Service not responding"
-	curl -f http://localhost:8005/health || echo "Analytics Service not responding"
-
-# Production
-prod:build:
-	@echo "Building for production..."
-	docker-compose -f docker-compose.prod.yml build
-
-prod:deploy:
-	@echo "Deploying to production..."
-	docker-compose -f docker-compose.prod.yml up -d
-
-# Documentation
-docs:generate:
-	@echo "Generating API documentation..."
-	cd services/api-gateway && python -m uvicorn main:app --reload --port 8000 &
-	@sleep 5
-	curl http://localhost:8000/openapi.json > docs/api/openapi.json
-	@echo "API documentation generated at docs/api/openapi.json"
-
-docs:serve:
-	@echo "Serving documentation..."
-	python -m http.server 8080 --directory docs/ 
+# Quick start
+quick-start: preflight up
+	@echo "SarvanOM is starting up..."
+	@echo "This may take a few minutes for all services to be healthy."
+	@echo "Run 'make health-check' to verify all services are running."
+	@echo "Run 'make logs' to view service logs." 

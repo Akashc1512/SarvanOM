@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Universal Knowledge Hub - API Gateway Service
 Main entry point for the knowledge platform with comprehensive request handling.
@@ -95,10 +97,10 @@ except ImportError:
 def validate_critical_env_vars():
     """Validate critical environment variables and fail fast if missing."""
     critical_vars = {
-        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
-        "ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY"),
-        "DATABASE_URL": os.getenv("DATABASE_URL"),
-        "REDIS_URL": os.getenv("REDIS_URL"),
+        "OPENAI_API_KEY": settings.openai_api_key,
+        "ANTHROPIC_API_KEY": settings.anthropic_api_key,
+        "DATABASE_URL": settings.database_url,
+        "REDIS_URL": settings.redis_url,
     }
     
     missing_vars = []
@@ -280,6 +282,333 @@ query_storage = {}
 query_index = 0
 
 
+async def route_query(query: str, user_context: Dict[str, Any] = None) -> Dict[str, Any]:
+    """
+    Route and process a query through the complete pipeline:
+    1. Classify the query (by keywords or small classifier)
+    2. Call search_service.retrieve(query)
+    3. Call factcheck_service.verify(results)
+    4. Call synthesis_service.compose(answer)
+    
+    Uses USE_DYNAMIC_SELECTION flag to decide between local LLM (Ollama) or API calls.
+    """
+    import os
+    import time
+    from typing import Dict, List, Any, Optional
+    
+    # Get environment configuration
+    use_dynamic_selection = getattr(settings.use_dynamic_selection, 'value', "true") if hasattr(settings.use_dynamic_selection, 'value') else settings.use_dynamic_selection.lower() == "true"
+    
+    start_time = time.time()
+    logger.info(f"Starting query routing for: {query[:100]}...")
+    
+    try:
+        # Step 1: Classify the query
+        query_classification = await _classify_query(query)
+        logger.info(f"Query classified as: {query_classification}")
+        
+        # Step 2: Retrieve relevant documents using search service
+        logger.info("Calling search service for retrieval...")
+        search_results = await _call_search_service(query, query_classification)
+        logger.info(f"Retrieved {len(search_results.get('documents', []))} documents")
+        
+        # Step 3: Verify facts using factcheck service
+        logger.info("Calling factcheck service for verification...")
+        verification_results = await _call_factcheck_service(query, search_results)
+        logger.info(f"Verification completed with confidence: {verification_results.get('verification_confidence', 0.0)}")
+        
+        # Step 4: Compose final answer using synthesis service
+        logger.info("Calling synthesis service for answer composition...")
+        synthesis_results = await _call_synthesis_service(
+            query, 
+            search_results, 
+            verification_results,
+            use_dynamic_selection
+        )
+        logger.info("Synthesis completed successfully")
+        
+        # Calculate total processing time
+        total_time = time.time() - start_time
+        
+        # Compile final response
+        response = {
+            "success": True,
+            "query": query,
+            "classification": query_classification,
+            "answer": synthesis_results.get("answer", ""),
+            "confidence": synthesis_results.get("confidence", 0.0),
+            "sources": search_results.get("documents", []),
+            "verification": verification_results,
+            "processing_time": total_time,
+            "metadata": {
+                "use_dynamic_selection": use_dynamic_selection,
+                "search_time": search_results.get("processing_time", 0),
+                "verification_time": verification_results.get("processing_time", 0),
+                "synthesis_time": synthesis_results.get("processing_time", 0),
+                "total_documents": len(search_results.get("documents", [])),
+                "verified_facts": len(verification_results.get("verified_sentences", [])),
+                "unsupported_claims": len(verification_results.get("unsupported_sentences", [])),
+            }
+        }
+        
+        logger.info(f"Query routing completed in {total_time:.3f}s")
+        return response
+        
+    except Exception as e:
+        logger.error(f"Query routing failed: {str(e)}", exc_info=True)
+        return {
+            "success": False,
+            "error": str(e),
+            "query": query,
+            "processing_time": time.time() - start_time
+        }
+
+
+async def _classify_query(query: str) -> Dict[str, Any]:
+    """Classify the query using keywords and simple heuristics."""
+    query_lower = query.lower()
+    
+    # Define classification keywords
+    classifications = {
+        "technical": ["code", "programming", "algorithm", "function", "api", "database", "server", "debug", "error", "bug", "git", "docker", "kubernetes", "aws", "azure", "cloud"],
+        "academic": ["research", "study", "paper", "thesis", "dissertation", "academic", "scholarly", "journal", "peer-reviewed", "citation", "bibliography"],
+        "business": ["market", "revenue", "profit", "business", "company", "startup", "investment", "strategy", "management", "leadership", "sales", "marketing"],
+        "medical": ["health", "medical", "disease", "treatment", "symptoms", "diagnosis", "patient", "doctor", "hospital", "medicine", "drug", "therapy"],
+        "legal": ["law", "legal", "court", "case", "judgment", "attorney", "lawyer", "contract", "rights", "liability", "compliance", "regulation"],
+        "news": ["news", "current", "recent", "latest", "breaking", "update", "today", "yesterday", "this week", "this month"],
+        "general": []  # Default classification
+    }
+    
+    # Score each classification
+    scores = {}
+    for category, keywords in classifications.items():
+        score = sum(1 for keyword in keywords if keyword in query_lower)
+        scores[category] = score
+    
+    # Find the best classification
+    best_category = max(scores.items(), key=lambda x: x[1])
+    
+    # Additional analysis
+    complexity = "simple" if len(query.split()) < 5 else "complex"
+    intent = "factual" if any(word in query_lower for word in ["what", "how", "why", "when", "where", "who"]) else "opinion"
+    
+    return {
+        "category": best_category[0] if best_category[1] > 0 else "general",
+        "confidence": min(best_category[1] / 3.0, 1.0),  # Normalize confidence
+        "complexity": complexity,
+        "intent": intent,
+        "keywords_found": [word for word in query_lower.split() if any(word in keywords for keywords in classifications.values())]
+    }
+
+
+async def _call_search_service(query: str, classification: Dict[str, Any]) -> Dict[str, Any]:
+    """Call the search service to retrieve relevant documents."""
+    try:
+        # Import search service
+        from services.search_service.retrieval_agent import RetrievalAgent
+        
+        # Initialize retrieval agent
+        search_agent = RetrievalAgent()
+        
+        # Create query context
+        from shared.core.agents.base_agent import QueryContext
+        context = QueryContext(
+            query=query,
+            user_id="api_gateway",
+            user_context={
+                "classification": classification,
+                "max_tokens": 4000,
+                "confidence_threshold": 0.7
+            },
+            token_budget=4000
+        )
+        
+        # Create task for retrieval
+        task = {
+            "query": query,
+            "top_k": 20,
+            "classification": classification
+        }
+        
+        # Process retrieval task
+        result = await search_agent.process_task(task, context)
+        
+        if result.success:
+            return {
+                "documents": result.data.get("documents", []),
+                "processing_time": result.processing_time_ms / 1000.0,
+                "total_hits": result.data.get("total_hits", 0),
+                "search_type": result.data.get("search_type", "hybrid")
+            }
+        else:
+            logger.error(f"Search service failed: {result.data.get('error', 'Unknown error')}")
+            return {
+                "documents": [],
+                "processing_time": result.processing_time_ms / 1000.0,
+                "error": result.data.get("error", "Search service failed")
+            }
+            
+    except Exception as e:
+        logger.error(f"Search service call failed: {str(e)}")
+        return {
+            "documents": [],
+            "processing_time": 0.0,
+            "error": str(e)
+        }
+
+
+async def _call_factcheck_service(query: str, search_results: Dict[str, Any]) -> Dict[str, Any]:
+    """Call the factcheck service to verify retrieved information."""
+    try:
+        # Import factcheck service
+        from services.factcheck_service.factcheck_agent import FactCheckAgent
+        
+        # Initialize factcheck agent
+        factcheck_agent = FactCheckAgent()
+        
+        # Create query context
+        from shared.core.agents.base_agent import QueryContext
+        context = QueryContext(
+            query=query,
+            user_id="api_gateway",
+            user_context={
+                "max_tokens": 2000,
+                "confidence_threshold": 0.7
+            },
+            token_budget=2000
+        )
+        
+        # Extract documents for verification
+        documents = search_results.get("documents", [])
+        
+        # Create task for factchecking
+        task = {
+            "query": query,
+            "source_docs": documents,
+            "verification_params": {
+                "temporal_validation": True,
+                "source_authenticity": True,
+                "source_freshness": True
+            }
+        }
+        
+        # Process factcheck task
+        result = await factcheck_agent.process_task(task, context)
+        
+        if result.success:
+            return {
+                "verification_confidence": result.confidence,
+                "verified_sentences": result.data.get("verified_sentences", []),
+                "unsupported_sentences": result.data.get("unsupported_sentences", []),
+                "outdated_sentences": result.data.get("outdated_sentences", []),
+                "processing_time": result.processing_time_ms / 1000.0,
+                "summary": result.data.get("summary", ""),
+                "verification_method": result.data.get("verification_method", "rule_based")
+            }
+        else:
+            logger.error(f"Factcheck service failed: {result.data.get('error', 'Unknown error')}")
+            return {
+                "verification_confidence": 0.0,
+                "verified_sentences": [],
+                "unsupported_sentences": [],
+                "outdated_sentences": [],
+                "processing_time": result.processing_time_ms / 1000.0,
+                "error": result.data.get("error", "Factcheck service failed")
+            }
+            
+    except Exception as e:
+        logger.error(f"Factcheck service call failed: {str(e)}")
+        return {
+            "verification_confidence": 0.0,
+            "verified_sentences": [],
+            "unsupported_sentences": [],
+            "outdated_sentences": [],
+            "processing_time": 0.0,
+            "error": str(e)
+        }
+
+
+async def _call_synthesis_service(
+    query: str, 
+    search_results: Dict[str, Any], 
+    verification_results: Dict[str, Any],
+    use_dynamic_selection: bool
+) -> Dict[str, Any]:
+    """Call the synthesis service to compose the final answer."""
+    try:
+        # Import synthesis service
+        from services.synthesis_service.synthesis_agent import SynthesisAgent
+        
+        # Initialize synthesis agent
+        synthesis_agent = SynthesisAgent()
+        
+        # Create query context
+        from shared.core.agents.base_agent import QueryContext
+        context = QueryContext(
+            query=query,
+            user_id="api_gateway",
+            user_context={
+                "max_tokens": 3000,
+                "confidence_threshold": 0.7,
+                "use_dynamic_selection": use_dynamic_selection
+            },
+            token_budget=3000
+        )
+        
+        # Prepare verified facts from verification results
+        verified_facts = []
+        for sentence in verification_results.get("verified_sentences", []):
+            verified_facts.append({
+                "claim": sentence.get("text", ""),
+                "confidence": sentence.get("confidence", 0.0),
+                "source": sentence.get("source", ""),
+                "evidence": sentence.get("evidence", [])
+            })
+        
+        # Create task for synthesis
+        task = {
+            "query": query,
+            "verified_facts": verified_facts,
+            "source_docs": search_results.get("documents", []),
+            "synthesis_params": {
+                "style": "comprehensive",
+                "use_dynamic_selection": use_dynamic_selection,
+                "include_citations": True,
+                "include_disclaimers": True
+            }
+        }
+        
+        # Process synthesis task
+        result = await synthesis_agent.process_task(task, context)
+        
+        if result.success:
+            return {
+                "answer": result.data.get("answer", ""),
+                "confidence": result.confidence,
+                "processing_time": result.processing_time_ms / 1000.0,
+                "synthesis_method": result.data.get("synthesis_method", "rule_based"),
+                "fact_count": result.data.get("fact_count", 0),
+                "metadata": result.data.get("metadata", {})
+            }
+        else:
+            logger.error(f"Synthesis service failed: {result.data.get('error', 'Unknown error')}")
+            return {
+                "answer": "I apologize, but I encountered an error while synthesizing the answer.",
+                "confidence": 0.0,
+                "processing_time": result.processing_time_ms / 1000.0,
+                "error": result.data.get("error", "Synthesis service failed")
+            }
+            
+    except Exception as e:
+        logger.error(f"Synthesis service call failed: {str(e)}")
+        return {
+            "answer": "I apologize, but I encountered an error while processing your query.",
+            "confidence": 0.0,
+            "processing_time": 0.0,
+            "error": str(e)
+        }
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager with proper startup and shutdown."""
@@ -295,18 +624,18 @@ async def lifespan(app: FastAPI):
     # 1. Environment Variables Check with Masking
     logger.info("📋 Environment Variables Check:")
     critical_vars = {
-        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
-        "ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY"),
-        "DATABASE_URL": os.getenv("DATABASE_URL"),
-        "REDIS_URL": os.getenv("REDIS_URL"),
+        "OPENAI_API_KEY": settings.openai_api_key,
+        "ANTHROPIC_API_KEY": settings.anthropic_api_key,
+        "DATABASE_URL": settings.database_url,
+        "REDIS_URL": settings.redis_url,
         "LLM_PROVIDER": os.getenv("LLM_PROVIDER"),
-        "OPENAI_LLM_MODEL": os.getenv("OPENAI_LLM_MODEL"),
-        "ANTHROPIC_MODEL": os.getenv("ANTHROPIC_MODEL"),
-        "CORS_ORIGINS": os.getenv("CORS_ORIGINS"),
+        "OPENAI_LLM_MODEL": settings.openai_model,
+        "ANTHROPIC_MODEL": settings.anthropic_model,
+        "CORS_ORIGINS": settings.cors_origins,
         "UKP_HOST": os.getenv("UKP_HOST"),
         "UKP_PORT": os.getenv("UKP_PORT"),
-        "ENVIRONMENT": os.getenv("ENVIRONMENT"),
-        "LOG_LEVEL": os.getenv("LOG_LEVEL"),
+        "ENVIRONMENT": settings.environment,
+        "LOG_LEVEL": settings.log_level,
     }
     
     for var_name, var_value in critical_vars.items():
@@ -1146,7 +1475,7 @@ async def health_check():
                 "version": "1.0.0",
                 "timestamp": datetime.now().isoformat()
             },
-            "environment": os.getenv("ENVIRONMENT", "development"),
+            "environment": settings.environment or "development",
             "uptime_seconds": time.time() - startup_time
         })
         
@@ -1167,7 +1496,7 @@ async def health_check():
                 "status": "unhealthy",
                 "error": str(e)
             },
-            "environment": os.getenv("ENVIRONMENT", "development"),
+            "environment": settings.environment or "development",
             "uptime_seconds": time.time() - startup_time,
             "components": {},
             "summary": {
@@ -1189,7 +1518,7 @@ async def simple_health_check():
             "version": "1.0.0",
             "timestamp": datetime.now().isoformat()
         },
-        "environment": os.getenv("ENVIRONMENT", "development"),
+        "environment": settings.environment or "development",
         "uptime_seconds": time.time() - startup_time,
         "timestamp": datetime.now().isoformat()
     }
@@ -1251,6 +1580,93 @@ async def get_metrics(admin: bool = False, format: str = "json"):
                 "error_type": type(e).__name__,
                 "timestamp": datetime.now().isoformat()
             }
+        )
+
+# Add simple query endpoint for basic pipeline testing
+@app.post("/query", response_model=Dict[str, Any])
+async def process_query(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user)
+):
+    """Process query using the basic pipeline with agent orchestration."""
+    request_id = getattr(http_request.state, "request_id", "unknown")
+    start_time = time.time()
+    
+    try:
+        # Extract query parameters
+        query = request.get("query", "")
+        session_id = request.get("session_id", str(uuid.uuid4()))
+        user_id = getattr(current_user, "user_id", "anonymous")
+        max_tokens = request.get("max_tokens", 1000)
+        confidence_threshold = request.get("confidence_threshold", 0.8)
+        
+        if not query:
+            raise HTTPException(status_code=422, detail="Query is required")
+        
+        # Check cache first
+        cache_key = f"query:{hash(query)}:{session_id}"
+        cached_result = await _query_cache.get(cache_key)
+        
+        if cached_result:
+            cached_result["cache_status"] = "Hit"
+            cached_result["execution_time"] = time.time() - start_time
+            return cached_result
+        
+        # Process query through the pipeline
+        pipeline_result = await route_query(query, {
+            "user_id": user_id,
+            "session_id": session_id,
+            "max_tokens": max_tokens,
+            "confidence_threshold": confidence_threshold
+        })
+        
+        if not pipeline_result.get("success", False):
+            raise HTTPException(
+                status_code=500,
+                detail=pipeline_result.get("error", "Query processing failed")
+            )
+        
+        # Format response for tests
+        response_data = {
+            "answer": pipeline_result.get("answer", ""),
+            "citations": pipeline_result.get("sources", []),
+            "validation_status": pipeline_result.get("verification", {}).get("overall_status", "Unverified"),
+            "llm_provider": pipeline_result.get("metadata", {}).get("llm_provider", "Unknown"),
+            "cache_status": "Miss",
+            "execution_time": time.time() - start_time,
+            "agent_results": {
+                "retrieval": {
+                    "vector_results": pipeline_result.get("metadata", {}).get("vector_results", []),
+                    "keyword_results": pipeline_result.get("metadata", {}).get("keyword_results", []),
+                    "knowledge_graph_results": pipeline_result.get("metadata", {}).get("knowledge_graph_results", [])
+                },
+                "factcheck": pipeline_result.get("verification", {}),
+                "synthesis": {
+                    "answer": pipeline_result.get("answer", ""),
+                    "confidence": pipeline_result.get("confidence", 0.0)
+                },
+                "citation": {
+                    "sources": pipeline_result.get("sources", [])
+                }
+            },
+            "confidence_score": pipeline_result.get("confidence", 0.0),
+            "coherence_score": pipeline_result.get("metadata", {}).get("coherence_score", 0.0),
+            "relevance_score": pipeline_result.get("metadata", {}).get("relevance_score", 0.0)
+        }
+        
+        # Cache the result
+        await _query_cache.set(cache_key, response_data)
+        
+        return response_data
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Query processing failed: {e}", extra={"request_id": request_id})
+        raise HTTPException(
+            status_code=500,
+            detail=f"Query processing failed: {str(e)}"
         )
 
 # Add new endpoint for comprehensive query processing
@@ -1354,7 +1770,7 @@ async def get_system_diagnostics(current_user=Depends(get_current_user)):
             "orchestration_metrics": orchestration_metrics,
             "expert_network_stats": expert_stats,
             "environment": {
-                "environment": os.getenv("ENVIRONMENT", "development"),
+                "environment": settings.environment or "development",
                 "python_version": os.getenv("PYTHON_VERSION", "unknown"),
                 "uptime_seconds": time.time() - startup_time
             }
@@ -1400,7 +1816,7 @@ async def get_security_status(current_user=Depends(get_current_user)):
 
     # Additional security check for production
     if (
-        os.getenv("ENVIRONMENT") == "production"
+        settings.environment == "production"
         and not os.getenv("ENABLE_SECURITY_ENDPOINT", "").lower() == "true"
     ):
         raise AuthorizationError("Security endpoint disabled in production")

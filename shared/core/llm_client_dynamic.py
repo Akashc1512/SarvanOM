@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Dynamic LLM Client - Universal Knowledge Platform
 Enhanced LLM client with intelligent model selection based on query classification.
@@ -436,7 +438,7 @@ class DynamicLLMClient:
     def _setup_providers(self):
         """Setup available LLM providers."""
         # Setup Ollama provider
-        ollama_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        ollama_url = settings.ollama_base_url or "http://localhost:11434"
         self.providers[LLMProvider.OLLAMA] = OllamaProvider(
             ProviderConfig(
                 name=LLMProvider.OLLAMA,
@@ -447,7 +449,7 @@ class DynamicLLMClient:
         logger.info(f"✅ Ollama provider configured: {ollama_url}")
         
         # Setup HuggingFace provider
-        hf_api_key = os.getenv("HUGGINGFACE_API_KEY")
+        hf_api_key = settings.huggingface_api_key
         if hf_api_key:
             self.providers[LLMProvider.HUGGINGFACE] = HuggingFaceProvider(
                 ProviderConfig(
@@ -462,7 +464,7 @@ class DynamicLLMClient:
             logger.warning("⚠️ HUGGINGFACE_API_KEY not found, HuggingFace provider disabled")
         
         # Setup OpenAI provider
-        openai_api_key = os.getenv("OPENAI_API_KEY")
+        openai_api_key = settings.openai_api_key
         if openai_api_key:
             self.providers[LLMProvider.OPENAI] = OpenAIProvider(
                 ProviderConfig(

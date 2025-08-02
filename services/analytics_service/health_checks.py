@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Health Checks Module for Universal Knowledge Platform
 Provides actual connectivity checks for all external services.
@@ -18,12 +20,12 @@ logger = logging.getLogger(__name__)
 # Service URLs from environment
 VECTOR_DB_URL = os.getenv("VECTOR_DB_URL", "http://localhost:6333")
 ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+REDIS_URL = settings.redis_url or "redis://localhost:6379"
 SPARQL_ENDPOINT = os.getenv(
     "SPARQL_ENDPOINT", "http://localhost:7200/repositories/knowledge"
 )
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+OPENAI_API_KEY = settings.openai_api_key or ""
+ANTHROPIC_API_KEY = settings.anthropic_api_key or ""
 
 # Timeout for health checks
 HEALTH_CHECK_TIMEOUT = 5.0

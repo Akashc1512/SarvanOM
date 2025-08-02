@@ -93,6 +93,7 @@ describe("Performance Tests", () => {
           url: "https://example.com",
           snippet: "Test snippet",
           relevance_score: 0.9,
+          source_type: "web" as const,
         },
       ],
     };
@@ -126,6 +127,7 @@ describe("Performance Tests", () => {
           url: `https://example${i}.com`,
           snippet: `Snippet ${i}`.repeat(100),
           relevance_score: 0.8,
+          source_type: "web" as const,
         })),
       };
 

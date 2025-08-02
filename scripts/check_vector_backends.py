@@ -1,4 +1,6 @@
+from ..\shared\core\api\config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Vector Database and Search Backend Configuration Checker
 
@@ -184,14 +186,14 @@ class VectorBackendChecker:
         
         try:
             # Check environment variables with fallbacks
-            meili_url = os.getenv("MEILISEARCH_URL")
+            meili_url = settings.meilisearch_url
             meili_host = os.getenv("MEILISEARCH_HOST", "localhost")
             meili_port = os.getenv("MEILISEARCH_PORT", "7700")
-            meili_index = os.getenv("MEILISEARCH_INDEX", "knowledge-base")
+            meili_index = settings.meilisearch_index or "knowledge-base"
             
             # Authentication credentials
-            meili_api_key = os.getenv("MEILISEARCH_API_KEY")
-            meili_master_key = os.getenv("MEILISEARCH_MASTER_KEY")
+            meili_api_key = settings.meilisearch_api_key
+            meili_master_key = settings.meilisearch_master_key
             
             if not meili_url:
                 meili_url = f"http://{meili_host}:{meili_port}"
@@ -287,13 +289,13 @@ class VectorBackendChecker:
         
         try:
             # Check environment variables with fallbacks
-            qdrant_url = os.getenv("QDRANT_URL")
+            qdrant_url = settings.qdrant_url
             qdrant_host = os.getenv("QDRANT_HOST", "localhost")
-            qdrant_port = os.getenv("QDRANT_PORT", "6333")
-            collection_name = os.getenv("QDRANT_COLLECTION", "knowledge-base")
+            qdrant_port = settings.qdrant_port or "6333"
+            collection_name = settings.qdrant_collection or "knowledge-base"
             
             # Authentication credentials
-            qdrant_api_key = os.getenv("QDRANT_API_KEY")
+            qdrant_api_key = settings.qdrant_api_key
             qdrant_username = os.getenv("QDRANT_USERNAME")
             qdrant_password = os.getenv("QDRANT_PASSWORD")
             
@@ -404,9 +406,9 @@ class VectorBackendChecker:
         
         try:
             # Check environment variables
-            api_key = os.getenv("PINECONE_API_KEY")
-            environment = os.getenv("PINECONE_ENVIRONMENT")
-            index_name = os.getenv("PINECONE_INDEX_NAME", "knowledge-base")
+            api_key = settings.pinecone_api_key
+            environment = settings.pinecone_environment
+            index_name = settings.pinecone_index_name or "knowledge-base"
             
             if not api_key:
                 status.error = "PINECONE_API_KEY not set"
@@ -516,14 +518,14 @@ class VectorBackendChecker:
         
         try:
             # Check environment variables with fallbacks
-            arango_url = os.getenv("ARANGO_URL")
-            arango_host = os.getenv("ARANGO_HOST", "localhost")
-            arango_port = os.getenv("ARANGO_PORT", "8529")
-            arango_user = os.getenv("ARANGO_USERNAME", "root")
-            arango_password = os.getenv("ARANGO_PASSWORD")
+            arango_url = settings.arango_url
+            arango_host = settings.arango_host or "localhost"
+            arango_port = settings.arango_port or "8529"
+            arango_user = settings.arango_username or "root"
+            arango_password = settings.arango_password
             
             # Additional authentication options
-            arango_database = os.getenv("ARANGO_DATABASE", "knowledge_graph")
+            arango_database = settings.arango_database or "knowledge_graph"
             
             if not arango_url:
                 arango_url = f"http://{arango_host}:{arango_port}"

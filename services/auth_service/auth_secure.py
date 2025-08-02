@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Secure Authentication System - MAANG Standards
 Fixes critical security issues identified in the analysis.
@@ -51,7 +53,7 @@ from shared.core.api.exceptions import ConfigurationError, AuthenticationError, 
 logger = structlog.get_logger(__name__)
 
 # Security configuration
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = settings.jwt_secret_key
 if not SECRET_KEY:
     logger.error("SECRET_KEY environment variable is required for production")
     raise ConfigurationError(

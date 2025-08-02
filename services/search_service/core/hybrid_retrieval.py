@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Hybrid retrieval system combining vector search and knowledge graph queries.
 """
@@ -106,10 +108,10 @@ class HybridRetrievalEngine:
     ):
         # Initialize Meilisearch
         if meilisearch_url is None:
-            meilisearch_url = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
+            meilisearch_url = settings.meilisearch_url or "http://localhost:7700"
         if meilisearch_api_key is None:
             # Try master key first, then API key
-            meilisearch_api_key = os.getenv("MEILI_MASTER_KEY") or os.getenv("MEILISEARCH_API_KEY")
+            meilisearch_api_key = settings.meilisearch_master_key or settings.meilisearch_api_key
         
         self.meilisearch_engine = None
         try:
@@ -130,8 +132,8 @@ class HybridRetrievalEngine:
         self.meilisearch_weight = meilisearch_weight
         
         # Store API keys for lazy initialization
-        self.pinecone_api_key = pinecone_api_key or os.getenv("PINECONE_API_KEY")
-        self.pinecone_environment = pinecone_environment or os.getenv("PINECONE_ENVIRONMENT", "us-west1-gcp")
+        self.pinecone_api_key = pinecone_api_key or settings.pinecone_api_key
+        self.pinecone_environment = pinecone_environment or settings.pinecone_environment or "us-west1-gcp"
         
         logger.info("HybridRetrievalEngine initialized successfully")
     

@@ -9,10 +9,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { QueryForm } from "@/components/QueryForm";
 import { AnswerDisplay } from "@/components/AnswerDisplay";
 import { TaskList } from "@/components/TaskList";
+import { ConversationContext } from "@/components/ConversationContext";
+import { LLMProviderBadge } from "@/components/LLMProviderBadge";
+import { KnowledgeGraphPanel } from "@/components/KnowledgeGraphPanel";
+// import { CollaborativeEditor } from "@/components/CollaborativeEditor";
 import { type QueryResponse } from "@/lib/api";
 import {
   Search,
@@ -26,12 +31,19 @@ import {
   BookOpen,
   Users,
   BarChart3,
+  Brain,
+  Network,
+  ArrowRight,
+  ExternalLink,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function Dashboard() {
   const { toast } = useToast();
   const [currentQuery, setCurrentQuery] = useState<QueryResponse | null>(null);
   const [recentQueries, setRecentQueries] = useState<QueryResponse[]>([]);
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
 
   const handleQuerySubmit = async (query: QueryResponse) => {
     setCurrentQuery(query);
@@ -54,6 +66,35 @@ export default function Dashboard() {
   ) => {
     console.log("Feedback submitted:", { rating, helpful, feedback });
     // Analytics tracking could be added here
+  };
+
+  const handleContextSelect = (context: any) => {
+    console.log("Context selected:", context);
+    toast({
+      title: "Context Loaded",
+      description: "Previous conversation context has been loaded for the next query",
+    });
+  };
+
+  const handleQueryReference = (query: string) => {
+    console.log("Query referenced:", query);
+    // This could be used to pre-fill the query form
+  };
+
+  const handleEntityClick = (entity: any) => {
+    console.log("Entity clicked:", entity);
+    toast({
+      title: "Entity Selected",
+      description: `Selected entity: ${entity.name} (${entity.type})`,
+    });
+  };
+
+  const handleRelationshipClick = (relationship: any) => {
+    console.log("Relationship clicked:", relationship);
+    toast({
+      title: "Relationship Selected",
+      description: `Selected relationship: ${relationship.relationship_type}`,
+    });
   };
 
   // Mock data for demonstration
@@ -98,77 +139,181 @@ export default function Dashboard() {
         <h1 className="text-4xl font-bold text-gray-900 mb-2">
           Universal Knowledge Hub
         </h1>
-        <p className="text-xl text-gray-600">
-          AI-powered research platform combining search, synthesis, and
-          collaboration
+        <p className="text-lg text-gray-600">
+          Advanced AI-powered research and knowledge discovery platform
         </p>
       </div>
 
+      {/* Platform Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Search className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-2xl font-bold">{platformStats.totalQueries}</p>
+                <p className="text-sm text-gray-600">Total Queries</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Users className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="text-2xl font-bold">{platformStats.activeUsers}</p>
+                <p className="text-sm text-gray-600">Active Users</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Brain className="h-5 w-5 text-purple-600" />
+              <div>
+                <p className="text-2xl font-bold">{platformStats.aiInteractions}</p>
+                <p className="text-sm text-gray-600">AI Interactions</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-2">
+              <Clock className="h-5 w-5 text-orange-600" />
+              <div>
+                <p className="text-2xl font-bold">{platformStats.avgResponseTime}</p>
+                <p className="text-sm text-gray-600">Avg Response</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Loader Demo Link */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            New: SarvanOM Loader Demo
+          </CardTitle>
+          <CardDescription>
+            Check out our beautiful animated loader component
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Experience the new SarvanOM loader with orbiting nodes and smooth animations
+            </p>
+            <Link href="/loader-demo">
+              <Button variant="outline" className="flex items-center gap-2">
+                <ExternalLink className="h-4 w-4" />
+                View Demo
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content */}
+        {/* Main Query Interface */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Search Interface */}
-          <QueryForm
-            onQuerySubmit={handleQuerySubmit}
-            onQueryUpdate={handleQueryUpdate}
+          {/* Conversation Context */}
+          <ConversationContext
+            sessionId={sessionId}
+            maxHistory={5}
+            onContextSelect={handleContextSelect}
+            onQueryReference={handleQueryReference}
           />
 
-          {/* Results Display */}
+          {/* Query Form */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Search className="h-5 w-5" />
+                <span>Ask Your Question</span>
+              </CardTitle>
+              <CardDescription>
+                Get comprehensive answers with citations and validation
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <QueryForm
+                onQuerySubmit={handleQuerySubmit}
+                onQueryUpdate={handleQueryUpdate}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Answer Display */}
           {currentQuery && (
-            <AnswerDisplay query={currentQuery} onFeedback={handleFeedback} />
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center space-x-2">
+                    <MessageSquare className="h-5 w-5" />
+                    <span>Answer</span>
+                  </CardTitle>
+                  <div className="flex items-center space-x-2">
+                    {/* LLM Provider Badge */}
+                    {currentQuery.llm_provider && (
+                      <LLMProviderBadge
+                        provider={currentQuery.llm_provider as any}
+                        model={currentQuery.llm_model || "unknown"}
+                        responseTime={currentQuery.processing_time || undefined}
+                        confidence={currentQuery.confidence || undefined}
+                      />
+                    )}
+                    {/* Knowledge Graph Toggle */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowKnowledgeGraph(!showKnowledgeGraph)}
+                    >
+                      <Network className="h-4 w-4 mr-1" />
+                      Knowledge Graph
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <AnswerDisplay
+                  query={currentQuery}
+                  onFeedback={handleFeedback}
+                />
+              </CardContent>
+            </Card>
           )}
 
-          {/* Task Generation */}
-          {currentQuery && currentQuery.answer && (
-            <TaskList
-              answer={currentQuery.answer}
-              query={currentQuery.query_id}
-              onTasksGenerated={(tasks) => {
-                console.log("Tasks generated:", tasks);
-                // Analytics tracking could be added here
-              }}
+          {/* Knowledge Graph Panel */}
+          {showKnowledgeGraph && (
+            <KnowledgeGraphPanel
+              query={currentQuery?.answer || ""}
+              onEntityClick={handleEntityClick}
+              onRelationshipClick={handleRelationshipClick}
+              maxEntities={8}
+              maxRelationships={12}
             />
           )}
 
-          {/* Quick Actions */}
-          {!currentQuery && (
+          {/* Task List */}
+          {currentQuery && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center space-x-2">
                   <Sparkles className="h-5 w-5" />
-                  Quick Research Actions
+                  <span>Generated Tasks</span>
                 </CardTitle>
                 <CardDescription>
-                  Start with these popular research topics
+                  AI-generated tasks based on your query
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {quickActions.map((action, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      className="h-auto p-4 justify-start text-left"
-                      onClick={() => {
-                        // This would trigger a new query
-                        toast({
-                          title: "Quick Action",
-                          description: `Research: ${action.title}`,
-                        });
-                      }}
-                    >
-                      <div className="flex items-start gap-3">
-                        <action.icon className="h-5 w-5 text-blue-500 mt-0.5" />
-                        <div>
-                          <div className="font-medium">{action.title}</div>
-                          <div className="text-sm text-gray-500">
-                            {action.description}
-                          </div>
-                        </div>
-                      </div>
-                    </Button>
-                  ))}
-                </div>
+                <TaskList queryId={currentQuery.query_id} />
               </CardContent>
             </Card>
           )}
@@ -176,40 +321,38 @@ export default function Dashboard() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Platform Stats */}
+          {/* Quick Actions */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Platform Stats
+              <CardTitle className="flex items-center space-x-2">
+                <Zap className="h-5 w-5" />
+                <span>Quick Actions</span>
               </CardTitle>
+              <CardDescription>
+                Common research queries to get started
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Total Queries</span>
-                  <span className="font-medium">
-                    {platformStats.totalQueries.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Active Users</span>
-                  <span className="font-medium">
-                    {platformStats.activeUsers}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">AI Interactions</span>
-                  <span className="font-medium">
-                    {platformStats.aiInteractions}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Avg Response</span>
-                  <span className="font-medium">
-                    {platformStats.avgResponseTime}
-                  </span>
-                </div>
+              <div className="space-y-3">
+                {quickActions.map((action, index) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    className="w-full justify-start h-auto p-3"
+                    onClick={() => {
+                      // This could trigger a query with the suggested text
+                      console.log("Quick action:", action.query);
+                    }}
+                  >
+                    <action.icon className="h-4 w-4 mr-2" />
+                    <div className="text-left">
+                      <div className="font-medium text-sm">{action.title}</div>
+                      <div className="text-xs text-gray-500">
+                        {action.description}
+                      </div>
+                    </div>
+                  </Button>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -218,51 +361,27 @@ export default function Dashboard() {
           {recentQueries.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center space-x-2">
                   <Clock className="h-5 w-5" />
-                  Recent Queries
+                  <span>Recent Queries</span>
                 </CardTitle>
+                <CardDescription>
+                  Your recent research questions
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {recentQueries.map((query) => (
+                <div className="space-y-2">
+                  {recentQueries.slice(0, 3).map((query, index) => (
                     <div
-                      key={query.query_id}
-                      className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                      key={index}
+                      className="p-2 border border-gray-200 rounded text-sm cursor-pointer hover:bg-gray-50"
                       onClick={() => setCurrentQuery(query)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          setCurrentQuery(query);
-                        }
-                      }}
-                      role="button"
-                      tabIndex={0}
                     >
-                      <div className="text-sm font-medium text-gray-900 truncate">
-                        {query.query_id}
+                      <div className="font-medium line-clamp-2">
+                        {query.answer?.substring(0, 100)}...
                       </div>
                       <div className="text-xs text-gray-500 mt-1">
                         {new Date(query.created_at).toLocaleDateString()}
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span
-                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            query.status === "completed"
-                              ? "bg-green-100 text-green-800"
-                              : query.status === "processing"
-                                ? "bg-blue-100 text-blue-800"
-                                : query.status === "failed"
-                                  ? "bg-red-100 text-red-800"
-                                  : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          {query.status}
-                        </span>
-                        {query.confidence && (
-                          <span className="text-xs text-gray-500">
-                            {(query.confidence * 100).toFixed(0)}% confidence
-                          </span>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -271,31 +390,34 @@ export default function Dashboard() {
             </Card>
           )}
 
-          {/* Features */}
+          {/* Platform Features */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center space-x-2">
                 <Star className="h-5 w-5" />
-                Platform Features
+                <span>Platform Features</span>
               </CardTitle>
+              <CardDescription>
+                Advanced capabilities available
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <Search className="h-4 w-4 text-blue-500" />
-                  <span>Multi-source search</span>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center space-x-2">
+                  <Brain className="h-4 w-4 text-blue-600" />
+                  <span>Multi-Agent AI Processing</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-green-500" />
-                  <span>AI synthesis</span>
+                <div className="flex items-center space-x-2">
+                  <Network className="h-4 w-4 text-green-600" />
+                  <span>Knowledge Graph Integration</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-purple-500" />
-                  <span>Real-time collaboration</span>
+                <div className="flex items-center space-x-2">
+                  <MessageSquare className="h-4 w-4 text-purple-600" />
+                  <span>Citation & Fact Checking</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-orange-500" />
-                  <span>Expert review system</span>
+                <div className="flex items-center space-x-2">
+                  <BarChart3 className="h-4 w-4 text-orange-600" />
+                  <span>Real-time Analytics</span>
                 </div>
               </div>
             </CardContent>

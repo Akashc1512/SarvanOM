@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Standalone LLM Client v3 - No Dependencies
 Modern, production-ready LLM integration with latest SDKs.
@@ -734,12 +736,12 @@ class EnhancedLLMClientV3:
         providers = []
 
         # OpenAI provider
-        if os.getenv("OPENAI_API_KEY"):
+        if settings.openai_api_key:
             providers.append(
                 LLMConfig(
                     provider=LLMProvider.OPENAI,
                     model=os.getenv("OPENAI_MODEL", "gpt-4"),
-                    api_key=os.getenv("OPENAI_API_KEY"),
+                    api_key=settings.openai_api_key,
                     base_url=os.getenv("OPENAI_BASE_URL"),
                     embedding_model=os.getenv(
                         "OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"
@@ -748,12 +750,12 @@ class EnhancedLLMClientV3:
             )
 
         # Anthropic provider
-        if os.getenv("ANTHROPIC_API_KEY"):
+        if settings.anthropic_api_key:
             providers.append(
                 LLMConfig(
                     provider=LLMProvider.ANTHROPIC,
-                    model=os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022"),
-                    api_key=os.getenv("ANTHROPIC_API_KEY"),
+                    model=settings.anthropic_model or "claude-3-5-sonnet-20241022",
+                    api_key=settings.anthropic_api_key,
                     embedding_model="text-embedding-3",
                 )
             )

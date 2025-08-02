@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Frontend State API Endpoints - Universal Knowledge Platform
 
@@ -32,7 +34,7 @@ load_dotenv()
 
 def get_db_session() -> Session:
     """Get database session for dependency injection."""
-    db_url = os.getenv('DATABASE_URL')
+    db_url = settings.database_url
     if not db_url:
         raise Exception("DATABASE_URL not configured")
     

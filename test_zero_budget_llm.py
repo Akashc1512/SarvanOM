@@ -1,4 +1,6 @@
+from shared.core.api.config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Test Zero Budget LLM Alternatives
 Verifies that free LLM alternatives work with the existing system
@@ -102,7 +104,7 @@ class ZeroBudgetLLMTester:
         """Test Hugging Face API."""
         logger.info("🔧 Testing Hugging Face...")
         
-        api_key = os.getenv("HUGGINGFACE_API_KEY")
+        api_key = settings.huggingface_api_key
         if not api_key:
             logger.warning("⚠️  HUGGINGFACE_API_KEY not set, skipping test")
             self.test_results["huggingface"] = False

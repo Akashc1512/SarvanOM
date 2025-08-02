@@ -106,7 +106,7 @@ export function EnterpriseCollaborativeEditor({
     // Connect to Socket.IO
     const connectSocket = async () => {
       try {
-        await socketIOManager.connect(userId);
+        await socketIOManager.connect();
         setIsConnected(true);
 
         // Join room
@@ -132,7 +132,7 @@ export function EnterpriseCollaborativeEditor({
     connectSocket();
 
     return () => {
-      socketIOManager.leaveRoom();
+      socketIOManager.leaveRoom(roomId);
       socketIOManager.disconnect();
     };
   }, [sessionId, userId, toast]);
@@ -148,7 +148,7 @@ export function EnterpriseCollaborativeEditor({
     });
 
     // Room events
-    socketIOManager.on("room_joined", (data) => {
+    socketIOManager.on("room_joined", (data: any) => {
       setDocumentVersion(data.document_version);
       setContent(data.document_content);
       setActiveUsers(
@@ -161,7 +161,7 @@ export function EnterpriseCollaborativeEditor({
       );
     });
 
-    socketIOManager.on("user_joined", (data) => {
+    socketIOManager.on("user_joined", (data: any) => {
       setActiveUsers((prev) => {
         const existing = prev.find((u) => u.userId === data.user_id);
         if (!existing) {
@@ -179,13 +179,13 @@ export function EnterpriseCollaborativeEditor({
       });
     });
 
-    socketIOManager.on("user_left", (data) => {
+    socketIOManager.on("user_left", (data: any) => {
       setActiveUsers((prev) => prev.filter((u) => u.userId !== data.user_id));
       setUserCursors((prev) => prev.filter((c) => c.userId !== data.user_id));
     });
 
     // Document events
-    socketIOManager.on("document_updated", (data) => {
+    socketIOManager.on("document_updated", (data: any) => {
       if (data.operation.user_id !== userId) {
         applyDocumentOperation(data.operation);
         setDocumentVersion((prev) => prev + 1);
@@ -194,7 +194,7 @@ export function EnterpriseCollaborativeEditor({
     });
 
     // Cursor events
-    socketIOManager.on("cursor_updated", (data) => {
+    socketIOManager.on("cursor_updated", (data: any) => {
       if (data.user_id !== userId) {
         setUserCursors((prev) => {
           const existing = prev.find((c) => c.userId === data.user_id);
@@ -227,7 +227,7 @@ export function EnterpriseCollaborativeEditor({
     });
 
     // Typing events
-    socketIOManager.on("typing_started", (data) => {
+    socketIOManager.on("typing_started", (data: any) => {
       if (data.user_id !== userId) {
         setTypingUsers((prev) => {
           if (!prev.includes(data.user_id)) {
@@ -238,7 +238,7 @@ export function EnterpriseCollaborativeEditor({
       }
     });
 
-    socketIOManager.on("typing_stopped", (data) => {
+    socketIOManager.on("typing_stopped", (data: any) => {
       setTypingUsers((prev) => prev.filter((id) => id !== data.user_id));
     });
 
@@ -297,7 +297,7 @@ export function EnterpriseCollaborativeEditor({
     );
 
     // Error events
-    socketIOManager.on("error", (error) => {
+    socketIOManager.on("error", (error: any) => {
       console.error("Socket.IO error:", error);
       toast({
         title: "Connection Error",
@@ -381,13 +381,13 @@ export function EnterpriseCollaborativeEditor({
   const handleCursorMove = useCallback(() => {
     const cursorPosition = textareaRef.current?.selectionStart || 0;
     if (cursorPosition !== lastCursorPosition.current) {
-      socketIOManager.updateCursor(cursorPosition);
+      socketIOManager.updateCursor(roomId, { x: cursorPosition, y: 0 });
       lastCursorPosition.current = cursorPosition;
     }
   }, []);
 
   const handleTyping = useCallback(() => {
-    socketIOManager.startTyping();
+    socketIOManager.startTyping(roomId);
   }, []);
 
   const handleSave = useCallback(() => {

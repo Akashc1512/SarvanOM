@@ -257,9 +257,9 @@ class VectorDBClient:
         self.embedding_model = config.get("embedding_model", "text-embedding-ada-002")
 
         # Pinecone configuration
-        self.pinecone_api_key = os.getenv("PINECONE_API_KEY")
-        self.pinecone_env = os.getenv("PINECONE_ENVIRONMENT")
-        self.pinecone_index_name = os.getenv("PINECONE_INDEX_NAME")
+        self.pinecone_api_key = settings.pinecone_api_key
+        self.pinecone_env = settings.pinecone_environment
+        self.pinecone_index_name = settings.pinecone_index_name
 
         # Initialize vector database
         self.pinecone_index = None
@@ -675,7 +675,7 @@ class SERPClient:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.serp_api_key = os.getenv("SERP_API_KEY")
-        self.google_api_key = os.getenv("GOOGLE_API_KEY")
+        self.google_api_key = settings.google_api_key
         self.google_cx = os.getenv("GOOGLE_CUSTOM_SEARCH_CX")
 
     async def search_web(

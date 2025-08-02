@@ -10,6 +10,7 @@ Features:
 - Testable components
 - Performance monitoring
 - Error handling and recovery
+- Intelligent model selection with free model prioritization
 
 Authors:
 - Universal Knowledge Platform Engineering Team
@@ -31,8 +32,258 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 
 from .llm_client_v2 import EnhancedLLMClient, LLMRequest, LLMResponse, LLMError
 from .base_agent import BaseAgent, AgentType, AgentResult, QueryContext
+from shared.core.api.config import get_settings
 
 logger = structlog.get_logger(__name__)
+
+# Get settings for model selection
+settings = get_settings()
+
+
+class ModelSelectionStrategy:
+    """Intelligent model selection based on query complexity and cost optimization."""
+    
+    def __init__(self):
+        self.settings = get_settings()
+        self.logger = structlog.get_logger(__name__)
+    
+    async def select_model_for_query(self, query: str, context: str = "", **kwargs) -> Dict[str, Any]:
+        """
+        Select the best model for a query based on complexity and cost optimization.
+        
+        Args:
+            query: The user query
+            context: Optional context information
+            **kwargs: Additional parameters
+            
+        Returns:
+            Dict with model selection info including provider, model, and fallback options
+        """
+        # Check if free models should be prioritized
+        prioritize_free = self.settings.prioritize_free_models
+        use_dynamic_selection = self.settings.use_dynamic_selection
+        
+        self.logger.info(f"Model selection - Prioritize free: {prioritize_free}, Dynamic selection: {use_dynamic_selection}")
+        
+        # Determine query complexity
+        complexity = self._assess_query_complexity(query, context)
+        
+        # Build model selection strategy
+        if prioritize_free:
+            return await self._select_with_free_priority(query, context, complexity, **kwargs)
+        else:
+            return await self._select_with_quality_priority(query, context, complexity, **kwargs)
+    
+    def _assess_query_complexity(self, query: str, context: str = "") -> str:
+        """Assess query complexity for model selection."""
+        # Simple heuristics for complexity assessment
+        query_lower = query.lower()
+        context_length = len(context)
+        
+        # Complexity indicators
+        complex_indicators = [
+            "analyze", "compare", "synthesize", "evaluate", "critique", "research",
+            "investigate", "examine", "explore", "discuss", "explain", "describe",
+            "how does", "what are the", "why does", "compare and contrast"
+        ]
+        
+        # Check for complex language patterns
+        is_complex = any(indicator in query_lower for indicator in complex_indicators)
+        
+        # Check context size
+        large_context = context_length > 2000
+        
+        # Check query length
+        long_query = len(query) > 200
+        
+        if is_complex or large_context or long_query:
+            return "complex"
+        elif len(query) > 100:
+            return "moderate"
+        else:
+            return "simple"
+    
+    async def _select_with_free_priority(self, query: str, context: str, complexity: str, **kwargs) -> Dict[str, Any]:
+        """Select model prioritizing free options first."""
+        
+        # Check if Ollama is enabled and available
+        ollama_available = self.settings.ollama_enabled
+        
+        # Check if dynamic selection deems the query too complex for local models
+        too_complex_for_local = complexity == "complex" and len(query) + len(context) > 4000
+        
+        selection_strategy = {
+            "primary_provider": None,
+            "fallback_providers": [],
+            "reason": "",
+            "complexity": complexity
+        }
+        
+        # Strategy 1: Try Ollama first if available and query is suitable
+        if ollama_available and not too_complex_for_local:
+            selection_strategy["primary_provider"] = "ollama"
+            selection_strategy["fallback_providers"] = ["openai", "anthropic"]
+            selection_strategy["reason"] = "Free local model prioritized"
+            
+            self.logger.info(f"🎯 Selected Ollama as primary provider for {complexity} query")
+            return selection_strategy
+        
+        # Strategy 2: If Ollama not available or query too complex, try OpenAI with fallback
+        elif self.settings.openai_api_key:
+            selection_strategy["primary_provider"] = "openai"
+            selection_strategy["fallback_providers"] = ["anthropic", "ollama"] if ollama_available else ["anthropic"]
+            selection_strategy["reason"] = "OpenAI selected for complex query or Ollama unavailable"
+            
+            self.logger.info(f"🎯 Selected OpenAI as primary provider for {complexity} query")
+            return selection_strategy
+        
+        # Strategy 3: Fallback to available providers
+        elif self.settings.anthropic_api_key:
+            selection_strategy["primary_provider"] = "anthropic"
+            selection_strategy["fallback_providers"] = ["ollama"] if ollama_available else []
+            selection_strategy["reason"] = "Anthropic as fallback option"
+            
+            self.logger.info(f"🎯 Selected Anthropic as primary provider for {complexity} query")
+            return selection_strategy
+        
+        # Strategy 4: Last resort - Ollama if available
+        elif ollama_available:
+            selection_strategy["primary_provider"] = "ollama"
+            selection_strategy["fallback_providers"] = []
+            selection_strategy["reason"] = "Ollama as last resort"
+            
+            self.logger.info(f"🎯 Selected Ollama as last resort for {complexity} query")
+            return selection_strategy
+        
+        else:
+            raise ValueError("No LLM providers available")
+    
+    async def _select_with_quality_priority(self, query: str, context: str, complexity: str, **kwargs) -> Dict[str, Any]:
+        """Select model prioritizing quality over cost."""
+        
+        selection_strategy = {
+            "primary_provider": None,
+            "fallback_providers": [],
+            "reason": "",
+            "complexity": complexity
+        }
+        
+        # For complex queries, prioritize OpenAI/Anthropic
+        if complexity == "complex":
+            if self.settings.openai_api_key:
+                selection_strategy["primary_provider"] = "openai"
+                selection_strategy["fallback_providers"] = ["anthropic", "ollama"] if self.settings.ollama_enabled else ["anthropic"]
+                selection_strategy["reason"] = "OpenAI selected for complex query"
+            elif self.settings.anthropic_api_key:
+                selection_strategy["primary_provider"] = "anthropic"
+                selection_strategy["fallback_providers"] = ["ollama"] if self.settings.ollama_enabled else []
+                selection_strategy["reason"] = "Anthropic selected for complex query"
+        
+        # For simple queries, can use any available provider
+        else:
+            if self.settings.openai_api_key:
+                selection_strategy["primary_provider"] = "openai"
+                selection_strategy["fallback_providers"] = ["anthropic", "ollama"] if self.settings.ollama_enabled else ["anthropic"]
+            elif self.settings.anthropic_api_key:
+                selection_strategy["primary_provider"] = "anthropic"
+                selection_strategy["fallback_providers"] = ["ollama"] if self.settings.ollama_enabled else []
+            elif self.settings.ollama_enabled:
+                selection_strategy["primary_provider"] = "ollama"
+                selection_strategy["fallback_providers"] = []
+        
+        if not selection_strategy["primary_provider"]:
+            raise ValueError("No LLM providers available")
+        
+        self.logger.info(f"🎯 Selected {selection_strategy['primary_provider']} as primary provider for {complexity} query")
+        return selection_strategy
+
+
+class EnhancedLLMClientWithFallback:
+    """Enhanced LLM client with intelligent fallback and model selection."""
+    
+    def __init__(self):
+        self.llm_client = EnhancedLLMClient()
+        self.model_selector = ModelSelectionStrategy()
+        self.logger = structlog.get_logger(__name__)
+    
+    async def generate_text_with_fallback(
+        self, 
+        prompt: str, 
+        system_message: str = None, 
+        context: str = "",
+        **kwargs
+    ) -> LLMResponse:
+        """
+        Generate text with intelligent model selection and fallback.
+        
+        Args:
+            prompt: The prompt to send
+            system_message: Optional system message
+            context: Optional context information
+            **kwargs: Additional parameters
+            
+        Returns:
+            LLMResponse with generated text
+        """
+        try:
+            # Select the best model for this query
+            model_selection = await self.model_selector.select_model_for_query(
+                prompt, context, **kwargs
+            )
+            
+            # Try primary provider
+            primary_provider = model_selection["primary_provider"]
+            self.logger.info(f"🚀 Attempting with primary provider: {primary_provider}")
+            
+            try:
+                response = await self._call_provider(
+                    primary_provider, prompt, system_message, **kwargs
+                )
+                self.logger.info(f"✅ Success with primary provider: {primary_provider}")
+                return response
+                
+            except Exception as e:
+                self.logger.warning(f"❌ Primary provider {primary_provider} failed: {str(e)}")
+                
+                # Try fallback providers
+                for fallback_provider in model_selection["fallback_providers"]:
+                    try:
+                        self.logger.info(f"🔄 Trying fallback provider: {fallback_provider}")
+                        response = await self._call_provider(
+                            fallback_provider, prompt, system_message, **kwargs
+                        )
+                        self.logger.info(f"✅ Success with fallback provider: {fallback_provider}")
+                        return response
+                        
+                    except Exception as fallback_error:
+                        self.logger.warning(f"❌ Fallback provider {fallback_provider} failed: {str(fallback_error)}")
+                        continue
+                
+                # All providers failed
+                raise Exception(f"All LLM providers failed. Last error: {str(e)}")
+                
+        except Exception as e:
+            self.logger.error(f"💥 LLM generation failed: {str(e)}")
+            raise
+    
+    async def _call_provider(self, provider: str, prompt: str, system_message: str = None, **kwargs) -> LLMResponse:
+        """Call a specific LLM provider."""
+        
+        # Extract max_tokens to avoid duplicate parameter
+        max_tokens = kwargs.pop("max_tokens", 1000)
+        temperature = kwargs.pop("temperature", 0.2)
+        
+        # Create request
+        request = LLMRequest(
+            prompt=prompt,
+            system_message=system_message,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs
+        )
+        
+        # Call the LLM client
+        return await self.llm_client.generate_text(request)
 
 
 class AgentStrategy(ABC):
@@ -241,7 +492,7 @@ class BaseAgentStrategy(AgentStrategy):
     def __init__(self, agent_id: str, agent_type: AgentType):
         self.agent_id = agent_id
         self.agent_type = agent_type
-        self.llm_client = EnhancedLLMClient()
+        self.llm_client = EnhancedLLMClientWithFallback()
         self.prompt_manager = PromptManager()
         self.metrics = AgentMetrics()
         self.logger = structlog.get_logger(f"agent.{agent_id}")
@@ -289,19 +540,23 @@ class BaseAgentStrategy(AgentStrategy):
         pass
 
     async def _call_llm(
-        self, prompt: str, system_message: str = None, **kwargs
+        self, prompt: str, system_message: str = None, context: str = "", **kwargs
     ) -> LLMResponse:
-        """Call LLM with error handling and fallback."""
+        """Call LLM with intelligent model selection and fallback."""
         try:
-            request = LLMRequest(prompt=prompt, system_message=system_message, **kwargs)
-
-            response = await self.llm_client.generate_text(request)
+            # Use the enhanced LLM client with fallback
+            response = await self.llm_client.generate_text_with_fallback(
+                prompt=prompt,
+                system_message=system_message,
+                context=context,
+                **kwargs
+            )
             self.metrics.record_llm_call()
 
             return response
 
-        except LLMError as e:
-            self.logger.warning(f"LLM call failed: {e.message}")
+        except Exception as e:
+            self.logger.warning(f"LLM call failed: {str(e)}")
             self.metrics.record_llm_call(fallback=True)
             raise
 
@@ -352,6 +607,7 @@ class SynthesisStrategy(BaseAgentStrategy):
             response = await self._call_llm(
                 prompt=prompt,
                 system_message="You are an expert knowledge synthesis agent.",
+                context=facts_text,  # Pass facts as context
                 max_tokens=1000,
                 temperature=0.3,
             )
@@ -603,6 +859,7 @@ class FactCheckStrategy(BaseAgentStrategy):
             response = await self._call_llm(
                 prompt=prompt,
                 system_message="You are an expert fact-checking agent.",
+                context="\n\n".join(evidence),  # Pass evidence as context
                 max_tokens=500,
                 temperature=0.1,
             )
@@ -780,6 +1037,7 @@ class RetrievalStrategy(BaseAgentStrategy):
             response = await self._call_llm(
                 prompt=prompt,
                 system_message="You are an expert information retrieval agent.",
+                context=query,  # Pass query as context
                 max_tokens=300,
                 temperature=0.3,
             )
@@ -858,6 +1116,7 @@ class RetrievalStrategy(BaseAgentStrategy):
             response = await self._call_llm(
                 prompt=prompt,
                 system_message="You are an expert information retrieval agent.",
+                context=results_text,  # Pass results as context
                 max_tokens=500,
                 temperature=0.1,
             )

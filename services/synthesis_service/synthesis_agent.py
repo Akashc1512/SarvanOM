@@ -74,6 +74,8 @@ import os
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
 from enum import Enum
+import re # Added for keyword matching in _find_source_doc_for_fact
+from datetime import datetime
 
 from dotenv import load_dotenv
 
@@ -295,6 +297,14 @@ class SynthesisAgent(BaseAgent):
             if unsupported_count > 0:
                 disclaimers.append(f"⚠️ **Verification Notice**: {unsupported_count} out of {total_factual} factual statements in this answer could not be verified against our sources. Some information may require additional verification.")
         
+        # Check for revised sentences
+        if verification_result.revised_sentences:
+            revised_count = len(verification_result.revised_sentences)
+            total_factual = verification_result.total_sentences
+            
+            if revised_count > 0:
+                disclaimers.append(f"✅ **Revision Notice**: {revised_count} out of {total_factual} factual statements were revised for accuracy based on our knowledge base verification.")
+        
         # Check for outdated sentences
         if verification_result.outdated_sentences:
             outdated_count = len(verification_result.outdated_sentences)
@@ -449,6 +459,7 @@ class SynthesisAgent(BaseAgent):
     ) -> str:
         """
         Add inline citations to the answer using CitationAgent.
+        Enhanced to include document IDs and URLs from retrieval results.
         
         Args:
             answer_text: The answer text to annotate
@@ -456,7 +467,7 @@ class SynthesisAgent(BaseAgent):
             verification_result: Result from fact verification
             
         Returns:
-            Answer with inline citations
+            Answer with inline citations and reference list
         """
         try:
             from services.synthesis_service.citation_agent import CitationAgent
@@ -466,19 +477,368 @@ class SynthesisAgent(BaseAgent):
             # Extract verified sentences from verification result
             verified_sentences = verification_result.verified_sentences if verification_result else []
             
-            # Generate citations
+            # Generate citations with enhanced metadata
             citation_result = await citation_agent.generate_citations(
                 answer_text, source_docs, verified_sentences
             )
             
             logger.info(f"Citation generation completed: {citation_result.total_citations} citations added")
             
-            # Return the annotated answer
-            return citation_result.annotated_answer
+            # Create enhanced reference list with document IDs and URLs
+            reference_list = self._create_enhanced_reference_list(source_docs, citation_result)
+            
+            # Add reference list to the annotated answer
+            final_answer = citation_result.annotated_answer
+            
+            if reference_list:
+                final_answer += "\n\n**References:**\n" + reference_list
+            
+            return final_answer
             
         except Exception as e:
             logger.error(f"Citation generation failed: {str(e)}")
             return answer_text  # Return original answer if citation fails
+
+    def _create_enhanced_reference_list(
+        self, 
+        source_docs: List[Dict[str, Any]], 
+        citation_result
+    ) -> str:
+        """
+        Create enhanced reference list with document IDs and URLs.
+        
+        Args:
+            source_docs: Source documents
+            citation_result: Citation result from citation agent
+            
+        Returns:
+            Formatted reference list string
+        """
+        if not source_docs:
+            return ""
+        
+        reference_lines = []
+        
+        # Create a mapping of citation IDs to source documents
+        citation_to_doc = {}
+        for i, doc in enumerate(source_docs, 1):
+            citation_to_doc[str(i)] = doc
+        
+        # Generate reference list
+        for citation in citation_result.citations:
+            citation_id = str(citation.get("id", ""))
+            doc = citation_to_doc.get(citation_id)
+            
+            if doc:
+                # Extract document metadata
+                doc_id = doc.get("doc_id", f"doc_{citation_id}")
+                url = doc.get("url", "")
+                title = doc.get("title", citation.get("title", f"Source {citation_id}"))
+                author = doc.get("author", citation.get("author", ""))
+                date = doc.get("timestamp", doc.get("date", citation.get("date", "")))
+                source = doc.get("source", citation.get("source", ""))
+                
+                # Format reference line
+                reference_line = f"[{citation_id}] "
+                
+                if author:
+                    reference_line += f"{author}. "
+                
+                if title:
+                    reference_line += f'"{title}". '
+                
+                if date:
+                    reference_line += f"{date}. "
+                
+                if url:
+                    reference_line += f"URL: {url}. "
+                
+                if source:
+                    reference_line += f"Source: {source}. "
+                
+                reference_line += f"(ID: {doc_id})"
+                
+                reference_lines.append(reference_line)
+            else:
+                # Fallback for citations without matching documents
+                reference_lines.append(f"[{citation_id}] {citation.get('title', f'Source {citation_id}')}")
+        
+        return "\n".join(reference_lines)
+
+    async def _synthesize_answer_with_citations(
+        self, 
+        verified_facts: List[Dict], 
+        query: str, 
+        params: Dict[str, Any],
+        source_docs: List[Dict[str, Any]]
+    ) -> str:
+        """
+        Synthesize answer from verified facts with enhanced citation support.
+        
+        Args:
+            verified_facts: List of verified facts
+            query: User query
+            params: Synthesis parameters
+            source_docs: Source documents for citation
+            
+        Returns:
+            Synthesized answer with citations
+        """
+        if not verified_facts:
+            return "I don't have enough verified information to provide a comprehensive answer."
+
+        try:
+            # Build comprehensive prompt for LLM synthesis with enhanced citations
+            facts_with_sources = []
+            source_mapping = {}
+            
+            for i, fact in enumerate(verified_facts, 1):
+                # Handle both dictionary and object formats
+                if hasattr(fact, "source"):
+                    # Object format (VerifiedFactModel)
+                    source = getattr(fact, "source", "Unknown source")
+                    claim = getattr(fact, "claim", "")
+                    confidence = getattr(fact, "confidence", 0)
+                else:
+                    # Dictionary format
+                    source = fact.get("source", "Unknown source")
+                    claim = fact.get("claim", "")
+                    confidence = fact.get("confidence", 0)
+                
+                # Find corresponding source document
+                source_doc = self._find_source_doc_for_fact(fact, source_docs)
+                if source_doc:
+                    doc_id = source_doc.get("doc_id", f"doc_{i}")
+                    url = source_doc.get("url", "")
+                    source_mapping[i] = {
+                        "doc_id": doc_id,
+                        "url": url,
+                        "title": source_doc.get("title", f"Source {i}")
+                    }
+                    facts_with_sources.append(
+                        f"{i}. {claim} (Source: {source}, Confidence: {confidence:.2f}, ID: {doc_id})"
+                    )
+                else:
+                    facts_with_sources.append(
+                        f"{i}. {claim} (Source: {source}, Confidence: {confidence:.2f})"
+                    )
+
+            facts_text = "\n".join(facts_with_sources)
+
+            synthesis_prompt = f"""
+            You are an expert assistant tasked with synthesizing a comprehensive answer based on verified facts.
+            
+            User Question: {query}
+            
+            Verified Facts with Sources:
+            {facts_text}
+            
+            Instructions:
+            1. Synthesize a clear, coherent, and accurate answer based on the verified facts
+            2. Address the user's question directly and comprehensively
+            3. Use only the provided verified facts - do not add information not supported by the facts
+            4. Include citations in your answer using the format [1], [2], etc. to reference the sources
+            5. If the facts are insufficient to answer the question, acknowledge this clearly
+            6. Structure your response logically and make it easy to understand
+            7. Keep the response concise but complete (max {params.get('max_length', 500)} words)
+            8. Include specific document IDs and URLs when referencing sources
+            9. At the end, include a "References:" section listing all referenced sources with IDs and URLs
+            
+            Answer:"""
+
+            # Use LLM for synthesis with enhanced client
+            from shared.core.llm_client_v3 import EnhancedLLMClientV3
+
+            llm_client = EnhancedLLMClientV3()
+
+            response = await llm_client.generate_text(
+                prompt=synthesis_prompt,
+                max_tokens=params.get("max_length", 500),
+                temperature=0.3,
+                query=query,
+                use_dynamic_selection=True
+            )
+
+            if response and response.strip():
+                # Add enhanced sources section if not already present
+                if "References:" not in response:
+                    references_section = "\n\n**References:**\n"
+                    for i, fact in enumerate(verified_facts, 1):
+                        if i in source_mapping:
+                            doc_info = source_mapping[i]
+                            references_section += f"[{i}] {doc_info['title']} (ID: {doc_info['doc_id']}, URL: {doc_info['url']})\n"
+                        else:
+                            # Handle both dictionary and object formats
+                            if hasattr(fact, "source"):
+                                source = getattr(fact, "source", "Unknown source")
+                            else:
+                                source = fact.get("source", "Unknown source")
+                            references_section += f"[{i}] {source}\n"
+                    response += references_section
+
+                return response.strip()
+            else:
+                # Fallback to rule-based synthesis if LLM fails
+                return self._fallback_synthesis_with_citations(verified_facts, query, source_docs)
+
+        except Exception as e:
+            logger.error(f"LLM synthesis error: {e}")
+            # Fallback to rule-based synthesis
+            return self._fallback_synthesis_with_citations(verified_facts, query, source_docs)
+
+    def _find_source_doc_for_fact(self, fact: Dict, source_docs: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """
+        Find the source document that corresponds to a verified fact.
+        
+        Args:
+            fact: Verified fact
+            source_docs: List of source documents
+            
+        Returns:
+            Matching source document or None
+        """
+        # Extract claim text
+        if hasattr(fact, "claim"):
+            claim_text = getattr(fact, "claim", "")
+        else:
+            claim_text = fact.get("claim", "")
+        
+        if not claim_text:
+            return None
+        
+        # Simple keyword matching to find best source
+        claim_terms = set(re.findall(r'\b\w+\b', claim_text.lower()))
+        claim_terms = {term for term in claim_terms if len(term) > 3}
+        
+        best_match = None
+        best_score = 0.0
+        
+        for doc in source_docs:
+            content = doc.get("content", "").lower()
+            if not content:
+                continue
+            
+            # Calculate overlap with claim terms
+            content_terms = set(re.findall(r'\b\w+\b', content))
+            content_terms = {term for term in content_terms if len(term) > 3}
+            
+            if not content_terms:
+                continue
+            
+            intersection = len(claim_terms.intersection(content_terms))
+            union = len(claim_terms.union(content_terms))
+            
+            if union > 0:
+                score = intersection / union
+                if score > best_score:
+                    best_score = score
+                    best_match = doc
+        
+        return best_match if best_score > 0.2 else None
+
+    def _fallback_synthesis_with_citations(
+        self, 
+        verified_facts: List[Dict], 
+        query: str, 
+        source_docs: List[Dict[str, Any]]
+    ) -> str:
+        """
+        Fallback synthesis method with citation support when LLM is unavailable.
+        
+        Args:
+            verified_facts: List of verified facts
+            query: Original user query
+            source_docs: Source documents
+            
+        Returns:
+            Synthesized answer with citations
+        """
+        if not verified_facts:
+            return "I don't have enough verified information to provide a comprehensive answer."
+
+        # Group facts by confidence level
+        def get_confidence(fact):
+            if hasattr(fact, "confidence"):
+                return getattr(fact, "confidence", 0)
+            else:
+                return fact.get("confidence", 0)
+
+        def get_claim(fact):
+            if hasattr(fact, "claim"):
+                return getattr(fact, "claim", "")
+            else:
+                return fact.get("claim", "")
+
+        high_conf_facts = [f for f in verified_facts if get_confidence(f) >= 0.8]
+        medium_conf_facts = [f for f in verified_facts if 0.5 <= get_confidence(f) < 0.8]
+        low_conf_facts = [f for f in verified_facts if get_confidence(f) < 0.5]
+
+        # Build answer based on confidence levels
+        answer_parts = []
+        citation_counter = 1
+        citations_used = []
+
+        if high_conf_facts:
+            answer_parts.append("Based on high-confidence verified information:")
+            for fact in high_conf_facts[:3]:  # Limit to top 3 high-confidence facts
+                source_doc = self._find_source_doc_for_fact(fact, source_docs)
+                if source_doc:
+                    doc_id = source_doc.get("doc_id", f"doc_{citation_counter}")
+                    url = source_doc.get("url", "")
+                    answer_parts.append(f"• {get_claim(fact)} [{citation_counter}]")
+                    citations_used.append({
+                        "id": citation_counter,
+                        "doc_id": doc_id,
+                        "url": url,
+                        "title": source_doc.get("title", f"Source {citation_counter}")
+                    })
+                    citation_counter += 1
+                else:
+                    answer_parts.append(f"• {get_claim(fact)}")
+
+        if medium_conf_facts and len(answer_parts) < 4:
+            answer_parts.append("\nAdditional verified information:")
+            for fact in medium_conf_facts[:2]:  # Add up to 2 medium-confidence facts
+                source_doc = self._find_source_doc_for_fact(fact, source_docs)
+                if source_doc:
+                    doc_id = source_doc.get("doc_id", f"doc_{citation_counter}")
+                    url = source_doc.get("url", "")
+                    answer_parts.append(f"• {get_claim(fact)} [{citation_counter}]")
+                    citations_used.append({
+                        "id": citation_counter,
+                        "doc_id": doc_id,
+                        "url": url,
+                        "title": source_doc.get("title", f"Source {citation_counter}")
+                    })
+                    citation_counter += 1
+                else:
+                    answer_parts.append(f"• {get_claim(fact)}")
+
+        if not answer_parts:
+            answer_parts.append("Based on available information:")
+            for fact in verified_facts[:3]:
+                source_doc = self._find_source_doc_for_fact(fact, source_docs)
+                if source_doc:
+                    doc_id = source_doc.get("doc_id", f"doc_{citation_counter}")
+                    url = source_doc.get("url", "")
+                    answer_parts.append(f"• {get_claim(fact)} [{citation_counter}]")
+                    citations_used.append({
+                        "id": citation_counter,
+                        "doc_id": doc_id,
+                        "url": url,
+                        "title": source_doc.get("title", f"Source {citation_counter}")
+                    })
+                    citation_counter += 1
+                else:
+                    answer_parts.append(f"• {get_claim(fact)}")
+
+        # Add references section
+        if citations_used:
+            answer_parts.append("\n\n**References:**")
+            for citation in citations_used:
+                answer_parts.append(f"[{citation['id']}] {citation['title']} (ID: {citation['doc_id']}, URL: {citation['url']})")
+
+        return "\n".join(answer_parts)
 
     async def process_task(
         self, task: Dict[str, Any], context: QueryContext
@@ -504,14 +864,30 @@ class SynthesisAgent(BaseAgent):
             logger.info(f"Prioritized {len(prioritized_source_docs)} recent sources out of {len(source_docs)} total sources")
 
             # Synthesize initial answer using prioritized sources
-            synthesis_result = await self._synthesize_answer(
-                verified_facts, query, synthesis_params
+            synthesis_result = await self._synthesize_answer_with_citations(
+                verified_facts, query, synthesis_params, prioritized_source_docs
             )
 
             # Verify the synthesized answer against source documents
             verification_result = await self._verify_synthesized_answer(
                 synthesis_result, source_docs
             )
+
+            # Use vector search verification for more detailed sentence-by-sentence verification
+            from services.factcheck_service.factcheck_agent import FactCheckAgent
+            fact_checker = FactCheckAgent()
+            
+            vector_verification_result = await fact_checker.verify_answer_with_vector_search(
+                synthesis_result, source_docs
+            )
+            
+            # Use the more detailed vector verification result if available
+            if vector_verification_result and vector_verification_result.total_sentences > 0:
+                verification_result = vector_verification_result
+                logger.info(f"Vector search verification completed: {verification_result.summary}")
+                logger.info(f"Revised sentences: {len(verification_result.revised_sentences) if verification_result.revised_sentences else 0}")
+            else:
+                logger.info(f"Standard verification completed: {verification_result.summary}")
 
             # Append disclaimer if unsupported facts exist or sources are outdated
             final_answer = self._append_verification_disclaimer(
@@ -549,6 +925,8 @@ class SynthesisAgent(BaseAgent):
                     "has_citations": "[1]" in cited_answer or "[2]" in cited_answer,
                     "source_freshness_score": verification_result.source_freshness.get("freshness_score", 1.0) if verification_result.source_freshness else 1.0,
                     "prioritized_recent_sources": len(prioritized_source_docs),
+                    "revised_sentences_count": len(verification_result.revised_sentences) if verification_result.revised_sentences else 0,
+                    "verification_method": verification_result.verification_method,
                 },
             )
 
@@ -564,6 +942,8 @@ class SynthesisAgent(BaseAgent):
                     "unsupported_sentences_count": len(verification_result.unsupported_sentences),
                     "outdated_sentences_count": len(verification_result.outdated_sentences) if verification_result.outdated_sentences else 0,
                     "source_freshness_score": verification_result.source_freshness.get("freshness_score", 1.0) if verification_result.source_freshness else 1.0,
+                    "revised_sentences_count": len(verification_result.revised_sentences) if verification_result.revised_sentences else 0,
+                    "verification_method": verification_result.verification_method,
                 },
             )
 

@@ -1,4 +1,6 @@
+from ..\shared\core\api\config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Manage Zero Budget LLM
 Monitoring and management script for Ollama and Hugging Face integration
@@ -137,9 +139,9 @@ class ZeroBudgetLLMManager:
         """Check if Hugging Face API is healthy."""
         try:
             # Check for any available token
-            write_token = os.getenv("HUGGINGFACE_WRITE_TOKEN")
-            read_token = os.getenv("HUGGINGFACE_READ_TOKEN")
-            legacy_api_key = os.getenv("HUGGINGFACE_API_KEY")
+            write_token = settings.huggingface_write_token
+            read_token = settings.huggingface_read_token
+            legacy_api_key = settings.huggingface_api_key
             
             token = write_token or read_token or legacy_api_key
             if not token:

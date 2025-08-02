@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 User Management Module for Universal Knowledge Platform.
 
@@ -641,7 +643,7 @@ class UserService:
         self._config = config or {}
 
         # JWT configuration
-        self._jwt_secret = os.getenv("JWT_SECRET_KEY", secrets.token_urlsafe(32))
+        self._jwt_secret = settings.jwt_secret_key or secrets.token_urlsafe(32)
         self._jwt_algorithm = TOKEN_ALGORITHM
 
         logger.info(

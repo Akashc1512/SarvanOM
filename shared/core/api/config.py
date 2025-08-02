@@ -84,6 +84,15 @@ class LogLevel(str, Enum):
     ERROR = "ERROR"
     CRITICAL = "CRITICAL"
 
+    @classmethod
+    def from_string(cls, level: str) -> "LogLevel":
+        """Create LogLevel from string (case-insensitive)."""
+        try:
+            return cls(level.upper())
+        except ValueError:
+            logger.warning(f"Unknown log level '{level}', defaulting to INFO")
+            return cls.INFO
+
 
 # Custom types
 Port = conint(ge=1, le=65535)
@@ -198,6 +207,15 @@ class DatabaseSettings(SecureSettings):
         default=None, description="SQLite file for testing"
     )
 
+    # PostgreSQL specific settings
+    postgres_host: str = Field(default="localhost", description="PostgreSQL host")
+    postgres_port: Port = Field(default=5432, description="PostgreSQL port")
+    postgres_db: str = Field(default="sarvanom", description="PostgreSQL database name")
+    postgres_user: str = Field(default="postgres", description="PostgreSQL username")
+    postgres_password: Optional[SecretStr] = Field(
+        default=None, description="PostgreSQL password"
+    )
+
     @validator("database_url", pre=True)
     def build_database_url(
         cls, v: Optional[str], values: Dict[str, Any]
@@ -207,11 +225,11 @@ class DatabaseSettings(SecureSettings):
             return v
 
         # Build from components
-        user = os.getenv("DB_USER")
-        password = os.getenv("DB_PASSWORD")
-        host = os.getenv("DB_HOST", "localhost")
-        port = os.getenv("DB_PORT", "5432")
-        name = os.getenv("DB_NAME", "universal_knowledge")
+        user = settings.postgres_user or "postgres"
+        password = settings.postgres_password
+        host = settings.postgres_host or "localhost"
+        port = settings.postgres_port or "5432"
+        name = settings.postgres_db or "sarvanom"
 
         if user and password:
             return f"postgresql://{user}:{password}@{host}:{port}/{name}"
@@ -314,12 +332,15 @@ class AISettings(SecureSettings):
     openai_organization: Optional[str] = Field(
         default=None, description="OpenAI organization ID"
     )
-    openai_model: str = Field(default="gpt-4", description="Default OpenAI model")
+    openai_model: str = Field(default="gpt-4o-mini", description="Default OpenAI model")
     openai_max_tokens: conint(ge=1) = Field(
         default=2000, description="Max tokens per request"
     )
     openai_temperature: confloat(ge=0.0, le=2.0) = Field(
         default=0.7, description="Model temperature"
+    )
+    openai_embedding_model: str = Field(
+        default="text-embedding-3-small", description="OpenAI embedding model"
     )
 
     # Anthropic
@@ -327,7 +348,53 @@ class AISettings(SecureSettings):
         default=None, description="Anthropic API key"
     )
     anthropic_model: str = Field(
-        default="claude-3-opus-20240229", description="Default Anthropic model"
+        default="claude-3-haiku-20240307", description="Default Anthropic model"
+    )
+
+    # Azure OpenAI
+    azure_openai_api_key: Optional[SecretStr] = Field(
+        default=None, description="Azure OpenAI API key"
+    )
+    azure_openai_endpoint: Optional[HttpUrl] = Field(
+        default=None, description="Azure OpenAI endpoint"
+    )
+    azure_openai_deployment_name: Optional[str] = Field(
+        default=None, description="Azure OpenAI deployment name"
+    )
+
+    # Google AI
+    google_api_key: Optional[SecretStr] = Field(
+        default=None, description="Google AI API key"
+    )
+    google_model: str = Field(default="gemini-pro", description="Default Google model")
+
+    # Ollama (Local Models - FREE)
+    ollama_enabled: bool = Field(default=True, description="Enable Ollama provider")
+    ollama_base_url: HttpUrl = Field(
+        default="http://localhost:11434", description="Ollama server URL"
+    )
+    ollama_model: str = Field(default="llama3.2:3b", description="Default Ollama model")
+
+    # Hugging Face (API Models - FREE)
+    huggingface_write_token: Optional[SecretStr] = Field(
+        default=None, description="Hugging Face write token"
+    )
+    huggingface_read_token: Optional[SecretStr] = Field(
+        default=None, description="Hugging Face read token"
+    )
+    huggingface_api_key: Optional[SecretStr] = Field(
+        default=None, description="Hugging Face API key (legacy)"
+    )
+    huggingface_model: str = Field(
+        default="microsoft/DialoGPT-medium", description="Default Hugging Face model"
+    )
+
+    # Model Selection Configuration
+    use_dynamic_selection: bool = Field(
+        default=True, description="Enable dynamic model selection"
+    )
+    prioritize_free_models: bool = Field(
+        default=True, description="Prioritize free models"
     )
 
     # Vector database
@@ -352,10 +419,105 @@ class AISettings(SecureSettings):
     @validator("vector_db_provider")
     def validate_vector_provider(cls, v: str) -> str:
         """Validate vector DB provider."""
-        valid_providers = {"pinecone", "weaviate", "milvus"}
+        valid_providers = {"pinecone", "weaviate", "milvus", "qdrant", "meilisearch"}
         if v.lower() not in valid_providers:
             raise ValueError(f"Invalid provider. Must be one of: {valid_providers}")
         return v.lower()
+
+
+class VectorDatabaseSettings(SecureSettings):
+    """Vector database configuration settings."""
+
+    # Qdrant
+    qdrant_url: HttpUrl = Field(
+        default="http://localhost:6333", description="Qdrant server URL"
+    )
+    qdrant_api_key: Optional[SecretStr] = Field(
+        default=None, description="Qdrant API key"
+    )
+    qdrant_collection: str = Field(
+        default="sarvanom_vectors", description="Qdrant collection name"
+    )
+    qdrant_port: Port = Field(default=6333, description="Qdrant port")
+    qdrant_cloud_url: Optional[HttpUrl] = Field(
+        default=None, description="Qdrant cloud URL"
+    )
+
+    # Pinecone
+    pinecone_api_key: Optional[SecretStr] = Field(
+        default=None, description="Pinecone API key"
+    )
+    pinecone_environment: str = Field(
+        default="us-east-1", description="Pinecone environment"
+    )
+    pinecone_index_name: str = Field(
+        default="saravanom-pinecone", description="Pinecone index name"
+    )
+
+    # MeiliSearch
+    meilisearch_url: HttpUrl = Field(
+        default="http://localhost:7700", description="MeiliSearch server URL"
+    )
+    meilisearch_master_key: Optional[SecretStr] = Field(
+        default=None, description="MeiliSearch master key"
+    )
+    meilisearch_api_key: Optional[SecretStr] = Field(
+        default=None, description="MeiliSearch API key"
+    )
+    meilisearch_index: str = Field(
+        default="knowledge_base", description="MeiliSearch index name"
+    )
+
+
+class KnowledgeGraphSettings(SecureSettings):
+    """Knowledge Graph configuration settings."""
+
+    # ArangoDB
+    arango_url: HttpUrl = Field(
+        default="http://localhost:8529", description="ArangoDB server URL"
+    )
+    arango_username: str = Field(default="root", description="ArangoDB username")
+    arango_password: Optional[SecretStr] = Field(
+        default=None, description="ArangoDB password"
+    )
+    arango_database: str = Field(
+        default="knowledge_graph", description="ArangoDB database name"
+    )
+    arango_host: str = Field(default="localhost", description="ArangoDB host")
+    arango_port: Port = Field(default=8529, description="ArangoDB port")
+
+    # GraphDB/Neo4j
+    sparql_endpoint: HttpUrl = Field(
+        default="http://localhost:7200/repositories/knowledge",
+        description="SPARQL endpoint URL"
+    )
+
+    # Graph settings
+    graph_update_enabled: bool = Field(
+        default=True, description="Enable graph updates"
+    )
+    graph_auto_extract_entities: bool = Field(
+        default=True, description="Auto-extract entities"
+    )
+    graph_confidence_threshold: confloat(ge=0.0, le=1.0) = Field(
+        default=0.7, description="Graph confidence threshold"
+    )
+    graph_max_entities_per_doc: conint(ge=1) = Field(
+        default=10, description="Max entities per document"
+    )
+    graph_relationship_types: str = Field(
+        default="is_related_to,is_part_of,is_similar_to,enables,requires",
+        description="Graph relationship types"
+    )
+
+    # Knowledge Graph Agent
+    kg_agent_enabled: bool = Field(default=True, description="Enable KG agent")
+    kg_agent_timeout: conint(ge=1) = Field(
+        default=30, description="KG agent timeout"
+    )
+    kg_max_relationship_depth: conint(ge=1) = Field(
+        default=3, description="Max relationship depth"
+    )
 
 
 class MonitoringSettings(SecureSettings):
@@ -386,9 +548,87 @@ class MonitoringSettings(SecureSettings):
     log_format: str = Field(default="json", description="Log format (json/text)")
     log_file: Optional[Path] = Field(default=None, description="Log file path")
 
+    @validator("log_level", pre=True)
+    def validate_log_level(cls, v: Union[str, LogLevel]) -> LogLevel:
+        """Validate and convert log level from string."""
+        if isinstance(v, str):
+            return LogLevel.from_string(v)
+        return v
+
     # Health checks
     health_check_interval: conint(ge=1) = Field(
         default=30, description="Health check interval in seconds"
+    )
+
+
+class MicroservicesSettings(SecureSettings):
+    """Microservices configuration settings."""
+
+    # Service URLs
+    auth_service_url: HttpUrl = Field(
+        default="http://localhost:8001", description="Auth service URL"
+    )
+    auth_service_secret: SecretStr = Field(
+        default_factory=lambda: SecretStr(secrets.token_urlsafe(32)),
+        description="Auth service secret"
+    )
+
+    search_service_url: HttpUrl = Field(
+        default="http://localhost:8002", description="Search service URL"
+    )
+    search_service_secret: SecretStr = Field(
+        default_factory=lambda: SecretStr(secrets.token_urlsafe(32)),
+        description="Search service secret"
+    )
+
+    synthesis_service_url: HttpUrl = Field(
+        default="http://localhost:8003", description="Synthesis service URL"
+    )
+    synthesis_service_secret: SecretStr = Field(
+        default_factory=lambda: SecretStr(secrets.token_urlsafe(32)),
+        description="Synthesis service secret"
+    )
+
+    factcheck_service_url: HttpUrl = Field(
+        default="http://localhost:8004", description="Fact-check service URL"
+    )
+    factcheck_service_secret: SecretStr = Field(
+        default_factory=lambda: SecretStr(secrets.token_urlsafe(32)),
+        description="Fact-check service secret"
+    )
+
+    analytics_service_url: HttpUrl = Field(
+        default="http://localhost:8005", description="Analytics service URL"
+    )
+    analytics_service_secret: SecretStr = Field(
+        default_factory=lambda: SecretStr(secrets.token_urlsafe(32)),
+        description="Analytics service secret"
+    )
+
+
+class AgentSettings(SecureSettings):
+    """Agent configuration settings."""
+
+    # Agent timeout and retry settings
+    agent_timeout_seconds: conint(ge=1) = Field(
+        default=30, description="Agent timeout in seconds"
+    )
+    agent_max_retries: conint(ge=0) = Field(
+        default=3, description="Agent max retries"
+    )
+    agent_backoff_factor: confloat(ge=1.0) = Field(
+        default=2.0, description="Agent backoff factor"
+    )
+
+    # Query processing
+    query_cache_ttl_seconds: conint(ge=0) = Field(
+        default=3600, description="Query cache TTL"
+    )
+    query_max_length: conint(ge=1) = Field(
+        default=2000, description="Query max length"
+    )
+    query_min_confidence: confloat(ge=0.0, le=1.0) = Field(
+        default=0.7, description="Query min confidence"
     )
 
 
@@ -398,7 +638,11 @@ class Settings(
     CacheSettings,
     SecuritySettings,
     AISettings,
+    VectorDatabaseSettings,
+    KnowledgeGraphSettings,
     MonitoringSettings,
+    MicroservicesSettings,
+    AgentSettings,
 ):
     """
     Complete application settings.
@@ -427,6 +671,11 @@ class Settings(
             "websockets": True,
             "graphql": False,
             "admin_panel": True,
+            "expert_review": True,
+            "real_time_collaboration": True,
+            "advanced_analytics": True,
+            "multi_tenant": False,
+            "sso": False,
         },
         description="Feature flags",
     )
@@ -448,6 +697,178 @@ class Settings(
     # Development
     reload: bool = Field(default=False, description="Auto-reload on changes")
     access_log: bool = Field(default=True, description="Enable access logging")
+
+    # Service identification
+    service_name: str = Field(default="sarvanom-backend", description="Service name")
+    version: str = Field(default="1.0.0", description="Service version")
+
+    # Docker configuration
+    docker_enabled: bool = Field(default=True, description="Docker mode enabled")
+    docker_network: str = Field(default="sarvanom-network", description="Docker network")
+
+    # Service URLs for Docker
+    backend_url: HttpUrl = Field(
+        default="http://sarvanom_backend:8000", description="Backend URL"
+    )
+    postgres_url: PostgresDsn = Field(
+        default="postgresql://postgres:password@postgres:5432/sarvanom_db",
+        description="PostgreSQL URL"
+    )
+    redis_url: RedisDsn = Field(
+        default="redis://redis:6379/0", description="Redis URL"
+    )
+    meilisearch_url: HttpUrl = Field(
+        default="http://meilisearch:7700", description="MeiliSearch URL"
+    )
+    arangodb_url: HttpUrl = Field(
+        default="http://arangodb:8529", description="ArangoDB URL"
+    )
+    qdrant_url: HttpUrl = Field(
+        default="http://qdrant:6333", description="Qdrant URL"
+    )
+    ollama_url: HttpUrl = Field(
+        default="http://ollama:11434", description="Ollama URL"
+    )
+
+    # External integrations
+    smtp_host: str = Field(default="smtp.gmail.com", description="SMTP host")
+    smtp_port: Port = Field(default=587, description="SMTP port")
+    smtp_username: Optional[str] = Field(default=None, description="SMTP username")
+    smtp_password: Optional[SecretStr] = Field(default=None, description="SMTP password")
+    smtp_use_tls: bool = Field(default=True, description="SMTP use TLS")
+
+    # File storage
+    storage_type: str = Field(default="local", description="Storage type")
+    storage_bucket: str = Field(default="sarvanom-uploads", description="Storage bucket")
+    storage_region: str = Field(default="us-west-1", description="Storage region")
+
+    # AWS S3
+    aws_access_key_id: Optional[SecretStr] = Field(
+        default=None, description="AWS access key ID"
+    )
+    aws_secret_access_key: Optional[SecretStr] = Field(
+        default=None, description="AWS secret access key"
+    )
+    aws_region: str = Field(default="us-west-1", description="AWS region")
+
+    # Webhooks
+    slack_webhook_url: Optional[HttpUrl] = Field(
+        default=None, description="Slack webhook URL"
+    )
+    slack_channel: str = Field(
+        default="#sarvanom-alerts", description="Slack channel"
+    )
+    discord_webhook_url: Optional[HttpUrl] = Field(
+        default=None, description="Discord webhook URL"
+    )
+
+    # Advanced configuration
+    cache_ttl_seconds: conint(ge=0) = Field(
+        default=3600, description="Cache TTL in seconds"
+    )
+    cache_max_size: conint(ge=1) = Field(
+        default=1000, description="Cache max size"
+    )
+    session_secret: SecretStr = Field(
+        default_factory=lambda: SecretStr(secrets.token_urlsafe(32)),
+        description="Session secret"
+    )
+    session_ttl_seconds: conint(ge=1) = Field(
+        default=86400, description="Session TTL in seconds"
+    )
+
+    # API versioning
+    api_version: str = Field(default="v1", description="API version")
+    api_deprecation_warning_days: conint(ge=0) = Field(
+        default=30, description="API deprecation warning days"
+    )
+
+    # Performance tuning
+    db_pool_size: conint(ge=1) = Field(default=5, description="DB pool size")
+    db_max_overflow: conint(ge=0) = Field(default=10, description="DB max overflow")
+    db_pool_timeout: conint(ge=1) = Field(default=30, description="DB pool timeout")
+    worker_processes: conint(ge=1) = Field(default=2, description="Worker processes")
+    worker_threads: conint(ge=1) = Field(default=2, description="Worker threads")
+    max_memory_usage_mb: conint(ge=1) = Field(
+        default=1024, description="Max memory usage in MB"
+    )
+    garbage_collection_interval: conint(ge=1) = Field(
+        default=300, description="Garbage collection interval"
+    )
+
+    # Backup & Recovery
+    backup_enabled: bool = Field(default=True, description="Enable backups")
+    backup_interval_hours: conint(ge=1) = Field(
+        default=24, description="Backup interval in hours"
+    )
+    backup_retention_days: conint(ge=1) = Field(
+        default=30, description="Backup retention in days"
+    )
+    recovery_mode: bool = Field(default=False, description="Recovery mode")
+    recovery_point_retention_days: conint(ge=1) = Field(
+        default=7, description="Recovery point retention"
+    )
+
+    # Compliance & Audit
+    audit_log_enabled: bool = Field(default=True, description="Enable audit logging")
+    audit_log_level: LogLevel = Field(
+        default=LogLevel.INFO, description="Audit log level"
+    )
+    audit_log_retention_days: conint(ge=1) = Field(
+        default=365, description="Audit log retention"
+    )
+    data_retention_days: conint(ge=1) = Field(
+        default=2555, description="Data retention in days"
+    )
+    anonymize_old_data: bool = Field(
+        default=True, description="Anonymize old data"
+    )
+
+    # Security headers
+    security_headers_enabled: bool = Field(
+        default=True, description="Enable security headers"
+    )
+    content_security_policy: str = Field(
+        default="default-src 'self'", description="Content security policy"
+    )
+
+    # Input validation
+    max_request_size_mb: conint(ge=1) = Field(
+        default=10, description="Max request size in MB"
+    )
+    max_query_length: conint(ge=1) = Field(
+        default=2000, description="Max query length"
+    )
+
+    # Rate limiting per user
+    user_rate_limit_requests_per_minute: conint(ge=1) = Field(
+        default=30, description="User rate limit requests per minute"
+    )
+    user_rate_limit_tokens_per_minute: conint(ge=1) = Field(
+        default=5000, description="User rate limit tokens per minute"
+    )
+
+    # Development & Testing
+    mock_ai_responses: bool = Field(
+        default=False, description="Mock AI responses"
+    )
+    skip_authentication: bool = Field(
+        default=False, description="Skip authentication"
+    )
+    enable_debug_endpoints: bool = Field(
+        default=False, description="Enable debug endpoints"
+    )
+    auto_reload: bool = Field(default=False, description="Auto reload")
+    test_mode: bool = Field(default=False, description="Test mode")
+    mock_providers: bool = Field(default=False, description="Mock providers")
+
+    # Test database
+    test_database_url: str = Field(
+        default="sqlite:///test.db", description="Test database URL"
+    )
+    test_redis_url: RedisDsn = Field(
+        default="redis://redis:6379/1", description="Test Redis URL"
+    )
 
     @root_validator(pre=True)
     def validate_environment(cls, values: Dict[str, Any]) -> Dict[str, Any]:
@@ -534,8 +955,8 @@ class Settings(
         warnings = []
 
         # Check AI configuration
-        if not self.openai_api_key and not self.anthropic_api_key:
-            warnings.append("No AI provider API key configured")
+        if not self.openai_api_key and not self.anthropic_api_key and not self.ollama_enabled:
+            warnings.append("No AI provider configured")
 
         # Check database configuration
         if not self.database_url and self.environment != Environment.TESTING:

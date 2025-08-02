@@ -1,3 +1,5 @@
+# from ..\api\config import get_settings
+# settings = get_settings()
 """
 ArangoDB Knowledge Graph Agent
 Refactored from Neo4j to use ArangoDB as the graph database backend.
@@ -10,6 +12,13 @@ import os
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
+
+# Load environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    logging.warning("python-dotenv not available. Install with: pip install python-dotenv")
 
 try:
     from arango import ArangoClient
@@ -930,3 +939,603 @@ class ArangoDBKnowledgeGraphAgent(BaseAgent):
             "relationships_count": len(self.mock_knowledge_graph["relationships"]) if hasattr(self, 'mock_knowledge_graph') else 0,
             "last_updated": datetime.now().isoformat()
         }
+
+    async def upsert_document_entities(self, document_id: str, content: str, metadata: Dict[str, Any] = None) -> bool:
+        """
+        Upsert entities extracted from a document into the knowledge graph.
+        
+        Args:
+            document_id: Unique identifier for the document
+            content: Document content to extract entities from
+            metadata: Additional metadata for the document
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Extract entities from content
+            entities = await self._extract_entities_enhanced(content)
+            
+            if not entities:
+                logger.debug(f"No entities found in document: {document_id}")
+                return True
+            
+            # Create entity nodes
+            created_entities = []
+            for entity in entities:
+                node_id = f"entity_{entity['text'].lower().replace(' ', '_')}"
+                
+                # Create or update entity node
+                success = await self.create_knowledge_node(
+                    node_id,
+                    entity['type'],
+                    {
+                        "name": entity['text'],
+                        "description": f"Entity extracted from document: {document_id}",
+                        "confidence": entity['confidence'],
+                        "source_document": document_id,
+                        "source_type": metadata.get('source_type', 'unknown') if metadata else 'unknown',
+                        "extraction_timestamp": datetime.now().isoformat()
+                    }
+                )
+                
+                if success:
+                    created_entities.append({
+                        "id": node_id,
+                        "name": entity['text'],
+                        "type": entity['type'],
+                        "confidence": entity['confidence']
+                    })
+            
+            # Create relationships between entities in the same document
+            if len(created_entities) > 1:
+                await self._create_document_relationships(created_entities, document_id, metadata)
+            
+            logger.info(f"Upserted {len(created_entities)} entities from document: {document_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to upsert document entities: {e}")
+            return False
+
+    async def _extract_entities_enhanced(self, content: str) -> List[Dict[str, Any]]:
+        """
+        Enhanced entity extraction using LLM and multiple strategies.
+        
+        Args:
+            content: Document content
+            
+        Returns:
+            List of extracted entities with enhanced metadata
+        """
+        try:
+            # Use LLM for advanced entity extraction
+            llm_prompt = f"""
+            Extract named entities from this content:
+            "{content[:1000]}..."
+            
+            Return a JSON array with entities in this format:
+            [
+                {{
+                    "text": "entity name",
+                    "type": "PERSON|ORGANIZATION|LOCATION|TECHNOLOGY|CONCEPT|OTHER",
+                    "confidence": 0.0-1.0,
+                    "relevance": "high|medium|low",
+                    "description": "brief description"
+                }}
+            ]
+            
+            Focus on entities that are important for knowledge graph construction.
+            Limit to the most relevant entities.
+            """
+            
+            try:
+                response = await self.llm_client.generate_text(
+                    prompt=llm_prompt,
+                    max_tokens=500,
+                    use_dynamic_selection=True
+                )
+                
+                if response:
+                    import json
+                    try:
+                        entities = json.loads(response)
+                        if isinstance(entities, list):
+                            # Filter by confidence threshold
+                            entities = [e for e in entities if e.get('confidence', 0) >= 0.7]
+                            # Limit number of entities
+                            entities = entities[:10]
+                            return entities
+                    except json.JSONDecodeError:
+                        pass
+            except Exception as e:
+                logger.warning(f"LLM entity extraction failed: {e}")
+            
+            # Fallback to basic entity extraction
+            return await self._extract_entities(content)
+            
+        except Exception as e:
+            logger.error(f"Enhanced entity extraction failed: {e}")
+            return []
+
+    async def upsert_document_entities_enhanced(self, document_id: str, content: str, metadata: Dict[str, Any] = None) -> bool:
+        """
+        Enhanced upsert of entities extracted from a document into the knowledge graph.
+        
+        Args:
+            document_id: Unique identifier for the document
+            content: Document content to extract entities from
+            metadata: Additional metadata for the document
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Extract entities from content using enhanced extraction
+            entities = await self._extract_entities_enhanced(content)
+            
+            if not entities:
+                logger.debug(f"No entities found in document: {document_id}")
+                return True
+            
+            # Create entity nodes with enhanced metadata
+            created_entities = []
+            for entity in entities:
+                node_id = f"entity_{entity['text'].lower().replace(' ', '_').replace('-', '_')}"
+                
+                # Enhanced properties
+                properties = {
+                    "name": entity['text'],
+                    "description": entity.get('description', f"Entity extracted from document: {document_id}"),
+                    "confidence": entity['confidence'],
+                    "relevance": entity.get('relevance', 'medium'),
+                    "source_document": document_id,
+                    "source_type": metadata.get('source_type', 'unknown') if metadata else 'unknown',
+                    "extraction_timestamp": datetime.now().isoformat(),
+                    "content_preview": content[:200] + "..." if len(content) > 200 else content
+                }
+                
+                # Create or update entity node
+                success = await self.create_knowledge_node(node_id, entity['type'], properties)
+                
+                if success:
+                    created_entities.append({
+                        "id": node_id,
+                        "name": entity['text'],
+                        "type": entity['type'],
+                        "confidence": entity['confidence'],
+                        "properties": properties
+                    })
+            
+            # Create enhanced relationships between entities
+            if len(created_entities) > 1:
+                await self._create_enhanced_document_relationships(created_entities, document_id, metadata, content)
+            
+            # Link to existing entities in the graph
+            await self._link_to_existing_entities(created_entities, document_id, metadata)
+            
+            logger.info(f"Enhanced upsert of {len(created_entities)} entities from document: {document_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to enhanced upsert document entities: {e}")
+            return False
+
+    async def _create_enhanced_document_relationships(self, entities: List[Dict], document_id: str, 
+                                                    metadata: Dict[str, Any] = None, content: str = "") -> None:
+        """
+        Create enhanced relationships between entities from the same document.
+        
+        Args:
+            entities: List of entity dictionaries
+            document_id: Source document ID
+            metadata: Document metadata
+            content: Document content for context
+        """
+        try:
+            # Create relationships between all pairs of entities
+            for i, entity1 in enumerate(entities):
+                for j, entity2 in enumerate(entities[i+1:], i+1):
+                    # Determine enhanced relationship type
+                    relationship_type = self._determine_enhanced_entity_relationship_type(entity1, entity2, content)
+                    
+                    # Calculate relationship strength
+                    relationship_strength = self._calculate_relationship_strength(entity1, entity2, content)
+                    
+                    # Create relationship with enhanced properties
+                    await self.create_relationship(
+                        entity1["id"],
+                        entity2["id"],
+                        relationship_type,
+                        {
+                            "description": f"Enhanced relationship from document: {document_id}",
+                            "confidence": min(entity1["confidence"], entity2["confidence"]),
+                            "source_document": document_id,
+                            "source_type": metadata.get('source_type', 'unknown') if metadata else 'unknown',
+                            "created_timestamp": datetime.now().isoformat(),
+                            "relationship_strength": relationship_strength,
+                            "content_context": content[:100] + "..." if len(content) > 100 else content
+                        }
+                    )
+                    
+        except Exception as e:
+            logger.error(f"Failed to create enhanced document relationships: {e}")
+
+    async def _link_to_existing_entities(self, new_entities: List[Dict], document_id: str, 
+                                       metadata: Dict[str, Any] = None) -> None:
+        """
+        Link new entities to existing entities in the knowledge graph.
+        
+        Args:
+            new_entities: List of new entity dictionaries
+            document_id: Source document ID
+            metadata: Document metadata
+        """
+        try:
+            for new_entity in new_entities:
+                # Query for similar existing entities
+                similar_entities = await self.query_related_entities([new_entity["name"]], max_depth=1)
+                
+                for existing_entity in similar_entities.entities:
+                    if existing_entity.name != new_entity["name"]:
+                        # Create relationship to existing entity
+                        relationship_type = self._determine_enhanced_entity_relationship_type(
+                            new_entity, 
+                            {"name": existing_entity.name, "type": existing_entity.type}, 
+                            ""
+                        )
+                        
+                        await self.create_relationship(
+                            new_entity["id"],
+                            existing_entity.id,
+                            relationship_type,
+                            {
+                                "description": f"Link from document: {document_id}",
+                                "confidence": new_entity["confidence"],
+                                "source_document": document_id,
+                                "source_type": metadata.get('source_type', 'unknown') if metadata else 'unknown',
+                                "created_timestamp": datetime.now().isoformat(),
+                                "link_type": "document_to_existing"
+                            }
+                        )
+                        
+        except Exception as e:
+            logger.error(f"Failed to link to existing entities: {e}")
+
+    def _determine_enhanced_entity_relationship_type(self, entity1: Dict, entity2: Dict, content: str = "") -> str:
+        """
+        Determine enhanced relationship type between two entities.
+        
+        Args:
+            entity1: First entity
+            entity2: Second entity
+            content: Document content for context
+            
+        Returns:
+            Relationship type
+        """
+        # Enhanced relationship type determination
+        type1 = entity1["type"].lower()
+        type2 = entity2["type"].lower()
+        name1 = entity1["name"].lower()
+        name2 = entity2["name"].lower()
+        
+        # Check content for relationship indicators
+        content_lower = content.lower()
+        
+        # Technology relationships
+        if any(tech in type1 or tech in type2 for tech in ["technology", "framework", "tool"]):
+            if any(word in content_lower for word in ["enables", "supports", "powers"]):
+                return "enables"
+            elif any(word in content_lower for word in ["requires", "needs", "depends"]):
+                return "requires"
+            else:
+                return "is_related_to"
+        
+        # Language relationships
+        if any(lang in type1 or lang in type2 for lang in ["language", "programming"]):
+            if any(word in content_lower for word in ["used with", "compatible", "works with"]):
+                return "works_with"
+            else:
+                return "is_related_to"
+        
+        # Organization relationships
+        if any(org in type1 or org in type2 for org in ["organization", "company"]):
+            if any(word in content_lower for word in ["partners", "collaborates", "works with"]):
+                return "collaborates_with"
+            else:
+                return "is_related_to"
+        
+        # Person relationships
+        if any(person in type1 or person in type2 for person in ["person", "individual"]):
+            if any(word in content_lower for word in ["works with", "collaborates", "teams"]):
+                return "works_with"
+            else:
+                return "is_related_to"
+        
+        # Similar entities
+        if type1 == type2:
+            return "is_similar_to"
+        
+        # Default relationship
+        return "is_related_to"
+
+    def _calculate_relationship_strength(self, entity1: Dict, entity2: Dict, content: str) -> float:
+        """
+        Calculate the strength of relationship between two entities.
+        
+        Args:
+            entity1: First entity
+            entity2: Second entity
+            content: Document content
+            
+        Returns:
+            Relationship strength (0.0 to 1.0)
+        """
+        # Base strength on entity confidence
+        base_strength = min(entity1["confidence"], entity2["confidence"])
+        
+        # Boost strength if entities appear close together in content
+        if content:
+            content_lower = content.lower()
+            name1 = entity1["name"].lower()
+            name2 = entity2["name"].lower()
+            
+            if name1 in content_lower and name2 in content_lower:
+                # Find positions of both entities
+                pos1 = content_lower.find(name1)
+                pos2 = content_lower.find(name2)
+                
+                # Calculate distance
+                distance = abs(pos1 - pos2)
+                
+                # Closer entities get higher strength
+                if distance < 50:
+                    base_strength += 0.2
+                elif distance < 100:
+                    base_strength += 0.1
+                elif distance < 200:
+                    base_strength += 0.05
+        
+        return min(1.0, base_strength)
+
+    async def maintain_graph_consistency(self) -> bool:
+        """
+        Maintain consistency of the knowledge graph by cleaning up orphaned nodes and relationships.
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            if not self.connected or not self.db:
+                logger.warning("Cannot maintain graph consistency - ArangoDB not connected")
+                return False
+            
+            # Remove orphaned relationships (where source or target entity doesn't exist)
+            aql_query = """
+            FOR rel IN relationships
+            LET source_exists = DOCUMENT(rel._from) != null
+            LET target_exists = DOCUMENT(rel._to) != null
+            FILTER !source_exists OR !target_exists
+            REMOVE rel IN relationships
+            """
+            
+            result = self.db.aql.execute(aql_query)
+            logger.info(f"Cleaned up {len(result)} orphaned relationships")
+            
+            # Remove duplicate relationships
+            aql_query = """
+            FOR rel IN relationships
+            COLLECT from_id = rel._from, to_id = rel._to, rel_type = rel.type
+            LET duplicates = (FOR r IN relationships
+                           FILTER r._from == from_id AND r._to == to_id AND r.type == rel_type
+                           RETURN r)
+            FILTER LENGTH(duplicates) > 1
+            FOR dup IN duplicates
+            LIMIT LENGTH(duplicates) - 1
+            REMOVE dup IN relationships
+            """
+            
+            result = self.db.aql.execute(aql_query)
+            logger.info(f"Cleaned up {len(result)} duplicate relationships")
+            
+            # Update entity confidence scores based on relationship count
+            aql_query = """
+            FOR entity IN entities
+            LET rel_count = LENGTH(FOR rel IN relationships
+                                 FILTER rel._from == entity._id OR rel._to == entity._id
+                                 RETURN rel)
+            UPDATE entity WITH {relationship_count: rel_count} IN entities
+            """
+            
+            result = self.db.aql.execute(aql_query)
+            logger.info(f"Updated {len(result)} entity confidence scores")
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to maintain graph consistency: {e}")
+            return False
+
+    async def get_graph_statistics(self) -> Dict[str, Any]:
+        """
+        Get statistics about the knowledge graph.
+        
+        Returns:
+            Dictionary with graph statistics
+        """
+        try:
+            if not self.connected or not self.db:
+                return {
+                    "total_entities": len(self.mock_knowledge_graph["entities"]),
+                    "total_relationships": len(self.mock_knowledge_graph["relationships"]),
+                    "connected": False
+                }
+            
+            # Get entity count
+            entity_count = self.db.aql.execute("RETURN LENGTH(FOR doc IN entities RETURN doc)")[0]
+            
+            # Get relationship count
+            relationship_count = self.db.aql.execute("RETURN LENGTH(FOR doc IN relationships RETURN doc)")[0]
+            
+            # Get entity types distribution
+            entity_types = self.db.aql.execute("""
+                FOR doc IN entities
+                COLLECT type = doc.type WITH COUNT INTO count
+                RETURN {type: type, count: count}
+            """)
+            
+            # Get relationship types distribution
+            relationship_types = self.db.aql.execute("""
+                FOR doc IN relationships
+                COLLECT type = doc.type WITH COUNT INTO count
+                RETURN {type: type, count: count}
+            """)
+            
+            return {
+                "total_entities": entity_count,
+                "total_relationships": relationship_count,
+                "entity_types": entity_types,
+                "relationship_types": relationship_types,
+                "connected": True,
+                "last_updated": datetime.now().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get graph statistics: {e}")
+            return {
+                "error": str(e),
+                "connected": self.connected
+            }
+
+    async def query_related_entities(self, query_entities: List[str], max_depth: int = 2) -> KnowledgeGraphResult:
+        """
+        Query for entities related to the given query entities.
+        
+        Args:
+            query_entities: List of entity names to search for
+            max_depth: Maximum depth for relationship traversal
+            
+        Returns:
+            KnowledgeGraphResult with related entities and relationships
+        """
+        try:
+            if not self.connected or not self.db:
+                return await self._query_mock_related_entities(query_entities)
+            
+            # Build AQL query for related entities
+            aql_query = """
+            FOR entity IN entities
+            FOR rel IN relationships
+            LET related_entity = DOCUMENT(rel._to)
+            FILTER entity.name IN @query_entities OR related_entity.name IN @query_entities
+            RETURN {
+                entity: entity,
+                relationship: rel,
+                related_entity: related_entity
+            }
+            LIMIT 50
+            """
+            
+            parameters = {"query_entities": query_entities}
+            result = self.db.aql.execute(aql_query, parameters)
+            
+            # Parse results
+            found_entities = []
+            found_relationships = []
+            entity_ids = set()
+            
+            for record in result:
+                if 'entity' in record and record['entity']:
+                    entity = record['entity']
+                    if entity['_id'] not in entity_ids:
+                        found_entities.append(EntityNode(
+                            id=entity.get('id', ''),
+                            name=entity.get('name', ''),
+                            type=entity.get('type', 'Node'),
+                            properties=entity
+                        ))
+                        entity_ids.add(entity['_id'])
+                
+                if 'related_entity' in record and record['related_entity']:
+                    related_entity = record['related_entity']
+                    if related_entity['_id'] not in entity_ids:
+                        found_entities.append(EntityNode(
+                            id=related_entity.get('id', ''),
+                            name=related_entity.get('name', ''),
+                            type=related_entity.get('type', 'Node'),
+                            properties=related_entity
+                        ))
+                        entity_ids.add(related_entity['_id'])
+                
+                if 'relationship' in record and record['relationship']:
+                    rel = record['relationship']
+                    found_relationships.append(Relationship(
+                        source_id=rel.get('_from', ''),
+                        target_id=rel.get('_to', ''),
+                        relationship_type=rel.get('type', ''),
+                        properties=rel
+                    ))
+            
+            return KnowledgeGraphResult(
+                entities=found_entities,
+                relationships=found_relationships,
+                paths=[],
+                query_entities=query_entities,
+                confidence=0.9 if found_entities else 0.3,
+                processing_time_ms=0,
+                metadata={
+                    "query_type": "related_entities",
+                    "entities_found": len(found_entities),
+                    "relationships_found": len(found_relationships),
+                    "max_depth": max_depth
+                }
+            )
+            
+        except Exception as e:
+            logger.error(f"Failed to query related entities: {e}")
+            return await self._query_mock_related_entities(query_entities)
+
+    async def _query_mock_related_entities(self, query_entities: List[str]) -> KnowledgeGraphResult:
+        """Mock implementation for related entities query."""
+        found_entities = []
+        found_relationships = []
+        
+        # Find entities in mock knowledge graph
+        for entity_name in query_entities:
+            for entity_id, entity_data in self.mock_knowledge_graph["entities"].items():
+                if entity_name.lower() in entity_data["name"].lower():
+                    found_entities.append(EntityNode(
+                        id=entity_id,
+                        name=entity_data["name"],
+                        type=entity_data["type"],
+                        properties=entity_data["properties"]
+                    ))
+        
+        # Find relationships involving these entities
+        for rel in self.mock_knowledge_graph["relationships"]:
+            source_entity = next((e for e in found_entities if e.id == rel["source"]), None)
+            target_entity = next((e for e in found_entities if e.id == rel["target"]), None)
+            
+            if source_entity and target_entity:
+                found_relationships.append(Relationship(
+                    source_id=rel["source"],
+                    target_id=rel["target"],
+                    relationship_type=rel["type"],
+                    properties=rel["properties"]
+                ))
+        
+        return KnowledgeGraphResult(
+            entities=found_entities,
+            relationships=found_relationships,
+            paths=[],
+            query_entities=query_entities,
+            confidence=0.85 if found_entities else 0.3,
+            processing_time_ms=0,
+            metadata={
+                "query_type": "related_entities",
+                "entities_found": len(found_entities),
+                "relationships_found": len(found_relationships),
+                "mock_data": True
+            }
+        )

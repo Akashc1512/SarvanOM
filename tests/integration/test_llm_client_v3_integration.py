@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Integration tests for LLM Client v3.
 
@@ -45,8 +47,8 @@ class TestLLMClientV3Integration:
     def setup(self):
         """Setup test environment."""
         # Ensure we have API keys for testing
-        self.openai_key = os.getenv("OPENAI_API_KEY")
-        self.anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+        self.openai_key = settings.openai_api_key
+        self.anthropic_key = settings.anthropic_api_key
         
         # Skip tests if no API keys are available
         if not self.openai_key and not self.anthropic_key:

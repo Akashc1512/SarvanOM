@@ -1,4 +1,6 @@
+from shared.core.api.config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Test script for Refactored ArangoDB KnowledgeGraphAgent
 Demonstrates the complete Neo4j to ArangoDB refactoring.
@@ -128,10 +130,10 @@ async def test_arangodb_connection():
     
     # Check environment variables
     arango_vars = {
-        "ARANGO_URL": os.getenv("ARANGO_URL"),
-        "ARANGO_USERNAME": os.getenv("ARANGO_USERNAME"),
-        "ARANGO_PASSWORD": os.getenv("ARANGO_PASSWORD"),
-        "ARANGO_DATABASE": os.getenv("ARANGO_DATABASE")
+        "ARANGO_URL": settings.arango_url,
+        "ARANGO_USERNAME": settings.arango_username,
+        "ARANGO_PASSWORD": settings.arango_password,
+        "ARANGO_DATABASE": settings.arango_database
     }
     
     print("Environment Variables:")

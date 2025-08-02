@@ -31,12 +31,14 @@ interface Task {
 interface TaskListProps {
   answer?: string;
   query?: string;
+  queryId?: string;
   onTasksGenerated?: (tasks: Task[]) => void;
 }
 
 export function TaskList({
   answer,
   query,
+  queryId,
   onTasksGenerated,
 }: TaskListProps) {
   const { toast } = useToast();

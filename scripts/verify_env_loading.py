@@ -1,4 +1,6 @@
+from ..\shared\core\api\config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Verify Environment Variable Loading
 Checks that all environment variables are properly loaded for zero-budget LLM integration
@@ -114,21 +116,21 @@ def verify_env_loading():
     print("\n🏥 Provider Availability:")
     
     # Check Ollama
-    ollama_enabled = os.getenv("OLLAMA_ENABLED", "true").lower() == "true"
+    ollama_enabled = getattr(settings.ollama_enabled, 'value', "true") if hasattr(settings.ollama_enabled, 'value') else settings.ollama_enabled.lower() == "true"
     print(f"   {'✅' if ollama_enabled else '❌'} Ollama: {'Enabled' if ollama_enabled else 'Disabled'}")
     
     # Check Hugging Face
-    hf_write = os.getenv("HUGGINGFACE_WRITE_TOKEN")
-    hf_read = os.getenv("HUGGINGFACE_READ_TOKEN")
-    hf_legacy = os.getenv("HUGGINGFACE_API_KEY")
+    hf_write = settings.huggingface_write_token
+    hf_read = settings.huggingface_read_token
+    hf_legacy = settings.huggingface_api_key
     hf_available = any([hf_write, hf_read, hf_legacy])
     print(f"   {'✅' if hf_available else '❌'} Hugging Face: {'Available' if hf_available else 'Not configured'}")
     
     # Check paid providers
-    openai_available = bool(os.getenv("OPENAI_API_KEY"))
-    anthropic_available = bool(os.getenv("ANTHROPIC_API_KEY"))
-    azure_available = bool(os.getenv("AZURE_OPENAI_API_KEY"))
-    google_available = bool(os.getenv("GOOGLE_API_KEY"))
+    openai_available = bool(settings.openai_api_key)
+    anthropic_available = bool(settings.anthropic_api_key)
+    azure_available = bool(settings.azure_openai_api_key)
+    google_available = bool(settings.google_api_key)
     
     print(f"   {'✅' if openai_available else '❌'} OpenAI: {'Available' if openai_available else 'Not configured'}")
     print(f"   {'✅' if anthropic_available else '❌'} Anthropic: {'Available' if anthropic_available else 'Not configured'}")

@@ -1,3 +1,5 @@
+# from ..\api\config import get_settings
+# settings = get_settings()
 """
 LeadOrchestrator Implementation for Multi-Agent Knowledge Platform
 This module implements the central orchestrator that coordinates all agents.
@@ -136,10 +138,10 @@ class LeadOrchestrator:
             # DEEP DEBUG: Log environment configuration with masking
             logger.info("🔍 DEEP DEBUG: Environment Configuration Check")
             env_vars = {
-                "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
-                "ANTHROPIC_API_KEY": os.getenv("ANTHROPIC_API_KEY"),
-                "DATABASE_URL": os.getenv("DATABASE_URL"),
-                "REDIS_URL": os.getenv("REDIS_URL"),
+                "OPENAI_API_KEY": settings.openai_api_key,
+                "ANTHROPIC_API_KEY": settings.anthropic_api_key,
+                "DATABASE_URL": settings.database_url,
+                "REDIS_URL": settings.redis_url,
             }
             for key, value in env_vars.items():
                 if value:

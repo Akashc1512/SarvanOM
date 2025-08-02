@@ -1,3 +1,5 @@
+from ..\shared\core\api\config import get_settings
+settings = get_settings()
 """
 Frontend States Table Migration Script - Universal Knowledge Platform
 
@@ -39,7 +41,7 @@ def create_frontend_states_table():
     """
     try:
         # Get database connection details from environment
-        db_url = os.getenv('DATABASE_URL')
+        db_url = settings.database_url
         if not db_url:
             print("❌ Error: DATABASE_URL environment variable not found")
             print("Please set DATABASE_URL in your .env file")
@@ -112,7 +114,7 @@ def verify_table_structure():
     4. Constraints are properly set
     """
     try:
-        db_url = os.getenv('DATABASE_URL')
+        db_url = settings.database_url
         if not db_url:
             print("❌ Error: DATABASE_URL environment variable not found")
             return False
@@ -202,7 +204,7 @@ def insert_sample_data():
     Insert sample data into the frontend_states table for testing.
     """
     try:
-        db_url = os.getenv('DATABASE_URL')
+        db_url = settings.database_url
         if not db_url:
             print("❌ Error: DATABASE_URL environment variable not found")
             return False

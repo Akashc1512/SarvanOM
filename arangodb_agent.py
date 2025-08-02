@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 ArangoDB Knowledge Graph Agent
 Free alternative to Neo4j KnowledgeGraphAgent
@@ -68,10 +70,10 @@ class ArangoDBKnowledgeGraphAgent(BaseAgent):
         self.llm_client = EnhancedLLMClientV3()
         
         # ArangoDB connection configuration
-        self.arango_url = os.getenv("ARANGO_URL", "http://localhost:8529")
-        self.arango_username = os.getenv("ARANGO_USERNAME", "root")
-        self.arango_password = os.getenv("ARANGO_PASSWORD", "")
-        self.arango_database = os.getenv("ARANGO_DATABASE", "knowledge_graph")
+        self.arango_url = settings.arango_url or "http://localhost:8529"
+        self.arango_username = settings.arango_username or "root"
+        self.arango_password = settings.arango_password or ""
+        self.arango_database = settings.arango_database or "knowledge_graph"
         
         # ArangoDB client
         self.client: Optional[ArangoClient] = None

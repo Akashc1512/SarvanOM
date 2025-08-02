@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 LLMClient: Legacy wrapper for backward compatibility.
 This module provides backward compatibility with the old LLM client interface.
@@ -50,18 +52,18 @@ class LLMClient:
             raise Exception(f"LLM Client v3 initialization failed: {str(e)}")
         
         self._provider = os.getenv("LLM_PROVIDER", "openai").lower()
-        self._model = os.getenv("OPENAI_LLM_MODEL", "gpt-3.5-turbo")
+        self._model = settings.openai_model or "gpt-3.5-turbo"
 
         # Set up the model based on provider
         if self._provider == "anthropic":
-            self._model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
+            self._model = settings.anthropic_model or "claude-3-5-sonnet-20241022"
 
         logger.info(f"✅ LLM Client configured - Provider: {self._provider}, Model: {self._model}")
         
         # SANITY CHECK: Validate API keys with detailed error surface
         logger.info("🔍 DEEP DEBUG: Validating API keys")
         if self._provider == "openai":
-            api_key = os.getenv("OPENAI_API_KEY")
+            api_key = settings.openai_api_key
             if not api_key:
                 logger.error("❌ OPENAI_API_KEY not found in environment")
                 raise Exception("OPENAI_API_KEY is required but not set")
@@ -70,7 +72,7 @@ class LLMClient:
                 raise Exception("OPENAI_API_KEY appears to be invalid")
             logger.info("✅ OPENAI_API_KEY found and validated")
         elif self._provider == "anthropic":
-            api_key = os.getenv("ANTHROPIC_API_KEY")
+            api_key = settings.anthropic_api_key
             if not api_key:
                 logger.error("❌ ANTHROPIC_API_KEY not found in environment")
                 raise Exception("ANTHROPIC_API_KEY is required but not set")

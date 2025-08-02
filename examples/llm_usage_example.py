@@ -1,4 +1,6 @@
+from ..\shared\core\api\config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 LLM Usage Example
 Demonstrates how to use Ollama and Hugging Face providers with the existing LLM client
@@ -65,11 +67,11 @@ async def example_usage():
     print("\n📋 Example 3: Explicit Hugging Face Configuration")
     print("-" * 40)
     
-    if os.getenv("HUGGINGFACE_API_KEY"):
+    if settings.huggingface_api_key:
         hf_config = LLMConfig(
             provider=LLMProvider.HUGGINGFACE,
             model="microsoft/DialoGPT-medium",
-            api_key=os.getenv("HUGGINGFACE_API_KEY"),
+            api_key=settings.huggingface_api_key,
             timeout=30
         )
         
@@ -94,7 +96,7 @@ async def example_usage():
     multi_configs = []
     
     # Add Ollama if available
-    if os.getenv("OLLAMA_ENABLED", "true").lower() == "true":
+    if getattr(settings.ollama_enabled, 'value', "true") if hasattr(settings.ollama_enabled, 'value') else settings.ollama_enabled.lower() == "true":
         multi_configs.append(
             LLMConfig(
                 provider=LLMProvider.OLLAMA,
@@ -106,12 +108,12 @@ async def example_usage():
         )
     
     # Add Hugging Face if API key is available
-    if os.getenv("HUGGINGFACE_API_KEY"):
+    if settings.huggingface_api_key:
         multi_configs.append(
             LLMConfig(
                 provider=LLMProvider.HUGGINGFACE,
                 model="microsoft/DialoGPT-large",
-                api_key=os.getenv("HUGGINGFACE_API_KEY"),
+                api_key=settings.huggingface_api_key,
                 timeout=30
             )
         )

@@ -1,4 +1,6 @@
+from ..\shared\core\api\config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Configure Available Services Script.
 
@@ -21,7 +23,7 @@ def check_service_availability() -> Dict[str, bool]:
     services = {}
     
     # Check Redis
-    redis_url = os.getenv('REDIS_URL', '')
+    redis_url = settings.redis_url or ''
     if redis_url and not any(p in redis_url for p in ['your-', 'change-', 'placeholder']):
         # Fix Redis URL format if needed
         if redis_url.startswith('clustercfg.'):
@@ -51,7 +53,7 @@ def check_service_availability() -> Dict[str, bool]:
         }
     
     # Check Meilisearch
-    meili_url = os.getenv('MEILISEARCH_URL', '')
+    meili_url = settings.meilisearch_url or ''
     if meili_url and not any(p in meili_url for p in ['your-', 'change-', 'placeholder']):
         # Remove quotes if present
         meili_url = meili_url.strip('"\'')
@@ -68,7 +70,7 @@ def check_service_availability() -> Dict[str, bool]:
         }
     
     # Check Pinecone
-    pinecone_key = os.getenv('PINECONE_API_KEY', '')
+    pinecone_key = settings.pinecone_api_key or ''
     if pinecone_key and not any(p in pinecone_key for p in ['your-', 'change-', 'placeholder']):
         services['pinecone'] = {
             'available': True,
@@ -81,7 +83,7 @@ def check_service_availability() -> Dict[str, bool]:
         }
     
     # Check Qdrant
-    qdrant_url = os.getenv('QDRANT_URL', '')
+    qdrant_url = settings.qdrant_url or ''
     if qdrant_url and not any(p in qdrant_url for p in ['your-', 'change-', 'placeholder']):
         services['qdrant'] = {
             'available': True,
@@ -95,7 +97,7 @@ def check_service_availability() -> Dict[str, bool]:
         }
     
     # Check ArangoDB
-    arango_url = os.getenv('ARANGO_URL', '')
+    arango_url = settings.arango_url or ''
     if arango_url and not any(p in arango_url for p in ['your-', 'change-', 'placeholder']):
         services['arangodb'] = {
             'available': True,

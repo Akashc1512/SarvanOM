@@ -162,7 +162,7 @@ class SarvanOMSetupValidator:
                 name="Environment Configuration",
                 status=True,
                 message="✅ Environment configuration is valid",
-                details={"environment": os.getenv("ENVIRONMENT", "development")}
+                details={"environment": settings.environment or "development"}
             ))
     
     async def _validate_security_settings(self):
@@ -188,7 +188,7 @@ class SarvanOMSetupValidator:
             ))
         
         # Validate JWT configuration
-        jwt_secret = os.getenv("JWT_SECRET_KEY")
+        jwt_secret = settings.jwt_secret_key
         if not jwt_secret or jwt_secret == "your-jwt-secret-key-change-this-in-production":
             self.results.append(ValidationResult(
                 name="JWT Security",
@@ -238,7 +238,7 @@ class SarvanOMSetupValidator:
         logger.info("Validating database connectivity", extra={"validation_step": "database"})
         
         # Check database URL
-        db_url = os.getenv("DATABASE_URL")
+        db_url = settings.database_url
         if not db_url:
             self.results.append(ValidationResult(
                 name="Database Configuration",

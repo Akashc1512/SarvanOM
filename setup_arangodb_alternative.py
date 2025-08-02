@@ -1,4 +1,6 @@
+from shared.core.api.config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 ArangoDB Setup Script - Free Neo4j Alternative
 This script helps set up ArangoDB as a free alternative to Neo4j.
@@ -168,10 +170,10 @@ class ArangoDBKnowledgeGraphAgent(BaseAgent):
         self.llm_client = EnhancedLLMClientV3()
         
         # ArangoDB connection configuration
-        self.arango_url = os.getenv("ARANGO_URL", "http://localhost:8529")
-        self.arango_username = os.getenv("ARANGO_USERNAME", "root")
-        self.arango_password = os.getenv("ARANGO_PASSWORD", "")
-        self.arango_database = os.getenv("ARANGO_DATABASE", "knowledge_graph")
+        self.arango_url = settings.arango_url or "http://localhost:8529"
+        self.arango_username = settings.arango_username or "root"
+        self.arango_password = settings.arango_password or ""
+        self.arango_database = settings.arango_database or "knowledge_graph"
         
         # ArangoDB client
         self.client: Optional[ArangoClient] = None
@@ -667,10 +669,10 @@ async def test_arangodb_connection():
     
     # Check environment variables
     arango_vars = {
-        "ARANGO_URL": os.getenv("ARANGO_URL"),
-        "ARANGO_USERNAME": os.getenv("ARANGO_USERNAME"),
-        "ARANGO_PASSWORD": os.getenv("ARANGO_PASSWORD"),
-        "ARANGO_DATABASE": os.getenv("ARANGO_DATABASE")
+        "ARANGO_URL": settings.arango_url,
+        "ARANGO_USERNAME": settings.arango_username,
+        "ARANGO_PASSWORD": settings.arango_password,
+        "ARANGO_DATABASE": settings.arango_database
     }
     
     print("Environment Variables:")

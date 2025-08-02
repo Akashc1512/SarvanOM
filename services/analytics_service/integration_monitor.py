@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Integration Monitoring System for Universal Knowledge Platform
 Monitors the health and status of external integrations.
@@ -47,7 +49,7 @@ class IntegrationMonitor:
             "vector_database": {
                 "enabled": bool(
                     os.getenv("VECTOR_DB_HOST")
-                    or os.getenv("PINECONE_API_KEY")
+                    or settings.pinecone_api_key
                     # Qdrant URL removed - using Pinecone only
                 ),
                 "type": "vector_db",
@@ -59,19 +61,19 @@ class IntegrationMonitor:
                 "config_keys": ["ELASTICSEARCH_URL"],
             },
             "knowledge_graph": {
-                "enabled": bool(os.getenv("SPARQL_ENDPOINT")),
+                "enabled": bool(settings.sparql_endpoint),
                 "type": "graph",
                 "config_keys": ["SPARQL_ENDPOINT"],
             },
             "llm_api": {
                 "enabled": bool(
-                    os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY")
+                    settings.openai_api_key or settings.anthropic_api_key
                 ),
                 "type": "llm",
                 "config_keys": ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"],
             },
             "redis_cache": {
-                "enabled": bool(os.getenv("REDIS_ENABLED", "false").lower() == "true"),
+                "enabled": bool(getattr(settings.cache_enabled, 'value', "false") if hasattr(settings.cache_enabled, 'value') else settings.cache_enabled.lower() == "true"),
                 "type": "cache",
                 "config_keys": ["REDIS_URL"],
             },
@@ -143,12 +145,12 @@ class IntegrationMonitor:
         """Check vector database connectivity."""
         try:
             # Check Pinecone
-            if os.getenv("PINECONE_API_KEY"):
+            if settings.pinecone_api_key:
                 import pinecone
 
                 pinecone.init(
-                    api_key=os.getenv("PINECONE_API_KEY"),
-                    environment=os.getenv("PINECONE_ENVIRONMENT", "us-west1-gcp"),
+                    api_key=settings.pinecone_api_key,
+                    environment=settings.pinecone_environment or "us-west1-gcp",
                 )
                 # Test connection by listing indexes
                 indexes = pinecone.list_indexes()
@@ -206,12 +208,12 @@ class IntegrationMonitor:
     async def _check_knowledge_graph(self) -> str:
         """Check knowledge graph connectivity."""
         try:
-            if not os.getenv("SPARQL_ENDPOINT"):
+            if not settings.sparql_endpoint:
                 return "not_configured"
 
             import aiohttp
 
-            sparql_endpoint = os.getenv("SPARQL_ENDPOINT")
+            sparql_endpoint = settings.sparql_endpoint
 
             # Test with a simple SPARQL query
             test_query = """
@@ -262,12 +264,12 @@ class IntegrationMonitor:
     async def _check_redis_cache(self) -> str:
         """Check Redis cache connectivity."""
         try:
-            if not os.getenv("REDIS_ENABLED", "false").lower() == "true":
+            if not getattr(settings.cache_enabled, 'value', "false") if hasattr(settings.cache_enabled, 'value') else settings.cache_enabled.lower() == "true":
                 return "not_configured"
 
             import aioredis
 
-            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+            redis_url = settings.redis_url or "redis://localhost:6379"
 
             # Test Redis connection
             redis = aioredis.from_url(redis_url)

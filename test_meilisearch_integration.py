@@ -1,4 +1,6 @@
+from shared.core.api.config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Test Meilisearch Integration - Zero-budget Elasticsearch alternative
 Tests the Meilisearch integration with the existing hybrid retrieval system.
@@ -25,7 +27,7 @@ async def test_meilisearch_basic():
     print("🔍 Testing Meilisearch Basic Functionality...")
     
     # Initialize Meilisearch engine
-    meilisearch_url = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
+    meilisearch_url = settings.meilisearch_url or "http://localhost:7700"
     engine = MeilisearchEngine(meilisearch_url)
     
     # Test health check

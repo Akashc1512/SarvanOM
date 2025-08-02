@@ -77,6 +77,7 @@ class VerificationResult:
     temporal_validation: Dict[str, Any] = None
     source_authenticity: Dict[str, Any] = None
     source_freshness: Dict[str, Any] = None  # New field for freshness validation
+    revised_sentences: List[Dict[str, Any]] = None # New field for revised sentences
 
 
 @dataclass
@@ -217,6 +218,140 @@ class FactCheckAgent(BaseAgent):
                 temporal_validation={"error": str(e)},
                 source_authenticity={"error": str(e)},
                 source_freshness={"error": str(e)}
+            )
+
+    async def verify_answer_with_vector_search(
+        self, 
+        answer_text: str, 
+        source_docs: List[Dict[str, Any]], 
+        query_timestamp: Optional[datetime] = None
+    ) -> VerificationResult:
+        """
+        Verify answer by iterating over each sentence/fact and performing vector search verification.
+        If a fact is unsupported, either mark it or call the LLM to revise the answer.
+        
+        Args:
+            answer_text: The LLM-generated answer to verify
+            source_docs: List of source documents to check against
+            query_timestamp: Timestamp when the query was made (defaults to now)
+            
+        Returns:
+            VerificationResult with detailed sentence-by-sentence verification
+        """
+        start_time = time.time()
+        
+        if query_timestamp is None:
+            query_timestamp = datetime.now()
+        
+        try:
+            # Split answer into sentences
+            sentences = self._split_into_sentences(answer_text)
+            
+            verified_sentences = []
+            unsupported_sentences = []
+            revised_sentences = []
+            
+            # Initialize vector search engine
+            search_engine = await self._get_vector_search_engine()
+            
+            for i, sentence in enumerate(sentences):
+                if len(sentence.strip()) < 10:  # Skip very short sentences
+                    continue
+                    
+                # Check if sentence is factual
+                if not self._is_factual_statement(sentence):
+                    continue
+                
+                # Perform vector search verification for this sentence
+                verification = await self._verify_sentence_with_vector_search(
+                    sentence, search_engine, source_docs
+                )
+                
+                if verification["is_supported"]:
+                    verified_sentences.append({
+                        "sentence": sentence,
+                        "confidence": verification["confidence"],
+                        "evidence": verification["evidence"],
+                        "source_docs": verification["source_docs"],
+                        "verification_method": "vector_search",
+                        "sentence_index": i
+                    })
+                else:
+                    # Try to revise the unsupported sentence using LLM
+                    revised_sentence = await self._revise_unsupported_sentence(
+                        sentence, verification["reason"], source_docs
+                    )
+                    
+                    if revised_sentence and revised_sentence != sentence:
+                        # Verify the revised sentence
+                        revised_verification = await self._verify_sentence_with_vector_search(
+                            revised_sentence, search_engine, source_docs
+                        )
+                        
+                        if revised_verification["is_supported"]:
+                            revised_sentences.append({
+                                "original_sentence": sentence,
+                                "revised_sentence": revised_sentence,
+                                "confidence": revised_verification["confidence"],
+                                "evidence": revised_verification["evidence"],
+                                "source_docs": revised_verification["source_docs"],
+                                "verification_method": "vector_search_with_revision",
+                                "sentence_index": i,
+                                "revision_reason": verification["reason"]
+                            })
+                        else:
+                            unsupported_sentences.append({
+                                "sentence": sentence,
+                                "confidence": verification["confidence"],
+                                "reason": verification["reason"],
+                                "revision_attempted": True,
+                                "revised_sentence": revised_sentence,
+                                "sentence_index": i
+                            })
+                    else:
+                        unsupported_sentences.append({
+                            "sentence": sentence,
+                            "confidence": verification["confidence"],
+                            "reason": verification["reason"],
+                            "revision_attempted": False,
+                            "sentence_index": i
+                        })
+            
+            # Calculate summary
+            total_factual = len(verified_sentences) + len(unsupported_sentences) + len(revised_sentences)
+            verified_count = len(verified_sentences)
+            revised_count = len(revised_sentences)
+            
+            if total_factual == 0:
+                summary = "No factual statements found to verify"
+                verification_confidence = 1.0
+            else:
+                summary = f"{verified_count}/{total_factual} statements verified"
+                if revised_count > 0:
+                    summary += f" ({revised_count} revised)"
+                verification_confidence = (verified_count + revised_count) / total_factual
+            
+            processing_time = time.time() - start_time
+            
+            return VerificationResult(
+                summary=summary,
+                verified_sentences=verified_sentences,
+                unsupported_sentences=unsupported_sentences,
+                total_sentences=total_factual,
+                verification_confidence=verification_confidence,
+                verification_method="vector_search_with_revision",
+                revised_sentences=revised_sentences
+            )
+            
+        except Exception as e:
+            logger.error(f"Vector search verification failed: {str(e)}")
+            return VerificationResult(
+                summary="Verification failed due to error",
+                verified_sentences=[],
+                unsupported_sentences=[],
+                total_sentences=0,
+                verification_confidence=0.0,
+                verification_method="error"
             )
 
     async def _validate_temporal_relevance(
@@ -1797,6 +1932,217 @@ class FactCheckAgent(BaseAgent):
                 logger.warning(f"No published_date found for source: {doc.get('doc_id', 'unknown')}")
         
         return all_outdated
+
+    async def _get_vector_search_engine(self):
+        """
+        Get vector search engine for verification.
+        
+        Returns:
+            Search engine instance
+        """
+        try:
+            # Try to use Meilisearch engine
+            from services.search_service.core.meilisearch_engine import MeilisearchEngine
+            
+            meilisearch_url = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
+            master_key = os.getenv("MEILI_MASTER_KEY")
+            
+            search_engine = MeilisearchEngine(meilisearch_url, master_key)
+            
+            # Check if engine is available
+            if await search_engine.health_check():
+                logger.info("Using Meilisearch for vector search verification")
+                return search_engine
+            else:
+                logger.warning("Meilisearch not available, using fallback verification")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Failed to initialize vector search engine: {str(e)}")
+            return None
+
+    async def _verify_sentence_with_vector_search(
+        self, 
+        sentence: str, 
+        search_engine, 
+        source_docs: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Verify a single sentence using vector search.
+        
+        Args:
+            sentence: Sentence to verify
+            search_engine: Vector search engine
+            source_docs: Source documents
+            
+        Returns:
+            Verification result dictionary
+        """
+        if not search_engine:
+            # Fallback to existing verification method
+            return await self._verify_sentence_against_docs(sentence, source_docs)
+        
+        try:
+            # Perform vector search for the sentence
+            search_results = await search_engine.search(sentence, top_k=5)
+            
+            if not search_results:
+                return {
+                    "is_supported": False,
+                    "confidence": 0.0,
+                    "evidence": [],
+                    "source_docs": [],
+                    "reason": "No relevant documents found in vector search"
+                }
+            
+            # Check if any search results support the sentence
+            best_score = 0.0
+            supporting_evidence = []
+            supporting_docs = []
+            
+            for result in search_results:
+                # Calculate similarity between sentence and search result
+                similarity = self._calculate_sentence_similarity(sentence, result.content)
+                
+                if similarity > best_score:
+                    best_score = similarity
+                
+                # Collect evidence if similarity is above threshold
+                if similarity > 0.4:  # Lower threshold for evidence collection
+                    supporting_evidence.append(result.content[:200])
+                    supporting_docs.append(result.source)
+            
+            # Determine if sentence is supported
+            support_threshold = 0.6  # Adjustable threshold
+            is_supported = best_score >= support_threshold
+            
+            # Calculate confidence based on similarity and evidence quantity
+            confidence = min(1.0, best_score + (len(supporting_evidence) * 0.1))
+            
+            return {
+                "is_supported": is_supported,
+                "confidence": confidence,
+                "evidence": supporting_evidence[:3],  # Limit to top 3 pieces of evidence
+                "source_docs": list(set(supporting_docs)),  # Remove duplicates
+                "reason": f"Vector search best match similarity: {best_score:.3f}" if not is_supported else "Supported by vector search"
+            }
+            
+        except Exception as e:
+            logger.error(f"Vector search verification error: {str(e)}")
+            # Fallback to existing method
+            return await self._verify_sentence_against_docs(sentence, source_docs)
+
+    def _calculate_sentence_similarity(self, sentence: str, content: str) -> float:
+        """
+        Calculate similarity between sentence and content using simple keyword matching.
+        
+        Args:
+            sentence: Sentence to compare
+            content: Content to compare against
+            
+        Returns:
+            Similarity score between 0 and 1
+        """
+        # Extract key terms from sentence
+        sentence_terms = set(re.findall(r'\b\w+\b', sentence.lower()))
+        sentence_terms = {term for term in sentence_terms if len(term) > 3}
+        
+        if not sentence_terms:
+            return 0.0
+        
+        # Extract key terms from content
+        content_terms = set(re.findall(r'\b\w+\b', content.lower()))
+        content_terms = {term for term in content_terms if len(term) > 3}
+        
+        if not content_terms:
+            return 0.0
+        
+        # Calculate Jaccard similarity
+        intersection = len(sentence_terms.intersection(content_terms))
+        union = len(sentence_terms.union(content_terms))
+        
+        if union == 0:
+            return 0.0
+        
+        return intersection / union
+
+    async def _revise_unsupported_sentence(
+        self, 
+        sentence: str, 
+        reason: str, 
+        source_docs: List[Dict[str, Any]]
+    ) -> Optional[str]:
+        """
+        Use LLM to revise an unsupported sentence based on available sources.
+        
+        Args:
+            sentence: Original sentence to revise
+            reason: Reason why the sentence was unsupported
+            source_docs: Available source documents
+            
+        Returns:
+            Revised sentence or None if revision failed
+        """
+        try:
+            # Extract key information from source documents
+            source_summaries = []
+            for i, doc in enumerate(source_docs[:3], 1):  # Use top 3 sources
+                content = doc.get("content", "")
+                if content:
+                    # Take first 200 characters as summary
+                    summary = content[:200] + "..." if len(content) > 200 else content
+                    source_summaries.append(f"Source {i}: {summary}")
+            
+            sources_text = "\n".join(source_summaries) if source_summaries else "No specific sources available."
+            
+            # Create revision prompt
+            revision_prompt = f"""
+            The following sentence could not be verified against our knowledge base:
+            
+            Original sentence: "{sentence}"
+            Reason for rejection: {reason}
+            
+            Available source information:
+            {sources_text}
+            
+            Please revise the sentence to be more accurate and supported by the available information. 
+            If the information cannot be verified, state that clearly.
+            
+            Guidelines:
+            1. Only include information that can be supported by the sources
+            2. Be more conservative and less specific if needed
+            3. If the claim cannot be verified, use phrases like "may be", "could be", "appears to be"
+            4. If no relevant information is available, state "No verified information available"
+            
+            Revised sentence:"""
+            
+            # Use LLM for revision
+            from shared.core.llm_client_v3 import EnhancedLLMClientV3
+            
+            llm_client = EnhancedLLMClientV3()
+            
+            response = await llm_client.generate_text(
+                prompt=revision_prompt,
+                max_tokens=100,
+                temperature=0.3,
+                use_dynamic_selection=True
+            )
+            
+            if response and response.strip():
+                revised_sentence = response.strip()
+                # Clean up the response
+                if revised_sentence.startswith('"') and revised_sentence.endswith('"'):
+                    revised_sentence = revised_sentence[1:-1]
+                
+                logger.info(f"Revised sentence: '{sentence}' -> '{revised_sentence}'")
+                return revised_sentence
+            else:
+                logger.warning(f"LLM revision failed for sentence: {sentence}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error revising sentence: {str(e)}")
+            return None
 
 
 # Example usage

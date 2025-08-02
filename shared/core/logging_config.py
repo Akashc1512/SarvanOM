@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Structured Logging Configuration - MAANG Standards
 
@@ -439,6 +441,6 @@ def configure_logging(environment: str = "development", log_level: str = "INFO")
 
 # Initialize logging configuration
 configure_logging(
-    environment=os.getenv("ENVIRONMENT", "development"),
-    log_level=os.getenv("LOG_LEVEL", "INFO")
+    environment=settings.environment or "development",
+    log_level=settings.log_level or "INFO"
 ) 

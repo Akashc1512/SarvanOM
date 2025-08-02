@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Analytics System for Universal Knowledge Platform
 Provides query tracking and analytics with privacy protection.
@@ -17,7 +19,7 @@ import os
 logger = logging.getLogger(__name__)
 
 # Privacy configuration
-DATA_RETENTION_DAYS = int(os.getenv("DATA_RETENTION_DAYS", "30"))
+DATA_RETENTION_DAYS = int(settings.data_retention_days or "30")
 ANONYMIZE_QUERIES = os.getenv("ANONYMIZE_QUERIES", "true").lower() == "true"
 LOG_QUERY_CONTENT = os.getenv("LOG_QUERY_CONTENT", "false").lower() == "true"
 

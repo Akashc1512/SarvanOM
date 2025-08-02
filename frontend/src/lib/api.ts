@@ -208,7 +208,7 @@ class APIClient {
         
         // Transform error for better handling
         const apiError: APIError = {
-          message: error.response?.data?.detail || error.message,
+          message: (error.response?.data as any)?.detail || error.message,
           code: error.response?.status?.toString() || "UNKNOWN",
           details: error.response?.data,
           timestamp: new Date().toISOString(),
@@ -400,6 +400,34 @@ class APIClient {
       query,
     });
     return response.data;
+  }
+
+  // Session state methods
+  async getSessionState(sessionId: string): Promise<any> {
+    const response = await this.client.get(`/api/state/${sessionId}`);
+    return response.data;
+  }
+
+  async updateSessionState(sessionId: string, state: any): Promise<any> {
+    const response = await this.client.put(`/api/state/${sessionId}`, state);
+    return response.data;
+  }
+
+  // Knowledge graph methods
+  async queryKnowledgeGraph(params: {
+    query: string;
+    query_type?: string;
+    max_entities?: number;
+    max_relationships?: number;
+  }): Promise<any> {
+    const response = await this.client.post("/knowledge-graph/query", params);
+    return response.data;
+  }
+
+  // WebSocket methods (for future implementation)
+  async getWebSocketUrl(): Promise<string> {
+    const response = await this.client.get("/ws/url");
+    return response.data.url;
   }
 
   // Utility methods

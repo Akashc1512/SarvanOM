@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Enhanced LLM Client - MAANG Standards
 Robust LLM integration with fallback mechanisms and comprehensive logging.
@@ -50,6 +52,7 @@ class LLMProvider(str, Enum):
     ANTHROPIC = "anthropic"
     AZURE = "azure"
     GOOGLE = "google"
+    OLLAMA = "ollama"  # Local models
     MOCK = "mock"  # For testing
 
 
@@ -364,6 +367,173 @@ class AnthropicProvider(LLMProviderInterface):
         return {"provider": LLMProvider.ANTHROPIC.value, "model": self.config.model}
 
 
+class OllamaProvider(LLMProviderInterface):
+    """Ollama local LLM provider."""
+
+    def __init__(self, config: LLMConfig):
+        self.config = config
+        self.session = None
+        self.default_model = "llama3.2:3b"
+
+    async def _get_session(self):
+        """Get or create aiohttp session."""
+        if self.session is None or self.session.closed:
+            import aiohttp
+            self.session = aiohttp.ClientSession(
+                timeout=aiohttp.ClientTimeout(total=self.config.timeout)
+            )
+        return self.session
+
+    async def generate_text(self, request: LLMRequest) -> LLMResponse:
+        """Generate text using Ollama."""
+        start_time = time.time()
+        session = await self._get_session()
+
+        # Prepare the prompt
+        prompt = request.prompt
+        if request.system_message:
+            prompt = f"System: {request.system_message}\n\n{prompt}"
+
+        # Prepare request payload
+        payload = {
+            "model": self.default_model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": request.temperature or self.config.temperature,
+                "num_predict": request.max_tokens or self.config.max_tokens
+            }
+        }
+
+        try:
+            async with session.post(
+                f"{self.config.base_url}/api/generate",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status != 200:
+                    raise Exception(f"Ollama API error: {response.status}")
+
+                result = await response.json()
+                content = result.get("response", "")
+
+                response_time = (time.time() - start_time) * 1000
+
+                return LLMResponse(
+                    content=content,
+                    provider=LLMProvider.OLLAMA,
+                    model=self.default_model,
+                    token_usage={
+                        "prompt_tokens": len(prompt.split()),
+                        "completion_tokens": len(content.split()),
+                        "total_tokens": len(prompt.split()) + len(content.split()),
+                    },
+                    finish_reason="stop",
+                    response_time_ms=response_time,
+                    metadata={"ollama_response": result},
+                )
+
+        except Exception as e:
+            # Ensure the exception is properly derived from BaseException
+            error_message = str(e) if e else "Unknown Ollama error"
+            raise LLMError(
+                error_type="ollama_error",
+                message=error_message,
+                provider=LLMProvider.OLLAMA,
+                model=self.default_model,
+                retryable=True,
+            )
+
+    async def generate_stream(self, request: LLMRequest) -> AsyncGenerator[str, None]:
+        """Generate streaming text using Ollama."""
+        session = await self._get_session()
+
+        # Prepare the prompt
+        prompt = request.prompt
+        if request.system_message:
+            prompt = f"System: {request.system_message}\n\n{prompt}"
+
+        # Prepare request payload
+        payload = {
+            "model": self.default_model,
+            "prompt": prompt,
+            "stream": True,
+            "options": {
+                "temperature": request.temperature or self.config.temperature,
+                "num_predict": request.max_tokens or self.config.max_tokens
+            }
+        }
+
+        try:
+            async with session.post(
+                f"{self.config.base_url}/api/generate",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status != 200:
+                    raise Exception(f"Ollama API error: {response.status}")
+
+                async for line in response.content:
+                    if line:
+                        try:
+                            data = json.loads(line.decode())
+                            if "response" in data:
+                                yield data["response"]
+                        except json.JSONDecodeError:
+                            continue
+
+        except Exception as e:
+            # Ensure the exception is properly derived from BaseException
+            error_message = str(e) if e else "Unknown Ollama streaming error"
+            raise LLMError(
+                error_type="ollama_stream_error",
+                message=error_message,
+                provider=LLMProvider.OLLAMA,
+                model=self.default_model,
+                retryable=True,
+            )
+
+    async def create_embedding(self, text: str) -> List[float]:
+        """Create embeddings using Ollama."""
+        session = await self._get_session()
+
+        try:
+            payload = {
+                "model": "llama3.2:3b",
+                "prompt": text
+            }
+
+            async with session.post(
+                f"{self.config.base_url}/api/embeddings",
+                json=payload,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status != 200:
+                    raise Exception(f"Ollama embeddings API error: {response.status}")
+
+                result = await response.json()
+                return result.get("embedding", [])
+
+        except Exception as e:
+            # Ensure the exception is properly derived from BaseException
+            error_message = str(e) if e else "Unknown Ollama embedding error"
+            raise LLMError(
+                error_type="ollama_embedding_error",
+                message=error_message,
+                provider=LLMProvider.OLLAMA,
+                model="llama3.2:3b",
+                retryable=True,
+            )
+
+    def get_provider_info(self) -> Dict[str, Any]:
+        """Get Ollama provider information."""
+        return {
+            "provider": LLMProvider.OLLAMA.value,
+            "model": self.default_model,
+            "base_url": self.config.base_url,
+        }
+
+
 class MockProvider(LLMProviderInterface):
     """Mock provider for testing."""
 
@@ -440,24 +610,35 @@ class EnhancedLLMClient:
         """Setup default providers from environment variables."""
         providers = []
 
+        # Ollama provider (free, local) - prioritize if enabled
+        if settings.ollama_enabled:
+            providers.append(
+                LLMConfig(
+                    provider=LLMProvider.OLLAMA,
+                    model=settings.ollama_model or "llama3.2:3b",
+                    api_key=None,  # No API key needed for local Ollama
+                    base_url=str(settings.ollama_base_url),
+                )
+            )
+
         # OpenAI provider
-        if os.getenv("OPENAI_API_KEY"):
+        if settings.openai_api_key:
             providers.append(
                 LLMConfig(
                     provider=LLMProvider.OPENAI,
                     model=os.getenv("OPENAI_MODEL", "gpt-4"),
-                    api_key=os.getenv("OPENAI_API_KEY"),
+                    api_key=settings.openai_api_key,
                     base_url=os.getenv("OPENAI_BASE_URL"),
                 )
             )
 
         # Anthropic provider
-        if os.getenv("ANTHROPIC_API_KEY"):
+        if settings.anthropic_api_key:
             providers.append(
                 LLMConfig(
                     provider=LLMProvider.ANTHROPIC,
-                    model=os.getenv("ANTHROPIC_MODEL", "claude-3-sonnet-20240229"),
-                    api_key=os.getenv("ANTHROPIC_API_KEY"),
+                    model=settings.anthropic_model or "claude-3-sonnet-20240229",
+                    api_key=settings.anthropic_api_key,
                 )
             )
 
@@ -477,6 +658,7 @@ class EnhancedLLMClient:
         provider_map = {
             LLMProvider.OPENAI: OpenAIProvider,
             LLMProvider.ANTHROPIC: AnthropicProvider,
+            LLMProvider.OLLAMA: OllamaProvider,
             LLMProvider.MOCK: MockProvider,
         }
 

@@ -8,24 +8,15 @@ services:
       dockerfile: Dockerfile.enterprise
     ports:
       - "8000:8000"
-    environment:
-      - ENVIRONMENT=development
-      - LOG_LEVEL=INFO
-      - DATABASE_URL=postgresql://postgres:password@postgres:5432/sarvanom_db
-      - REDIS_URL=redis://redis:6379/0
-      - MEILISEARCH_URL=http://meilisearch:7700
-      - ARANGODB_URL=http://arangodb:8529
-      - QDRANT_URL=http://qdrant:6333
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - OLLAMA_MODEL=llama3.2:3b
+    env_file:
+      - .env.docker
     volumes:
+      # Use relative paths for Windows WSL2 optimization
       - ./:/app
       - /app/__pycache__
       - /app/.pytest_cache
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
       meilisearch:
         condition: service_healthy
@@ -34,6 +25,8 @@ services:
       qdrant:
         condition: service_healthy
       ollama:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - sarvanom-network
@@ -53,6 +46,45 @@ services:
       retries: 3
       start_period: 40s
 
+  # Frontend - React/Next.js Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.docker
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_BASE_URL=http://sarvanom_backend:8000
+      - VITE_API_BASE_URL=http://sarvanom_backend:8000
+    volumes:
+      # Use relative paths for Windows WSL2 optimization
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      sarvanom_backend:
+        condition: service_healthy
+    networks:
+      - sarvanom-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   # Ollama - Local LLM Service
   ollama:
     image: ollama/ollama:latest
@@ -60,7 +92,8 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      - ollama_data:/root/.ollama
+      # Use relative path for Windows WSL2 optimization
+      - ./data/ollama:/root/.ollama
     environment:
       - OLLAMA_HOST=0.0.0.0
     networks:
@@ -91,7 +124,8 @@ services:
       - MEILI_MASTER_KEY=sarvanom-master-key-2024
       - MEILI_ENV=development
     volumes:
-      - meilisearch_data:/meili_data
+      # Use relative path for Windows WSL2 optimization
+      - ./data/meilisearch:/meili_data
     networks:
       - sarvanom-network
     restart: unless-stopped
@@ -122,8 +156,9 @@ services:
       - ARANGO_USER=sarvanom_user
       - ARANGO_PASSWORD=sarvanom-user-password-2024
     volumes:
-      - arangodb_data:/var/lib/arangodb3
-      - arangodb_apps_data:/var/lib/arangodb3-apps
+      # Use relative paths for Windows WSL2 optimization
+      - ./data/arangodb:/var/lib/arangodb3
+      - ./data/arangodb-apps:/var/lib/arangodb3-apps
     networks:
       - sarvanom-network
     restart: unless-stopped
@@ -154,7 +189,8 @@ services:
       - POSTGRES_PASSWORD=password
       - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Use relative path for Windows WSL2 optimization
+      - ./data/postgres:/var/lib/postgresql/data
     networks:
       - sarvanom-network
     restart: unless-stopped
@@ -181,7 +217,8 @@ services:
       - "6333:6333"
       - "6334:6334"
     volumes:
-      - qdrant_data:/qdrant/storage
+      # Use relative path for Windows WSL2 optimization
+      - ./data/qdrant:/qdrant/storage
     networks:
       - sarvanom-network
     restart: unless-stopped
@@ -207,7 +244,8 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      # Use relative path for Windows WSL2 optimization
+      - ./data/redis:/data
     networks:
       - sarvanom-network
     restart: unless-stopped
@@ -227,19 +265,8 @@ services:
       start_period: 10s
 
 volumes:
-  ollama_data:
-    driver: local
-  meilisearch_data:
-    driver: local
-  arangodb_data:
-    driver: local
-  arangodb_apps_data:
-    driver: local
-  postgres_data:
-    driver: local
-  qdrant_data:
-    driver: local
-  redis_data:
+  # Define named volumes for better Windows WSL2 performance
+  sarvanom_data:
     driver: local
 
 networks:

@@ -38,13 +38,13 @@ export default function LoginPage() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.username.trim()) {
-      newErrors.username = "Username is required";
+      newErrors["username"] = "Username is required";
     }
 
     if (!formData.password) {
-      newErrors.password = "Password is required";
+      newErrors["password"] = "Password is required";
     } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+      newErrors["password"] = "Password must be at least 6 characters";
     }
 
     setErrors(newErrors);
@@ -117,11 +117,11 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Error Alert */}
-            {(errors.general || error) && (
+            {(errors["general"] || error) && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  {errors.general || error}
+                  {errors["general"] || error}
                 </AlertDescription>
               </Alert>
             )}
@@ -135,12 +135,12 @@ export default function LoginPage() {
                 placeholder="Enter your username"
                 value={formData.username}
                 onChange={(e) => handleInputChange("username", e.target.value)}
-                className={errors.username ? "border-red-500" : ""}
+                className={errors["username"] ? "border-red-500" : ""}
                 disabled={isSubmitting}
                 autoComplete="username"
               />
-              {errors.username && (
-                <p className="text-sm text-red-500">{errors.username}</p>
+              {errors["username"] && (
+                <p className="text-sm text-red-500">{errors["username"]}</p>
               )}
             </div>
 
@@ -154,7 +154,7 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={(e) => handleInputChange("password", e.target.value)}
-                  className={errors.password ? "border-red-500 pr-10" : "pr-10"}
+                  className={errors["password"] ? "border-red-500 pr-10" : "pr-10"}
                   disabled={isSubmitting}
                   autoComplete="current-password"
                 />
@@ -171,8 +171,8 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
-              {errors.password && (
-                <p className="text-sm text-red-500">{errors.password}</p>
+              {errors["password"] && (
+                <p className="text-sm text-red-500">{errors["password"]}</p>
               )}
             </div>
 

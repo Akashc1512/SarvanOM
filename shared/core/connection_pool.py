@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Connection Pooling Module for Universal Knowledge Platform
 Manages connection pools for all external services to improve performance.
@@ -34,7 +36,7 @@ MAX_KEEPALIVE_TIME = int(os.getenv("MAX_KEEPALIVE_TIME", "300"))  # 5 minutes
 # Service URLs
 VECTOR_DB_URL = os.getenv("VECTOR_DB_URL", "http://localhost:6333")
 ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+REDIS_URL = settings.redis_url or "redis://localhost:6379"
 SPARQL_ENDPOINT = os.getenv(
     "SPARQL_ENDPOINT", "http://localhost:7200/repositories/knowledge"
 )

@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Enhanced LLM Client v3 - MAANG Standards
 Modern, production-ready LLM integration with latest SDKs and comprehensive features.
@@ -1116,9 +1118,9 @@ class HuggingFaceProvider(LLMProviderInterface):
     
     def _get_token_type(self) -> str:
         """Determine the type of token being used."""
-        if os.getenv("HUGGINGFACE_WRITE_TOKEN") == self.config.api_key:
+        if settings.huggingface_write_token == self.config.api_key:
             return "write"
-        elif os.getenv("HUGGINGFACE_READ_TOKEN") == self.config.api_key:
+        elif settings.huggingface_read_token == self.config.api_key:
             return "read"
         else:
             return "legacy"  # HUGGINGFACE_API_KEY
@@ -1238,12 +1240,13 @@ class EnhancedLLMClientV3:
         providers = []
 
         # OpenAI provider
-        if os.getenv("OPENAI_API_KEY"):
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if openai_api_key:
             providers.append(
                 LLMConfig(
                     provider=LLMProvider.OPENAI,
                     model=os.getenv("OPENAI_MODEL", "gpt-4"),
-                    api_key=os.getenv("OPENAI_API_KEY"),
+                    api_key=openai_api_key,
                     base_url=os.getenv("OPENAI_BASE_URL"),
                     embedding_model=os.getenv(
                         "OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"
@@ -1252,18 +1255,20 @@ class EnhancedLLMClientV3:
             )
 
         # Anthropic provider
-        if os.getenv("ANTHROPIC_API_KEY"):
+        anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+        if anthropic_api_key:
             providers.append(
                 LLMConfig(
                     provider=LLMProvider.ANTHROPIC,
                     model=os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022"),
-                    api_key=os.getenv("ANTHROPIC_API_KEY"),
+                    api_key=anthropic_api_key,
                     embedding_model="text-embedding-3",
                 )
             )
 
         # Ollama provider (local models)
-        if os.getenv("OLLAMA_ENABLED", "true").lower() == "true":
+        ollama_enabled = os.getenv("OLLAMA_ENABLED", "true").lower() == "true"
+        if ollama_enabled:
             providers.append(
                 LLMConfig(
                     provider=LLMProvider.OLLAMA,

@@ -13,7 +13,6 @@ Version: 1.0.0 (2024-12-28)
 """
 
 from .base_agent import BaseAgent, AgentType, AgentMessage, AgentResult, QueryContext
-from .retrieval_agent import RetrievalAgent
 from .synthesis_agent import SynthesisAgent
 from .factcheck_agent import FactCheckAgent
 from .citation_agent import CitationAgent
@@ -27,7 +26,6 @@ __all__ = [
     "AgentMessage",
     "AgentResult",
     "QueryContext",
-    "RetrievalAgent",
     "SynthesisAgent",
     "FactCheckAgent",
     "CitationAgent",

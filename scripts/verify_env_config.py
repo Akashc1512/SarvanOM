@@ -1,4 +1,6 @@
+from ..\shared\core\api\config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Verify Environment Configuration Script.
 
@@ -137,7 +139,7 @@ def check_service_connectivity():
     print("="*60)
     
     # Redis connectivity
-    redis_url = os.getenv('REDIS_URL')
+    redis_url = settings.redis_url
     if redis_url and not any(p in redis_url for p in ['your-', 'change-']):
         try:
             import redis

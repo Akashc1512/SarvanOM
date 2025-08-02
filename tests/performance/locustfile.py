@@ -1,4 +1,6 @@
+from shared.core.api.config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 🐝 LOCUST PERFORMANCE TESTING
 Universal Knowledge Platform - Load Testing with Locust
@@ -26,7 +28,7 @@ PERFORMANCE_CONFIG = {
     "default_token_budget": int(os.getenv("DEFAULT_TOKEN_BUDGET", "1000")),
     "test_users": int(os.getenv("LOCUST_USERS", "1000")),
     "confidence_threshold": float(os.getenv("CONFIDENCE_THRESHOLD", "0.7")),
-    "index_name": os.getenv("MEILISEARCH_INDEX", "knowledge_base"),
+    "index_name": settings.meilisearch_index or "knowledge_base",
 }
 
 

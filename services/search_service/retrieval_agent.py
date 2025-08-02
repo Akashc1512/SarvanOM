@@ -12,7 +12,7 @@ import time
 import os
 import re
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any, Tuple, Set
+from typing import Dict, List, Optional, Any, Tuple, Set, Union
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 import numpy as np
@@ -39,6 +39,35 @@ load_dotenv()
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Add imports for Meilisearch and ArangoDB agents
+from services.search_service.core.meilisearch_engine import MeilisearchEngine, create_meilisearch_engine
+from shared.core.agents.arangodb_knowledge_graph_agent import ArangoDBKnowledgeGraphAgent, EntityNode, Relationship
+
+# Graph update configuration
+GRAPH_UPDATE_ENABLED = os.getenv("GRAPH_UPDATE_ENABLED", "true").lower() == "true"
+GRAPH_AUTO_EXTRACT_ENTITIES = os.getenv("GRAPH_AUTO_EXTRACT_ENTITIES", "true").lower() == "true"
+GRAPH_CONFIDENCE_THRESHOLD = float(os.getenv("GRAPH_CONFIDENCE_THRESHOLD", "0.7"))
+GRAPH_MAX_ENTITIES_PER_DOC = int(os.getenv("GRAPH_MAX_ENTITIES_PER_DOC", "10"))
+GRAPH_RELATIONSHIP_TYPES = os.getenv("GRAPH_RELATIONSHIP_TYPES", "is_related_to,is_part_of,is_similar_to,enables,requires").split(",")
+GRAPH_CONTEXT_ENABLED = os.getenv("GRAPH_CONTEXT_ENABLED", "true").lower() == "true"
+GRAPH_CONTEXT_MAX_RESULTS = int(os.getenv("GRAPH_CONTEXT_MAX_RESULTS", "10"))
+GRAPH_UPDATE_BATCH_SIZE = int(os.getenv("GRAPH_UPDATE_BATCH_SIZE", "5"))
+
+# Environment variable verification
+MEILISEARCH_URL = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
+MEILI_MASTER_KEY = os.getenv("MEILI_MASTER_KEY")
+ARANGO_URL = os.getenv("ARANGO_URL", "http://localhost:8529")
+ARANGO_USERNAME = os.getenv("ARANGO_USERNAME", "root")
+ARANGO_PASSWORD = os.getenv("ARANGO_PASSWORD", "")
+ARANGO_DATABASE = os.getenv("ARANGO_DATABASE", "knowledge_graph")
+
+logger.info(f"🔧 Environment Configuration:")
+logger.info(f"   MEILISEARCH_URL: {MEILISEARCH_URL}")
+logger.info(f"   MEILI_MASTER_KEY: {'Set' if MEILI_MASTER_KEY else 'Not set'}")
+logger.info(f"   ARANGO_URL: {ARANGO_URL}")
+logger.info(f"   ARANGO_DATABASE: {ARANGO_DATABASE}")
+logger.info(f"   GRAPH_UPDATE_ENABLED: {GRAPH_UPDATE_ENABLED}")
 
 
 # ============================================================================
@@ -491,90 +520,7 @@ class VectorDBClient:
             logger.error(f"Qdrant upsert failed: {e}")
 
 
-# --- ElasticsearchClient: Real Integration ---
-# Required environment variables:
-#   ELASTICSEARCH_HOST
-#   ELASTICSEARCH_USERNAME (optional)
-#   ELASTICSEARCH_PASSWORD (optional)
-
-try:
-    from elasticsearch import AsyncElasticsearch
-
-    ELASTICSEARCH_AVAILABLE = True
-except ImportError:
-    ELASTICSEARCH_AVAILABLE = False
-    AsyncElasticsearch = None
-
-
-class ElasticsearchClient:
-    """
-    ElasticsearchClient using the official elasticsearch Python client.
-    """
-
-    def __init__(self, config: Dict[str, Any]):
-        import os
-
-        self.config = config
-        self.index_name = config.get(
-            "index_name", os.getenv("ELASTICSEARCH_INDEX", "knowledge_base")
-        )
-        self.host = os.getenv("ELASTICSEARCH_HOST", "http://localhost:9200")
-        self.username = os.getenv("ELASTICSEARCH_USERNAME")
-        self.password = os.getenv("ELASTICSEARCH_PASSWORD")
-        self.es = AsyncElasticsearch(
-            hosts=[self.host],
-            http_auth=(
-                (self.username, self.password)
-                if self.username and self.password
-                else None
-            ),
-            verify_certs=True,
-        )
-
-    async def search(
-        self, query: str, top_k: int, filters: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
-        """
-        Perform BM25 keyword search using Elasticsearch.
-        """
-        try:
-            es_query = {
-                "size": top_k,
-                "query": {
-                    "multi_match": {
-                        "query": query,
-                        "fields": ["content^2", "title", "metadata.*"],
-                    }
-                },
-            }
-            if filters:
-                es_query["post_filter"] = filters
-            response = await self.es.search(index=self.index_name, body=es_query)
-            return response
-        except Exception as e:
-            logger.error(f"Elasticsearch query error: {e}")
-            return {"hits": {"total": {"value": 0}, "hits": []}}
-
-    async def search_documents(
-        self, query: str, top_k: int = 20
-    ) -> List[Dict[str, Any]]:
-        """
-        Search documents and return formatted results.
-        """
-        response = await self.search(query, top_k)
-        documents = []
-        for hit in response.get("hits", {}).get("hits", []):
-            source = hit.get("_source", {})
-            documents.append(
-                {
-                    "id": hit.get("_id", ""),
-                    "content": source.get("content", ""),
-                    "title": source.get("title", ""),
-                    "score": hit.get("_score", 0.0),
-                    "metadata": source.get("metadata", {}),
-                }
-            )
-        return documents
+# Elasticsearch removed - using Meilisearch for keyword search
 
 
 # --- KnowledgeGraphClient: Real SPARQL Integration ---
@@ -771,7 +717,15 @@ class SERPClient:
             except Exception as e:
                 logger.warning(f"Google Custom Search failed: {e}")
 
-        # If both fail, return mock results
+        # Try DuckDuckGo as zero-budget alternative
+        if not results:
+            try:
+                duckduckgo_results = await self._search_duckduckgo(query, num_results)
+                results.extend(duckduckgo_results)
+            except Exception as e:
+                logger.warning(f"DuckDuckGo search failed: {e}")
+
+        # If all APIs fail, return mock results
         if not results:
             logger.warning("All search APIs failed, returning mock results")
             results = self._generate_mock_results(query, num_results)
@@ -843,6 +797,38 @@ class SERPClient:
                     return results
                 else:
                     raise Exception(f"Google CSE returned status {response.status}")
+
+    async def _search_duckduckgo(self, query: str, num_results: int) -> List[Dict[str, Any]]:
+        """Search using DuckDuckGo (zero-budget alternative)."""
+        try:
+            # Try to import duckduckgo_search, install if not available
+            try:
+                from duckduckgo_search import DDGS
+            except ImportError:
+                logger.warning("duckduckgo_search not installed. Installing...")
+                import subprocess
+                subprocess.check_call(["pip", "install", "duckduckgo-search"])
+                from duckduckgo_search import DDGS
+
+            # Perform search
+            with DDGS() as ddgs:
+                results = list(ddgs.text(query, max_results=num_results))
+            
+            formatted_results = []
+            for result in results:
+                formatted_results.append({
+                    "title": result.get("title", ""),
+                    "snippet": result.get("body", ""),
+                    "link": result.get("href", ""),
+                    "source": "duckduckgo",
+                    "score": 0.7,  # Slightly lower score than paid APIs
+                })
+            
+            return formatted_results
+            
+        except Exception as e:
+            logger.error(f"DuckDuckGo search failed: {e}")
+            raise Exception(f"DuckDuckGo search failed: {e}")
 
     def _generate_mock_results(
         self, query: str, num_results: int
@@ -1360,12 +1346,16 @@ class RetrievalAgent(BaseAgent):
 
         # Initialize clients
         self.vector_db = VectorDBClient(self.config.get("vector_db", {}))
-        self.elasticsearch = ElasticsearchClient(self.config.get("elasticsearch", {}))
         self.knowledge_graph = KnowledgeGraphClient(
             self.config.get("knowledge_graph", {})
         )
         self.serp_client = SERPClient(self.config.get("serp", {}))
         self.semantic_cache = SemanticCache()
+
+        # Initialize multi-source clients
+        self.meilisearch_engine = None
+        self.arangodb_agent = None
+        self._initialize_multi_source_clients()
 
         # Initialize query intelligence
         self.query_intelligence = QueryIntelligence()
@@ -1373,15 +1363,205 @@ class RetrievalAgent(BaseAgent):
         # Initialize entity extractor
         self.entity_extractor = EntityExtractor()
 
+    def _initialize_multi_source_clients(self):
+        """Initialize Meilisearch and ArangoDB clients."""
+        try:
+            # Initialize Meilisearch engine
+            meilisearch_url = MEILISEARCH_URL
+            meili_master_key = MEILI_MASTER_KEY
+            self.meilisearch_engine = MeilisearchEngine(meilisearch_url, meili_master_key)
+            logger.info("✅ Meilisearch engine initialized")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to initialize Meilisearch engine: {e}")
+            self.meilisearch_engine = None
+
+        try:
+            # Initialize ArangoDB knowledge graph agent
+            self.arangodb_agent = ArangoDBKnowledgeGraphAgent()
+            logger.info("✅ ArangoDB knowledge graph agent initialized")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to initialize ArangoDB agent: {e}")
+            self.arangodb_agent = None
+
+    async def meilisearch_search(self, query: str, top_k: int = 20) -> SearchResult:
+        """
+        Perform keyword search using Meilisearch.
+
+        Args:
+            query: Search query
+            top_k: Number of results to return
+
+        Returns:
+            SearchResult with documents
+        """
+        start_time = time.time()
+
+        try:
+            if not self.meilisearch_engine:
+                logger.warning("Meilisearch engine not available")
+                return SearchResult(
+                    documents=[],
+                    search_type="meilisearch",
+                    query_time_ms=int((time.time() - start_time) * 1000),
+                    total_hits=0,
+                    metadata={"error": "Meilisearch engine not available"},
+                )
+
+            # Perform Meilisearch search
+            results = await self.meilisearch_engine.search(query, top_k)
+
+            # Convert to Document objects
+            documents = []
+            for result in results:
+                doc = Document(
+                    content=result.content,
+                    score=result.score,
+                    source="meilisearch_search",
+                    metadata=result.metadata,
+                    doc_id=result.metadata.get("meilisearch_id", ""),
+                )
+                documents.append(doc)
+
+            query_time = int((time.time() - start_time) * 1000)
+
+            return SearchResult(
+                documents=documents,
+                search_type="meilisearch",
+                query_time_ms=query_time,
+                total_hits=len(documents),
+                metadata={"search_engine": "meilisearch"},
+            )
+
+        except Exception as e:
+            logger.error(f"Meilisearch search error: {e}")
+            return SearchResult(
+                documents=[],
+                search_type="meilisearch",
+                query_time_ms=int((time.time() - start_time) * 1000),
+                total_hits=0,
+                metadata={"error": str(e)},
+            )
+
+    async def arangodb_graph_search(self, query: str, entities: List[str] = None, top_k: int = 20) -> SearchResult:
+        """
+        Perform graph-based search using ArangoDB knowledge graph agent.
+
+        Args:
+            query: Search query
+            entities: Optional pre-extracted entities
+            top_k: Number of results to return
+
+        Returns:
+            SearchResult with documents
+        """
+        start_time = time.time()
+
+        try:
+            if not self.arangodb_agent:
+                logger.warning("ArangoDB agent not available")
+                return SearchResult(
+                    documents=[],
+                    search_type="arangodb_graph",
+                    query_time_ms=int((time.time() - start_time) * 1000),
+                    total_hits=0,
+                    metadata={"error": "ArangoDB agent not available"},
+                )
+
+            # Extract entities if not provided
+            if not entities:
+                entities = await self._extract_entities(query)
+                entities = [entity["text"] for entity in entities]
+
+            # Query ArangoDB knowledge graph
+            kg_result = await self.arangodb_agent.query(query, query_type="entity_relationship")
+
+            # Convert knowledge graph results to Document objects
+            documents = []
+            
+            # Add entities as documents
+            for entity in kg_result.entities:
+                content = f"{entity.name}: {entity.properties.get('description', '')}"
+                doc = Document(
+                    content=content,
+                    score=entity.confidence,
+                    source="arangodb_graph",
+                    metadata={
+                        "entity_id": entity.id,
+                        "entity_type": entity.type,
+                        "entity_properties": entity.properties,
+                        "source_type": "entity",
+                    },
+                    doc_id=f"kg_entity_{entity.id}",
+                )
+                documents.append(doc)
+
+            # Add relationships as documents
+            for relationship in kg_result.relationships:
+                # Find source and target entities
+                source_entity = next((e for e in kg_result.entities if e.id == relationship.source_id), None)
+                target_entity = next((e for e in kg_result.entities if e.id == relationship.target_id), None)
+                
+                if source_entity and target_entity:
+                    content = f"{source_entity.name} {relationship.relationship_type} {target_entity.name}"
+                    if relationship.properties.get('description'):
+                        content += f": {relationship.properties['description']}"
+                    
+                    doc = Document(
+                        content=content,
+                        score=relationship.confidence,
+                        source="arangodb_graph",
+                        metadata={
+                            "source_entity": source_entity.name,
+                            "target_entity": target_entity.name,
+                            "relationship_type": relationship.relationship_type,
+                            "relationship_properties": relationship.properties,
+                            "source_type": "relationship",
+                        },
+                        doc_id=f"kg_rel_{relationship.source_id}_{relationship.target_id}",
+                    )
+                    documents.append(doc)
+
+            # Sort by score and limit results
+            documents.sort(key=lambda x: x.score, reverse=True)
+            documents = documents[:top_k]
+
+            query_time = int((time.time() - start_time) * 1000)
+
+            return SearchResult(
+                documents=documents,
+                search_type="arangodb_graph",
+                query_time_ms=query_time,
+                total_hits=len(documents),
+                metadata={
+                    "entities_found": len(kg_result.entities),
+                    "relationships_found": len(kg_result.relationships),
+                    "query_entities": entities,
+                },
+            )
+
+        except Exception as e:
+            logger.error(f"ArangoDB graph search error: {e}")
+            return SearchResult(
+                documents=[],
+                search_type="arangodb_graph",
+                query_time_ms=int((time.time() - start_time) * 1000),
+                total_hits=0,
+                metadata={"error": str(e)},
+            )
+
     def _default_config(self) -> Dict[str, Any]:
         """Default configuration for retrieval agent."""
         return {
             "vector_db": {
                 "url": os.getenv("VECTOR_DB_URL", "http://localhost:6333"),
                 "collection_name": "knowledge_base",
+                "pinecone_api_key": os.getenv("PINECONE_API_KEY"),
+                "pinecone_environment": os.getenv("PINECONE_ENVIRONMENT"),
+                "pinecone_index_name": os.getenv("PINECONE_INDEX_NAME"),
             },
-            "elasticsearch": {
-                "hosts": [os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")],
+            "meilisearch": {
+                "url": MEILISEARCH_URL,
+                "master_key": MEILI_MASTER_KEY,
                 "index_name": "knowledge_base",
             },
             "knowledge_graph": {
@@ -1448,7 +1628,7 @@ class RetrievalAgent(BaseAgent):
 
     async def keyword_search(self, query: str, top_k: int = 20) -> SearchResult:
         """
-        Perform keyword search using Elasticsearch.
+        Perform keyword search using Meilisearch.
 
         Args:
             query: Search query
@@ -1457,43 +1637,8 @@ class RetrievalAgent(BaseAgent):
         Returns:
             SearchResult with documents
         """
-        start_time = time.time()
-
-        try:
-            # Perform keyword search
-            results = await self.elasticsearch.search_documents(query, top_k)
-
-            # Convert to Document objects
-            documents = []
-            for result in results:
-                doc = Document(
-                    content=result["content"],
-                    score=result["score"],
-                    source="keyword_search",
-                    metadata=result.get("metadata", {}),
-                    doc_id=result.get("id", ""),
-                )
-                documents.append(doc)
-
-            query_time = int((time.time() - start_time) * 1000)
-
-            return SearchResult(
-                documents=documents,
-                search_type="keyword",
-                query_time_ms=query_time,
-                total_hits=len(documents),
-                metadata={"search_engine": "elasticsearch"},
-            )
-
-        except Exception as e:
-            logger.error(f"Keyword search error: {e}")
-            return SearchResult(
-                documents=[],
-                search_type="keyword",
-                query_time_ms=int((time.time() - start_time) * 1000),
-                total_hits=0,
-                metadata={"error": str(e)},
-            )
+        # Use Meilisearch for keyword search instead of Elasticsearch
+        return await self.meilisearch_search(query, top_k)
 
     async def web_search(self, query: str, top_k: int = 10) -> SearchResult:
         """
@@ -1650,6 +1795,7 @@ class RetrievalAgent(BaseAgent):
     ) -> SearchResult:
         """
         Perform hybrid retrieval using multiple strategies based on query intelligence.
+        Now includes Meilisearch keyword search and ArangoDB graph search.
 
         Args:
             query: User query
@@ -1670,7 +1816,7 @@ class RetrievalAgent(BaseAgent):
             if not entities:
                 entities = [entity["text"] for entity in query_analysis["entities"]]
 
-            # Determine retrieval strategy based on intent and complexity
+            # Determine retrieval strategies based on intent and complexity
             retrieval_strategies = self._determine_retrieval_strategies(
                 intent, complexity, entities
             )
@@ -1683,6 +1829,12 @@ class RetrievalAgent(BaseAgent):
 
             if "keyword" in retrieval_strategies:
                 retrieval_tasks.append(self.keyword_search(query, top_k=20))
+
+            if "meilisearch" in retrieval_strategies:
+                retrieval_tasks.append(self.meilisearch_search(query, top_k=20))
+
+            if "arangodb_graph" in retrieval_strategies and entities:
+                retrieval_tasks.append(self.arangodb_graph_search(query, entities, top_k=20))
 
             if "web" in retrieval_strategies:
                 retrieval_tasks.append(self.web_search(query, top_k=10))
@@ -1708,6 +1860,12 @@ class RetrievalAgent(BaseAgent):
                         successful_results
                     )
 
+                    # Query graph for additional context
+                    graph_context_documents = await self.query_graph_for_context(query, entities)
+                    if graph_context_documents:
+                        merged_documents.extend(graph_context_documents)
+                        logger.info(f"Added {len(graph_context_documents)} context documents from knowledge graph")
+
                     # Apply diversity constraints
                     diverse_documents = self._apply_diversity_constraints(
                         merged_documents
@@ -1718,6 +1876,10 @@ class RetrievalAgent(BaseAgent):
                         diverse_documents = await self._llm_rerank(
                             query, diverse_documents
                         )
+
+                    # Update knowledge graph with new documents (async, don't wait)
+                    if GRAPH_UPDATE_ENABLED and diverse_documents:
+                        asyncio.create_task(self.update_knowledge_graph(diverse_documents))
 
                     query_time = int((time.time() - start_time) * 1000)
 
@@ -1732,6 +1894,8 @@ class RetrievalAgent(BaseAgent):
                             "entities": entities,
                             "strategies_used": retrieval_strategies,
                             "query_analysis": query_analysis,
+                            "graph_context_added": len(graph_context_documents),
+                            "graph_update_triggered": GRAPH_UPDATE_ENABLED,
                         },
                     )
 
@@ -1748,6 +1912,7 @@ class RetrievalAgent(BaseAgent):
     ) -> List[str]:
         """
         Determine which retrieval strategies to use based on query analysis.
+        Updated to include Meilisearch and ArangoDB graph search.
 
         Args:
             intent: Query intent (factual, comparative, etc.)
@@ -1761,13 +1926,18 @@ class RetrievalAgent(BaseAgent):
 
         # Base strategies for all queries
         strategies.append("vector")
-        strategies.append("keyword")
+        strategies.append("keyword")  # Now uses Meilisearch
+        strategies.append("meilisearch")  # Direct Meilisearch search
+
+        # Add ArangoDB graph search if entities are available
+        if entities:
+            strategies.append("arangodb_graph")
 
         # Add web search for factual and comparative queries
         if intent in ["factual", "comparative"]:
             strategies.append("web")
 
-        # Add graph search if entities are available
+        # Add graph search if entities are available (legacy SPARQL)
         if entities:
             strategies.append("graph")
 
@@ -1782,7 +1952,8 @@ class RetrievalAgent(BaseAgent):
         self, results: List[SearchResult]
     ) -> List[Document]:
         """
-        Merge and deduplicate search results.
+        Merge and deduplicate search results from multiple sources.
+        Enhanced to handle different source types.
 
         Args:
             results: List of search results
@@ -1794,17 +1965,27 @@ class RetrievalAgent(BaseAgent):
         for result in results:
             all_documents.extend(result.documents)
 
-        # Deduplicate by content similarity
+        # Deduplicate by content similarity and source
         unique_documents = []
         seen_contents = set()
+        seen_ids = set()
 
         for doc in all_documents:
             # Create content hash for deduplication
             content_hash = hashlib.md5(doc.content.lower().encode()).hexdigest()
-
+            
+            # Check for exact content match
             if content_hash not in seen_contents:
                 seen_contents.add(content_hash)
                 unique_documents.append(doc)
+            else:
+                # If content is similar but from different sources, keep the higher scoring one
+                existing_doc = next((d for d in unique_documents 
+                                   if hashlib.md5(d.content.lower().encode()).hexdigest() == content_hash), None)
+                if existing_doc and doc.score > existing_doc.score:
+                    # Replace with higher scoring document
+                    unique_documents.remove(existing_doc)
+                    unique_documents.append(doc)
 
         # Sort by score
         unique_documents.sort(key=lambda x: x.score, reverse=True)
@@ -1882,6 +2063,743 @@ class RetrievalAgent(BaseAgent):
             List of extracted entities with metadata
         """
         return await self.entity_extractor.extract_entities(query)
+
+    async def update_knowledge_graph(self, documents: List[Document]) -> bool:
+        """
+        Update the knowledge graph with new documents.
+        
+        Args:
+            documents: List of documents to add to the knowledge graph
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not GRAPH_UPDATE_ENABLED or not self.arangodb_agent:
+            logger.info("Graph updates disabled or ArangoDB agent not available")
+            return False
+        
+        try:
+            logger.info(f"Updating knowledge graph with {len(documents)} documents")
+            
+            # Process documents in batches for better performance
+            batch_size = GRAPH_UPDATE_BATCH_SIZE
+            for i in range(0, len(documents), batch_size):
+                batch = documents[i:i + batch_size]
+                await self._process_document_batch(batch)
+            
+            logger.info("Knowledge graph update completed successfully")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to update knowledge graph: {e}")
+            return False
+
+    async def _process_document_batch(self, documents: List[Document]) -> None:
+        """
+        Process a batch of documents for graph updates.
+        
+        Args:
+            documents: Batch of documents to process
+        """
+        try:
+            # Extract entities from all documents in batch
+            entity_tasks = []
+            for doc in documents:
+                task = self._extract_entities_enhanced(doc.content)
+                entity_tasks.append(task)
+            
+            # Wait for all entity extraction to complete
+            entity_results = await asyncio.gather(*entity_tasks, return_exceptions=True)
+            
+            # Process each document with its extracted entities
+            for i, doc in enumerate(documents):
+                if i < len(entity_results) and not isinstance(entity_results[i], Exception):
+                    entities = entity_results[i]
+                    await self._add_document_to_graph_enhanced(doc, entities)
+                else:
+                    logger.warning(f"Entity extraction failed for document: {doc.doc_id}")
+                    # Fallback to basic entity extraction
+                    entities = await self._extract_entities(doc.content)
+                    await self._add_document_to_graph_enhanced(doc, entities)
+                    
+        except Exception as e:
+            logger.error(f"Failed to process document batch: {e}")
+
+    async def _extract_entities_enhanced(self, content: str) -> List[Dict[str, Any]]:
+        """
+        Enhanced entity extraction using multiple strategies.
+        
+        Args:
+            content: Document content
+            
+        Returns:
+            List of extracted entities with enhanced metadata
+        """
+        try:
+            # Use LLM for advanced entity extraction
+            llm_prompt = f"""
+            Extract named entities from this content:
+            "{content[:1000]}..."
+            
+            Return a JSON array with entities in this format:
+            [
+                {{
+                    "text": "entity name",
+                    "type": "PERSON|ORGANIZATION|LOCATION|TECHNOLOGY|CONCEPT|OTHER",
+                    "confidence": 0.0-1.0,
+                    "relevance": "high|medium|low",
+                    "description": "brief description"
+                }}
+            ]
+            
+            Focus on entities that are important for knowledge graph construction.
+            Limit to the most relevant entities.
+            """
+            
+            try:
+                from shared.core.llm_client_v3 import EnhancedLLMClientV3
+                
+                llm_client = EnhancedLLMClientV3()
+                response = await llm_client.generate_text(
+                    prompt=llm_prompt,
+                    max_tokens=500,
+                    use_dynamic_selection=True
+                )
+                
+                if response:
+                    import json
+                    try:
+                        entities = json.loads(response)
+                        if isinstance(entities, list):
+                            # Filter by confidence threshold
+                            entities = [e for e in entities if e.get('confidence', 0) >= GRAPH_CONFIDENCE_THRESHOLD]
+                            # Limit number of entities
+                            entities = entities[:GRAPH_MAX_ENTITIES_PER_DOC]
+                            return entities
+                    except json.JSONDecodeError:
+                        pass
+            except Exception as e:
+                logger.warning(f"LLM entity extraction failed: {e}")
+            
+            # Fallback to basic entity extraction
+            return await self._extract_entities(content)
+            
+        except Exception as e:
+            logger.error(f"Enhanced entity extraction failed: {e}")
+            return []
+
+    async def _add_document_to_graph_enhanced(self, document: Document, entities: List[Dict[str, Any]]) -> bool:
+        """
+        Add a single document to the knowledge graph with enhanced processing.
+        
+        Args:
+            document: Document to add to the graph
+            entities: Pre-extracted entities
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            if not entities:
+                logger.debug(f"No entities found in document: {document.doc_id}")
+                return True
+            
+            # Create entity nodes with enhanced metadata
+            entity_nodes = []
+            for entity in entities:
+                if entity.get("confidence", 0) >= GRAPH_CONFIDENCE_THRESHOLD:
+                    node_id = f"entity_{entity['text'].lower().replace(' ', '_').replace('-', '_')}"
+                    
+                    # Enhanced properties
+                    properties = {
+                        "name": entity["text"],
+                        "description": entity.get("description", f"Entity extracted from document: {document.doc_id}"),
+                        "confidence": entity["confidence"],
+                        "relevance": entity.get("relevance", "medium"),
+                        "source_document": document.doc_id,
+                        "source_type": document.source,
+                        "extraction_timestamp": datetime.now().isoformat(),
+                        "content_preview": document.content[:200] + "..." if len(document.content) > 200 else document.content
+                    }
+                    
+                    entity_nodes.append({
+                        "id": node_id,
+                        "name": entity["text"],
+                        "type": entity["type"],
+                        "properties": properties
+                    })
+            
+            # Add entities to graph
+            for entity_node in entity_nodes:
+                await self.arangodb_agent.create_knowledge_node(
+                    entity_node["id"],
+                    entity_node["type"],
+                    entity_node["properties"]
+                )
+            
+            # Create relationships between entities
+            if len(entity_nodes) > 1:
+                await self._create_enhanced_entity_relationships(entity_nodes, document)
+            
+            # Create relationships with existing entities in the graph
+            await self._link_to_existing_entities(entity_nodes, document)
+            
+            logger.debug(f"Added {len(entity_nodes)} entities to graph for document: {document.doc_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to add document to graph: {e}")
+            return False
+
+    async def _create_enhanced_entity_relationships(self, entity_nodes: List[Dict], document: Document) -> None:
+        """
+        Create enhanced relationships between entities in the same document.
+        
+        Args:
+            entity_nodes: List of entity nodes
+            document: Source document
+        """
+        try:
+            # Create relationships between all pairs of entities
+            for i, entity1 in enumerate(entity_nodes):
+                for j, entity2 in enumerate(entity_nodes[i+1:], i+1):
+                    # Determine relationship type based on entity types and content
+                    relationship_type = self._determine_enhanced_relationship_type(entity1, entity2, document.content)
+                    
+                    # Create relationship with enhanced properties
+                    await self.arangodb_agent.create_relationship(
+                        entity1["id"],
+                        entity2["id"],
+                        relationship_type,
+                        {
+                            "description": f"Relationship from document: {document.doc_id}",
+                            "confidence": min(entity1["properties"]["confidence"], entity2["properties"]["confidence"]),
+                            "source_document": document.doc_id,
+                            "source_type": document.source,
+                            "created_timestamp": datetime.now().isoformat(),
+                            "relationship_strength": self._calculate_relationship_strength(entity1, entity2, document.content)
+                        }
+                    )
+                    
+        except Exception as e:
+            logger.error(f"Failed to create enhanced entity relationships: {e}")
+
+    async def _link_to_existing_entities(self, new_entities: List[Dict], document: Document) -> None:
+        """
+        Link new entities to existing entities in the knowledge graph.
+        
+        Args:
+            new_entities: List of new entity nodes
+            document: Source document
+        """
+        try:
+            for new_entity in new_entities:
+                # Query for similar existing entities
+                similar_entities = await self.arangodb_agent.query_related_entities([new_entity["name"]], max_depth=1)
+                
+                for existing_entity in similar_entities.entities:
+                    if existing_entity.name != new_entity["name"]:
+                        # Create relationship to existing entity
+                        relationship_type = self._determine_enhanced_relationship_type(
+                            new_entity, 
+                            {"name": existing_entity.name, "type": existing_entity.type}, 
+                            document.content
+                        )
+                        
+                        await self.arangodb_agent.create_relationship(
+                            new_entity["id"],
+                            existing_entity.id,
+                            relationship_type,
+                            {
+                                "description": f"Link from document: {document.doc_id}",
+                                "confidence": new_entity["properties"]["confidence"],
+                                "source_document": document.doc_id,
+                                "source_type": document.source,
+                                "created_timestamp": datetime.now().isoformat(),
+                                "link_type": "document_to_existing"
+                            }
+                        )
+                        
+        except Exception as e:
+            logger.error(f"Failed to link to existing entities: {e}")
+
+    def _determine_enhanced_relationship_type(self, entity1: Dict, entity2: Dict, content: str) -> str:
+        """
+        Determine enhanced relationship type between two entities.
+        
+        Args:
+            entity1: First entity
+            entity2: Second entity
+            content: Document content for context
+            
+        Returns:
+            Relationship type
+        """
+        # Enhanced relationship type determination
+        type1 = entity1["type"].lower()
+        type2 = entity2["type"].lower()
+        name1 = entity1["name"].lower()
+        name2 = entity2["name"].lower()
+        
+        # Check content for relationship indicators
+        content_lower = content.lower()
+        
+        # Technology relationships
+        if any(tech in type1 or tech in type2 for tech in ["technology", "framework", "tool"]):
+            if any(word in content_lower for word in ["enables", "supports", "powers"]):
+                return "enables"
+            elif any(word in content_lower for word in ["requires", "needs", "depends"]):
+                return "requires"
+            else:
+                return "is_related_to"
+        
+        # Language relationships
+        if any(lang in type1 or lang in type2 for lang in ["language", "programming"]):
+            if any(word in content_lower for word in ["used with", "compatible", "works with"]):
+                return "works_with"
+            else:
+                return "is_related_to"
+        
+        # Organization relationships
+        if any(org in type1 or org in type2 for org in ["organization", "company"]):
+            if any(word in content_lower for word in ["partners", "collaborates", "works with"]):
+                return "collaborates_with"
+            else:
+                return "is_related_to"
+        
+        # Person relationships
+        if any(person in type1 or person in type2 for person in ["person", "individual"]):
+            if any(word in content_lower for word in ["works with", "collaborates", "teams"]):
+                return "works_with"
+            else:
+                return "is_related_to"
+        
+        # Similar entities
+        if type1 == type2:
+            return "is_similar_to"
+        
+        # Default relationship
+        return "is_related_to"
+
+    def _calculate_relationship_strength(self, entity1: Dict, entity2: Dict, content: str) -> float:
+        """
+        Calculate the strength of relationship between two entities.
+        
+        Args:
+            entity1: First entity
+            entity2: Second entity
+            content: Document content
+            
+        Returns:
+            Relationship strength (0.0 to 1.0)
+        """
+        # Base strength on entity confidence
+        base_strength = min(entity1["properties"]["confidence"], entity2["properties"]["confidence"])
+        
+        # Boost strength if entities appear close together in content
+        content_lower = content.lower()
+        name1 = entity1["name"].lower()
+        name2 = entity2["name"].lower()
+        
+        if name1 in content_lower and name2 in content_lower:
+            # Find positions of both entities
+            pos1 = content_lower.find(name1)
+            pos2 = content_lower.find(name2)
+            
+            # Calculate distance
+            distance = abs(pos1 - pos2)
+            
+            # Closer entities get higher strength
+            if distance < 50:
+                base_strength += 0.2
+            elif distance < 100:
+                base_strength += 0.1
+            elif distance < 200:
+                base_strength += 0.05
+        
+        return min(1.0, base_strength)
+
+    async def _add_document_to_graph(self, document: Document) -> bool:
+        """
+        Add a single document to the knowledge graph.
+        
+        Args:
+            document: Document to add to the graph
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Extract entities from document content
+            entities = await self._extract_entities(document.content)
+            
+            if not entities:
+                logger.debug(f"No entities found in document: {document.doc_id}")
+                return True
+            
+            # Limit entities per document
+            entities = entities[:GRAPH_MAX_ENTITIES_PER_DOC]
+            
+            # Create entity nodes
+            entity_nodes = []
+            for entity in entities:
+                if entity["confidence"] >= GRAPH_CONFIDENCE_THRESHOLD:
+                    node_id = f"entity_{entity['text'].lower().replace(' ', '_')}"
+                    entity_nodes.append({
+                        "id": node_id,
+                        "name": entity["text"],
+                        "type": entity["type"],
+                        "properties": {
+                            "description": f"Entity extracted from document: {document.doc_id}",
+                            "confidence": entity["confidence"],
+                            "source_document": document.doc_id,
+                            "source_type": document.source
+                        }
+                    })
+            
+            # Add entities to graph
+            for entity_node in entity_nodes:
+                await self.arangodb_agent.create_knowledge_node(
+                    entity_node["id"],
+                    entity_node["type"],
+                    entity_node["properties"]
+                )
+            
+            # Create relationships between entities
+            if len(entity_nodes) > 1:
+                await self._create_entity_relationships(entity_nodes, document)
+            
+            logger.debug(f"Added {len(entity_nodes)} entities to graph for document: {document.doc_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to add document to graph: {e}")
+            return False
+
+    async def _create_entity_relationships(self, entity_nodes: List[Dict], document: Document) -> None:
+        """
+        Create relationships between entities in the same document.
+        
+        Args:
+            entity_nodes: List of entity nodes
+            document: Source document
+        """
+        try:
+            # Create relationships between all pairs of entities
+            for i, entity1 in enumerate(entity_nodes):
+                for j, entity2 in enumerate(entity_nodes[i+1:], i+1):
+                    # Determine relationship type based on entity types
+                    relationship_type = self._determine_relationship_type(entity1, entity2)
+                    
+                    # Create relationship
+                    await self.arangodb_agent.create_relationship(
+                        entity1["id"],
+                        entity2["id"],
+                        relationship_type,
+                        {
+                            "description": f"Relationship from document: {document.doc_id}",
+                            "confidence": min(entity1["properties"]["confidence"], entity2["properties"]["confidence"]),
+                            "source_document": document.doc_id,
+                            "source_type": document.source
+                        }
+                    )
+                    
+        except Exception as e:
+            logger.error(f"Failed to create entity relationships: {e}")
+
+    def _determine_relationship_type(self, entity1: Dict, entity2: Dict) -> str:
+        """
+        Determine the type of relationship between two entities.
+        
+        Args:
+            entity1: First entity
+            entity2: Second entity
+            
+        Returns:
+            Relationship type
+        """
+        # Simple heuristic for relationship type
+        type1 = entity1["type"].lower()
+        type2 = entity2["type"].lower()
+        
+        if type1 == type2:
+            return "is_similar_to"
+        elif "technology" in type1 or "technology" in type2:
+            return "enables"
+        elif "language" in type1 or "language" in type2:
+            return "is_related_to"
+        else:
+            return "is_related_to"
+
+    async def query_graph_for_context(self, query: str, entities: List[str] = None) -> List[Document]:
+        """
+        Query the knowledge graph for additional context related to the query.
+        
+        Args:
+            query: Search query
+            entities: Optional pre-extracted entities
+            
+        Returns:
+            List of additional context documents from the graph
+        """
+        if not GRAPH_CONTEXT_ENABLED or not self.arangodb_agent:
+            return []
+        
+        try:
+            # Extract entities if not provided
+            if not entities:
+                extracted_entities = await self._extract_entities_enhanced(query)
+                entities = [entity["text"] for entity in extracted_entities]
+            
+            if not entities:
+                return []
+            
+            # Query the graph for related entities with enhanced context
+            context_documents = await self._get_enhanced_graph_context(query, entities)
+            
+            # Sort by score and limit results
+            context_documents.sort(key=lambda x: x.score, reverse=True)
+            context_documents = context_documents[:GRAPH_CONTEXT_MAX_RESULTS]
+            
+            logger.info(f"Found {len(context_documents)} context documents from knowledge graph")
+            return context_documents
+            
+        except Exception as e:
+            logger.error(f"Failed to query graph for context: {e}")
+            return []
+
+    async def _get_enhanced_graph_context(self, query: str, entities: List[str]) -> List[Document]:
+        """
+        Get enhanced context from the knowledge graph.
+        
+        Args:
+            query: Search query
+            entities: List of entities
+            
+        Returns:
+            List of context documents
+        """
+        context_documents = []
+        
+        try:
+            # Query for related entities
+            kg_result = await self.arangodb_agent.query_related_entities(entities, max_depth=2)
+            
+            # Add entities as context with enhanced metadata
+            for entity in kg_result.entities:
+                content = self._format_entity_context(entity, query)
+                doc = Document(
+                    content=content,
+                    score=entity.confidence,
+                    source="knowledge_graph_context",
+                    metadata={
+                        "entity_id": entity.id,
+                        "entity_type": entity.type,
+                        "entity_properties": entity.properties,
+                        "source_type": "graph_entity",
+                        "context_type": "entity",
+                        "relevance_to_query": self._calculate_query_relevance(entity, query)
+                    },
+                    doc_id=f"graph_context_entity_{entity.id}",
+                )
+                context_documents.append(doc)
+            
+            # Add relationships as context
+            for relationship in kg_result.relationships:
+                # Find source and target entities
+                source_entity = next((e for e in kg_result.entities if e.id == relationship.source_id), None)
+                target_entity = next((e for e in kg_result.entities if e.id == relationship.target_id), None)
+                
+                if source_entity and target_entity:
+                    content = self._format_relationship_context(source_entity, target_entity, relationship, query)
+                    doc = Document(
+                        content=content,
+                        score=relationship.confidence,
+                        source="knowledge_graph_context",
+                        metadata={
+                            "source_entity": source_entity.name,
+                            "target_entity": target_entity.name,
+                            "relationship_type": relationship.relationship_type,
+                            "relationship_properties": relationship.properties,
+                            "source_type": "graph_relationship",
+                            "context_type": "relationship",
+                            "relevance_to_query": self._calculate_query_relevance(
+                                {"name": f"{source_entity.name} {relationship.relationship_type} {target_entity.name}"}, 
+                                query
+                            )
+                        },
+                        doc_id=f"graph_context_rel_{relationship.source_id}_{relationship.target_id}",
+                    )
+                    context_documents.append(doc)
+            
+            # Add path-based context
+            path_context = await self._get_path_based_context(query, entities)
+            context_documents.extend(path_context)
+            
+            return context_documents
+            
+        except Exception as e:
+            logger.error(f"Failed to get enhanced graph context: {e}")
+            return []
+
+    def _format_entity_context(self, entity: EntityNode, query: str) -> str:
+        """
+        Format entity information as context.
+        
+        Args:
+            entity: Entity node
+            query: Original query
+            
+        Returns:
+            Formatted context string
+        """
+        description = entity.properties.get('description', '')
+        relevance = self._calculate_query_relevance(entity, query)
+        
+        context = f"Graph Entity: {entity.name}"
+        if description:
+            context += f" - {description}"
+        
+        # Add relevance indicator
+        if relevance > 0.8:
+            context += " (Highly relevant)"
+        elif relevance > 0.6:
+            context += " (Relevant)"
+        
+        return context
+
+    def _format_relationship_context(self, source_entity: EntityNode, target_entity: EntityNode, 
+                                   relationship: Relationship, query: str) -> str:
+        """
+        Format relationship information as context.
+        
+        Args:
+            source_entity: Source entity
+            target_entity: Target entity
+            relationship: Relationship between entities
+            query: Original query
+            
+        Returns:
+            Formatted context string
+        """
+        context = f"Graph Relationship: {source_entity.name} {relationship.relationship_type} {target_entity.name}"
+        
+        description = relationship.properties.get('description', '')
+        if description:
+            context += f" - {description}"
+        
+        # Add relationship strength indicator
+        strength = relationship.properties.get('relationship_strength', 0.5)
+        if strength > 0.8:
+            context += " (Strong relationship)"
+        elif strength > 0.6:
+            context += " (Moderate relationship)"
+        
+        return context
+
+    async def _get_path_based_context(self, query: str, entities: List[str]) -> List[Document]:
+        """
+        Get context based on paths between entities in the knowledge graph.
+        
+        Args:
+            query: Search query
+            entities: List of entities
+            
+        Returns:
+            List of path-based context documents
+        """
+        context_documents = []
+        
+        try:
+            if len(entities) < 2:
+                return context_documents
+            
+            # Query for paths between entities
+            kg_result = await self.arangodb_agent.query(query, query_type="path_finding")
+            
+            for path in kg_result.paths:
+                if len(path) >= 2:
+                    # Create path context
+                    path_names = [entity.name for entity in path]
+                    path_content = f"Graph Path: {' -> '.join(path_names)}"
+                    
+                    # Add descriptions if available
+                    descriptions = []
+                    for entity in path:
+                        desc = entity.properties.get('description', '')
+                        if desc:
+                            descriptions.append(f"{entity.name}: {desc}")
+                    
+                    if descriptions:
+                        path_content += f" - {'; '.join(descriptions)}"
+                    
+                    doc = Document(
+                        content=path_content,
+                        score=0.7,  # Default score for paths
+                        source="knowledge_graph_context",
+                        metadata={
+                            "path_length": len(path),
+                            "path_entities": path_names,
+                            "source_type": "graph_path",
+                            "context_type": "path",
+                            "relevance_to_query": self._calculate_query_relevance(
+                                {"name": " -> ".join(path_names)}, 
+                                query
+                            )
+                        },
+                        doc_id=f"graph_context_path_{hash(path_content)}",
+                    )
+                    context_documents.append(doc)
+            
+            return context_documents
+            
+        except Exception as e:
+            logger.error(f"Failed to get path-based context: {e}")
+            return []
+
+    def _calculate_query_relevance(self, entity: Union[Dict, EntityNode], query: str) -> float:
+        """
+        Calculate relevance of an entity to the query.
+        
+        Args:
+            entity: Entity information (Dict or EntityNode)
+            query: Search query
+            
+        Returns:
+            Relevance score (0.0 to 1.0)
+        """
+        try:
+            # Handle both Dict and EntityNode types
+            if hasattr(entity, 'name'):
+                # EntityNode object
+                entity_name = entity.name.lower()
+            else:
+                # Dict object
+                entity_name = entity.get("name", "").lower()
+            
+            query_lower = query.lower()
+            
+            # Simple relevance calculation based on word overlap
+            entity_words = set(entity_name.split())
+            query_words = set(query_lower.split())
+            
+            if not entity_words or not query_words:
+                return 0.5
+            
+            overlap = len(entity_words.intersection(query_words))
+            union = len(entity_words.union(query_words))
+            
+            relevance = overlap / union if union > 0 else 0.0
+            
+            # Boost relevance for exact matches
+            if entity_name in query_lower or query_lower in entity_name:
+                relevance += 0.3
+            
+            return min(1.0, relevance)
+            
+        except Exception as e:
+            logger.error(f"Failed to calculate query relevance: {e}")
+            return 0.5
 
     async def _emergency_fallback(self, query: str) -> SearchResult:
         """Emergency fallback when primary retrieval fails"""

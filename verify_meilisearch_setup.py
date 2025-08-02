@@ -1,4 +1,6 @@
+from shared.core.api.config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Meilisearch Setup Verification Script
 Verifies that Meilisearch is properly configured and working with your environment variables.
@@ -69,9 +71,9 @@ async def test_meilisearch_connection():
     
     try:
         # Get configuration from environment
-        meili_url = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
-        meili_index = os.getenv("MEILISEARCH_INDEX", "knowledge_base")
-        meili_master_key = os.getenv("MEILISEARCH_MASTER_KEY")
+        meili_url = settings.meilisearch_url or "http://localhost:7700"
+        meili_index = settings.meilisearch_index or "knowledge_base"
+        meili_master_key = settings.meilisearch_master_key
         
         print(f"URL: {meili_url}")
         print(f"Index: {meili_index}")

@@ -1,4 +1,6 @@
+from shared.core.api.config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Add sample documents to Meilisearch for testing.
 This script adds realistic documents to enable proper testing of the hybrid retrieval system.
@@ -27,8 +29,8 @@ async def add_sample_documents():
     print("📚 Adding Sample Documents to Meilisearch...")
     
     # Create Meilisearch engine
-    meilisearch_url = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
-    meilisearch_api_key = os.getenv("MEILISEARCH_API_KEY")
+    meilisearch_url = settings.meilisearch_url or "http://localhost:7700"
+    meilisearch_api_key = settings.meilisearch_api_key
     
     engine = MeilisearchEngine(meilisearch_url, meilisearch_api_key)
     

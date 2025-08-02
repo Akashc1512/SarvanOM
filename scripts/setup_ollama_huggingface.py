@@ -1,4 +1,6 @@
+from ..\shared\core\api\config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Setup Ollama and Hugging Face Integration
 Comprehensive setup script for zero-budget LLM alternatives
@@ -282,9 +284,9 @@ class OllamaHuggingFaceSetup:
         logger.info("🔧 Setting up Hugging Face...")
         
         # Check for existing tokens
-        write_token = os.getenv("HUGGINGFACE_WRITE_TOKEN")
-        read_token = os.getenv("HUGGINGFACE_READ_TOKEN")
-        legacy_api_key = os.getenv("HUGGINGFACE_API_KEY")
+        write_token = settings.huggingface_write_token
+        read_token = settings.huggingface_read_token
+        legacy_api_key = settings.huggingface_api_key
         
         if write_token or read_token or legacy_api_key:
             logger.info("✅ Hugging Face tokens found in environment")
@@ -340,7 +342,7 @@ class OllamaHuggingFaceSetup:
     def _test_huggingface_health(self) -> bool:
         """Test Hugging Face API health."""
         try:
-            api_key = os.getenv("HUGGINGFACE_API_KEY")
+            api_key = settings.huggingface_api_key
             headers = {"Authorization": f"Bearer {api_key}"}
             response = requests.get("https://huggingface.co/api/models", 
                                   headers=headers, timeout=10)
@@ -401,11 +403,11 @@ class OllamaHuggingFaceSetup:
             ])
             
             # Add token settings based on what's available
-            if os.getenv("HUGGINGFACE_WRITE_TOKEN"):
+            if settings.huggingface_write_token:
                 env_settings.append("# HUGGINGFACE_WRITE_TOKEN=your_write_token_here")
-            if os.getenv("HUGGINGFACE_READ_TOKEN"):
+            if settings.huggingface_read_token:
                 env_settings.append("# HUGGINGFACE_READ_TOKEN=your_read_token_here")
-            if os.getenv("HUGGINGFACE_API_KEY"):
+            if settings.huggingface_api_key:
                 env_settings.append("# HUGGINGFACE_API_KEY=your_legacy_api_key_here")
         
         # Write to .env file
@@ -482,7 +484,7 @@ class OllamaHuggingFaceSetup:
     def _test_huggingface_models(self) -> bool:
         """Test Hugging Face models."""
         try:
-            api_key = os.getenv("HUGGINGFACE_API_KEY")
+            api_key = settings.huggingface_api_key
             if not api_key:
                 return False
             

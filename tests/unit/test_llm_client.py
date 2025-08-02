@@ -1,4 +1,6 @@
+from shared.core.api.config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Test script for LLMClient functionality.
 """
@@ -117,8 +119,8 @@ def main():
     
     # Check environment variables
     print("🔍 Checking environment variables...")
-    openai_key = os.getenv("OPENAI_API_KEY")
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+    openai_key = settings.openai_api_key
+    anthropic_key = settings.anthropic_api_key
     
     if openai_key:
         print(f"✅ OPENAI_API_KEY found (length: {len(openai_key)})")

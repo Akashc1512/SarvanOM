@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Frontend State PostgreSQL Integration Tests - Universal Knowledge Platform
 
@@ -69,7 +71,7 @@ class TestFrontendStatePostgres:
     @pytest.fixture(scope="class")
     def db_engine(self):
         """Create database engine for testing."""
-        db_url = os.getenv('DATABASE_URL')
+        db_url = settings.database_url
         if not db_url:
             pytest.skip("DATABASE_URL not configured")
         

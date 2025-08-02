@@ -1,4 +1,6 @@
+from shared.core.api.config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Test Meilisearch connection - Zero-budget Elasticsearch alternative.
 """
@@ -16,8 +18,8 @@ def test_meilisearch():
     print("=" * 50)
     
     # Get Meilisearch configuration
-    meili_url = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
-    meili_master_key = os.getenv("MEILISEARCH_MASTER_KEY")
+    meili_url = settings.meilisearch_url or "http://localhost:7700"
+    meili_master_key = settings.meilisearch_master_key
     
     print(f"URL: {meili_url}")
     print(f"Master Key: {'*' * len(meili_master_key) if meili_master_key else 'NOT SET'}")
@@ -53,9 +55,9 @@ def test_index_creation():
     print("\n📝 Testing Index Operations...")
     print("=" * 50)
     
-    meili_url = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
-    meili_master_key = os.getenv("MEILISEARCH_MASTER_KEY")
-    index_name = os.getenv("MEILISEARCH_INDEX", "knowledge_base")
+    meili_url = settings.meilisearch_url or "http://localhost:7700"
+    meili_master_key = settings.meilisearch_master_key
+    index_name = settings.meilisearch_index or "knowledge_base"
     
     # Set headers for authentication if master key is provided
     headers = {"Content-Type": "application/json"}
@@ -107,9 +109,9 @@ def test_document_operations():
     print("\n📄 Testing Document Operations...")
     print("=" * 50)
     
-    meili_url = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
-    meili_master_key = os.getenv("MEILISEARCH_MASTER_KEY")
-    index_name = os.getenv("MEILISEARCH_INDEX", "knowledge_base")
+    meili_url = settings.meilisearch_url or "http://localhost:7700"
+    meili_master_key = settings.meilisearch_master_key
+    index_name = settings.meilisearch_index or "knowledge_base"
     
     # Set headers for authentication if master key is provided
     headers = {"Content-Type": "application/json"}

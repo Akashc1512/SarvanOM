@@ -101,7 +101,7 @@ class MAANGSystemStartup:
         """Load system configuration."""
         try:
             # Set environment variable
-            os.environ["ENVIRONMENT"] = self.environment
+            settings.environment = self.environment
             
             # Load custom config if provided
             if self.config_path and os.path.exists(self.config_path):

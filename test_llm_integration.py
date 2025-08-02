@@ -1,4 +1,6 @@
+from shared.core.api.config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Test LLM Integration
 Verifies that Ollama and Hugging Face are properly integrated into the existing LLM client
@@ -28,7 +30,7 @@ async def test_llm_integration():
     test_configs = []
     
     # Test Ollama if available
-    if os.getenv("OLLAMA_ENABLED", "true").lower() == "true":
+    if getattr(settings.ollama_enabled, 'value', "true") if hasattr(settings.ollama_enabled, 'value') else settings.ollama_enabled.lower() == "true":
         test_configs.append(
             LLMConfig(
                 provider=LLMProvider.OLLAMA,
@@ -41,12 +43,12 @@ async def test_llm_integration():
         logger.info("✅ Added Ollama test configuration")
     
     # Test Hugging Face if API key is available
-    if os.getenv("HUGGINGFACE_API_KEY"):
+    if settings.huggingface_api_key:
         test_configs.append(
             LLMConfig(
                 provider=LLMProvider.HUGGINGFACE,
                 model="microsoft/DialoGPT-medium",
-                api_key=os.getenv("HUGGINGFACE_API_KEY"),
+                api_key=settings.huggingface_api_key,
                 timeout=30
             )
         )
@@ -109,7 +111,7 @@ async def test_provider_specific():
     logger.info("\n🔧 Testing Provider-Specific Functionality")
     
     # Test Ollama provider directly
-    if os.getenv("OLLAMA_ENABLED", "true").lower() == "true":
+    if getattr(settings.ollama_enabled, 'value', "true") if hasattr(settings.ollama_enabled, 'value') else settings.ollama_enabled.lower() == "true":
         logger.info("Testing Ollama Provider...")
         
         from shared.core.llm_client_v3 import OllamaProvider, LLMRequest
@@ -137,7 +139,7 @@ async def test_provider_specific():
             logger.error(f"Ollama provider test failed: {e}")
     
     # Test Hugging Face provider directly
-    if os.getenv("HUGGINGFACE_API_KEY"):
+    if settings.huggingface_api_key:
         logger.info("Testing Hugging Face Provider...")
         
         from shared.core.llm_client_v3 import HuggingFaceProvider
@@ -145,7 +147,7 @@ async def test_provider_specific():
         hf_config = LLMConfig(
             provider=LLMProvider.HUGGINGFACE,
             model="microsoft/DialoGPT-medium",
-            api_key=os.getenv("HUGGINGFACE_API_KEY"),
+            api_key=settings.huggingface_api_key,
             timeout=30
         )
         

@@ -1,4 +1,6 @@
+from shared.core.api.config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Final comprehensive test for all SarvanOM services.
 """
@@ -30,7 +32,7 @@ def test_all_services():
     print("\n🤖 Testing OpenAI...")
     try:
         import openai
-        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        client = openai.OpenAI(api_key=settings.openai_api_key)
         client.models.list()
         results.append(("OpenAI", True))
         print("✅ OpenAI")
@@ -42,7 +44,7 @@ def test_all_services():
     print("\n🧠 Testing Anthropic...")
     try:
         import anthropic
-        client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
         client.models.list()
         results.append(("Anthropic", True))
         print("✅ Anthropic")
@@ -54,7 +56,7 @@ def test_all_services():
     print("\n🌲 Testing Pinecone...")
     try:
         from pinecone import Pinecone
-        pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+        pc = Pinecone(api_key=settings.pinecone_api_key)
         pc.list_indexes()
         results.append(("Pinecone", True))
         print("✅ Pinecone")
@@ -66,7 +68,7 @@ def test_all_services():
     print("\n🔴 Testing Redis...")
     try:
         import redis
-        r = redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379"))
+        r = redis.from_url(settings.redis_url or "redis://localhost:6379")
         r.ping()
         results.append(("Redis", True))
         print("✅ Redis")
@@ -98,7 +100,7 @@ def test_all_services():
     print("\n🗄️ Testing PostgreSQL...")
     try:
         import psycopg2
-        db_url = os.getenv("DATABASE_URL")
+        db_url = settings.database_url
         if db_url:
             conn = psycopg2.connect(db_url)
             conn.close()
@@ -113,14 +115,14 @@ def test_all_services():
     
     # Test 8: Email Configuration
     print("\n📧 Testing Email Configuration...")
-    smtp_host = os.getenv("SMTP_HOST")
-    smtp_username = os.getenv("SMTP_USERNAME")
-    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_host = settings.smtp_host
+    smtp_username = settings.smtp_username
+    smtp_password = settings.smtp_password
     
     if all([smtp_host, smtp_username, smtp_password]):
         try:
             import smtplib
-            server = smtplib.SMTP(smtp_host, int(os.getenv("SMTP_PORT", "587")))
+            server = smtplib.SMTP(smtp_host, int(settings.smtp_port or "587"))
             server.starttls()
             server.login(smtp_username, smtp_password)
             server.quit()

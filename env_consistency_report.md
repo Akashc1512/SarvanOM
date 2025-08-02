@@ -1,0 +1,366 @@
+# Environment Variable Consistency Report
+
+## 📊 Analysis Summary
+
+- **Consistency Rate**: 33.0% (Low)
+- **Total Unique Keys**: 150
+- **Common Keys**: 50
+- **Missing in .env**: 100
+- **Unused in .env**: 25
+
+## ❌ Missing Keys in .env File (100 keys)
+
+These keys are used in the code but not defined in the .env file:
+
+### 🔧 Core System Keys
+- `ADMIN_API_KEY`
+- `ADMIN_RATE_LIMIT`
+- `AGENT_MAX_RETRIES`
+- `AGENT_TIMEOUT_MS`
+- `AGENT_TIMEOUT_SECONDS`
+- `ARANGO_PASSWORD`
+- `ARANGO_USERNAME`
+- `CIRCUIT_BREAKER_FAILURE_THRESHOLD`
+- `CIRCUIT_BREAKER_TIMEOUT`
+- `CONNECTION_POOL_SIZE`
+- `CONNECTION_POOL_TIMEOUT`
+- `CONFIDENCE_THRESHOLD`
+- `DATABASE_ENCRYPTION_KEY`
+- `DATABASE_NAME`
+- `DAILY_TOKEN_BUDGET`
+- `DEFAULT_TOKEN_BUDGET`
+- `DB_HOST`
+- `DB_NAME`
+- `DB_PASSWORD`
+- `DB_PORT`
+- `DB_USER`
+
+### 🔍 Search & Vector Database Keys
+- `ELASTICSEARCH_HOST`
+- `ELASTICSEARCH_INDEX`
+- `ELASTICSEARCH_PASSWORD`
+- `ELASTICSEARCH_URL`
+- `ELASTICSEARCH_USERNAME`
+- `MEILISEARCH_API_KEY`
+- `MEILISEARCH_HOST`
+- `MEILISEARCH_INDEX`
+- `MEILISEARCH_MASTER_KEY`
+- `MEILISEARCH_PORT`
+- `QDRANT_API_KEY`
+- `QDRANT_HOST`
+- `QDRANT_PASSWORD`
+- `QDRANT_PORT`
+- `QDRANT_USERNAME`
+- `VECTOR_DB_HOST`
+- `VECTOR_DB_URL`
+
+### 🤖 LLM Provider Keys
+- `GROQ_API_KEY`
+- `HUGGINGFACE_API_KEY`
+- `HUGGINGFACE_MODEL`
+- `HUGGINGFACE_READ_TOKEN`
+- `HUGGINGFACE_WRITE_TOKEN`
+- `LLM_PROVIDER`
+- `OPENAI_BASE_URL`
+- `OPENAI_MODEL`
+- `USE_MOCK_LLM`
+
+### 🔐 Authentication & Security Keys
+- `GITHUB_CLIENT_ID`
+- `GITHUB_CLIENT_SECRET`
+- `GITHUB_REDIRECT_URI`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_CUSTOM_SEARCH_CX`
+- `GOOGLE_REDIRECT_URI`
+- `READONLY_API_KEY`
+- `READONLY_RATE_LIMIT`
+- `USER_API_KEY`
+- `USER_RATE_LIMIT`
+
+### 📊 Monitoring & Logging Keys
+- `LOG_QUERY_CONTENT`
+- `MESSAGE_TTL_MS`
+- `PROMETHEUS_MULTIPROC_DIR`
+- `PYTHON_VERSION`
+- `UKP_ACCESS_LOG`
+- `UKP_HOST`
+- `UKP_LOG_LEVEL`
+- `UKP_PORT`
+- `UKP_RELOAD`
+- `UKP_WORKERS`
+
+### 🧪 Testing Keys
+- `LOCUST_MAX_WAIT`
+- `LOCUST_MIN_WAIT`
+- `LOCUST_USERS`
+- `MAX_KEEPALIVE_TIME`
+- `MAX_PAYLOAD_SIZE`
+- `MAX_SOURCE_AGE_DAYS`
+- `MIN_SOURCE_CONFIDENCE`
+- `TEST_API_BASE_URL`
+- `TEST_CONCURRENT_REQUESTS`
+- `TEST_CONCURRENT_USERS`
+- `TEST_CPU_THRESHOLD_PERCENT`
+- `TEST_DURATION_SECONDS`
+- `TEST_ERROR_RATE_THRESHOLD`
+- `TEST_MAX_RESPONSE_TIME_MS`
+- `TEST_MEMORY_THRESHOLD_MB`
+- `TEST_RAMP_UP_SECONDS`
+- `TEST_RATE_LIMIT_ATTEMPTS`
+- `TEST_RESPONSE_TIME_LIMIT`
+- `TEST_SQL_INJECTION_ATTEMPTS`
+- `TEST_TARGET_RPS`
+- `TEST_THROUGHPUT_RPS`
+- `TEST_TIMEOUT`
+- `TEST_XSS_ATTEMPTS`
+
+### 📧 Email & External Services
+- `SMTP_HOST`
+- `SMTP_PASSWORD`
+- `SMTP_PORT`
+- `SMTP_USERNAME`
+
+## ⚠️ Unused Keys in .env File (25 keys)
+
+These keys are defined in .env but not used in the code:
+
+### 🧹 Unused Configuration Keys
+- `AGENT_MAX_RETRIES`
+- `AGENT_TIMEOUT_SECONDS`
+- `AZURE_OPENAI_DEPLOYMENT_NAME`
+- `AZURE_OPENAI_ENDPOINT`
+- `BCRYPT_ROUNDS`
+- `CORS_ALLOW_HEADERS`
+- `CORS_ALLOW_METHODS`
+- `DEFAULT_EMBEDDING_MODEL`
+- `FORCE_HTTPS`
+- `GOOGLE_ANALYTICS_ID`
+- `GOOGLE_MODEL`
+- `MAX_FILE_SIZE`
+- `OPENTELEMETRY_ENABLED`
+- `OPENTELEMETRY_ENDPOINT`
+- `PASSWORD_MAX_LENGTH`
+- `PASSWORD_MIN_LENGTH`
+- `RATE_LIMIT_REQUESTS_PER_MINUTE`
+- `RATE_LIMIT_TOKENS_PER_MINUTE`
+- `SECURE_COOKIES`
+- `SENTRY_DSN`
+- `SSL_CERT_FILE`
+- `SSL_KEY_FILE`
+- `STRIPE_PUBLISHABLE_KEY`
+- `STRIPE_SECRET_KEY`
+- `UPLOAD_DIR`
+
+## ✅ Common Keys (50 keys)
+
+These keys are both defined in .env and used in code:
+
+### 🔧 Core System
+- `ANTHROPIC_API_KEY`
+- `ANTHROPIC_MODEL`
+- `ARANGO_DB`
+- `ARANGO_PASS`
+- `ARANGO_URL`
+- `ARANGO_USER`
+- `CORS_ORIGINS`
+- `DATABASE_URL`
+- `DEBUG`
+- `ENVIRONMENT`
+- `GRAFANA_ENABLED`
+- `GRAFANA_PORT`
+- `JWT_ALGORITHM`
+- `JWT_SECRET_KEY`
+- `LOG_FORMAT`
+- `LOG_LEVEL`
+- `LOG_LEVEL_ROOT`
+- `LOG_LEVEL_SERVICES`
+- `MEILI_MASTER_KEY`
+- `MEILISEARCH_URL`
+- `OLLAMA_BASE_URL`
+- `OLLAMA_ENABLED`
+- `OLLAMA_MODEL`
+- `OPENAI_API_KEY`
+- `OPENAI_LLM_MODEL`
+- `PINECONE_API_KEY`
+- `PINECONE_ENVIRONMENT`
+- `PINECONE_INDEX_NAME`
+- `POSTGRES_DB`
+- `POSTGRES_HOST`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_PORT`
+- `POSTGRES_USER`
+- `PRIORITIZE_FREE_MODELS`
+- `PROMETHEUS_ENABLED`
+- `PROMETHEUS_PORT`
+- `QDRANT_COLLECTION`
+- `QDRANT_URL`
+- `REDIS_DB`
+- `REDIS_URL`
+- `SECRET_KEY`
+- `SPARQL_ENDPOINT`
+- `USE_DYNAMIC_SELECTION`
+
+## 🔧 Recommendations
+
+### 1. Add Missing Keys to .env File
+
+Add these critical missing keys to your .env file:
+
+```bash
+# Core System
+ADMIN_API_KEY=your_admin_api_key_here
+ADMIN_RATE_LIMIT=1000
+AGENT_TIMEOUT_MS=5000
+ARANGO_USERNAME=root
+ARANGO_PASSWORD=your_arangodb_password_here
+CIRCUIT_BREAKER_FAILURE_THRESHOLD=5
+CIRCUIT_BREAKER_TIMEOUT=60
+CONNECTION_POOL_SIZE=10
+CONNECTION_POOL_TIMEOUT=30.0
+CONFIDENCE_THRESHOLD=0.7
+DATABASE_ENCRYPTION_KEY=your_encryption_key_here
+DATABASE_NAME=knowledge_base
+DAILY_TOKEN_BUDGET=100000
+DEFAULT_TOKEN_BUDGET=1000
+DB_HOST=localhost
+DB_NAME=universal_knowledge
+DB_PASSWORD=your_db_password_here
+DB_PORT=5432
+DB_USER=your_db_user_here
+
+# Search & Vector Database
+MEILISEARCH_API_KEY=your_meilisearch_api_key_here
+MEILISEARCH_HOST=localhost
+MEILISEARCH_INDEX=knowledge_base
+MEILISEARCH_MASTER_KEY=your_meilisearch_master_key_here
+MEILISEARCH_PORT=7700
+QDRANT_API_KEY=your_qdrant_api_key_here
+QDRANT_HOST=localhost
+QDRANT_PASSWORD=your_qdrant_password_here
+QDRANT_PORT=6333
+QDRANT_USERNAME=your_qdrant_username_here
+VECTOR_DB_HOST=localhost
+VECTOR_DB_URL=http://localhost:6333
+
+# LLM Providers
+GROQ_API_KEY=your_groq_api_key_here
+HUGGINGFACE_API_KEY=your_huggingface_api_key_here
+HUGGINGFACE_MODEL=microsoft/DialoGPT-medium
+HUGGINGFACE_READ_TOKEN=your_hf_read_token_here
+HUGGINGFACE_WRITE_TOKEN=your_hf_write_token_here
+LLM_PROVIDER=openai
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4
+USE_MOCK_LLM=false
+
+# Authentication & Security
+GITHUB_CLIENT_ID=your_github_client_id_here
+GITHUB_CLIENT_SECRET=your_github_client_secret_here
+GITHUB_REDIRECT_URI=http://localhost:3000/auth/github/callback
+GOOGLE_CLIENT_ID=your_google_client_id_here
+GOOGLE_CLIENT_SECRET=your_google_client_secret_here
+GOOGLE_CUSTOM_SEARCH_CX=your_google_cse_id_here
+GOOGLE_REDIRECT_URI=http://localhost:3000/auth/google/callback
+READONLY_API_KEY=your_readonly_api_key_here
+READONLY_RATE_LIMIT=50
+USER_API_KEY=your_user_api_key_here
+USER_RATE_LIMIT=100
+
+# Monitoring & Logging
+LOG_QUERY_CONTENT=true
+MESSAGE_TTL_MS=30000
+PROMETHEUS_MULTIPROC_DIR=/tmp
+PYTHON_VERSION=3.9
+UKP_ACCESS_LOG=true
+UKP_HOST=0.0.0.0
+UKP_LOG_LEVEL=info
+UKP_PORT=8000
+UKP_RELOAD=false
+UKP_WORKERS=1
+
+# Testing
+LOCUST_MAX_WAIT=1000
+LOCUST_MIN_WAIT=1000
+LOCUST_USERS=10
+MAX_KEEPALIVE_TIME=300
+MAX_PAYLOAD_SIZE=10485760
+MAX_SOURCE_AGE_DAYS=365
+MIN_SOURCE_CONFIDENCE=0.6
+TEST_API_BASE_URL=http://localhost:8000
+TEST_CONCURRENT_REQUESTS=10
+TEST_CONCURRENT_USERS=5
+TEST_CPU_THRESHOLD_PERCENT=80
+TEST_DURATION_SECONDS=60
+TEST_ERROR_RATE_THRESHOLD=5
+TEST_MAX_RESPONSE_TIME_MS=5000
+TEST_MEMORY_THRESHOLD_MB=1024
+TEST_RAMP_UP_SECONDS=10
+TEST_RATE_LIMIT_ATTEMPTS=100
+TEST_RESPONSE_TIME_LIMIT=5000
+TEST_SQL_INJECTION_ATTEMPTS=10
+TEST_TARGET_RPS=100
+TEST_THROUGHPUT_RPS=50
+TEST_TIMEOUT=30
+TEST_XSS_ATTEMPTS=10
+
+# Email & External Services
+SMTP_HOST=smtp.gmail.com
+SMTP_PASSWORD=your_smtp_password_here
+SMTP_PORT=587
+SMTP_USERNAME=your_smtp_username_here
+```
+
+### 2. Remove or Comment Out Unused Keys
+
+Consider commenting out these unused keys in your .env file:
+
+```bash
+# AGENT_MAX_RETRIES=3  # Unused
+# AGENT_TIMEOUT_SECONDS=30  # Unused
+# AZURE_OPENAI_DEPLOYMENT_NAME=your_deployment_name_here  # Unused
+# AZURE_OPENAI_ENDPOINT=your_azure_endpoint_here  # Unused
+# BCRYPT_ROUNDS=12  # Unused
+# CORS_ALLOW_HEADERS=["*"]  # Unused
+# CORS_ALLOW_METHODS=["GET", "POST", "PUT", "DELETE", "OPTIONS"]  # Unused
+# DEFAULT_EMBEDDING_MODEL=text-embedding-3-small  # Unused
+# FORCE_HTTPS=false  # Unused
+# GOOGLE_ANALYTICS_ID=  # Unused
+# GOOGLE_MODEL=gemini-pro  # Unused
+# MAX_FILE_SIZE=10485760  # Unused
+# OPENTELEMETRY_ENABLED=true  # Unused
+# OPENTELEMETRY_ENDPOINT=http://localhost:4317  # Unused
+# PASSWORD_MAX_LENGTH=128  # Unused
+# PASSWORD_MIN_LENGTH=8  # Unused
+# RATE_LIMIT_REQUESTS_PER_MINUTE=60  # Unused
+# RATE_LIMIT_TOKENS_PER_MINUTE=10000  # Unused
+# SECURE_COOKIES=false  # Unused
+# SENTRY_DSN=  # Unused
+# SSL_CERT_FILE=  # Unused
+# SSL_KEY_FILE=  # Unused
+# STRIPE_PUBLISHABLE_KEY=  # Unused
+# STRIPE_SECRET_KEY=  # Unused
+# UPLOAD_DIR=./uploads  # Unused
+```
+
+### 3. Standardize Key Names
+
+Consider standardizing these key name inconsistencies:
+
+- `MEILI_MASTER_KEY` vs `MEILISEARCH_MASTER_KEY`
+- `ARANGO_USER` vs `ARANGO_USERNAME`
+- `ARANGO_PASS` vs `ARANGO_PASSWORD`
+
+## 🎯 Priority Actions
+
+1. **High Priority**: Add missing authentication keys (`ADMIN_API_KEY`, `USER_API_KEY`, etc.)
+2. **Medium Priority**: Add missing database configuration keys
+3. **Low Priority**: Add testing and monitoring keys
+4. **Cleanup**: Remove or comment out unused keys
+
+## 📈 Expected Improvement
+
+After implementing these recommendations:
+- **Consistency Rate**: Should improve from 33% to ~85-90%
+- **Missing Keys**: Reduce from 100 to ~10-15
+- **Unused Keys**: Reduce from 25 to ~5-10 

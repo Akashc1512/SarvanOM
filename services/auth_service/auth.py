@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Authentication and Authorization System for Universal Knowledge Platform
 Provides secure access control with API keys, OAuth, and role-based permissions.
@@ -24,7 +26,7 @@ from shared.core.api.exceptions import ConfigurationError
 logger = logging.getLogger(__name__)
 
 # Security configuration
-SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_urlsafe(32))
+SECRET_KEY = settings.jwt_secret_key or secrets.token_urlsafe(32)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
@@ -35,7 +37,7 @@ def _load_api_keys():
     api_keys = {}
 
     # Only use hardcoded keys in development if no environment keys are set
-    if os.getenv("ENVIRONMENT") == "development" and not os.getenv("ADMIN_API_KEY"):
+    if settings.environment == "development" and not os.getenv("ADMIN_API_KEY"):
         logger.warning("Using development API keys - NOT SECURE FOR PRODUCTION")
         api_keys.update(
             {

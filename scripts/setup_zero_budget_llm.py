@@ -1,4 +1,6 @@
+from ..\shared\core\api\config import get_settings
 #!/usr/bin/env python3
+settings = get_settings()
 """
 Zero Budget LLM Setup Script
 Sets up free LLM alternatives for the Universal Knowledge Platform
@@ -199,7 +201,7 @@ class ZeroBudgetLLMSetup:
         """Setup Hugging Face API access."""
         logger.info("🔧 Setting up Hugging Face...")
         
-        api_key = os.getenv("HUGGINGFACE_API_KEY")
+        api_key = settings.huggingface_api_key
         if not api_key:
             logger.info("📝 Please get your Hugging Face API key from: https://huggingface.co/settings/tokens")
             logger.info("💡 Set it as environment variable: HUGGINGFACE_API_KEY")
@@ -357,7 +359,7 @@ class ZeroBudgetLLMSetup:
     def _test_huggingface(self) -> bool:
         """Test Hugging Face API."""
         try:
-            api_key = os.getenv("HUGGINGFACE_API_KEY")
+            api_key = settings.huggingface_api_key
             headers = {"Authorization": f"Bearer {api_key}"}
             response = requests.get("https://huggingface.co/api/models", 
                                   headers=headers, timeout=10)

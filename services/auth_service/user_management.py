@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 User Management Module for Universal Knowledge Platform
 Handles user creation, authentication, and role management.
@@ -19,7 +21,7 @@ logger = logging.getLogger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here-change-in-production")
+SECRET_KEY = settings.jwt_secret_key or "your-secret-key-here-change-in-production"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
@@ -158,7 +160,7 @@ class UserManager:
         logger.warning("Default passwords are insecure - change immediately!")
 
         # Print to console for development convenience (remove in production)
-        if os.getenv("ENVIRONMENT") != "production":
+        if settings.environment != "production":
             print("\n" + "=" * 60)
             print("🔐 DEFAULT USER CREDENTIALS CREATED")
             print("=" * 60)

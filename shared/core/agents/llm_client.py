@@ -1,3 +1,5 @@
+# from ..\api\config import get_settings
+# settings = get_settings()
 """
 LLMClient: Legacy wrapper for backward compatibility.
 This module provides backward compatibility with the old LLM client interface.
@@ -51,7 +53,7 @@ class LLMClient:
             raise Exception(f"LLM Client v3 initialization failed: {str(e)}")
         
         self._provider = os.getenv("LLM_PROVIDER", "openai").lower()
-        self._model = os.getenv("OPENAI_LLM_MODEL", "gpt-3.5-turbo")
+        self._model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 
         # Set up the model based on provider
         if self._provider == "anthropic":

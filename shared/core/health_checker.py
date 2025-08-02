@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Universal Knowledge Platform - Health Checker
 Comprehensive health checking for all platform components.
@@ -88,7 +90,7 @@ class HealthChecker:
         
         try:
             # Check PostgreSQL connection
-            database_url = os.getenv("DATABASE_URL")
+            database_url = settings.database_url
             if database_url:
                 # Simple connection test - in production, use proper DB client
                 import asyncpg
@@ -141,7 +143,7 @@ class HealthChecker:
         start_time = time.time()
         
         try:
-            meilisearch_url = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
+            meilisearch_url = settings.meilisearch_url or "http://localhost:7700"
             health_url = f"{meilisearch_url}/health"
             
             async with self.session.get(health_url) as response:
@@ -253,7 +255,7 @@ class HealthChecker:
         start_time = time.time()
         
         try:
-            ollama_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+            ollama_url = settings.ollama_base_url or "http://localhost:11434"
             health_url = f"{ollama_url}/api/tags"
             
             async with self.session.get(health_url) as response:
@@ -295,7 +297,7 @@ class HealthChecker:
         start_time = time.time()
         
         try:
-            hf_token = os.getenv("HUGGINGFACE_API_KEY") or os.getenv("HUGGINGFACE_WRITE_TOKEN")
+            hf_token = settings.huggingface_api_key or settings.huggingface_write_token
             if not hf_token:
                 return HealthCheckResult(
                     component="llm_huggingface",
@@ -345,7 +347,7 @@ class HealthChecker:
         start_time = time.time()
         
         try:
-            openai_key = os.getenv("OPENAI_API_KEY")
+            openai_key = settings.openai_api_key
             if not openai_key:
                 return HealthCheckResult(
                     component="llm_openai",

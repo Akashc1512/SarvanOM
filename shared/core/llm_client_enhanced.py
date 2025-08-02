@@ -1,3 +1,5 @@
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 Enhanced LLM Client - Universal Knowledge Platform
 Modular LLM provider selection with intelligent routing and fallback chains.
@@ -563,8 +565,8 @@ class EnhancedLLMClient:
     def _setup_providers(self):
         """Setup available providers based on environment configuration."""
         # Ollama provider (local, free)
-        ollama_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-        if os.getenv("OLLAMA_ENABLED", "true").lower() == "true":
+        ollama_url = settings.ollama_base_url or "http://localhost:11434"
+        if getattr(settings.ollama_enabled, 'value', "true") if hasattr(settings.ollama_enabled, 'value') else settings.ollama_enabled.lower() == "true":
             ollama_config = ProviderConfig(
                 name=LLMProvider.OLLAMA,
                 base_url=ollama_url,
@@ -576,7 +578,7 @@ class EnhancedLLMClient:
             logger.info("✅ Ollama provider configured")
         
         # HuggingFace provider (free API)
-        hf_token = os.getenv("HUGGINGFACE_API_KEY") or os.getenv("HUGGINGFACE_WRITE_TOKEN")
+        hf_token = settings.huggingface_api_key or settings.huggingface_write_token
         if hf_token:
             hf_config = ProviderConfig(
                 name=LLMProvider.HUGGINGFACE,
@@ -589,7 +591,7 @@ class EnhancedLLMClient:
             logger.info("✅ HuggingFace provider configured")
         
         # OpenAI provider (paid, fallback)
-        openai_key = os.getenv("OPENAI_API_KEY")
+        openai_key = settings.openai_api_key
         if openai_key:
             openai_config = ProviderConfig(
                 name=LLMProvider.OPENAI,
