@@ -34,7 +34,6 @@ spacy>=3.8.0
 
 # Caching and storage
 aiocache>=0.12.0
-redis>=5.0.0
 
 # Content sanitization
 bleach>=6.2.0

@@ -5,7 +5,7 @@ This module implements a sophisticated caching system following MAANG
 best practices for performance, scalability, and reliability.
 
 Features:
-    - Multiple cache backends (Redis, In-Memory, Hybrid)
+    - Multiple cache backends (In-Memory, Hybrid)
     - Cache warming and preloading
     - TTL management with jitter
     - Cache stampede prevention
@@ -54,7 +54,7 @@ from enum import Enum
 from abc import ABC, abstractmethod
 import structlog
 
-import redis.asyncio as aioredis
+
 from aiocache import Cache as AiocacheBase
 from aiocache.serializers import JsonSerializer, PickleSerializer
 from cryptography.fernet import Fernet
@@ -174,284 +174,8 @@ class CacheBackend(Protocol):
         ...
 
 
-# Redis cache backend
-class RedisBackend:
-    """Redis cache backend implementation."""
 
-    def __init__(
-        self,
-        url: str,
-        pool_size: int = 10,
-        prefix: str = "cache:",
-        serializer: SerializationType = SerializationType.JSON,
-        compress_threshold: int = 1024,  # Compress values > 1KB
-        encrypt: bool = False,
-        encryption_key: Optional[bytes] = None,
-    ) -> None:
-        """
-        Initialize Redis backend.
 
-        Args:
-            url: Redis connection URL
-            pool_size: Connection pool size
-            prefix: Key prefix
-            serializer: Serialization type
-            compress_threshold: Compression threshold in bytes
-            encrypt: Enable encryption
-            encryption_key: Encryption key
-        """
-        self.url = url
-        self.pool_size = pool_size
-        self.prefix = prefix
-        self.serializer = serializer
-        self.compress_threshold = compress_threshold
-        self.encrypt = encrypt
-
-        if encrypt:
-            if not encryption_key:
-                raise ValueError("Encryption key required when encryption is enabled")
-            self._fernet = Fernet(encryption_key)
-        else:
-            self._fernet = None
-
-        self._pool: Optional[aioredis.ConnectionPool] = None
-        self._client: Optional[aioredis.Redis] = None
-        self.stats = CacheStats()
-
-    async def connect(self) -> None:
-        """Connect to Redis."""
-        if not self._pool:
-            self._pool = aioredis.ConnectionPool.from_url(
-                self.url,
-                max_connections=self.pool_size,
-                decode_responses=False,  # Handle bytes
-            )
-            self._client = aioredis.Redis(connection_pool=self._pool)
-
-            # Test connection
-            await self._client.ping()
-            logger.info("Redis cache connected", url=self.url)
-
-    async def close(self) -> None:
-        """Close Redis connections."""
-        if self._client:
-            await self._client.close()
-        if self._pool:
-            await self._pool.disconnect()
-        logger.info("Redis cache disconnected")
-
-    def _make_key(self, key: CacheKey) -> str:
-        """Create prefixed key."""
-        if isinstance(key, bytes):
-            key = key.decode("utf-8")
-        return f"{self.prefix}{key}"
-
-    def _serialize(self, value: Any) -> bytes:
-        """Serialize value to bytes."""
-        if self.serializer == SerializationType.JSON:
-            serialized = json.dumps(value).encode("utf-8")
-        elif self.serializer == SerializationType.PICKLE:
-            serialized = pickle.dumps(value)
-        elif self.serializer == SerializationType.BYTES:
-            serialized = (
-                value if isinstance(value, bytes) else str(value).encode("utf-8")
-            )
-        else:  # STRING
-            serialized = str(value).encode("utf-8")
-
-        # Compress if needed
-        if len(serialized) > self.compress_threshold:
-            serialized = b"COMPRESSED:" + gzip.compress(serialized)
-
-        # Encrypt if needed
-        if self._fernet:
-            serialized = b"ENCRYPTED:" + self._fernet.encrypt(serialized)
-
-        return serialized
-
-    def _deserialize(self, data: bytes) -> Any:
-        """Deserialize bytes to value."""
-        if not data:
-            return None
-
-        # Decrypt if needed
-        if data.startswith(b"ENCRYPTED:"):
-            if not self._fernet:
-                raise ValueError("Cannot decrypt without encryption key")
-            data = self._fernet.decrypt(data[10:])
-
-        # Decompress if needed
-        if data.startswith(b"COMPRESSED:"):
-            data = gzip.decompress(data[11:])
-
-        # Deserialize
-        if self.serializer == SerializationType.JSON:
-            return json.loads(data.decode("utf-8"))
-        elif self.serializer == SerializationType.PICKLE:
-            return pickle.loads(data)
-        elif self.serializer == SerializationType.BYTES:
-            return data
-        else:  # STRING
-            return data.decode("utf-8")
-
-    async def get(self, key: CacheKey) -> Optional[Any]:
-        """Get value from cache."""
-        if not self._client:
-            await self.connect()
-
-        try:
-            redis_key = self._make_key(key)
-            data = await self._client.get(redis_key)
-
-            if data is None:
-                self.stats.misses += 1
-                record_cache_miss("redis", "get")
-                return None
-
-            self.stats.hits += 1
-            record_cache_hit("redis", "get")
-
-            return self._deserialize(data)
-
-        except Exception as e:
-            self.stats.errors += 1
-            logger.error("Redis get error", key=key, error=str(e))
-            return None
-
-    async def set(self, key: CacheKey, value: Any, ttl: Optional[int] = None) -> bool:
-        """Set value in cache."""
-        if not self._client:
-            await self.connect()
-
-        try:
-            redis_key = self._make_key(key)
-            data = self._serialize(value)
-
-            # Add jitter to TTL to prevent cache stampede
-            if ttl:
-                ttl = int(ttl * (1 + random.uniform(-0.1, 0.1)))
-
-            if ttl:
-                await self._client.setex(redis_key, ttl, data)
-            else:
-                await self._client.set(redis_key, data)
-
-            self.stats.sets += 1
-            self.stats.total_size += len(data)
-
-            return True
-
-        except Exception as e:
-            self.stats.errors += 1
-            logger.error("Redis set error", key=key, error=str(e))
-            return False
-
-    async def delete(self, key: CacheKey) -> bool:
-        """Delete value from cache."""
-        if not self._client:
-            await self.connect()
-
-        try:
-            redis_key = self._make_key(key)
-            result = await self._client.delete(redis_key)
-
-            if result > 0:
-                self.stats.deletes += 1
-                return True
-            return False
-
-        except Exception as e:
-            self.stats.errors += 1
-            logger.error("Redis delete error", key=key, error=str(e))
-            return False
-
-    async def exists(self, key: CacheKey) -> bool:
-        """Check if key exists."""
-        if not self._client:
-            await self.connect()
-
-        try:
-            redis_key = self._make_key(key)
-            return bool(await self._client.exists(redis_key))
-        except Exception:
-            return False
-
-    async def clear(self) -> int:
-        """Clear all cache entries with prefix."""
-        if not self._client:
-            await self.connect()
-
-        try:
-            # Use SCAN to find all keys with prefix
-            pattern = f"{self.prefix}*"
-            count = 0
-
-            async for key in self._client.scan_iter(match=pattern, count=100):
-                await self._client.delete(key)
-                count += 1
-
-            self.stats.deletes += count
-            return count
-
-        except Exception as e:
-            self.stats.errors += 1
-            logger.error("Redis clear error", error=str(e))
-            return 0
-
-    async def get_many(self, keys: List[CacheKey]) -> Dict[CacheKey, Any]:
-        """Get multiple values."""
-        if not self._client:
-            await self.connect()
-
-        try:
-            redis_keys = [self._make_key(k) for k in keys]
-            values = await self._client.mget(redis_keys)
-
-            result = {}
-            for key, value in zip(keys, values):
-                if value is not None:
-                    result[key] = self._deserialize(value)
-                    self.stats.hits += 1
-                else:
-                    self.stats.misses += 1
-
-            return result
-
-        except Exception as e:
-            self.stats.errors += 1
-            logger.error("Redis mget error", error=str(e))
-            return {}
-
-    async def set_many(
-        self, mapping: Dict[CacheKey, Any], ttl: Optional[int] = None
-    ) -> bool:
-        """Set multiple values."""
-        if not self._client:
-            await self.connect()
-
-        try:
-            # Prepare data
-            redis_mapping = {}
-            for key, value in mapping.items():
-                redis_key = self._make_key(key)
-                redis_mapping[redis_key] = self._serialize(value)
-
-            # Set all at once
-            await self._client.mset(redis_mapping)
-
-            # Set TTL if needed (requires individual commands)
-            if ttl:
-                ttl_with_jitter = int(ttl * (1 + random.uniform(-0.1, 0.1)))
-                for redis_key in redis_mapping:
-                    await self._client.expire(redis_key, ttl_with_jitter)
-
-            self.stats.sets += len(mapping)
-            return True
-
-        except Exception as e:
-            self.stats.errors += 1
-            logger.error("Redis mset error", error=str(e))
-            return False
 
 
 # In-memory cache backend
@@ -615,7 +339,7 @@ class CacheManager:
     Main cache manager with multiple backends and strategies.
 
     Features:
-    - Multiple cache tiers (L1: memory, L2: Redis)
+    - Multiple cache tiers (L1: memory)
     - Automatic failover
     - Cache warming
     - Batch operations
@@ -656,21 +380,7 @@ class CacheManager:
                 InMemoryBackend(max_size=1000, ttl=60)  # 1 minute for L1
             )
 
-            # L2: Redis cache (only if properly configured)
-            try:
-                redis_url = getattr(settings, 'redis_url', None)
-                if redis_url and str(redis_url) != 'None':
-                    redis_backend = RedisBackend(
-                        url=str(redis_url),
-                        pool_size=getattr(settings, 'redis_pool_size', 10),
-                        prefix=getattr(settings, 'cache_prefix', 'cache:'),
-                        encrypt=getattr(settings, 'environment', 'development') == "production",
-                    )
-                    await redis_backend.connect()
-                    self.backends.append(redis_backend)
-                    logger.info("Redis cache backend initialized")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Redis cache: {e}")
+
 
         self._initialized = True
         logger.info("Cache manager initialized", backends=len(self.backends))
@@ -1017,7 +727,6 @@ __all__ = [
     # Classes
     "CacheManager",
     "CacheBackend",
-    "RedisBackend",
     "InMemoryBackend",
     "CacheStats",
     # Enums

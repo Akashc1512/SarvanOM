@@ -19,7 +19,7 @@ import logging
 import os
 import time
 from typing import Optional, Dict, Any, List
-import redis.asyncio as aioredis
+
 from elasticsearch import AsyncElasticsearch
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -146,14 +146,13 @@ class ConnectionPoolManager:
 
     def __init__(self):
         self._http_session: Optional[aiohttp.ClientSession] = None
-        self._redis_pool: Optional[aioredis.Redis] = None
+
         self._elasticsearch_client: Optional[AsyncElasticsearch] = None
         self._initialized = False
         self._lock = asyncio.Lock()
         
         # Circuit breakers for each service
         self._circuit_breakers = {
-            "redis": CircuitBreaker("redis"),
             "elasticsearch": CircuitBreaker("elasticsearch"),
             "vector_db": CircuitBreaker("vector_db"),
             "sparql": CircuitBreaker("sparql"),
@@ -162,7 +161,6 @@ class ConnectionPoolManager:
         
         # Metrics for each service
         self._metrics = {
-            "redis": PoolMetrics("redis"),
             "elasticsearch": PoolMetrics("elasticsearch"),
             "vector_db": PoolMetrics("vector_db"),
             "sparql": PoolMetrics("sparql"),
@@ -196,32 +194,7 @@ class ConnectionPoolManager:
                 headers={"User-Agent": "UniversalKnowledgePlatform/1.0"},
             )
 
-            # Initialize Redis connection pool
-            try:
-                if not self._circuit_breakers["redis"].can_execute():
-                    logger.warning("Redis circuit breaker is OPEN, skipping initialization")
-                    self._redis_pool = None
-                else:
-                    start_time = time.time()
-                    self._redis_pool = await aioredis.from_url(
-                        REDIS_URL,
-                        max_connections=POOL_SIZE,
-                        socket_connect_timeout=5.0,
-                        socket_keepalive=True,
-                        health_check_interval=30,
-                    )
-                    await self._redis_pool.ping()
-                    response_time = time.time() - start_time
-                    
-                    self._circuit_breakers["redis"].record_success()
-                    self._metrics["redis"].record_request(True, response_time)
-                    logger.info(f"Redis connection pool initialized (response time: {response_time:.3f}s)")
-            except Exception as e:
-                response_time = time.time() - start_time if 'start_time' in locals() else 0.0
-                self._circuit_breakers["redis"].record_failure()
-                self._metrics["redis"].record_request(False, response_time)
-                logger.warning(f"Failed to initialize Redis pool: {e}")
-                self._redis_pool = None
+
 
             # Initialize Elasticsearch client with connection pooling
             try:
@@ -292,16 +265,7 @@ class ConnectionPoolManager:
 
         yield self._http_session
 
-    @asynccontextmanager
-    async def get_redis_connection(self):
-        """Get Redis connection from pool."""
-        if not self._initialized:
-            await self.initialize()
 
-        if not self._redis_pool:
-            raise RuntimeError("Redis pool not initialized")
-
-        yield self._redis_pool
 
     @asynccontextmanager
     async def get_elasticsearch_client(self):
@@ -381,7 +345,6 @@ class ConnectionPoolManager:
         stats = {
             "initialized": self._initialized,
             "http_session": self._http_session is not None,
-            "redis_pool": self._redis_pool is not None,
             "elasticsearch_client": self._elasticsearch_client is not None,
             "circuit_breakers": {
                 service: {
@@ -477,11 +440,7 @@ async def make_pooled_request(
     return await manager.make_http_request(method, url, **kwargs)
 
 
-async def get_redis_connection():
-    """Get Redis connection from pool."""
-    manager = await get_pool_manager()
-    async with manager.get_redis_connection() as redis:
-        yield redis
+
 
 
 async def get_elasticsearch_client():

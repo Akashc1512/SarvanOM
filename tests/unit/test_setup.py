@@ -36,10 +36,10 @@ def test_imports():
         return False
     
     try:
-        import redis
-        print("✅ Redis imported")
-    except ImportError as e:
-        print(f"❌ Redis import failed: {e}")
+    from shared.core.database import get_database_service
+    print("✅ Database service imported")
+except ImportError as e:
+    print(f"❌ Database service import failed: {e}")
         return False
     
     try:

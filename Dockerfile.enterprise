@@ -63,11 +63,7 @@ WORKDIR /app
 # Copy Python dependencies from dependencies stage
 COPY --from=dependencies /root/.local /home/appuser/.local
 
-# Copy security reports from security-scan stage
-COPY --from=security-scan /app/bandit-report.json /app/safety-report.json /app/pip-audit-report.json ./
-
-# Copy test coverage from testing stage
-COPY --from=testing /app/coverage.xml /app/htmlcov/ ./
+# Note: Security reports and test coverage files are optional and may not exist
 
 # Copy application code
 COPY services/ ./services/

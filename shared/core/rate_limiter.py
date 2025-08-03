@@ -48,7 +48,7 @@ from enum import Enum
 from functools import wraps
 import structlog
 
-import redis.asyncio as aioredis
+
 from fastapi import Request, Response, HTTPException, status
 
 # Mock exceptions and monitoring for now
@@ -155,9 +155,7 @@ class RateLimiterBackend(Protocol):
         ...
 
 
-# Redis rate limiter backend
-class RedisRateLimiter:
-    """Redis-based distributed rate limiter."""
+
 
     def __init__(
         self, redis_url: str, prefix: str = "rate_limit:", pool_size: int = 10

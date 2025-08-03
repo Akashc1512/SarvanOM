@@ -34,7 +34,7 @@ venv.bak/
 .venv-py311/
 .venv-py310/
 
-# Environment variables
+# Environment variables and sensitive files
 .env
 .env.local
 .env.development.local
@@ -43,6 +43,9 @@ venv.bak/
 .env.development
 .env.test
 .env.docker
+.env.*
+env_template.txt
+setup_environment.py
 
 # IDE and Editor files
 .vscode/
@@ -82,16 +85,29 @@ yarn-error.log*
 out/
 build/
 
-# Database
+# Database files and data
 *.db
 *.sqlite
 *.sqlite3
+data/postgres/
+data/meilisearch/
+data/qdrant/
+data/ollama/
+data/arangodb/
+data/arangodb-apps/
+session_storage/
+temp/
+uploads/
 
 # API Keys and Secrets
 secrets/
 keys/
 *.key
 *.pem
+id_ed25519
+id_ed25519.pub
+*.pub
+*.private
 
 # Temporary files
 *.tmp
@@ -182,3 +198,17 @@ cython_debug/
 # Local development
 local/
 dev/
+
+# Test files and scripts
+test_*.py
+*_test.py
+quick_*.py
+real_*.py
+diagnostic_*.py
+fix_*.py
+start_*.py
+
+# Documentation and guides (optional - uncomment if you don't want to track these)
+# *.md
+# documentation/
+# frontend/*.md

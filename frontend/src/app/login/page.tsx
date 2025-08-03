@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { LoadingSpinner } from "@/components/atoms/loading-spinner";
+import { Button } from "@/ui/ui/button";
+import { Input } from "@/ui/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/ui/card";
+import { Label } from "@/ui/ui/label";
+import { Alert, AlertDescription } from "@/ui/ui/alert";
+import { LoadingSpinner } from "@/ui/atoms/loading-spinner";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {

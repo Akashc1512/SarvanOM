@@ -1,6 +1,4 @@
-from ..\shared\core\api\config import get_settings
 #!/usr/bin/env python3
-settings = get_settings()
 """
 Vector Database and Search Backend Configuration Checker
 
@@ -28,9 +26,13 @@ from contextlib import asynccontextmanager
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dotenv import load_dotenv
+from shared.core.api.config import get_settings
 
 # Load environment variables
 load_dotenv()
+
+# Get settings
+settings = get_settings()
 
 # Configure logging
 logging.basicConfig(

@@ -32,9 +32,13 @@ from shared.core.agents.base_agent import (
 from dotenv import load_dotenv
 from shared.core.agents.base_agent import BaseAgent
 from shared.core.agents.data_models import RetrievalResult, DocumentModel
+from shared.core.api.config import get_settings
 
 # Load environment variables
 load_dotenv()
+
+# Get settings
+settings = get_settings()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

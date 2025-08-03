@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api } from "@/services/api";
 import {
   QueryListResponse,
   QueryDetailResponse,
@@ -25,12 +25,7 @@ export default function QueriesPage() {
   });
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Load queries on component mount and when filters change
-  useEffect(() => {
-    loadQueries();
-  }, [filters, refreshTrigger]);
-
-  const loadQueries = async () => {
+  const loadQueries = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -42,7 +37,12 @@ export default function QueriesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filters.page, filters.page_size]);
+
+  // Load queries on component mount and when filters change
+  useEffect(() => {
+    loadQueries();
+  }, [loadQueries, refreshTrigger]);
 
   const loadQueryDetails = async (queryId: string) => {
     try {

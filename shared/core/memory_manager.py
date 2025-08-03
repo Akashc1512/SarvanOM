@@ -1,6 +1,6 @@
 """
 Memory Management System - Universal Knowledge Platform
-Three-tier memory management with Redis, session storage, and knowledge graph cache.
+Three-tier memory management with PostgreSQL, session storage, and knowledge graph cache.
 """
 import asyncio
 import json
@@ -13,7 +13,6 @@ from enum import Enum
 from typing import Dict, List, Optional, Any, Tuple
 from pathlib import Path
 
-import redis
 from pydantic import BaseModel, Field
 
 # Configure logging
@@ -63,80 +62,99 @@ class MemoryStats:
 
 
 class ShortTermMemory:
-    """Redis-based short-term memory."""
+    """PostgreSQL-based short-term memory."""
     
-    def __init__(self, redis_url: str = "redis://localhost:6379"):
+    def __init__(self, database_service=None):
         try:
-            self.redis_client = redis.from_url(redis_url)
-            self.redis_client.ping()
-            logger.info("ShortTermMemory connected to Redis")
+            from shared.core.database import get_database_service
+            from shared.models.session_memory import SessionMemory
+            
+            self.db_service = database_service or get_database_service()
+            self.SessionMemory = SessionMemory
+            logger.info("ShortTermMemory connected to PostgreSQL")
         except Exception as e:
-            logger.warning(f"Redis connection failed: {e}")
-            self.redis_client = None
+            logger.warning(f"PostgreSQL connection failed: {e}")
+            self.db_service = None
     
     async def store(self, key: str, value: Any, ttl_seconds: int = 3600) -> bool:
         """Store item in short-term memory."""
-        if not self.redis_client:
+        if not self.db_service:
             return False
         
         try:
-            data = {
-                "value": value,
-                "created_at": datetime.now().isoformat(),
-                "accessed_at": datetime.now().isoformat(),
-                "access_count": 0
-            }
-            self.redis_client.setex(f"stm:{key}", ttl_seconds, json.dumps(data))
-            logger.debug(f"Stored in short-term memory: {key}")
-            return True
+            with self.db_service.get_session() as session:
+                # Create or update session memory
+                session_memory = self.SessionMemory(
+                    session_id=key,
+                    data=value,
+                    created_at=datetime.now(),
+                    expires_at=datetime.now() + timedelta(seconds=ttl_seconds)
+                )
+                session.merge(session_memory)
+                session.commit()
+                logger.debug(f"Stored in short-term memory: {key}")
+                return True
         except Exception as e:
             logger.error(f"Failed to store in short-term memory: {e}")
             return False
     
     async def retrieve(self, key: str) -> Optional[Any]:
         """Retrieve item from short-term memory."""
-        if not self.redis_client:
+        if not self.db_service:
             return None
         
         try:
-            data = self.redis_client.get(f"stm:{key}")
-            if data:
-                item_data = json.loads(data)
-                # Update access info
-                item_data["accessed_at"] = datetime.now().isoformat()
-                item_data["access_count"] += 1
-                self.redis_client.setex(f"stm:{key}", 3600, json.dumps(item_data))
-                logger.debug(f"Retrieved from short-term memory: {key}")
-                return item_data["value"]
-            return None
+            with self.db_service.get_session() as session:
+                session_memory = session.query(self.SessionMemory).filter(
+                    self.SessionMemory.session_id == key,
+                    self.SessionMemory.expires_at > datetime.now()
+                ).first()
+                
+                if session_memory:
+                    session_memory.accessed_at = datetime.now()
+                    session_memory.access_count += 1
+                    session.commit()
+                    logger.debug(f"Retrieved from short-term memory: {key}")
+                    return session_memory.data
+                return None
         except Exception as e:
             logger.error(f"Failed to retrieve from short-term memory: {e}")
             return None
     
     async def delete(self, key: str) -> bool:
         """Delete item from short-term memory."""
-        if not self.redis_client:
+        if not self.db_service:
             return False
         
         try:
-            result = self.redis_client.delete(f"stm:{key}")
-            logger.debug(f"Deleted from short-term memory: {key}")
-            return result > 0
+            with self.db_service.get_session() as session:
+                result = session.query(self.SessionMemory).filter(
+                    self.SessionMemory.session_id == key
+                ).delete()
+                session.commit()
+                logger.debug(f"Deleted from short-term memory: {key}")
+                return result > 0
         except Exception as e:
             logger.error(f"Failed to delete from short-term memory: {e}")
             return False
     
     async def get_stats(self) -> Dict[str, Any]:
         """Get short-term memory statistics."""
-        if not self.redis_client:
+        if not self.db_service:
             return {"items": 0, "size_bytes": 0}
         
         try:
-            keys = self.redis_client.keys("stm:*")
-            return {
-                "items": len(keys),
-                "size_bytes": sum(len(self.redis_client.get(k) or b"") for k in keys)
-            }
+            with self.db_service.get_session() as session:
+                total_items = session.query(self.SessionMemory).count()
+                active_items = session.query(self.SessionMemory).filter(
+                    self.SessionMemory.expires_at > datetime.now()
+                ).count()
+                
+                return {
+                    "items": total_items,
+                    "active_items": active_items,
+                    "size_bytes": total_items * 1024  # Approximate
+                }
         except Exception as e:
             logger.error(f"Failed to get short-term memory stats: {e}")
             return {"items": 0, "size_bytes": 0}
@@ -328,8 +346,8 @@ class LongTermMemory:
 class MemoryManager:
     """Main memory management system."""
     
-    def __init__(self, redis_url: str = "redis://localhost:6379"):
-        self.short_term = ShortTermMemory(redis_url)
+    def __init__(self, database_service=None):
+        self.short_term = ShortTermMemory(database_service)
         self.medium_term = MediumTermMemory()
         self.long_term = LongTermMemory()
         logger.info("MemoryManager initialized")

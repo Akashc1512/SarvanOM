@@ -48,7 +48,7 @@ from services.api-gateway.realtime import (
 # Test configuration
 TEST_CONFIG = {
     "socket_io_url": "http://localhost:8002",
-    "redis_url": "redis://localhost:6379",
+
     "test_timeout": 30,
     "max_users": 10,
     "max_operations": 100,
@@ -72,7 +72,7 @@ class TestSocketIOManager:
     @pytest.fixture
     async def socket_io_manager(self):
         """Create Socket.IO manager instance."""
-        manager = SocketIOManager(TEST_CONFIG["redis_url"])
+        manager = SocketIOManager()
         await manager.start()
         yield manager
         await manager.stop()
@@ -418,7 +418,7 @@ class TestRealTimePerformance:
     @pytest.mark.asyncio
     async def test_high_concurrency(self):
         """Test high concurrency scenarios."""
-        manager = SocketIOManager(TEST_CONFIG["redis_url"])
+        manager = SocketIOManager()
         await manager.start()
         
         try:
@@ -474,7 +474,7 @@ class TestRealTimePerformance:
     @pytest.mark.asyncio
     async def test_message_throughput(self):
         """Test message throughput performance."""
-        manager = SocketIOManager(TEST_CONFIG["redis_url"])
+        manager = SocketIOManager()
         await manager.start()
         
         try:
@@ -524,7 +524,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_connection_recovery(self):
         """Test connection recovery mechanisms."""
-        manager = SocketIOManager(TEST_CONFIG["redis_url"])
+        manager = SocketIOManager()
         
         # Test graceful shutdown
         await manager.start()
@@ -537,7 +537,7 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_invalid_operations(self):
         """Test handling of invalid operations."""
-        manager = SocketIOManager(TEST_CONFIG["redis_url"])
+        manager = SocketIOManager()
         await manager.start()
         
         try:

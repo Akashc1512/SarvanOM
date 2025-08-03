@@ -103,17 +103,26 @@ class LeadOrchestrator:
 
         logger.info("✅ LeadOrchestrator initialized successfully")
 
-    async def select_llm_provider(self, query: str, context_size: int = 0) -> LLMProvider:
+    async def select_llm_provider(self, query: str, context_size: int = 0, selected_model: str = "auto") -> LLMProvider:
         """
-        Select the best LLM provider based on query classification and context size.
+        Select the best LLM provider based on query classification, context size, and user preference.
         
         Args:
             query: The user query
             context_size: Size of context in tokens
+            selected_model: User's preferred model ("auto", "ollama", "openai", "huggingface")
             
         Returns:
             Selected LLM provider
         """
+        # If user specified a model, use it directly
+        if selected_model != "auto":
+            try:
+                return LLMProvider(selected_model)
+            except ValueError:
+                logger.warning(f"Invalid model selection '{selected_model}', falling back to auto selection")
+        
+        # Otherwise, use intelligent selection
         return await self.enhanced_llm_client.select_llm_provider(query, context_size)
 
     async def process_query(
@@ -141,7 +150,7 @@ class LeadOrchestrator:
                 "OPENAI_API_KEY": settings.openai_api_key,
                 "ANTHROPIC_API_KEY": settings.anthropic_api_key,
                 "DATABASE_URL": settings.database_url,
-                "REDIS_URL": settings.redis_url,
+        
             }
             for key, value in env_vars.items():
                 if value:
@@ -154,6 +163,10 @@ class LeadOrchestrator:
             context = QueryContext(
                 query=query, user_context=user_context or {}, trace_id=trace_id
             )
+            
+            # Extract model preference from user context
+            selected_model = user_context.get("model", "auto") if user_context else "auto"
+            logger.info(f"🎯 User selected model: {selected_model}")
 
             # Check cache first
             cached_result = await self.semantic_cache.get_cached_response(query)
@@ -969,6 +982,8 @@ class LeadOrchestrator:
             try:
                 logger.info(f"  🔍 Synthesis attempt {attempt + 1}/{max_retries + 1}")
                 
+                # Pass the selected model to the synthesis agent
+                synthesis_input["selected_model"] = context.user_context.get("model", "auto")
                 synthesis_result = await asyncio.wait_for(
                     self.agents[AgentType.SYNTHESIS].process_task(synthesis_input, context),
                     timeout=timeout,
@@ -1588,7 +1603,7 @@ class LeadOrchestrator:
         This method ensures:
         1. All active agents are stopped gracefully
         2. Pending tasks are canceled
-        3. All connections (Redis, database, etc.) are closed
+                        3. All connections (cache, database, etc.) are closed
         4. Cleanup is completed before returning
         5. Comprehensive logging of the shutdown process
         6. Exception handling for robust shutdown
@@ -1660,14 +1675,13 @@ class LeadOrchestrator:
             # Phase 4: Close all connections
             logger.info("📋 Phase 4: Closing connections")
             
-            # Close Redis connections
+            # Close cache connections
             try:
-                if hasattr(self, 'semantic_cache') and hasattr(self.semantic_cache, '_redis_client'):
-                    if self.semantic_cache._redis_client:
-                        await self.semantic_cache._redis_client.close()
-                        logger.info("✅ Redis cache connection closed")
+                if hasattr(self, 'semantic_cache'):
+                    await self.semantic_cache.close()
+                    logger.info("✅ Cache connections closed")
             except Exception as e:
-                error_msg = f"Error closing Redis connection: {e}"
+                error_msg = f"Error closing cache connections: {e}"
                 logger.warning(f"⚠️ {error_msg}")
                 shutdown_errors.append(error_msg)
             

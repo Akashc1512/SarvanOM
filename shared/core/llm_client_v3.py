@@ -1217,6 +1217,7 @@ class EnhancedLLMClientV3:
         """Initialize the enhanced LLM client."""
         self.providers: List[LLMProviderInterface] = []
         self.current_provider_index = 0
+        self.configs = configs or []  # Store configs for dynamic model selection
         self.metrics = {
             "total_requests": 0,
             "successful_requests": 0,

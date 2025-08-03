@@ -26,8 +26,7 @@ services:
         condition: service_healthy
       ollama:
         condition: service_healthy
-      redis:
-        condition: service_healthy
+
     networks:
       - sarvanom-network
     restart: unless-stopped
@@ -237,32 +236,7 @@ services:
       retries: 3
       start_period: 30s
 
-  # Redis - Caching and Session Storage
-  redis:
-    image: redis:7-alpine
-    container_name: sarvanom-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      # Use relative path for Windows WSL2 optimization
-      - ./data/redis:/data
-    networks:
-      - sarvanom-network
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-          cpus: '0.25'
-        reservations:
-          memory: 128M
-          cpus: '0.1'
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+
 
 volumes:
   # Define named volumes for better Windows WSL2 performance

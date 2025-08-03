@@ -217,6 +217,7 @@ class IntegrationRequest:
     preferences: Dict[str, Any] = field(default_factory=dict)
     priority: str = "normal"
     timeout_seconds: int = 30
+    model: str = "auto"  # Add model selection with auto fallback
 
 
 @dataclass
@@ -469,7 +470,8 @@ class UniversalKnowledgePlatformIntegration:
                     "session_id": request.session_id,
                     "retrieval_results": retrieval_result.results,
                     "validation_result": validation_result.to_dict() if validation_result else None,
-                    "preferences": request.preferences
+                    "preferences": request.preferences,
+                    "model": request.model  # Pass the selected model
                 }
             )
             

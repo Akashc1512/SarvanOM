@@ -1,24 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+} from "@/ui/ui/card";
+import { Badge } from "@/ui/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { QueryForm } from "@/components/QueryForm";
-import { AnswerDisplay } from "@/components/AnswerDisplay";
-import { TaskList } from "@/components/TaskList";
-import { ConversationContext } from "@/components/ConversationContext";
-import { LLMProviderBadge } from "@/components/LLMProviderBadge";
-import { KnowledgeGraphPanel } from "@/components/KnowledgeGraphPanel";
-// import { CollaborativeEditor } from "@/components/CollaborativeEditor";
-import { type QueryResponse } from "@/lib/api";
+import { QueryForm } from "@/ui/QueryForm";
+import { AnswerDisplay } from "@/ui/AnswerDisplay";
+import { TaskList } from "@/ui/TaskList";
+import { ConversationContext } from "@/ui/ConversationContext";
+import { LLMProviderBadge } from "@/ui/LLMProviderBadge";
+import { KnowledgeGraphPanel } from "@/ui/KnowledgeGraphPanel";
+// import { CollaborativeEditor } from "@/ui/CollaborativeEditor";
+import { type QueryResponse } from "@/services/api";
 import {
   Search,
   Sparkles,
@@ -212,6 +212,33 @@ export default function Dashboard() {
               <Button variant="outline" className="flex items-center gap-2">
                 <ExternalLink className="h-4 w-4" />
                 View Demo
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Comprehensive Query Link */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Search className="h-5 w-5" />
+            New: Comprehensive Research Query
+          </CardTitle>
+          <CardDescription>
+            Advanced AI-powered research with fact-checking and citations
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              Try our new comprehensive query system with automatic fact-checking and citation management
+            </p>
+            <Link href="/comprehensive-query">
+              <Button variant="outline" className="flex items-center gap-2">
+                <ExternalLink className="h-4 w-4" />
+                Try Comprehensive Query
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>

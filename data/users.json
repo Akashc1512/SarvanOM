@@ -2,9 +2,9 @@
   "admin": {
     "username": "admin",
     "email": "admin@sarvanom.ai",
-    "hashed_password": "$2b$12$8/bzn8k1kjk.bm/Zjctame46W/WsDmB6VRtVjZ78W2cn6BFsxJZtS",
+    "hashed_password": "$2b$12$gPXjtT0e4s0X.QVjiKv3X.pCzJWwe30poEovtVbqVtU2Txx63Eq2m",
     "role": "admin",
-    "full_name": "System Administrator",
+    "full_name": "Development Administrator",
     "is_active": true,
     "created_at": "2025-07-28T04:22:59.238989",
     "last_login": null
@@ -12,91 +12,51 @@
   "user": {
     "username": "user",
     "email": "user@sarvanom.ai",
-    "hashed_password": "$2b$12$SNCvc.Ex.K3dfX2WdRI7JeqTWXpdjkIkzjNqdktSx3Hi25RpIAvXS",
+    "hashed_password": "$2b$12$IQZ0PGKmF8l.XkLikx/pi.yJ0j.gSODPmUMuluBTUYAm4TxSEm5Zi",
     "role": "user",
-    "full_name": "Default User",
+    "full_name": "Development User",
     "is_active": true,
     "created_at": "2025-07-28T04:22:59.514405",
     "last_login": null
   },
-  "testuser_health_check": {
-    "username": "testuser_health_check",
-    "email": "test@healthcheck.com",
-    "hashed_password": "$2b$12$EOjzoc0tPsx6eSZb6Lybieitt99msM8hJ9MrFI5kAM2ZBgkghACHm",
-    "role": "user",
-    "full_name": null,
+  "testadmin": {
+    "username": "testadmin",
+    "email": "testadmin@sarvanom.ai",
+    "hashed_password": "$2b$12$JyfhgTh9LcHCuy3jG5s/H.9vWZ1b9Ws0LuVp0V2j6SHwZ5xABDtD6",
+    "role": "admin",
+    "full_name": "Test Administrator",
     "is_active": true,
-    "created_at": "2025-07-31T05:53:28.079238",
+    "created_at": "2025-08-03T10:45:25.996008",
     "last_login": null
   },
-  "testuser2": {
-    "username": "testuser2",
-    "email": "test2@healthcheck.com",
-    "hashed_password": "$2b$12$tkpHTmPgJrtXnHBuSD2SruXVSEBUCm1jgysIOKB4kYzLy0LfxeD2q",
+  "testuser": {
+    "username": "testuser",
+    "email": "testuser@sarvanom.ai",
+    "hashed_password": "$2b$12$ATbxxZuaLF4KAclbI52aFuWkKGYHNZWdZwTQrO/yq0wPUuTlhRLoC",
     "role": "user",
-    "full_name": null,
+    "full_name": "Test User",
     "is_active": true,
-    "created_at": "2025-07-31T05:55:51.756143",
+    "created_at": "2025-08-03T10:45:26.211342",
     "last_login": null
   },
-  "testuser3": {
-    "username": "testuser3",
-    "email": "test3@healthcheck.com",
-    "hashed_password": "$2b$12$jdf3qdzhK6t9IJpvgkcZce.MDXUw2y/7thWCX01.5fuk7OZacsj4O",
-    "role": "user",
-    "full_name": null,
+  "dev": {
+    "username": "dev",
+    "email": "dev@sarvanom.ai",
+    "hashed_password": "$2b$12$sPbZ7GssbH6cFqollt4HA.tcZeTBRdKGOwrogN7hIH35Sk7BM6tVW",
+    "role": "admin",
+    "full_name": "Developer Account",
     "is_active": true,
-    "created_at": "2025-07-31T05:57:14.022418",
+    "created_at": "2025-08-03T10:45:26.427194",
     "last_login": null
   },
-  "debuguser": {
-    "username": "debuguser",
-    "email": "debug@test.com",
-    "hashed_password": "$2b$12$1A85zk/fRoRwso/l2Qud0.VDwnXJ2LLMYta.CzRr7Pq8VO5EG2Abe",
+  "demo": {
+    "username": "demo",
+    "email": "demo@sarvanom.ai",
+    "hashed_password": "$2b$12$poBEOqGalSUrU0l54sWw/.bT3X5pk.teJaYhiKZjqyt38WuEz3kHC",
     "role": "user",
-    "full_name": null,
+    "full_name": "Demo User",
     "is_active": true,
-    "created_at": "2025-07-31T05:58:17.086656",
-    "last_login": null
-  },
-  "debuguser2": {
-    "username": "debuguser2",
-    "email": "debug2@test.com",
-    "hashed_password": "$2b$12$aBdDvKqDH/Um77o/ftk62OCmeELkd6wK.Yo/5AvvFXKTSdoCE0L1m",
-    "role": "user",
-    "full_name": null,
-    "is_active": true,
-    "created_at": "2025-07-31T05:59:15.347806",
-    "last_login": null
-  },
-  "testuser_simple": {
-    "username": "testuser_simple",
-    "email": "simple@test.com",
-    "hashed_password": "$2b$12$Js5U42T/7dGw3z70j0ML3eqeFSGLWl3AscG5RHo00qRSZH7hT0ji2",
-    "role": "user",
-    "full_name": null,
-    "is_active": true,
-    "created_at": "2025-07-31T06:01:40.043109",
-    "last_login": "2025-07-31T06:28:36.964523"
-  },
-  "testuser_simple2": {
-    "username": "testuser_simple2",
-    "email": "simple2@test.com",
-    "hashed_password": "$2b$12$yKJZLh9cM57C1oedrK4fw..qZUwLc40kdXHW4TdaHaHCGMdWmJbEm",
-    "role": "user",
-    "full_name": null,
-    "is_active": true,
-    "created_at": "2025-07-31T06:02:48.591755",
-    "last_login": null
-  },
-  "testuser_oauth2": {
-    "username": "testuser_oauth2",
-    "email": "oauth2@test.com",
-    "hashed_password": "$2b$12$3sy2Rmg5ME8KEvTEVFmw3u31z1hTtWRWLMxCbY7Hpxtgsq6aUu/Zm",
-    "role": "user",
-    "full_name": "Test User OAuth2",
-    "is_active": true,
-    "created_at": "2025-07-31T06:09:00.651053",
+    "created_at": "2025-08-03T10:45:26.646348",
     "last_login": null
   }
 }

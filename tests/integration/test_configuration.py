@@ -210,7 +210,7 @@ class TestConfigurationManager(unittest.TestCase):
         self.assertIsInstance(env_config, dict)
         self.assertIn("environment", env_config)
         self.assertIn("database", env_config)
-        self.assertIn("redis", env_config)
+        self.assertIn("cache", env_config)
         self.assertIn("meilisearch", env_config)
         self.assertIn("features", env_config)
         self.assertIn("app", env_config)
@@ -307,7 +307,7 @@ class TestConfigurationSources(unittest.TestCase):
             "DATABASE_HOST": "test-db",
             "DATABASE_PORT": "5432",
             "DATABASE_NAME": "test_db",
-            "REDIS_HOST": "test-redis",
+
             "MEILISEARCH_HOST": "test-meili",
             "DEBUG": "true",
             "LOG_LEVEL": "DEBUG",
@@ -337,7 +337,7 @@ class TestConfigurationSources(unittest.TestCase):
         """Test loading configuration from Kubernetes ConfigMaps"""
         mock_api = Mock()
         mock_api.read_namespaced_config_map.return_value = Mock(
-            data={"database.host": "k8s-db-host", "redis.host": "k8s-redis-host"}
+            data={"database.host": "k8s-db-host"}
         )
         mock_k8s.return_value = mock_api
 

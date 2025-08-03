@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { authService, type AuthState, type User, type LoginCredentials, type RegisterData } from "@/lib/auth";
+import { authService, type AuthState, type User, type LoginCredentials, type RegisterData } from "@/services/auth";
 
 export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>(authService.getAuthState());

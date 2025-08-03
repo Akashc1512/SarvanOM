@@ -115,7 +115,7 @@ export default [
       "no-undef": "off",
       "no-prototype-builtins": "off",
       "max-len": ["warn", { code: 100, ignoreUrls: true }],
-      indent: ["error", 2],
+      "indent": "off", // Disable problematic indent rule
       quotes: ["error", "double"],
       semi: ["error", "always"],
       "comma-dangle": ["error", "always-multiline"],

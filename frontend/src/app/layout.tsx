@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/providers/app-provider";
-import { MainNav } from "@/components/navigation/main-nav";
-import { Breadcrumbs } from "@/components/navigation/breadcrumbs";
-import { RouteGuard } from "@/components/auth/route-guard";
+import { MainNav } from "@/ui/navigation/main-nav";
+import { Breadcrumbs } from "@/ui/navigation/breadcrumbs";
+import { RouteGuard } from "@/ui/auth/route-guard";
 
 const inter = Inter({
   variable: "--font-inter",

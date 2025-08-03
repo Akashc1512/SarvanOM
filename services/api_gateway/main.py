@@ -75,6 +75,13 @@ except ImportError:
     async def track_query(*args, **kwargs):
         pass
 
+# Import agent handlers
+try:
+    from .agents import agent_handler
+except ImportError:
+    # Fallback if agent handlers are not available
+    agent_handler = None
+
 # Initialize query cache
 try:
     from shared.core.cache import CacheManager
@@ -297,7 +304,12 @@ async def route_query(query: str, user_context: Dict[str, Any] = None) -> Dict[s
     from typing import Dict, List, Any, Optional
     
     # Get environment configuration
-    use_dynamic_selection = getattr(settings.use_dynamic_selection, 'value', "true") if hasattr(settings.use_dynamic_selection, 'value') else settings.use_dynamic_selection.lower() == "true"
+    if hasattr(settings.use_dynamic_selection, 'value'):
+        use_dynamic_selection = getattr(settings.use_dynamic_selection, 'value', "true")
+    elif isinstance(settings.use_dynamic_selection, bool):
+        use_dynamic_selection = settings.use_dynamic_selection
+    else:
+        use_dynamic_selection = str(settings.use_dynamic_selection).lower() == "true"
     
     start_time = time.time()
     logger.info(f"Starting query routing for: {query[:100]}...")
@@ -642,7 +654,12 @@ async def lifespan(app: FastAPI):
         if var_value:
             # Mask sensitive values for security
             if "KEY" in var_name or "URL" in var_name:
-                masked_value = var_value[:8] + "..." if len(var_value) > 8 else "***"
+                # Handle SecretStr objects properly
+                if hasattr(var_value, 'get_secret_value'):
+                    str_value = var_value.get_secret_value()
+                else:
+                    str_value = str(var_value)
+                masked_value = str_value[:8] + "..." if len(str_value) > 8 else "***"
                 logger.info(f"  ✅ {var_name}: {masked_value}")
             else:
                 logger.info(f"  ✅ {var_name}: {var_value}")
@@ -658,13 +675,21 @@ async def lifespan(app: FastAPI):
         try:
             from shared.core.agents.lead_orchestrator import LeadOrchestrator
             orchestrator = LeadOrchestrator()
-            logger.info("✅ Orchestrator initialized successfully")
+            logger.info("✅ Main orchestrator initialized successfully")
         except Exception as e:
-            logger.error(f"❌ Orchestrator initialization failed: {e}")
+            logger.error(f"❌ Main orchestrator initialization failed: {e}")
             logger.error(f"Error type: {type(e).__name__}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
-            orchestrator = None
+            
+            # Try fallback orchestrator
+            try:
+                from services.api_gateway.fallback_orchestrator import FallbackOrchestrator
+                orchestrator = FallbackOrchestrator()
+                logger.info("✅ Fallback orchestrator initialized successfully")
+            except Exception as fallback_e:
+                logger.error(f"❌ Fallback orchestrator also failed: {fallback_e}")
+                orchestrator = None
         
         # Check vector backends and search services
         logger.info("🔍 Checking vector backends and search services...")
@@ -1157,7 +1182,13 @@ async def security_check(request: Request, call_next):
             user_context["user_id"] = user_id
 
             # Process query through orchestrator - FIXED: pass string and dict instead of QueryContext
-            result = await orchestrator.process_query(query, user_context)
+            # Check if orchestrator is available
+            if orchestrator is None:
+                logger.error("Orchestrator not initialized - using fallback processing")
+                # Fallback to direct service calls
+                result = await route_query(query, user_context)
+            else:
+                result = await orchestrator.process_query(query, user_context)
             process_time = time.time() - start_time
 
             # Check if processing was successful
@@ -1447,6 +1478,7 @@ async def submit_feedback(
 
 
 # Add integration layer import at the top with other imports
+from services.api_gateway.fallback_orchestrator import FallbackOrchestrator
 from services.api_gateway.integration_layer import (
     UniversalKnowledgePlatformIntegration,
     IntegrationRequest,
@@ -1691,7 +1723,8 @@ async def process_comprehensive_query(
             context=request.get("context", {}),
             preferences=request.get("preferences", {}),
             priority=request.get("priority", "normal"),
-            timeout_seconds=request.get("timeout_seconds", 30)
+            timeout_seconds=request.get("timeout_seconds", 30),
+            model=request.get("model", "auto")  # Add model selection with auto fallback
         )
         
         # Process query through integration layer
@@ -1709,6 +1742,8 @@ async def process_comprehensive_query(
         if response.success:
             api_response.update({
                 "response": response.orchestration_result.response if response.orchestration_result else "",
+                "llm_provider": response.orchestration_result.model_used.value if response.orchestration_result else "",
+                "llm_model": response.orchestration_result.model_used.value if response.orchestration_result else "",
                 "model_used": response.orchestration_result.model_used.value if response.orchestration_result else "",
                 "query_analysis": {
                     "intent": response.query_analysis.intent.value if response.query_analysis else "",
@@ -2698,6 +2733,280 @@ async def websocket_query_updates(websocket: WebSocket):
         traceback.print_exc()
         await websocket.close(code=1011, reason="Internal error")
 
+
+@app.post("/knowledge-graph/query")
+async def query_knowledge_graph(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user)
+):
+    """Query the knowledge graph for entities and relationships."""
+    start_time = time.time()
+    
+    try:
+        query = request.get("query", "")
+        query_type = request.get("query_type", "entity_relationship")
+        max_entities = request.get("max_entities", 10)
+        max_relationships = request.get("max_relationships", 15)
+        
+        if not query:
+            raise HTTPException(status_code=422, detail="Query is required")
+        
+        # Mock knowledge graph data for testing
+        # In production, this would call the actual knowledge graph service
+        mock_data = {
+            "entities": [
+                {
+                    "id": "entity_1",
+                    "name": "OpenAI",
+                    "type": "organization",
+                    "properties": {
+                        "description": "AI research company",
+                        "founded": "2015",
+                        "location": "San Francisco"
+                    },
+                    "confidence": 0.95
+                },
+                {
+                    "id": "entity_2", 
+                    "name": "ChatGPT",
+                    "type": "technology",
+                    "properties": {
+                        "description": "Large language model",
+                        "released": "2022",
+                        "capabilities": ["text generation", "conversation"]
+                    },
+                    "confidence": 0.92
+                },
+                {
+                    "id": "entity_3",
+                    "name": "Sam Altman",
+                    "type": "person",
+                    "properties": {
+                        "description": "CEO of OpenAI",
+                        "role": "Chief Executive Officer",
+                        "background": "Entrepreneur and investor"
+                    },
+                    "confidence": 0.88
+                },
+                {
+                    "id": "entity_4",
+                    "name": "GPT-4",
+                    "type": "technology",
+                    "properties": {
+                        "description": "Advanced language model",
+                        "released": "2023",
+                        "capabilities": ["multimodal", "reasoning"]
+                    },
+                    "confidence": 0.90
+                },
+                {
+                    "id": "entity_5",
+                    "name": "Microsoft",
+                    "type": "organization",
+                    "properties": {
+                        "description": "Technology company",
+                        "partnership": "OpenAI investor",
+                        "industry": "Software and cloud services"
+                    },
+                    "confidence": 0.85
+                }
+            ],
+            "relationships": [
+                {
+                    "source_id": "entity_1",
+                    "target_id": "entity_2",
+                    "relationship_type": "developed",
+                    "properties": {
+                        "description": "OpenAI developed ChatGPT",
+                        "year": "2022"
+                    },
+                    "confidence": 0.95
+                },
+                {
+                    "source_id": "entity_3",
+                    "target_id": "entity_1",
+                    "relationship_type": "leads",
+                    "properties": {
+                        "description": "Sam Altman leads OpenAI",
+                        "since": "2019"
+                    },
+                    "confidence": 0.88
+                },
+                {
+                    "source_id": "entity_1",
+                    "target_id": "entity_4",
+                    "relationship_type": "developed",
+                    "properties": {
+                        "description": "OpenAI developed GPT-4",
+                        "year": "2023"
+                    },
+                    "confidence": 0.90
+                },
+                {
+                    "source_id": "entity_5",
+                    "target_id": "entity_1",
+                    "relationship_type": "invests_in",
+                    "properties": {
+                        "description": "Microsoft invests in OpenAI",
+                        "amount": "$10 billion",
+                        "year": "2023"
+                    },
+                    "confidence": 0.85
+                },
+                {
+                    "source_id": "entity_2",
+                    "target_id": "entity_4",
+                    "relationship_type": "preceded_by",
+                    "properties": {
+                        "description": "ChatGPT preceded GPT-4",
+                        "timeline": "2022-2023"
+                    },
+                    "confidence": 0.92
+                }
+            ],
+            "paths": [],
+            "query_entities": ["artificial intelligence", "companies"],
+            "confidence": 0.89,
+            "processing_time_ms": int((time.time() - start_time) * 1000),
+            "metadata": {
+                "query_type": query_type,
+                "max_entities": max_entities,
+                "max_relationships": max_relationships,
+                "source": "mock_knowledge_graph"
+            }
+        }
+        
+        return JSONResponse(
+            status_code=200,
+            content=mock_data
+        )
+        
+    except Exception as e:
+        logger.error(f"Knowledge graph query failed: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "Knowledge graph query failed",
+                "message": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+        )
+
+# Agent endpoints
+@app.post("/agents/browser/search")
+async def browser_search(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user)
+):
+    """Browser agent for web search functionality."""
+    if not agent_handler:
+        raise HTTPException(status_code=503, detail="Agent handlers not available")
+    
+    try:
+        from .agents import BrowserSearchRequest
+        search_request = BrowserSearchRequest(**request)
+        result = await agent_handler.handle_browser_search(search_request)
+        return result.dict()
+    except Exception as e:
+        logger.error(f"Browser search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/agents/pdf/process")
+async def pdf_process(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user)
+):
+    """PDF agent for document processing."""
+    if not agent_handler:
+        raise HTTPException(status_code=503, detail="Agent handlers not available")
+    
+    try:
+        from .agents import PDFProcessRequest
+        pdf_request = PDFProcessRequest(**request)
+        result = await agent_handler.handle_pdf_processing(pdf_request)
+        return result.dict()
+    except Exception as e:
+        logger.error(f"PDF processing error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/agents/code-executor/run")
+async def code_executor(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user)
+):
+    """Code executor agent for running code snippets."""
+    if not agent_handler:
+        raise HTTPException(status_code=503, detail="Agent handlers not available")
+    
+    try:
+        from .agents import CodeExecutionRequest
+        code_request = CodeExecutionRequest(**request)
+        result = await agent_handler.handle_code_execution(code_request)
+        return result.dict()
+    except Exception as e:
+        logger.error(f"Code execution error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/agents/knowledge-graph/query")
+async def knowledge_graph_query(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user)
+):
+    """Knowledge graph agent for querying the knowledge graph."""
+    if not agent_handler:
+        raise HTTPException(status_code=503, detail="Agent handlers not available")
+    
+    try:
+        from .agents import KnowledgeGraphQueryRequest
+        kg_request = KnowledgeGraphQueryRequest(**request)
+        result = await agent_handler.handle_knowledge_graph_query(kg_request)
+        return result.dict()
+    except Exception as e:
+        logger.error(f"Knowledge graph query error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/agents/database/query")
+async def database_query(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user)
+):
+    """Database agent for querying structured databases."""
+    if not agent_handler:
+        raise HTTPException(status_code=503, detail="Agent handlers not available")
+    
+    try:
+        from .agents import DatabaseQueryRequest
+        db_request = DatabaseQueryRequest(**request)
+        result = await agent_handler.handle_database_query(db_request)
+        return result.dict()
+    except Exception as e:
+        logger.error(f"Database query error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/agents/web-crawler/crawl")
+async def web_crawler(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user)
+):
+    """Web crawler agent for crawling and indexing web pages."""
+    if not agent_handler:
+        raise HTTPException(status_code=503, detail="Agent handlers not available")
+    
+    try:
+        from .agents import WebCrawlerRequest
+        crawler_request = WebCrawlerRequest(**request)
+        result = await agent_handler.handle_web_crawler(crawler_request)
+        return result.dict()
+    except Exception as e:
+        logger.error(f"Web crawler error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/test")
 async def test_endpoint():

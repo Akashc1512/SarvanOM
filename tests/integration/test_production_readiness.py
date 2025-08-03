@@ -14,7 +14,7 @@ import os
 
 from services.api-gateway.main import app
 from shared.core.integration_monitor import IntegrationMonitor, IntegrationStatus
-from shared.core.cache import RedisCache, LRUCache
+from shared.core.cache import LRUCache
 from shared.core.metrics import MetricsCollector
 
 
@@ -116,7 +116,7 @@ class TestProductionReadiness:
         assert "meilisearch" in status
         assert "knowledge_graph" in status
         assert "llm_api" in status
-        assert "redis_cache" in status
+        assert "cache" in status
 
         # Test individual integration health check
         vector_status = await monitor.check_integration_health("vector_database")
@@ -125,10 +125,10 @@ class TestProductionReadiness:
         assert vector_status.status in ["healthy", "unhealthy", "not_configured", "unknown"]
 
     @pytest.mark.asyncio
-    async def test_redis_cache_functionality(self):
-        """Test Redis cache functionality."""
-        # Test with Redis disabled (should fall back gracefully)
-        cache = RedisCache()
+    async def test_cache_functionality(self):
+        """Test cache functionality."""
+        # Test with cache disabled (should fall back gracefully)
+        cache = LRUCache()
 
         # Test get with no connection
         result = await cache.get("test_key")
@@ -290,8 +290,8 @@ class TestProductionReadiness:
 
     def test_environment_variable_handling(self):
         """Test environment variable handling for monitoring."""
-        # Test Redis configuration
-        assert "REDIS_ENABLED" in os.environ or "REDIS_ENABLED" not in os.environ
+        # Test cache configuration
+        assert "CACHE_ENABLED" in os.environ or "CACHE_ENABLED" not in os.environ
 
         # Test monitoring configuration
         assert "PROMETHEUS_ENABLED" in os.environ or "PROMETHEUS_ENABLED" not in os.environ

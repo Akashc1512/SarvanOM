@@ -41,7 +41,7 @@ import structlog
 from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field, validator
-import redis.asyncio as aioredis
+
 
 logger = structlog.get_logger(__name__)
 
@@ -250,8 +250,15 @@ class JWTManager:
 class RateLimiter:
     """Rate limiting for authentication endpoints."""
 
-    def __init__(self, redis_client: aioredis.Redis):
-        self.redis = redis_client
+    def __init__(self, database_service=None):
+        try:
+            from shared.core.database import get_database_service
+            self.db_service = database_service or get_database_service()
+        except Exception as e:
+            logger.warning(f"Database service not available: {e}")
+            self.db_service = None
+        
+        self._rate_limits: Dict[str, List[int]] = {}
 
     async def check_rate_limit(
         self, key: str, max_requests: int, window_seconds: int
@@ -261,14 +268,17 @@ class RateLimiter:
         window_start = current_time - window_seconds
 
         # Get requests in current window
-        requests = await self.redis.zrangebyscore(key, window_start, current_time)
+        if key not in self._rate_limits:
+            self._rate_limits[key] = []
+        
+        # Remove old requests
+        self._rate_limits[key] = [t for t in self._rate_limits[key] if t >= window_start]
 
-        if len(requests) >= max_requests:
+        if len(self._rate_limits[key]) >= max_requests:
             return False
 
         # Add current request
-        await self.redis.zadd(key, {str(current_time): current_time})
-        await self.redis.expire(key, window_seconds)
+        self._rate_limits[key].append(current_time)
 
         return True
 
@@ -281,10 +291,16 @@ class RateLimiter:
 
 
 class SessionManager:
-    """Session management with Redis."""
+    """Session management with database."""
 
-    def __init__(self, redis_client: aioredis.Redis, config: AuthConfig):
-        self.redis = redis_client
+    def __init__(self, database_service=None, config: AuthConfig = None):
+        try:
+            from shared.core.database import get_database_service
+            self.db_service = database_service or get_database_service()
+        except Exception as e:
+            logger.warning(f"Database service not available: {e}")
+            self.db_service = None
+        
         self.config = config
 
     async def create_session(self, session: UserSession) -> None:
@@ -363,11 +379,11 @@ class SessionManager:
 class AuthManager:
     """Main authentication manager."""
 
-    def __init__(self, config: AuthConfig, redis_client: aioredis.Redis):
+    def __init__(self, config: AuthConfig, database_service=None):
         self.config = config
         self.jwt_manager = JWTManager(config)
-        self.rate_limiter = RateLimiter(redis_client)
-        self.session_manager = SessionManager(redis_client, config)
+        self.rate_limiter = RateLimiter(database_service)
+        self.session_manager = SessionManager(database_service, config)
         self.password_validator = PasswordValidator()
 
         # Track failed login attempts

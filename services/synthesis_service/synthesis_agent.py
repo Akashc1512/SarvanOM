@@ -934,7 +934,7 @@ class SynthesisAgent(BaseAgent):
                 success=True,
                 data=synthesis_data.model_dump(),
                 confidence=confidence,
-                processing_time_ms=int(processing_time * 1000),
+                execution_time_ms=int(processing_time * 1000),
                 metadata={
                     "verification_summary": verification_result.summary,
                     "verification_confidence": verification_result.verification_confidence,
@@ -953,7 +953,7 @@ class SynthesisAgent(BaseAgent):
                 success=False,
                 data={"error": str(e)},
                 confidence=0.0,
-                processing_time_ms=int((time.time() - start_time) * 1000),
+                execution_time_ms=int((time.time() - start_time) * 1000),
             )
 
     def _prioritize_recent_sources(self, source_docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

@@ -19,6 +19,14 @@ export function usePolling({
   const attemptsRef = useRef(0);
   const isPollingRef = useRef(false);
 
+  const stopPolling = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = undefined;
+    }
+    isPollingRef.current = false;
+  }, []);
+
   const startPolling = useCallback(() => {
     if (!enabled || isPollingRef.current) return;
 
@@ -45,15 +53,7 @@ export function usePolling({
 
     // Set up interval
     intervalRef.current = setInterval(poll, interval);
-  }, [enabled, interval, onPoll, onError, maxAttempts]);
-
-  const stopPolling = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = undefined;
-    }
-    isPollingRef.current = false;
-  }, []);
+  }, [enabled, interval, onPoll, onError, maxAttempts, stopPolling]);
 
   useEffect(() => {
     if (enabled) {

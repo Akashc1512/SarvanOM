@@ -225,11 +225,11 @@ class DatabaseSettings(SecureSettings):
             return v
 
         # Build from components
-        user = settings.postgres_user or "postgres"
-        password = settings.postgres_password
-        host = settings.postgres_host or "localhost"
-        port = settings.postgres_port or "5432"
-        name = settings.postgres_db or "sarvanom"
+        user = values.get("postgres_user", "postgres")
+        password = values.get("postgres_password")
+        host = values.get("postgres_host", "localhost")
+        port = values.get("postgres_port", "5432")
+        name = values.get("postgres_db", "sarvanom")
 
         if user and password:
             return f"postgresql://{user}:{password}@{host}:{port}/{name}"

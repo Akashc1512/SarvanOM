@@ -174,3 +174,50 @@ export interface QueryListFilters {
   page?: number | undefined;
   page_size?: number | undefined;
 }
+
+// Wiki Types
+export interface WikiArticle {
+  id: string;
+  title: string;
+  content: string;
+  summary: string;
+  author?: string;
+  created_at: string;
+  updated_at: string;
+  tags?: string[];
+  read_count?: number;
+}
+
+export interface WikiArticleList {
+  articles: WikiArticle[];
+  total: number;
+  page: number;
+  page_size: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+export interface CreateWikiArticleRequest {
+  title: string;
+  content: string;
+  summary?: string;
+  tags?: string[];
+}
+
+export interface UpdateWikiArticleRequest {
+  title?: string;
+  content?: string;
+  summary?: string;
+  tags?: string[];
+}
+
+export interface WikiArticleResponse {
+  article: WikiArticle;
+  message?: string;
+}
+
+export interface WikiErrorResponse {
+  error: string;
+  status_code: number;
+  details?: string;
+}

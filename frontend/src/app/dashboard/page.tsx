@@ -1,14 +1,17 @@
+export const dynamic = 'force-dynamic';
+
 "use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api } from "@/services/api";
 import {
   SystemMetrics,
   IntegrationStatus,
   ApiInfo,
   AnalyticsData,
 } from "@/types/api";
+import AgentToolkit from "@/ui/AgentToolkit";
 
 interface ErrorResponse {
   error: string;
@@ -356,6 +359,42 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Agent Toolkit */}
+      <AgentToolkit
+        availableAgents={[
+          {
+            id: 'browser',
+            name: 'Web Search',
+            description: 'Search the web for real-time information',
+            icon: () => <span>🔍</span>,
+            category: 'search' as const,
+            status: 'available' as const,
+            endpoint: '/api/agents/browser'
+          },
+          {
+            id: 'pdf',
+            name: 'PDF Processor',
+            description: 'Upload and analyze PDF documents',
+            icon: () => <span>📄</span>,
+            category: 'document' as const,
+            status: 'available' as const,
+            endpoint: '/api/agents/pdf'
+          },
+          {
+            id: 'code',
+            name: 'Code Executor',
+            description: 'Run and execute code snippets',
+            icon: () => <span>💻</span>,
+            category: 'code' as const,
+            status: 'available' as const,
+            endpoint: '/api/agents/code-executor'
+          }
+        ]}
+        onToolSelected={(agentId, result) => {
+          console.log(`Dashboard: Agent ${agentId} selected with result:`, result);
+        }}
+      />
     </div>
   );
 }
