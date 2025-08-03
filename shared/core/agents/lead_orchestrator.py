@@ -1,5 +1,5 @@
-# from ..\api\config import get_settings
-# settings = get_settings()
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 LeadOrchestrator Implementation for Multi-Agent Knowledge Platform
 This module implements the central orchestrator that coordinates all agents.

@@ -1,5 +1,5 @@
-# from ..\api\config import get_settings
-# settings = get_settings()
+from shared.core.api.config import get_settings
+settings = get_settings()
 """
 ArangoDB Knowledge Graph Agent
 Complete replacement of Neo4j with ArangoDB implementation.
