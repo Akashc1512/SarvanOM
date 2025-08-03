@@ -1,15 +1,12 @@
 """
 Browser Agent Route Handler
-Handles web search and browser-related operations.
+Handles web search and browser-related operations using BrowserService.
 """
 
 import logging
-import aiohttp
-import os
 from typing import Dict, Any
 from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException, Depends
-from urllib.parse import quote_plus
 
 from ..base import (
     AgentResponseFormatter,
@@ -20,6 +17,8 @@ from ..base import (
 )
 from ...models.requests import BrowserSearchRequest
 from ...middleware import get_current_user
+from ...di import get_browser_service
+from ...services.browser_service import BrowserService
 
 logger = logging.getLogger(__name__)
 
@@ -30,9 +29,10 @@ router = APIRouter()
 async def browser_search(
     request: Dict[str, Any],
     http_request: Request,
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
+    browser_service: BrowserService = Depends(get_browser_service)
 ):
-    """Execute browser search using the browser agent."""
+    """Execute browser search using the browser service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
     
@@ -48,8 +48,13 @@ async def browser_search(
             context=request.get("context", {})
         )
         
-        # Execute browser search
-        search_results = await _execute_browser_search(search_request)
+        # Execute browser search using service
+        search_results = await browser_service.search_web(
+            query=search_request.query,
+            search_engine=search_request.search_type,
+            max_results=search_request.max_results,
+            parameters=search_request.parameters
+        )
         
         processing_time = tracker.get_processing_time()
         user_id = get_user_id(current_user)
@@ -77,83 +82,165 @@ async def browser_search(
         )
 
 
-async def _execute_browser_search(search_request: BrowserSearchRequest) -> Dict[str, Any]:
-    """Execute the actual browser search operation."""
-    
-    # Get search API configuration
-    search_api_key = os.getenv('SEARCH_API_KEY', '')
-    search_engine = search_request.search_type or 'google'
-    
-    if search_engine == 'google':
-        return await _google_search(search_request, search_api_key)
-    elif search_engine == 'bing':
-        return await _bing_search(search_request)
-    else:
-        return await _fallback_search(search_request)
-
-
-async def _google_search(search_request: BrowserSearchRequest, api_key: str) -> Dict[str, Any]:
-    """Execute Google Custom Search."""
-    if not api_key:
-        logger.warning("Google API key not configured, using fallback search")
-        return await _fallback_search(search_request)
-    
-    google_cse_id = os.getenv('GOOGLE_CSE_ID', '')
-    search_url = "https://www.googleapis.com/customsearch/v1"
-    params = {
-        'key': api_key,
-        'cx': google_cse_id,
-        'q': search_request.query,
-        'num': min(search_request.max_results, 10)
-    }
+@router.post("/browser/extract")
+async def browser_extract_content(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user),
+    browser_service: BrowserService = Depends(get_browser_service)
+):
+    """Extract content from a URL using the browser service."""
+    tracker = AgentPerformanceTracker()
+    tracker.start_tracking()
     
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(search_url, params=params, timeout=10) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    items = data.get('items', [])
-                    
-                    return {
-                        "query": search_request.query,
-                        "engine": "google",
-                        "results": [
-                            {
-                                "title": item.get('title', ''),
-                                "url": item.get('link', ''),
-                                "snippet": item.get('snippet', '')
-                            }
-                            for item in items
-                        ],
-                        "total_results": data.get('searchInformation', {}).get('totalResults', 0)
-                    }
-                else:
-                    logger.error(f"Google search failed with status {response.status}")
-                    return await _fallback_search(search_request)
-                    
+        # Validate request
+        AgentErrorHandler.validate_request(request, ["url"])
+        
+        url = request.get("url", "")
+        extract_images = request.get("extract_images", False)
+        extract_links = request.get("extract_links", True)
+        
+        # Extract content using service
+        content_result = await browser_service.extract_content(
+            url=url,
+            extract_images=extract_images,
+            extract_links=extract_links
+        )
+        
+        processing_time = tracker.get_processing_time()
+        user_id = get_user_id(current_user)
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="browser_extract",
+            result=content_result,
+            processing_time=processing_time,
+            metadata=create_agent_metadata(
+                user_id=user_id,
+                url=url,
+                extract_images=extract_images,
+                extract_links=extract_links
+            ),
+            user_id=user_id
+        )
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Google search error: {e}")
-        return await _fallback_search(search_request)
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="browser_extract",
+            error=e,
+            operation="Content extraction",
+            user_id=get_user_id(current_user)
+        )
 
 
-async def _bing_search(search_request: BrowserSearchRequest) -> Dict[str, Any]:
-    """Execute Bing search (placeholder implementation)."""
-    logger.info("Bing search not implemented, using fallback")
-    return await _fallback_search(search_request)
+@router.post("/browser/browse")
+async def browser_browse_page(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user),
+    browser_service: BrowserService = Depends(get_browser_service)
+):
+    """Browse a page and follow links using the browser service."""
+    tracker = AgentPerformanceTracker()
+    tracker.start_tracking()
+    
+    try:
+        # Validate request
+        AgentErrorHandler.validate_request(request, ["url"])
+        
+        url = request.get("url", "")
+        follow_links = request.get("follow_links", False)
+        max_links = request.get("max_links", 5)
+        
+        # Browse page using service
+        browse_result = await browser_service.browse_page(
+            url=url,
+            follow_links=follow_links,
+            max_links=max_links
+        )
+        
+        processing_time = tracker.get_processing_time()
+        user_id = get_user_id(current_user)
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="browser_browse",
+            result=browse_result,
+            processing_time=processing_time,
+            metadata=create_agent_metadata(
+                user_id=user_id,
+                url=url,
+                follow_links=follow_links,
+                max_links=max_links
+            ),
+            user_id=user_id
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="browser_browse",
+            error=e,
+            operation="Page browsing",
+            user_id=get_user_id(current_user)
+        )
 
 
-async def _fallback_search(search_request: BrowserSearchRequest) -> Dict[str, Any]:
-    """Fallback search implementation with mock results."""
-    return {
-        "query": search_request.query,
-        "engine": "fallback",
-        "results": [
-            {
-                "title": f"Sample result for: {search_request.query}",
-                "url": "https://example.com",
-                "snippet": f"This is a sample search result for the query: {search_request.query}"
-            }
-        ],
-        "total_results": 1,
-        "note": "Using fallback search - configure API keys for real results"
-    } 
+@router.get("/browser/health")
+async def browser_health(
+    current_user=Depends(get_current_user),
+    browser_service: BrowserService = Depends(get_browser_service)
+):
+    """Get browser service health status."""
+    try:
+        health_status = await browser_service.health_check()
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="browser_health",
+            result=health_status,
+            processing_time=0.0,
+            metadata=create_agent_metadata(
+                user_id=get_user_id(current_user),
+                health_check=True
+            ),
+            user_id=get_user_id(current_user)
+        )
+        
+    except Exception as e:
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="browser_health",
+            error=e,
+            operation="Health check",
+            user_id=get_user_id(current_user)
+        )
+
+
+@router.get("/browser/status")
+async def browser_status(
+    current_user=Depends(get_current_user),
+    browser_service: BrowserService = Depends(get_browser_service)
+):
+    """Get browser service detailed status."""
+    try:
+        status_info = await browser_service.get_status()
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="browser_status",
+            result=status_info,
+            processing_time=0.0,
+            metadata=create_agent_metadata(
+                user_id=get_user_id(current_user),
+                status_check=True
+            ),
+            user_id=get_user_id(current_user)
+        )
+        
+    except Exception as e:
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="browser_status",
+            error=e,
+            operation="Status check",
+            user_id=get_user_id(current_user)
+        ) 

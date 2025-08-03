@@ -1,6 +1,6 @@
 """
 PDF Agent Route Handler
-Handles PDF processing and document analysis operations.
+Handles PDF processing and document analysis operations using PDFService.
 """
 
 import logging
@@ -18,6 +18,8 @@ from ..base import (
 )
 from ...models.requests import PDFProcessRequest
 from ...middleware import get_current_user
+from ...di import get_pdf_service
+from ...services.pdf_service import PDFService
 
 logger = logging.getLogger(__name__)
 
@@ -28,9 +30,10 @@ router = APIRouter()
 async def pdf_process(
     request: Dict[str, Any],
     http_request: Request,
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
+    pdf_service: PDFService = Depends(get_pdf_service)
 ):
-    """Process PDF documents for text extraction and analysis."""
+    """Process PDF documents for text extraction and analysis using PDF service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
     
@@ -45,8 +48,12 @@ async def pdf_process(
             context=request.get("context", {})
         )
         
-        # Execute PDF processing
-        pdf_results = await _process_pdf_document(pdf_request)
+        # Execute PDF processing using service
+        pdf_results = await pdf_service.process_pdf(
+            file_path=pdf_request.file_path,
+            operation=pdf_request.operation,
+            parameters=pdf_request.parameters
+        )
         
         processing_time = tracker.get_processing_time()
         user_id = get_user_id(current_user)
@@ -77,9 +84,10 @@ async def pdf_process(
 @router.post("/pdf/upload")
 async def pdf_upload(
     file: UploadFile = File(...),
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
+    pdf_service: PDFService = Depends(get_pdf_service)
 ):
-    """Upload and process PDF file."""
+    """Upload and process PDF file using PDF service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
     
@@ -91,37 +99,26 @@ async def pdf_upload(
                 detail="Only PDF files are supported"
             )
         
-        # Save uploaded file
-        upload_dir = "uploads/pdfs"
-        os.makedirs(upload_dir, exist_ok=True)
+        # Read file content
+        file_content = await file.read()
         
-        file_path = os.path.join(upload_dir, file.filename)
-        
-        with open(file_path, "wb") as buffer:
-            content = await file.read()
-            buffer.write(content)
-        
-        # Process the uploaded PDF
-        pdf_request = PDFProcessRequest(
-            file_path=file_path,
-            operation="extract_text",
-            parameters={},
-            context={}
+        # Process PDF using service
+        pdf_results = await pdf_service.process_pdf(
+            file_content=file_content,
+            filename=file.filename
         )
-        
-        pdf_results = await _process_pdf_document(pdf_request)
         
         processing_time = tracker.get_processing_time()
         user_id = get_user_id(current_user)
         
         return AgentResponseFormatter.format_success(
-            agent_id="pdf_upload_processor",
+            agent_id="pdf_upload",
             result=pdf_results,
             processing_time=processing_time,
             metadata=create_agent_metadata(
                 user_id=user_id,
                 filename=file.filename,
-                file_size=len(content)
+                file_size=len(file_content)
             ),
             user_id=user_id
         )
@@ -130,129 +127,219 @@ async def pdf_upload(
         raise
     except Exception as e:
         return AgentErrorHandler.handle_agent_error(
-            agent_id="pdf_upload_processor",
+            agent_id="pdf_upload",
             error=e,
-            operation="PDF upload processing",
+            operation="PDF upload and processing",
             user_id=get_user_id(current_user)
         )
 
 
-async def _process_pdf_document(pdf_request: PDFProcessRequest) -> Dict[str, Any]:
-    """Process PDF document based on operation type."""
+@router.post("/pdf/extract-text")
+async def pdf_extract_text(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user),
+    pdf_service: PDFService = Depends(get_pdf_service)
+):
+    """Extract text from PDF using PDF service."""
+    tracker = AgentPerformanceTracker()
+    tracker.start_tracking()
     
-    operation = pdf_request.operation.lower()
+    try:
+        # Validate request
+        AgentErrorHandler.validate_request(request, ["file_path"])
+        
+        file_path = request.get("file_path", "")
+        pages = request.get("pages", None)
+        
+        # Extract text using service
+        text_result = await pdf_service.extract_text(
+            file_path=file_path,
+            pages=pages
+        )
+        
+        processing_time = tracker.get_processing_time()
+        user_id = get_user_id(current_user)
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="pdf_extract_text",
+            result=text_result,
+            processing_time=processing_time,
+            metadata=create_agent_metadata(
+                user_id=user_id,
+                file_path=file_path,
+                pages=pages
+            ),
+            user_id=user_id
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="pdf_extract_text",
+            error=e,
+            operation="Text extraction",
+            user_id=get_user_id(current_user)
+        )
+
+
+@router.post("/pdf/extract-images")
+async def pdf_extract_images(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user),
+    pdf_service: PDFService = Depends(get_pdf_service)
+):
+    """Extract images from PDF using PDF service."""
+    tracker = AgentPerformanceTracker()
+    tracker.start_tracking()
     
-    if operation == "extract_text":
-        return await _extract_text_from_pdf(pdf_request)
-    elif operation == "extract_images":
-        return await _extract_images_from_pdf(pdf_request)
-    elif operation == "analyze_structure":
-        return await _analyze_pdf_structure(pdf_request)
-    elif operation == "extract_tables":
-        return await _extract_tables_from_pdf(pdf_request)
-    else:
-        logger.warning(f"Unknown PDF operation: {operation}")
-        return await _extract_text_from_pdf(pdf_request)
-
-
-async def _extract_text_from_pdf(pdf_request: PDFProcessRequest) -> Dict[str, Any]:
-    """Extract text content from PDF."""
     try:
-        # TODO: Implement actual PDF text extraction
-        # This would typically use PyPDF2, pdfplumber, or similar library
+        # Validate request
+        AgentErrorHandler.validate_request(request, ["file_path"])
         
-        return {
-            "file_path": pdf_request.file_path,
-            "operation": "extract_text",
-            "text_content": f"Sample extracted text from {pdf_request.file_path}",
-            "pages": 1,
-            "word_count": 50,
-            "char_count": 300,
-            "extraction_method": "fallback"
-        }
+        file_path = request.get("file_path", "")
+        pages = request.get("pages", None)
+        output_dir = request.get("output_dir", "extracted_images")
+        
+        # Extract images using service
+        images_result = await pdf_service.extract_images(
+            file_path=file_path,
+            pages=pages,
+            output_dir=output_dir
+        )
+        
+        processing_time = tracker.get_processing_time()
+        user_id = get_user_id(current_user)
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="pdf_extract_images",
+            result=images_result,
+            processing_time=processing_time,
+            metadata=create_agent_metadata(
+                user_id=user_id,
+                file_path=file_path,
+                pages=pages,
+                output_dir=output_dir
+            ),
+            user_id=user_id
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="pdf_extract_images",
+            error=e,
+            operation="Image extraction",
+            user_id=get_user_id(current_user)
+        )
+
+
+@router.post("/pdf/analyze")
+async def pdf_analyze(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user),
+    pdf_service: PDFService = Depends(get_pdf_service)
+):
+    """Analyze PDF structure and content using PDF service."""
+    tracker = AgentPerformanceTracker()
+    tracker.start_tracking()
+    
+    try:
+        # Validate request
+        AgentErrorHandler.validate_request(request, ["file_path"])
+        
+        file_path = request.get("file_path", "")
+        analysis_type = request.get("analysis_type", "full")
+        
+        # Analyze PDF using service
+        analysis_result = await pdf_service.analyze_pdf(
+            file_path=file_path,
+            analysis_type=analysis_type
+        )
+        
+        processing_time = tracker.get_processing_time()
+        user_id = get_user_id(current_user)
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="pdf_analyze",
+            result=analysis_result,
+            processing_time=processing_time,
+            metadata=create_agent_metadata(
+                user_id=user_id,
+                file_path=file_path,
+                analysis_type=analysis_type
+            ),
+            user_id=user_id
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="pdf_analyze",
+            error=e,
+            operation="PDF analysis",
+            user_id=get_user_id(current_user)
+        )
+
+
+@router.get("/pdf/health")
+async def pdf_health(
+    current_user=Depends(get_current_user),
+    pdf_service: PDFService = Depends(get_pdf_service)
+):
+    """Get PDF service health status."""
+    try:
+        health_status = await pdf_service.health_check()
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="pdf_health",
+            result=health_status,
+            processing_time=0.0,
+            metadata=create_agent_metadata(
+                user_id=get_user_id(current_user),
+                health_check=True
+            ),
+            user_id=get_user_id(current_user)
+        )
         
     except Exception as e:
-        logger.error(f"PDF text extraction failed: {e}")
-        return {
-            "file_path": pdf_request.file_path,
-            "operation": "extract_text",
-            "error": str(e),
-            "text_content": "",
-            "pages": 0,
-            "word_count": 0,
-            "char_count": 0
-        }
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="pdf_health",
+            error=e,
+            operation="Health check",
+            user_id=get_user_id(current_user)
+        )
 
 
-async def _extract_images_from_pdf(pdf_request: PDFProcessRequest) -> Dict[str, Any]:
-    """Extract images from PDF."""
+@router.get("/pdf/status")
+async def pdf_status(
+    current_user=Depends(get_current_user),
+    pdf_service: PDFService = Depends(get_pdf_service)
+):
+    """Get PDF service detailed status."""
     try:
-        # TODO: Implement actual PDF image extraction
+        status_info = await pdf_service.get_status()
         
-        return {
-            "file_path": pdf_request.file_path,
-            "operation": "extract_images",
-            "images_found": 0,
-            "image_details": [],
-            "extraction_method": "fallback"
-        }
+        return AgentResponseFormatter.format_success(
+            agent_id="pdf_status",
+            result=status_info,
+            processing_time=0.0,
+            metadata=create_agent_metadata(
+                user_id=get_user_id(current_user),
+                status_check=True
+            ),
+            user_id=get_user_id(current_user)
+        )
         
     except Exception as e:
-        logger.error(f"PDF image extraction failed: {e}")
-        return {
-            "file_path": pdf_request.file_path,
-            "operation": "extract_images",
-            "error": str(e),
-            "images_found": 0,
-            "image_details": []
-        }
-
-
-async def _analyze_pdf_structure(pdf_request: PDFProcessRequest) -> Dict[str, Any]:
-    """Analyze PDF document structure."""
-    try:
-        # TODO: Implement actual PDF structure analysis
-        
-        return {
-            "file_path": pdf_request.file_path,
-            "operation": "analyze_structure",
-            "total_pages": 1,
-            "has_bookmarks": False,
-            "has_links": False,
-            "has_forms": False,
-            "document_type": "unknown",
-            "analysis_method": "fallback"
-        }
-        
-    except Exception as e:
-        logger.error(f"PDF structure analysis failed: {e}")
-        return {
-            "file_path": pdf_request.file_path,
-            "operation": "analyze_structure",
-            "error": str(e),
-            "total_pages": 0
-        }
-
-
-async def _extract_tables_from_pdf(pdf_request: PDFProcessRequest) -> Dict[str, Any]:
-    """Extract tables from PDF."""
-    try:
-        # TODO: Implement actual PDF table extraction
-        
-        return {
-            "file_path": pdf_request.file_path,
-            "operation": "extract_tables",
-            "tables_found": 0,
-            "table_details": [],
-            "extraction_method": "fallback"
-        }
-        
-    except Exception as e:
-        logger.error(f"PDF table extraction failed: {e}")
-        return {
-            "file_path": pdf_request.file_path,
-            "operation": "extract_tables",
-            "error": str(e),
-            "tables_found": 0,
-            "table_details": []
-        } 
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="pdf_status",
+            error=e,
+            operation="Status check",
+            user_id=get_user_id(current_user)
+        ) 

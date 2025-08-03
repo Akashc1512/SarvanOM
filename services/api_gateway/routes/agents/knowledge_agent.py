@@ -1,6 +1,6 @@
 """
 Knowledge Graph Agent Route Handler
-Handles knowledge graph queries and operations.
+Handles knowledge graph queries and operations using KnowledgeService.
 """
 
 import logging
@@ -17,6 +17,8 @@ from ..base import (
 )
 from ...models.requests import KnowledgeGraphRequest
 from ...middleware import get_current_user
+from ...di import get_knowledge_service
+from ...services.knowledge_service import KnowledgeService
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +29,10 @@ router = APIRouter()
 async def knowledge_graph_query(
     request: Dict[str, Any],
     http_request: Request,
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
+    knowledge_service: KnowledgeService = Depends(get_knowledge_service)
 ):
-    """Query the knowledge graph for entities and relationships."""
+    """Query the knowledge graph for entities and relationships using knowledge service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
     
@@ -44,8 +47,12 @@ async def knowledge_graph_query(
             context=request.get("context", {})
         )
         
-        # Execute knowledge graph query
-        kg_results = await _query_knowledge_graph(kg_request)
+        # Execute knowledge graph query using service
+        kg_results = await knowledge_service.query_entities(
+            entity_type=kg_request.parameters.get("entity_type"),
+            properties=kg_request.parameters.get("properties"),
+            limit=kg_request.parameters.get("limit", 10)
+        )
         
         processing_time = tracker.get_processing_time()
         user_id = get_user_id(current_user)
@@ -77,9 +84,10 @@ async def knowledge_graph_query(
 async def get_entities(
     request: Dict[str, Any],
     http_request: Request,
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
+    knowledge_service: KnowledgeService = Depends(get_knowledge_service)
 ):
-    """Get entities from the knowledge graph."""
+    """Get entities from the knowledge graph using knowledge service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
     
@@ -88,10 +96,15 @@ async def get_entities(
         AgentErrorHandler.validate_request(request, ["entity_type"])
         
         entity_type = request.get("entity_type", "")
+        properties = request.get("properties", {})
         limit = request.get("limit", 10)
         
-        # Get entities
-        entities = await _get_entities_by_type(entity_type, limit)
+        # Get entities using service
+        entities = await knowledge_service.query_entities(
+            entity_type=entity_type,
+            properties=properties,
+            limit=limit
+        )
         
         processing_time = tracker.get_processing_time()
         user_id = get_user_id(current_user)
@@ -123,9 +136,10 @@ async def get_entities(
 async def get_relationships(
     request: Dict[str, Any],
     http_request: Request,
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user),
+    knowledge_service: KnowledgeService = Depends(get_knowledge_service)
 ):
-    """Get relationships from the knowledge graph."""
+    """Get relationships from the knowledge graph using knowledge service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
     
@@ -136,9 +150,15 @@ async def get_relationships(
         source_entity = request.get("source_entity", "")
         target_entity = request.get("target_entity", "")
         relationship_type = request.get("relationship_type", "")
+        limit = request.get("limit", 10)
         
-        # Get relationships
-        relationships = await _get_relationships(source_entity, target_entity, relationship_type)
+        # Get relationships using service
+        relationships = await knowledge_service.query_relationships(
+            source_entity=source_entity,
+            target_entity=target_entity,
+            relationship_type=relationship_type,
+            limit=limit
+        )
         
         processing_time = tracker.get_processing_time()
         user_id = get_user_id(current_user)
@@ -167,196 +187,166 @@ async def get_relationships(
         )
 
 
-async def _query_knowledge_graph(kg_request: KnowledgeGraphRequest) -> Dict[str, Any]:
-    """Execute knowledge graph query based on type."""
+@router.post("/knowledge-graph/paths")
+async def find_paths(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user),
+    knowledge_service: KnowledgeService = Depends(get_knowledge_service)
+):
+    """Find paths between entities using knowledge service."""
+    tracker = AgentPerformanceTracker()
+    tracker.start_tracking()
     
-    query_type = kg_request.query_type.lower()
+    try:
+        # Validate request
+        AgentErrorHandler.validate_request(request, ["source_entity", "target_entity"])
+        
+        source_entity = request.get("source_entity", "")
+        target_entity = request.get("target_entity", "")
+        max_paths = request.get("max_paths", 5)
+        max_length = request.get("max_length", 5)
+        
+        # Find paths using service
+        paths = await knowledge_service.find_paths(
+            source_entity=source_entity,
+            target_entity=target_entity,
+            max_paths=max_paths,
+            max_length=max_length
+        )
+        
+        processing_time = tracker.get_processing_time()
+        user_id = get_user_id(current_user)
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="knowledge_graph_paths",
+            result=paths,
+            processing_time=processing_time,
+            metadata=create_agent_metadata(
+                user_id=user_id,
+                source_entity=source_entity,
+                target_entity=target_entity,
+                max_paths=max_paths
+            ),
+            user_id=user_id
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="knowledge_graph_paths",
+            error=e,
+            operation="Path finding",
+            user_id=get_user_id(current_user)
+        )
+
+
+@router.post("/knowledge-graph/search")
+async def search_entities(
+    request: Dict[str, Any],
+    http_request: Request,
+    current_user=Depends(get_current_user),
+    knowledge_service: KnowledgeService = Depends(get_knowledge_service)
+):
+    """Search for entities using knowledge service."""
+    tracker = AgentPerformanceTracker()
+    tracker.start_tracking()
     
-    if query_type == "entity_relationship":
-        return await _query_entity_relationships(kg_request)
-    elif query_type == "path_finding":
-        return await _query_path_finding(kg_request)
-    elif query_type == "entity_search":
-        return await _query_entity_search(kg_request)
-    elif query_type == "general":
-        return await _query_general(kg_request)
-    else:
-        logger.warning(f"Unknown query type: {query_type}")
-        return await _query_general(kg_request)
-
-
-async def _query_entity_relationships(kg_request: KnowledgeGraphRequest) -> Dict[str, Any]:
-    """Query entity relationships in knowledge graph."""
     try:
-        # TODO: Implement actual knowledge graph query logic
-        # This would typically connect to ArangoDB, Neo4j, or similar
+        # Validate request
+        AgentErrorHandler.validate_request(request, ["search_term"])
         
-        return {
-            "query": kg_request.query,
-            "query_type": "entity_relationship",
-            "entities": [
-                {
-                    "id": "entity1",
-                    "name": "Sample Entity",
-                    "type": "Concept",
-                    "confidence": 0.95,
-                    "properties": {
-                        "description": "A sample entity for demonstration"
-                    }
-                }
-            ],
-            "relationships": [
-                {
-                    "source": "entity1",
-                    "target": "entity2",
-                    "type": "RELATED_TO",
-                    "confidence": 0.8,
-                    "properties": {
-                        "strength": 0.8
-                    }
-                }
-            ],
-            "subgraphs": [],
-            "query_time": 0.1,
-            "total_entities": 1,
-            "total_relationships": 1
-        }
+        search_term = request.get("search_term", "")
+        entity_types = request.get("entity_types", [])
+        limit = request.get("limit", 10)
+        
+        # Search entities using service
+        search_results = await knowledge_service.search_entities(
+            search_term=search_term,
+            entity_types=entity_types,
+            limit=limit
+        )
+        
+        processing_time = tracker.get_processing_time()
+        user_id = get_user_id(current_user)
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="knowledge_graph_search",
+            result=search_results,
+            processing_time=processing_time,
+            metadata=create_agent_metadata(
+                user_id=user_id,
+                search_term=search_term,
+                entity_types=entity_types
+            ),
+            user_id=user_id
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="knowledge_graph_search",
+            error=e,
+            operation="Entity search",
+            user_id=get_user_id(current_user)
+        )
+
+
+@router.get("/knowledge-graph/health")
+async def knowledge_health(
+    current_user=Depends(get_current_user),
+    knowledge_service: KnowledgeService = Depends(get_knowledge_service)
+):
+    """Get knowledge service health status."""
+    try:
+        health_status = await knowledge_service.health_check()
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="knowledge_health",
+            result=health_status,
+            processing_time=0.0,
+            metadata=create_agent_metadata(
+                user_id=get_user_id(current_user),
+                health_check=True
+            ),
+            user_id=get_user_id(current_user)
+        )
         
     except Exception as e:
-        logger.error(f"Entity relationship query failed: {e}")
-        return {
-            "query": kg_request.query,
-            "query_type": "entity_relationship",
-            "error": str(e),
-            "entities": [],
-            "relationships": [],
-            "subgraphs": [],
-            "query_time": 0.0,
-            "total_entities": 0,
-            "total_relationships": 0
-        }
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="knowledge_health",
+            error=e,
+            operation="Health check",
+            user_id=get_user_id(current_user)
+        )
 
 
-async def _query_path_finding(kg_request: KnowledgeGraphRequest) -> Dict[str, Any]:
-    """Query path finding in knowledge graph."""
+@router.get("/knowledge-graph/status")
+async def knowledge_status(
+    current_user=Depends(get_current_user),
+    knowledge_service: KnowledgeService = Depends(get_knowledge_service)
+):
+    """Get knowledge service detailed status."""
     try:
-        # TODO: Implement actual path finding logic
+        status_info = await knowledge_service.get_status()
         
-        return {
-            "query": kg_request.query,
-            "query_type": "path_finding",
-            "paths": [],
-            "shortest_path_length": 0,
-            "query_time": 0.1
-        }
+        return AgentResponseFormatter.format_success(
+            agent_id="knowledge_status",
+            result=status_info,
+            processing_time=0.0,
+            metadata=create_agent_metadata(
+                user_id=get_user_id(current_user),
+                status_check=True
+            ),
+            user_id=get_user_id(current_user)
+        )
         
     except Exception as e:
-        logger.error(f"Path finding query failed: {e}")
-        return {
-            "query": kg_request.query,
-            "query_type": "path_finding",
-            "error": str(e),
-            "paths": [],
-            "shortest_path_length": 0,
-            "query_time": 0.0
-        }
-
-
-async def _query_entity_search(kg_request: KnowledgeGraphRequest) -> Dict[str, Any]:
-    """Query entity search in knowledge graph."""
-    try:
-        # TODO: Implement actual entity search logic
-        
-        return {
-            "query": kg_request.query,
-            "query_type": "entity_search",
-            "entities": [],
-            "total_results": 0,
-            "query_time": 0.1
-        }
-        
-    except Exception as e:
-        logger.error(f"Entity search query failed: {e}")
-        return {
-            "query": kg_request.query,
-            "query_type": "entity_search",
-            "error": str(e),
-            "entities": [],
-            "total_results": 0,
-            "query_time": 0.0
-        }
-
-
-async def _query_general(kg_request: KnowledgeGraphRequest) -> Dict[str, Any]:
-    """General knowledge graph query."""
-    try:
-        # TODO: Implement general query logic
-        
-        return {
-            "query": kg_request.query,
-            "query_type": "general",
-            "results": [],
-            "query_time": 0.1
-        }
-        
-    except Exception as e:
-        logger.error(f"General query failed: {e}")
-        return {
-            "query": kg_request.query,
-            "query_type": "general",
-            "error": str(e),
-            "results": [],
-            "query_time": 0.0
-        }
-
-
-async def _get_entities_by_type(entity_type: str, limit: int) -> Dict[str, Any]:
-    """Get entities by type."""
-    try:
-        # TODO: Implement actual entity retrieval
-        
-        return {
-            "entity_type": entity_type,
-            "entities": [],
-            "total_count": 0,
-            "limit": limit
-        }
-        
-    except Exception as e:
-        logger.error(f"Entity retrieval failed: {e}")
-        return {
-            "entity_type": entity_type,
-            "error": str(e),
-            "entities": [],
-            "total_count": 0,
-            "limit": limit
-        }
-
-
-async def _get_relationships(
-    source_entity: str,
-    target_entity: str,
-    relationship_type: str
-) -> Dict[str, Any]:
-    """Get relationships between entities."""
-    try:
-        # TODO: Implement actual relationship retrieval
-        
-        return {
-            "source_entity": source_entity,
-            "target_entity": target_entity,
-            "relationship_type": relationship_type,
-            "relationships": [],
-            "total_count": 0
-        }
-        
-    except Exception as e:
-        logger.error(f"Relationship retrieval failed: {e}")
-        return {
-            "source_entity": source_entity,
-            "target_entity": target_entity,
-            "relationship_type": relationship_type,
-            "error": str(e),
-            "relationships": [],
-            "total_count": 0
-        } 
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="knowledge_status",
+            error=e,
+            operation="Status check",
+            user_id=get_user_id(current_user)
+        ) 

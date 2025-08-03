@@ -1,6 +1,6 @@
 """
 Database query agent routes.
-Handles database queries, schema exploration, and data analysis.
+Handles database queries, schema exploration, and data analysis using DatabaseService.
 """
 
 import logging
@@ -17,6 +17,8 @@ from ..base import (
 )
 from ..models.responses import AgentResponse
 from ...middleware import get_current_user
+from ...di import get_database_service
+from ...services.database_service import DatabaseService
 
 logger = logging.getLogger(__name__)
 
@@ -26,16 +28,17 @@ database_router = APIRouter(prefix="/database", tags=["database-query"])
 @database_router.post("/query")
 async def execute_database_query(
     request: Dict[str, Any],
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    database_service: DatabaseService = Depends(get_database_service)
 ) -> AgentResponse:
     """
-    Execute a database query and return results.
+    Execute a database query and return results using database service.
     
     Expected request format:
     {
         "query": "SELECT * FROM users WHERE age > 25",
-        "database_type": "postgresql",
-        "connection_string": "optional connection string",
+        "database_name": "my_database",
+        "params": {"optional": "parameters"},
         "timeout": 30
     }
     """
@@ -46,20 +49,25 @@ async def execute_database_query(
         user_id = get_user_id(current_user)
         
         # Validate request
-        AgentErrorHandler.validate_request(request, ["query", "database_type"])
+        AgentErrorHandler.validate_request(request, ["query", "database_name"])
         
         query = request.get("query", "")
-        database_type = request.get("database_type", "postgresql").lower()
-        connection_string = request.get("connection_string", "")
+        database_name = request.get("database_name", "")
+        params = request.get("params", {})
         timeout = request.get("timeout", 30)
         
-        # Execute the query
-        result = await _execute_database_query(query, database_type, connection_string, timeout)
+        # Execute the query using service
+        result = await database_service.execute_query(
+            database_name=database_name,
+            query=query,
+            params=params,
+            timeout=timeout
+        )
         
         processing_time = tracker.get_processing_time()
         metadata = create_agent_metadata(
             user_id, 
-            database_type=database_type, 
+            database_name=database_name, 
             timeout=timeout,
             query_length=len(query)
         )
@@ -85,15 +93,15 @@ async def execute_database_query(
 @database_router.post("/schema")
 async def get_database_schema(
     request: Dict[str, Any],
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    database_service: DatabaseService = Depends(get_database_service)
 ) -> AgentResponse:
     """
-    Get database schema information.
+    Get database schema information using database service.
     
     Expected request format:
     {
-        "database_type": "postgresql",
-        "connection_string": "optional connection string"
+        "database_name": "my_database"
     }
     """
     tracker = AgentPerformanceTracker()
@@ -103,20 +111,19 @@ async def get_database_schema(
         user_id = get_user_id(current_user)
         
         # Validate request
-        AgentErrorHandler.validate_request(request, ["database_type"])
+        AgentErrorHandler.validate_request(request, ["database_name"])
         
-        database_type = request.get("database_type", "postgresql").lower()
-        connection_string = request.get("connection_string", "")
+        database_name = request.get("database_name", "")
         
-        # Get schema information
-        schema_result = await _get_database_schema(database_type, connection_string)
+        # Get schema using service
+        result = await database_service.get_schema(database_name=database_name)
         
         processing_time = tracker.get_processing_time()
-        metadata = create_agent_metadata(user_id, database_type=database_type)
+        metadata = create_agent_metadata(user_id, database_name=database_name)
         
         return AgentResponseFormatter.format_success(
             agent_id="database-schema",
-            result=schema_result,
+            result=result,
             processing_time=processing_time,
             metadata=metadata,
             user_id=user_id
@@ -127,7 +134,7 @@ async def get_database_schema(
         return AgentErrorHandler.handle_agent_error(
             agent_id="database-schema",
             error=e,
-            operation="schema retrieval",
+            operation="database schema retrieval",
             user_id=get_user_id(current_user)
         )
 
@@ -135,17 +142,17 @@ async def get_database_schema(
 @database_router.post("/analyze")
 async def analyze_database_data(
     request: Dict[str, Any],
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    database_service: DatabaseService = Depends(get_database_service)
 ) -> AgentResponse:
     """
-    Analyze database data and generate insights.
+    Analyze database data using database service.
     
     Expected request format:
     {
+        "database_name": "my_database",
         "table_name": "users",
-        "database_type": "postgresql",
-        "connection_string": "optional connection string",
-        "analysis_type": "statistical"
+        "columns": ["optional", "columns", "to", "analyze"]
     }
     """
     tracker = AgentPerformanceTracker()
@@ -155,29 +162,29 @@ async def analyze_database_data(
         user_id = get_user_id(current_user)
         
         # Validate request
-        AgentErrorHandler.validate_request(request, ["table_name", "database_type"])
+        AgentErrorHandler.validate_request(request, ["database_name", "table_name"])
         
+        database_name = request.get("database_name", "")
         table_name = request.get("table_name", "")
-        database_type = request.get("database_type", "postgresql").lower()
-        connection_string = request.get("connection_string", "")
-        analysis_type = request.get("analysis_type", "statistical")
+        columns = request.get("columns", None)
         
-        # Analyze the data
-        analysis_result = await _analyze_database_data(
-            table_name, database_type, connection_string, analysis_type
+        # Analyze data using service
+        result = await database_service.analyze_data(
+            database_name=database_name,
+            table_name=table_name,
+            columns=columns
         )
         
         processing_time = tracker.get_processing_time()
         metadata = create_agent_metadata(
             user_id, 
-            database_type=database_type,
-            table_name=table_name,
-            analysis_type=analysis_type
+            database_name=database_name,
+            table_name=table_name
         )
         
         return AgentResponseFormatter.format_success(
             agent_id="database-analyzer",
-            result=analysis_result,
+            result=result,
             processing_time=processing_time,
             metadata=metadata,
             user_id=user_id
@@ -188,7 +195,7 @@ async def analyze_database_data(
         return AgentErrorHandler.handle_agent_error(
             agent_id="database-analyzer",
             error=e,
-            operation="data analysis",
+            operation="database data analysis",
             user_id=get_user_id(current_user)
         )
 
@@ -196,16 +203,16 @@ async def analyze_database_data(
 @database_router.post("/optimize")
 async def optimize_database_query(
     request: Dict[str, Any],
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user),
+    database_service: DatabaseService = Depends(get_database_service)
 ) -> AgentResponse:
     """
-    Optimize a database query for better performance.
+    Optimize database query using database service.
     
     Expected request format:
     {
-        "query": "SELECT * FROM users WHERE age > 25",
-        "database_type": "postgresql",
-        "connection_string": "optional connection string"
+        "database_name": "my_database",
+        "query": "SELECT * FROM users WHERE age > 25"
     }
     """
     tracker = AgentPerformanceTracker()
@@ -215,25 +222,27 @@ async def optimize_database_query(
         user_id = get_user_id(current_user)
         
         # Validate request
-        AgentErrorHandler.validate_request(request, ["query", "database_type"])
+        AgentErrorHandler.validate_request(request, ["database_name", "query"])
         
+        database_name = request.get("database_name", "")
         query = request.get("query", "")
-        database_type = request.get("database_type", "postgresql").lower()
-        connection_string = request.get("connection_string", "")
         
-        # Optimize the query
-        optimization_result = await _optimize_database_query(query, database_type, connection_string)
+        # Optimize query using service
+        result = await database_service.optimize_query(
+            database_name=database_name,
+            query=query
+        )
         
         processing_time = tracker.get_processing_time()
         metadata = create_agent_metadata(
             user_id, 
-            database_type=database_type,
-            original_query_length=len(query)
+            database_name=database_name,
+            query_length=len(query)
         )
         
         return AgentResponseFormatter.format_success(
             agent_id="database-optimizer",
-            result=optimization_result,
+            result=result,
             processing_time=processing_time,
             metadata=metadata,
             user_id=user_id
@@ -244,254 +253,149 @@ async def optimize_database_query(
         return AgentErrorHandler.handle_agent_error(
             agent_id="database-optimizer",
             error=e,
-            operation="query optimization",
+            operation="database query optimization",
             user_id=get_user_id(current_user)
         )
 
 
-async def _execute_database_query(
-    query: str,
-    database_type: str,
-    connection_string: str,
-    timeout: int
-) -> Dict[str, Any]:
-    """
-    Execute a database query safely.
-    """
-    # TODO: Implement actual database query execution
-    # This should include:
-    # - Connection pooling
-    # - Query validation
-    # - SQL injection prevention
-    # - Result pagination
-    # - Error handling
+@database_router.get("/databases")
+async def list_databases(
+    current_user = Depends(get_current_user),
+    database_service: DatabaseService = Depends(get_database_service)
+) -> AgentResponse:
+    """List available databases using database service."""
+    tracker = AgentPerformanceTracker()
+    tracker.start_tracking()
     
     try:
-        # Basic query validation
-        if not query.strip():
-            raise ValueError("Query cannot be empty")
+        user_id = get_user_id(current_user)
         
-        if timeout > 300:  # Max 5 minutes
-            timeout = 300
+        # List databases using service
+        result = await database_service.list_databases()
         
-        # Database-specific execution
-        if database_type == "postgresql":
-            return await _execute_postgresql_query(query, connection_string, timeout)
-        elif database_type == "mysql":
-            return await _execute_mysql_query(query, connection_string, timeout)
-        elif database_type == "sqlite":
-            return await _execute_sqlite_query(query, connection_string, timeout)
-        else:
-            raise ValueError(f"Unsupported database type: {database_type}")
-            
+        processing_time = tracker.get_processing_time()
+        metadata = create_agent_metadata(user_id)
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="database-lister",
+            result=result,
+            processing_time=processing_time,
+            metadata=metadata,
+            user_id=user_id
+        )
+        
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "results": [],
-            "row_count": 0,
-            "execution_time": 0.0
-        }
+        processing_time = tracker.get_processing_time()
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="database-lister",
+            error=e,
+            operation="database listing",
+            user_id=get_user_id(current_user)
+        )
 
 
-async def _execute_postgresql_query(
-    query: str,
-    connection_string: str,
-    timeout: int
-) -> Dict[str, Any]:
+@database_router.post("/test-connection")
+async def test_database_connection(
+    request: Dict[str, Any],
+    current_user = Depends(get_current_user),
+    database_service: DatabaseService = Depends(get_database_service)
+) -> AgentResponse:
     """
-    Execute PostgreSQL query.
-    """
-    # TODO: Implement actual PostgreSQL query execution
-    # This should use asyncpg or psycopg2 with proper connection handling
+    Test database connection using database service.
     
-    return {
-        "success": True,
-        "results": [{"message": f"PostgreSQL query executed: {len(query)} characters"}],
-        "row_count": 1,
-        "execution_time": 0.1,
-        "database_type": "postgresql"
+    Expected request format:
+    {
+        "database_name": "my_database"
     }
-
-
-async def _execute_mysql_query(
-    query: str,
-    connection_string: str,
-    timeout: int
-) -> Dict[str, Any]:
     """
-    Execute MySQL query.
-    """
-    # TODO: Implement actual MySQL query execution
-    # This should use aiomysql or pymysql with proper connection handling
+    tracker = AgentPerformanceTracker()
+    tracker.start_tracking()
     
-    return {
-        "success": True,
-        "results": [{"message": f"MySQL query executed: {len(query)} characters"}],
-        "row_count": 1,
-        "execution_time": 0.1,
-        "database_type": "mysql"
-    }
+    try:
+        user_id = get_user_id(current_user)
+        
+        # Validate request
+        AgentErrorHandler.validate_request(request, ["database_name"])
+        
+        database_name = request.get("database_name", "")
+        
+        # Test connection using service
+        result = await database_service.test_connection(database_name=database_name)
+        
+        processing_time = tracker.get_processing_time()
+        metadata = create_agent_metadata(user_id, database_name=database_name)
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="database-connection-tester",
+            result=result,
+            processing_time=processing_time,
+            metadata=metadata,
+            user_id=user_id
+        )
+        
+    except Exception as e:
+        processing_time = tracker.get_processing_time()
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="database-connection-tester",
+            error=e,
+            operation="database connection testing",
+            user_id=get_user_id(current_user)
+        )
 
 
-async def _execute_sqlite_query(
-    query: str,
-    connection_string: str,
-    timeout: int
-) -> Dict[str, Any]:
-    """
-    Execute SQLite query.
-    """
-    # TODO: Implement actual SQLite query execution
-    # This should use aiosqlite with proper connection handling
-    
-    return {
-        "success": True,
-        "results": [{"message": f"SQLite query executed: {len(query)} characters"}],
-        "row_count": 1,
-        "execution_time": 0.1,
-        "database_type": "sqlite"
-    }
+@database_router.get("/health")
+async def database_health(
+    current_user = Depends(get_current_user),
+    database_service: DatabaseService = Depends(get_database_service)
+) -> AgentResponse:
+    """Get database service health status."""
+    try:
+        health_status = await database_service.health_check()
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="database-health",
+            result=health_status,
+            processing_time=0.0,
+            metadata=create_agent_metadata(
+                get_user_id(current_user),
+                health_check=True
+            ),
+            user_id=get_user_id(current_user)
+        )
+        
+    except Exception as e:
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="database-health",
+            error=e,
+            operation="health check",
+            user_id=get_user_id(current_user)
+        )
 
 
-async def _get_database_schema(
-    database_type: str,
-    connection_string: str
-) -> Dict[str, Any]:
-    """
-    Get database schema information.
-    """
-    # TODO: Implement actual schema retrieval
-    # This should include:
-    # - Table names
-    # - Column information
-    # - Indexes
-    # - Foreign keys
-    # - Constraints
-    
-    if database_type == "postgresql":
-        return await _get_postgresql_schema(connection_string)
-    elif database_type == "mysql":
-        return await _get_mysql_schema(connection_string)
-    elif database_type == "sqlite":
-        return await _get_sqlite_schema(connection_string)
-    else:
-        return {
-            "tables": [],
-            "columns": {},
-            "indexes": {},
-            "database_type": database_type
-        }
-
-
-async def _get_postgresql_schema(connection_string: str) -> Dict[str, Any]:
-    """
-    Get PostgreSQL schema information.
-    """
-    # TODO: Implement actual PostgreSQL schema retrieval
-    return {
-        "tables": ["users", "orders", "products"],
-        "columns": {
-            "users": ["id", "name", "email", "created_at"],
-            "orders": ["id", "user_id", "total", "status"],
-            "products": ["id", "name", "price", "category"]
-        },
-        "indexes": {},
-        "database_type": "postgresql"
-    }
-
-
-async def _get_mysql_schema(connection_string: str) -> Dict[str, Any]:
-    """
-    Get MySQL schema information.
-    """
-    # TODO: Implement actual MySQL schema retrieval
-    return {
-        "tables": ["users", "orders", "products"],
-        "columns": {
-            "users": ["id", "name", "email", "created_at"],
-            "orders": ["id", "user_id", "total", "status"],
-            "products": ["id", "name", "price", "category"]
-        },
-        "indexes": {},
-        "database_type": "mysql"
-    }
-
-
-async def _get_sqlite_schema(connection_string: str) -> Dict[str, Any]:
-    """
-    Get SQLite schema information.
-    """
-    # TODO: Implement actual SQLite schema retrieval
-    return {
-        "tables": ["users", "orders", "products"],
-        "columns": {
-            "users": ["id", "name", "email", "created_at"],
-            "orders": ["id", "user_id", "total", "status"],
-            "products": ["id", "name", "price", "category"]
-        },
-        "indexes": {},
-        "database_type": "sqlite"
-    }
-
-
-async def _analyze_database_data(
-    table_name: str,
-    database_type: str,
-    connection_string: str,
-    analysis_type: str
-) -> Dict[str, Any]:
-    """
-    Analyze database data and generate insights.
-    """
-    # TODO: Implement actual data analysis
-    # This should include:
-    # - Statistical analysis
-    # - Data quality assessment
-    # - Pattern recognition
-    # - Anomaly detection
-    
-    return {
-        "table_name": table_name,
-        "analysis_type": analysis_type,
-        "row_count": 1000,
-        "column_count": 5,
-        "null_percentage": 0.05,
-        "duplicate_percentage": 0.02,
-        "statistics": {
-            "mean": 0.0,
-            "median": 0.0,
-            "std_dev": 0.0,
-            "min": 0.0,
-            "max": 0.0
-        },
-        "database_type": database_type
-    }
-
-
-async def _optimize_database_query(
-    query: str,
-    database_type: str,
-    connection_string: str
-) -> Dict[str, Any]:
-    """
-    Optimize a database query for better performance.
-    """
-    # TODO: Implement actual query optimization
-    # This should include:
-    # - Query plan analysis
-    # - Index recommendations
-    # - Query rewriting
-    # - Performance metrics
-    
-    return {
-        "original_query": query,
-        "optimized_query": query,  # TODO: Implement actual optimization
-        "estimated_improvement": "10%",
-        "recommendations": [
-            "Add index on frequently queried columns",
-            "Use LIMIT clause for large result sets",
-            "Avoid SELECT * when possible"
-        ],
-        "database_type": database_type
-    } 
+@database_router.get("/status")
+async def database_status(
+    current_user = Depends(get_current_user),
+    database_service: DatabaseService = Depends(get_database_service)
+) -> AgentResponse:
+    """Get database service detailed status."""
+    try:
+        status_info = await database_service.get_status()
+        
+        return AgentResponseFormatter.format_success(
+            agent_id="database-status",
+            result=status_info,
+            processing_time=0.0,
+            metadata=create_agent_metadata(
+                get_user_id(current_user),
+                status_check=True
+            ),
+            user_id=get_user_id(current_user)
+        )
+        
+    except Exception as e:
+        return AgentErrorHandler.handle_agent_error(
+            agent_id="database-status",
+            error=e,
+            operation="status check",
+            user_id=get_user_id(current_user)
+        ) 
