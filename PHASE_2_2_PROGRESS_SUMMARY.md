@@ -55,10 +55,59 @@ Phase 2.2 focuses on creating individual service implementations for each agent 
 - **OCR Support**: Tesseract integration for scanned documents
 - **File Size Limits**: Configurable file size and page limits
 
+### 3. Knowledge Service ✅
+**File**: `services/api_gateway/services/knowledge_service.py`
+
+#### Features Implemented:
+- **Entity Queries**: Query entities from knowledge graph
+- **Relationship Queries**: Query relationships between entities
+- **Path Finding**: Find paths between entities
+- **Subgraph Analysis**: Analyze subgraphs around entities
+- **Caching**: In-memory caching for query results
+
+#### Key Capabilities:
+- `query_entities()` - Query entities with filters
+- `query_relationships()` - Query relationships between entities
+- `find_paths()` - Find paths between entities
+- `analyze_subgraph()` - Analyze subgraphs
+- `get_entity_details()` - Get detailed entity information
+- `search_entities()` - Search entities by name/properties
+
+#### Technical Implementation:
+- **Graph Database Integration**: ArangoDB query support
+- **Query Building**: Dynamic query construction
+- **Caching System**: TTL-based result caching
+- **Security**: Input validation and sanitization
+- **Performance**: Query optimization and result limiting
+
+### 4. Code Service ✅
+**File**: `services/api_gateway/services/code_service.py`
+
+#### Features Implemented:
+- **Safe Code Execution**: Multi-language code execution
+- **Syntax Validation**: Code syntax checking
+- **Security Scanning**: Security vulnerability detection
+- **Code Analysis**: Structure and complexity analysis
+- **File Upload**: Upload and execute code files
+
+#### Key Capabilities:
+- `execute_code()` - Execute code safely
+- `validate_syntax()` - Validate code syntax
+- `analyze_code()` - Analyze code structure
+- `upload_and_execute()` - Upload and execute files
+- `health_check()` - Test code execution capabilities
+
+#### Technical Implementation:
+- **Multi-Language Support**: Python, JavaScript, Bash
+- **Security Scanning**: AST-based security analysis
+- **Sandbox Execution**: Isolated code execution
+- **Timeout Management**: Configurable execution timeouts
+- **Resource Limits**: Memory and file size limits
+
 ## 🔧 Service Architecture
 
 ### Service Interface Compliance
-Both services fully implement the `BaseAgentService` interface:
+All services fully implement the `BaseAgentService` interface:
 
 ```python
 class BaseAgentService(ABC):
@@ -95,28 +144,24 @@ class BaseAgentService(ABC):
 ## 🚀 Next Steps
 
 ### Remaining Services to Implement:
-1. **Knowledge Service** - Knowledge graph queries and operations
-2. **Code Service** - Code execution, validation, and analysis
-3. **Database Service** - Database queries, schema exploration
-4. **Crawler Service** - Web crawling, content extraction
+1. **Database Service** - Database queries, schema exploration
+2. **Crawler Service** - Web crawling, content extraction
 
 ### Implementation Plan:
-1. **Knowledge Service** - Graph database integration and query processing
-2. **Code Service** - Safe code execution and syntax validation
-3. **Database Service** - Database connection management and query execution
-4. **Crawler Service** - Web crawling with content extraction
+1. **Database Service** - Database connection management and query execution
+2. **Crawler Service** - Web crawling with content extraction
 
 ## 📈 Progress Metrics
 
 ### Completed:
-- ✅ **2/6 Services**: Browser and PDF services implemented
+- ✅ **4/6 Services**: Browser, PDF, Knowledge, and Code services implemented
 - ✅ **Service Interface**: Full compliance with BaseAgentService
 - ✅ **Health Monitoring**: Comprehensive health checks
 - ✅ **Error Handling**: Robust error tracking and reporting
 - ✅ **Configuration**: Dynamic configuration management
 
 ### Remaining:
-- ⏳ **4/6 Services**: Knowledge, Code, Database, Crawler services
+- ⏳ **2/6 Services**: Database and Crawler services
 - ⏳ **Service Integration**: Route handler updates
 - ⏳ **Testing**: Comprehensive service layer tests
 - ⏳ **Documentation**: Complete service documentation
@@ -124,7 +169,7 @@ class BaseAgentService(ABC):
 ## 🎯 Success Criteria
 
 ### Phase 2.2 Goals:
-1. **Service Implementation**: ✅ 2/6 services completed
+1. **Service Implementation**: ✅ 4/6 services completed
 2. **Interface Compliance**: ✅ All services implement BaseAgentService
 3. **Health Monitoring**: ✅ Comprehensive health checks
 4. **Error Handling**: ✅ Robust error tracking
@@ -139,8 +184,8 @@ class BaseAgentService(ABC):
 
 ## 🚀 Ready for Next Phase
 
-The foundation is solid with 2 comprehensive service implementations completed. The remaining services will follow the same high-quality patterns established by the Browser and PDF services.
+The foundation is solid with 4 comprehensive service implementations completed. The remaining services will follow the same high-quality patterns established by the existing services.
 
 **Status**: 🔄 **IN PROGRESS**  
-**Progress**: 2/6 services completed (33%)  
-**Next**: Continue with Knowledge Service implementation 
+**Progress**: 4/6 services completed (67%)  
+**Next**: Continue with Database Service implementation 
