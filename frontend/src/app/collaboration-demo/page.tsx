@@ -18,7 +18,7 @@ import {
 import { CollaborationProvider, useCollaborationContext } from '@/providers/collaboration-provider';
 import { CollaborativeQueryForm } from '@/ui/collaboration/CollaborativeQueryForm';
 import { PresenceIndicator } from '@/ui/collaboration/PresenceIndicator';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/useToast';
 
 // Generate a unique session ID for this demo
 const DEMO_SESSION_ID = `demo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;

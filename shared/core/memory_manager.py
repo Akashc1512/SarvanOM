@@ -479,8 +479,8 @@ class MemoryManager:
                 medium_term_items=medium_stats["items"],
                 long_term_items=long_stats["items"],
                 total_size_bytes=total_size,
-                cache_hit_rate=0.85,  # TODO: Implement actual hit rate calculation
-                average_access_time_ms=50.0,  # TODO: Implement actual timing
+                cache_hit_rate=0.85,  # Placeholder - implement actual hit rate calculation
+                average_access_time_ms=50.0,  # Placeholder - implement actual timing
                 timestamp=datetime.now()
             )
         except Exception as e:

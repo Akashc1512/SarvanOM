@@ -17,6 +17,10 @@ import time
 import psutil
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
+import os
+# Set multiprocess mode to disabled to avoid file creation issues on Windows
+os.environ.setdefault('PROMETHEUS_MULTIPROC_DIR', '')
+
 from prometheus_client import Counter, Histogram, Gauge
 
 # Prometheus metrics

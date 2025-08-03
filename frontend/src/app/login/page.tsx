@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/ui/ui/button";
 import { Input } from "@/ui/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/ui/card";

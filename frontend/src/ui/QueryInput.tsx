@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Button } from "@/ui/ui/button";
 import { Input } from "@/ui/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 import { LoadingSpinner } from "@/ui/atoms/loading-spinner";
 import { Search, Sparkles, AlertCircle } from "lucide-react";
 import { api, type QueryResponse, type Source } from "@/services/api";

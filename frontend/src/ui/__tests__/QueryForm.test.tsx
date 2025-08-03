@@ -5,14 +5,14 @@ import { QueryForm } from "../QueryForm";
 
 // Mock dependencies
 jest.mock("@/store/query-store");
-jest.mock("@/hooks/use-toast");
-jest.mock("@/hooks/use-debounce");
-jest.mock("@/hooks/use-polling");
+jest.mock("@/hooks/useToast");
+jest.mock("@/hooks/useDebounce");
+jest.mock("@/hooks/usePolling");
 jest.mock("@/lib/api");
 
 const mockUseQueryStore = require("@/store/query-store").useQueryStore as jest.MockedFunction<any>;
 
-const mockUseToast = require("@/hooks/use-toast").useToast as jest.MockedFunction<any>;
+const mockUseToast = require("@/hooks/useToast").useToast as jest.MockedFunction<any>;
 
 describe("QueryForm", () => {
   const mockToast = jest.fn();

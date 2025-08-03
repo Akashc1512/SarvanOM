@@ -208,6 +208,79 @@ diagnostic_*.py
 fix_*.py
 start_*.py
 
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Build artifacts and packages
+*.deb
+*.rpm
+*.msi
+*.exe
+*.dll
+*.so
+*.dylib
+*.lib
+*.a
+*.o
+
+# Large binary files
+*.bin
+*.dat
+*.pack
+*.pack.gz
+*.idx
+
+# Gauge database files
+gauge_*.db
+
+# Next.js cache
+.next/cache/
+
+# IDE and editor specific
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.idea/
+*.swp
+*.swo
+*~
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+
+# Log files
+*.log
+*.log.*
+logs/
+
+# Cache directories
+.cache/
+cache/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.parcel-cache/
+
 # Documentation and guides (optional - uncomment if you don't want to track these)
 # *.md
 # documentation/

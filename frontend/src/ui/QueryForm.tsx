@@ -75,9 +75,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/ui/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { useDebounce } from "@/hooks/use-debounce";
-import { usePolling } from "@/hooks/use-polling";
+import { useToast } from "@/hooks/useToast";
+import { useDebounce } from "@/hooks/useDebounce";
+import { usePolling } from "@/hooks/usePolling";
 import { useQueryStore } from "@/state/query-store";
 import { QueryStatusCard } from "@/ui/molecules/query-status-card";
 import { LoadingSpinner } from "@/ui/atoms/loading-spinner";

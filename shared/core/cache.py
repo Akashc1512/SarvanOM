@@ -59,18 +59,63 @@ from aiocache import Cache as AiocacheBase
 from aiocache.serializers import JsonSerializer, PickleSerializer
 from cryptography.fernet import Fernet
 
-# Mock monitoring functions for now - these will be implemented in actual services
+# Monitoring functions - implement in actual services as needed
 def record_cache_hit():
-    pass
+    """Record cache hit for monitoring."""
+    # Implement actual cache hit tracking
+    try:
+        # Increment hit counter in global stats
+        if hasattr(record_cache_hit, '_stats'):
+            record_cache_hit._stats.hits += 1
+        else:
+            record_cache_hit._stats = CacheStats()
+            record_cache_hit._stats.hits += 1
+    except Exception as e:
+        logger.error(f"Failed to record cache hit: {e}")
 
 def record_cache_miss():
-    pass
+    """Record cache miss for monitoring."""
+    # Implement actual cache miss tracking
+    try:
+        # Increment miss counter in global stats
+        if hasattr(record_cache_miss, '_stats'):
+            record_cache_miss._stats.misses += 1
+        else:
+            record_cache_miss._stats = CacheStats()
+            record_cache_miss._stats.misses += 1
+    except Exception as e:
+        logger.error(f"Failed to record cache miss: {e}")
 
 def track_async_operation():
-    pass
+    """Track async operation performance."""
+    # Implement actual async operation tracking
+    try:
+        # Record async operation metrics
+        if hasattr(track_async_operation, '_async_stats'):
+            track_async_operation._async_stats['total_operations'] += 1
+        else:
+            track_async_operation._async_stats = {
+                'total_operations': 1,
+                'avg_duration': 0.0,
+                'max_duration': 0.0
+            }
+    except Exception as e:
+        logger.error(f"Failed to track async operation: {e}")
 
 def cache_metrics():
-    pass
+    """Get cache metrics for monitoring."""
+    # Implement actual cache metrics collection
+    try:
+        metrics = {
+            'hits': getattr(record_cache_hit, '_stats', CacheStats()).hits,
+            'misses': getattr(record_cache_miss, '_stats', CacheStats()).misses,
+            'async_operations': getattr(track_async_operation, '_async_stats', {}).get('total_operations', 0),
+            'timestamp': datetime.now().isoformat()
+        }
+        return metrics
+    except Exception as e:
+        logger.error(f"Failed to collect cache metrics: {e}")
+        return {}
 
 def get_settings():
     return {}

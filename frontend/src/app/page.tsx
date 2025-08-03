@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/ui/ui/card";
 import { Badge } from "@/ui/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 import { QueryForm } from "@/ui/QueryForm";
 import { AnswerDisplay } from "@/ui/AnswerDisplay";
 import { TaskList } from "@/ui/TaskList";
@@ -35,6 +35,7 @@ import {
   Network,
   ArrowRight,
   ExternalLink,
+  Shield,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -219,32 +220,116 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Comprehensive Query Link */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            New: Comprehensive Research Query
-          </CardTitle>
-          <CardDescription>
-            Advanced AI-powered research with fact-checking and citations
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              Try our new comprehensive query system with automatic fact-checking and citation management
-            </p>
-            <Link href="/comprehensive-query">
-              <Button variant="outline" className="flex items-center gap-2">
-                <ExternalLink className="h-4 w-4" />
-                Try Comprehensive Query
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      {/* New Features Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Comprehensive Query Link */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Comprehensive Research Query
+            </CardTitle>
+            <CardDescription>
+              Advanced AI-powered research with fact-checking and citations
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">
+                Try our comprehensive query system with automatic fact-checking and citation management
+              </p>
+              <Link href="/comprehensive-query">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  Try Comprehensive Query
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Graph Visualization Link */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Network className="h-5 w-5" />
+              Knowledge Graph Explorer
+            </CardTitle>
+            <CardDescription>
+              Interactive visualization of knowledge graph relationships
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">
+                Explore entities and relationships in the knowledge graph with interactive visualization
+              </p>
+              <Link href="/graph-visualization">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  Explore Graph
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Analytics Link */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Analytics Dashboard
+            </CardTitle>
+            <CardDescription>
+              Comprehensive insights into system performance and usage
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">
+                View detailed analytics including validation metrics, time saved, and system health
+              </p>
+              <Link href="/analytics">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  View Analytics
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Expert Validation Link */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Expert Validation
+            </CardTitle>
+            <CardDescription>
+              Fact-checking and expert validation capabilities
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">
+                Validate claims using multiple expert networks including academic and industry sources
+              </p>
+              <Link href="/expert-review">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  Expert Review
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Query Interface */}

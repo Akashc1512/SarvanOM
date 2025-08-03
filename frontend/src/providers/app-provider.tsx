@@ -4,7 +4,7 @@ import React, { createContext, useContext, ReactNode } from "react";
 import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { ErrorBoundary } from "@/ui/error-boundary";
+import { ErrorBoundary } from "@/ui/ErrorBoundary";
 import { Toaster } from "@/ui/ui/toaster";
 
 // Create React Query client

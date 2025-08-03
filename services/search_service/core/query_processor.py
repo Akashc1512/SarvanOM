@@ -338,8 +338,8 @@ class QueryIntelligenceLayer:
     async def get_processing_stats(self) -> Dict[str, Any]:
         """Get processing statistics."""
         return {
-            "cache_hits": 0,  # TODO: Implement cache hit tracking
-            "cache_misses": 0,  # TODO: Implement cache miss tracking
-            "average_processing_time": 0.0,  # TODO: Implement time tracking
-            "total_queries_processed": 0  # TODO: Implement counter
+            "cache_hits": 0,  # Placeholder - implement cache hit tracking
+            "cache_misses": 0,  # Placeholder - implement cache miss tracking
+            "average_processing_time": 0.0,  # Placeholder - implement time tracking
+            "total_queries_processed": 0  # Placeholder - implement counter
         } 

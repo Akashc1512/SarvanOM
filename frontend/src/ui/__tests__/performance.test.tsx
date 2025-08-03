@@ -4,7 +4,7 @@ import { AnswerDisplay } from "../AnswerDisplay";
 import { QueryForm } from "../QueryForm";
 
 // Mock dependencies
-jest.mock("@/hooks/use-toast", () => ({
+jest.mock("@/hooks/useToast", () => ({
   useToast: () => ({
     toast: jest.fn(),
   }),
@@ -19,11 +19,11 @@ jest.mock("@/store/query-store", () => ({
   }),
 }));
 
-jest.mock("@/hooks/use-debounce", () => ({
+jest.mock("@/hooks/useDebounce", () => ({
   useDebounce: (value: any) => value,
 }));
 
-jest.mock("@/hooks/use-polling", () => ({
+jest.mock("@/hooks/usePolling", () => ({
   usePolling: () => ({
     isPolling: false,
     startPolling: jest.fn(),

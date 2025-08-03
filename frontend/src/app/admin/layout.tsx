@@ -1,4 +1,4 @@
-import { RouteGuard } from "@/ui/auth/route-guard";
+import { RouteGuard } from "@/ui/auth/RouteGuard";
 
 export default function AdminLayout({
   children,

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { useCollaboration, type CollaborationEvent, type CollaboratorPresence } from '@/hooks/useCollaboration';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/hooks/useAuth';
 
 interface CollaborationContextValue {
   // State

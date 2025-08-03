@@ -1,9 +1,9 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MainNav } from "../navigation/main-nav";
+import { MainNav } from "../navigation/MainNav";
 import { Breadcrumbs } from "../navigation/breadcrumbs";
-import { RouteGuard } from "../auth/route-guard";
+import { RouteGuard } from "../auth/RouteGuard";
 
 // Mock Next.js navigation
 jest.mock("next/navigation", () => ({

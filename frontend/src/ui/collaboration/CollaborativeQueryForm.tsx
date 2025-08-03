@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/ui/ui/button';
-import { Textarea } from '@/ui/ui/textarea';
+import { Textarea } from '@/ui/ui/TextArea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/ui/card';
 import { Badge } from '@/ui/ui/badge';
 import { Send, Users, MessageSquare } from 'lucide-react';
 import { useCollaborationContext } from '@/providers/collaboration-provider';
 import { PresenceIndicator } from './PresenceIndicator';
-import { useDebounce } from '@/hooks/use-debounce';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface CollaborativeQueryFormProps {
   onSubmit: (query: string) => void;

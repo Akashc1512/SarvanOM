@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/
 import { Button } from "@/ui/ui/button";
 import { Input } from "@/ui/ui/input";
 import { Badge } from "@/ui/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 import { LoadingSpinner } from "@/ui/atoms/loading-spinner";
 import { 
   BarChart3, 

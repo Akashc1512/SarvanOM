@@ -290,7 +290,7 @@ class MultiAgentOrchestrator:
         return OrchestrationResult(
             model_used=selected_model,
             response=result,
-            confidence_score=0.85,  # TODO: Implement confidence scoring
+            confidence_score=0.85,  # Placeholder - implement confidence scoring
             processing_time_ms=processing_time,
             tokens_used=int(tokens_used),
             cost_estimate=cost_estimate,

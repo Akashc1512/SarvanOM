@@ -13,6 +13,8 @@ import { Badge } from "@/ui/ui/badge";
 
 import { api, type QueryResponse, type Source } from "@/services/api";
 import { SourcesList } from "@/ui/SourcesList";
+import { CitationPanel } from "@/ui/CitationPanel";
+import { ExpertValidationButton } from "@/ui/ExpertValidationButton";
 import { parseCitations } from "@/utils/citation-parser";
 import {
   ExternalLink,
@@ -25,7 +27,7 @@ import {
   Globe,
   Bookmark,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 
 interface AnswerDisplayProps {
   query: QueryResponse;
@@ -218,6 +220,12 @@ export function AnswerDisplay({
                 <Bookmark className="h-4 w-4 mr-2" />
                 {isSavingToMemory ? "Saving..." : "Save to Memory"}
               </Button>
+              <ExpertValidationButton 
+                claim={query.answer || ""}
+                queryId={query.query_id}
+                variant="outline"
+                size="sm"
+              />
             </div>
           </div>
           <CardDescription>
@@ -243,7 +251,7 @@ export function AnswerDisplay({
 
       {/* Sources */}
       {query.sources && query.sources.length > 0 && (
-        <SourcesList sources={query.sources} />
+        <CitationPanel sources={query.sources} />
       )}
 
       {/* Feedback Section */}

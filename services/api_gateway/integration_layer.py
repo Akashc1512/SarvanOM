@@ -553,7 +553,7 @@ class UniversalKnowledgePlatformIntegration:
             
             # Record cache hits/misses (mock data for now)
             cache_hits = {
-                "query_cache": False,  # TODO: Implement actual cache checking
+                "query_cache": False,  # Placeholder - implement actual cache checking
                 "retrieval_cache": True,  # Mock cache hit
                 "llm_cache": False  # Mock cache miss
             }

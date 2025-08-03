@@ -11,7 +11,7 @@ import {
 import { Button } from "@/ui/ui/button";
 import { Badge } from "@/ui/ui/badge";
 import { api } from "@/services/api";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 import {
   CheckCircle,
   Circle,

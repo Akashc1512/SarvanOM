@@ -10,7 +10,7 @@ import {
 } from "@/ui/ui/card";
 import { Button } from "@/ui/ui/button";
 import { Badge } from "@/ui/ui/badge";
-import { ScrollArea } from "@/ui/ui/scroll-area";
+import { ScrollArea } from "@/ui/ui/ScrollArea";
 import { api } from "@/services/api";
 import {
   MessageSquare,
@@ -22,7 +22,7 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 import { useCollaborationContext } from "@/providers/collaboration-provider";
 import { PresenceIndicator } from "@/ui/collaboration/PresenceIndicator";
 

@@ -28,12 +28,6 @@ export default function MemoryDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (params['id']) {
-      fetchMemoryDetail(params['id'] as string);
-    }
-  }, [params, fetchMemoryDetail]);
-
   const fetchMemoryDetail = useCallback(async (id: string) => {
     try {
       setLoading(true);
@@ -52,6 +46,12 @@ export default function MemoryDetail() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (params['id']) {
+      fetchMemoryDetail(params['id'] as string);
+    }
+  }, [params, fetchMemoryDetail]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
