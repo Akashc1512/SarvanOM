@@ -1,3 +1,4 @@
+# DEAD CODE - Candidate for deletion: This strategy module is not imported or used anywhere in the codebase
 """
 Strategy Pattern implementation for search algorithms.
 

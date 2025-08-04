@@ -1,5 +1,7 @@
-# MLflow Configuration for Universal Knowledge Platform
-# Enterprise-grade model registry and experiment tracking
+# MLflow Configuration
+# Configuration for MLflow model registry
+
+# DEAD CODE - Candidate for deletion: This configuration file is not referenced anywhere in the codebase
 
 mlflow:
   # MLflow Server Configuration

@@ -1,6 +1,9 @@
 """
-Authentication Endpoints for Universal Knowledge Platform
-Handles login, logout, and user management endpoints.
+Auth Endpoints Service
+
+This module provides authentication API endpoints for the backend.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status

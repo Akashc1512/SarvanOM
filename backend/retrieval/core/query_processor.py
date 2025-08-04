@@ -1,6 +1,9 @@
 """
-Query Intelligence Layer - Universal Knowledge Platform
-Core query analysis and intelligence processing.
+Query Processor
+
+This module provides query processing logic for the backend retrieval service.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 import asyncio
 import hashlib

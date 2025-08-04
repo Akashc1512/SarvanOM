@@ -1,27 +1,16 @@
 """
-Backend Main Entry Point
+Main entry point for the backend application.
 
-This is the main entry point for the new modular backend structure.
-It initializes the API gateway and starts the FastAPI server.
+This module initializes the FastAPI application and starts the server.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
-import asyncio
 import logging
-import os
-import sys
-from contextlib import asynccontextmanager
-from typing import Dict, Any
-
-# Add the backend directory to the Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-# FastAPI imports
+import asyncio
 import uvicorn
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-# Import the gateway service
-from gateway.gateway_service import GatewayService
+from contextlib import asynccontextmanager
+from typing import Dict, Any, Optional
 
 # Configure logging
 logging.basicConfig(
@@ -30,45 +19,52 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# FastAPI imports
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+# Import the gateway service
+from backend.gateway.gateway_service import GatewayService
+
+# Global gateway service instance
+gateway_service: Optional[GatewayService] = None
+
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app):
     """Application lifespan manager."""
-    # Startup
-    logger.info("Starting backend services...")
+    global gateway_service
     
-    # Initialize services
+    # Startup
+    logger.info("Starting backend application...")
     try:
-        # The gateway service will initialize all other services
-        gateway = GatewayService()
-        app.state.gateway = gateway
-        logger.info("Backend services initialized successfully")
+        gateway_service = GatewayService()
+        await gateway_service.startup()
+        logger.info("Backend application started successfully")
     except Exception as e:
-        logger.error(f"Failed to initialize backend services: {e}")
+        logger.error(f"Failed to start backend application: {e}")
         raise
     
     yield
     
     # Shutdown
-    logger.info("Shutting down backend services...")
+    logger.info("Shutting down backend application...")
     try:
-        if hasattr(app.state, 'gateway'):
-            await app.state.gateway.shutdown()
-        logger.info("Backend services shutdown complete")
+        if gateway_service:
+            await gateway_service.shutdown()
+        logger.info("Backend application shut down successfully")
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
 
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
-    # Create the gateway service
-    gateway = GatewayService()
-    
-    # Get the FastAPI app from the gateway
-    app = gateway.app
-    
-    # Add lifespan manager
-    app.router.lifespan_context = lifespan
+    app = FastAPI(
+        title="Universal Knowledge Platform API",
+        description="Backend API for the Universal Knowledge Platform",
+        version="1.0.0",
+        lifespan=lifespan
+    )
     
     # Add CORS middleware
     app.add_middleware(
@@ -79,38 +75,21 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     
+    # Include the API router
+    app.include_router(gateway_service.router if gateway_service else app.router)
+    
     return app
 
 
-def main():
-    """Main entry point for the backend application."""
-    try:
-        # Create the application
-        app = create_app()
-        
-        # Get configuration from environment
-        host = os.getenv("BACKEND_HOST", "0.0.0.0")
-        port = int(os.getenv("BACKEND_PORT", "8000"))
-        reload = os.getenv("BACKEND_RELOAD", "false").lower() == "true"
-        
-        logger.info(f"Starting backend server on {host}:{port}")
-        logger.info(f"Reload mode: {reload}")
-        
-        # Start the server
-        uvicorn.run(
-            "backend.main:app",
-            host=host,
-            port=port,
-            reload=reload,
-            log_level="info"
-        )
-        
-    except KeyboardInterrupt:
-        logger.info("Backend server stopped by user")
-    except Exception as e:
-        logger.error(f"Failed to start backend server: {e}")
-        sys.exit(1)
-
-
 if __name__ == "__main__":
-    main() 
+    # Create the application
+    app = create_app()
+    
+    # Run the server
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="info",
+        reload=True  # Enable auto-reload for development
+    ) 

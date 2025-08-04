@@ -2,6 +2,8 @@
 """
 Test QueryResponse Fix Script
 Validates that the QueryResponse model is working correctly with all required fields.
+
+# DEAD CODE - Candidate for deletion: This test script is not integrated into any test suite
 """
 
 import asyncio

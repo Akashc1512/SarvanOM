@@ -1,5 +1,9 @@
 """
-Enhanced citation agent that generates proper citations for sources with inline citation support.
+Citation Agent
+
+This module provides the citation agent for the backend synthesis service.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import asyncio

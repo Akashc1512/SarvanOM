@@ -1,6 +1,9 @@
 """
-Input Validation Module for Universal Knowledge Platform
-Provides comprehensive validation for all API endpoints.
+Auth Validators Service
+
+This module provides authentication validators for the backend.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import re

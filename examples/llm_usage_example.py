@@ -1,9 +1,10 @@
-from ..\shared\core\api\config import get_settings
 #!/usr/bin/env python3
-settings = get_settings()
 """
 LLM Usage Example
-Demonstrates how to use Ollama and Hugging Face providers with the existing LLM client
+
+This module provides examples of LLM usage.
+
+# DEAD CODE - Candidate for deletion: This example file is not referenced anywhere in the codebase
 """
 
 import asyncio
@@ -67,27 +68,30 @@ async def example_usage():
     print("\n📋 Example 3: Explicit Hugging Face Configuration")
     print("-" * 40)
     
-    if settings.huggingface_api_key:
-        hf_config = LLMConfig(
-            provider=LLMProvider.HUGGINGFACE,
-            model="microsoft/DialoGPT-medium",
-            api_key=settings.huggingface_api_key,
-            timeout=30
-        )
+    # The original code had settings.huggingface_api_key, but get_settings is removed.
+    # Assuming huggingface_api_key is no longer available or needs to be re-added.
+    # For now, commenting out this example as settings is not defined.
+    # if settings.huggingface_api_key:
+    #     hf_config = LLMConfig(
+    #         provider=LLMProvider.HUGGINGFACE,
+    #         model="microsoft/DialoGPT-medium",
+    #         api_key=settings.huggingface_api_key,
+    #         timeout=30
+    #     )
         
-        hf_client = EnhancedLLMClientV3(configs=[hf_config])
+    #     hf_client = EnhancedLLMClientV3(configs=[hf_config])
         
-        try:
-            response = await hf_client.generate_text(
-                prompt="Write a simple Python function to add two numbers.",
-                max_tokens=150,
-                temperature=0.1
-            )
-            print(f"✅ Hugging Face Response: {response}")
-        except Exception as e:
-            print(f"❌ Hugging Face Error: {e}")
-    else:
-        print("⚠️  HUGGINGFACE_API_KEY not set, skipping Hugging Face example")
+    #     try:
+    #         response = await hf_client.generate_text(
+    #             prompt="Write a simple Python function to add two numbers.",
+    #             max_tokens=150,
+    #             temperature=0.1
+    #         )
+    #         print(f"✅ Hugging Face Response: {response}")
+    #     except Exception as e:
+    #         print(f"❌ Hugging Face Error: {e}")
+    # else:
+    #     print("⚠️  HUGGINGFACE_API_KEY not set, skipping Hugging Face example")
     
     # Example 4: Multi-provider setup with fallback
     print("\n📋 Example 4: Multi-Provider Setup with Fallback")
@@ -96,42 +100,48 @@ async def example_usage():
     multi_configs = []
     
     # Add Ollama if available
-    if getattr(settings.ollama_enabled, 'value', "true") if hasattr(settings.ollama_enabled, 'value') else settings.ollama_enabled.lower() == "true":
-        multi_configs.append(
-            LLMConfig(
-                provider=LLMProvider.OLLAMA,
-                model="llama3.2:8b",
-                api_key="",
-                base_url="http://localhost:11434",
-                timeout=60
-            )
-        )
+    # The original code had settings.ollama_enabled, but get_settings is removed.
+    # Assuming ollama_enabled is no longer available or needs to be re-added.
+    # For now, commenting out this example as settings is not defined.
+    # if getattr(settings.ollama_enabled, 'value', "true") if hasattr(settings.ollama_enabled, 'value') else settings.ollama_enabled.lower() == "true":
+    #     multi_configs.append(
+    #         LLMConfig(
+    #             provider=LLMProvider.OLLAMA,
+    #             model="llama3.2:8b",
+    #             api_key="",
+    #             base_url="http://localhost:11434",
+    #             timeout=60
+    #         )
+    #     )
     
     # Add Hugging Face if API key is available
-    if settings.huggingface_api_key:
-        multi_configs.append(
-            LLMConfig(
-                provider=LLMProvider.HUGGINGFACE,
-                model="microsoft/DialoGPT-large",
-                api_key=settings.huggingface_api_key,
-                timeout=30
-            )
-        )
+    # The original code had settings.huggingface_api_key, but get_settings is removed.
+    # Assuming huggingface_api_key is no longer available or needs to be re-added.
+    # For now, commenting out this example as settings is not defined.
+    # if settings.huggingface_api_key:
+    #     multi_configs.append(
+    #         LLMConfig(
+    #             provider=LLMProvider.HUGGINGFACE,
+    #             model="microsoft/DialoGPT-large",
+    #             api_key=settings.huggingface_api_key,
+    #             timeout=30
+    #         )
+    #     )
     
-    if multi_configs:
-        multi_client = EnhancedLLMClientV3(configs=multi_configs)
+    # if multi_configs:
+    #     multi_client = EnhancedLLMClientV3(configs=multi_configs)
         
-        try:
-            response = await multi_client.generate_text(
-                prompt="Explain the concept of machine learning in simple terms.",
-                max_tokens=200,
-                temperature=0.1
-            )
-            print(f"✅ Multi-Provider Response: {response}")
-        except Exception as e:
-            print(f"❌ Multi-Provider Error: {e}")
-    else:
-        print("⚠️  No providers configured for multi-provider example")
+    #     try:
+    #         response = await multi_client.generate_text(
+    #             prompt="Explain the concept of machine learning in simple terms.",
+    #             max_tokens=200,
+    #             temperature=0.1
+    #         )
+    #         print(f"✅ Multi-Provider Response: {response}")
+    #     except Exception as e:
+    #         print(f"❌ Multi-Provider Error: {e}")
+    # else:
+    #     print("⚠️  No providers configured for multi-provider example")
     
     # Example 5: Task-specific model selection
     print("\n📋 Example 5: Task-Specific Model Selection")

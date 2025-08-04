@@ -1,85 +1,29 @@
 """
-API Gateway Router
+Gateway Router
 
-This module provides the main routing logic for the API gateway,
-handling requests to all backend services.
+This module provides routing logic for the backend gateway service.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import logging
 from typing import Dict, List, Any, Optional
-from fastapi import APIRouter, HTTPException, Depends, Request
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, Depends, status
+from pydantic import BaseModel, Field
+from datetime import datetime
 
 # Import services
-from ..retrieval import SearchService
-from ..fact_check import FactCheckService
-from ..synthesis import SynthesisService
-from ..auth import AuthService
-from ..crawler import CrawlerService
-from ..vector import VectorService
-from ..graph import GraphService
+from backend.retrieval import SearchService
+from backend.fact_check import FactCheckService
+from backend.synthesis import SynthesisService
+from backend.auth import AuthService
+from backend.crawler import CrawlerService
+from backend.vector import VectorService
+from backend.graph import GraphService
 
 logger = logging.getLogger(__name__)
 
-
-class QueryRequest(BaseModel):
-    """Request model for search queries."""
-    query: str
-    user_id: Optional[str] = None
-    context: Optional[Dict[str, Any]] = None
-    max_results: Optional[int] = 10
-
-
-class FactCheckRequest(BaseModel):
-    """Request model for fact checking."""
-    claim: str
-    sources: List[str] = []
-    user_id: Optional[str] = None
-
-
-class SynthesisRequest(BaseModel):
-    """Request model for content synthesis."""
-    content: List[Dict[str, Any]]
-    query: str
-    user_id: Optional[str] = None
-    style: Optional[str] = "academic"
-
-
-class CrawlRequest(BaseModel):
-    """Request model for web crawling."""
-    url: str
-    depth: Optional[int] = 1
-    max_pages: Optional[int] = 10
-
-
-class VectorSearchRequest(BaseModel):
-    """Request model for vector search."""
-    query: str
-    top_k: Optional[int] = 10
-    filters: Optional[Dict[str, Any]] = None
-
-
-class GraphQueryRequest(BaseModel):
-    """Request model for graph queries."""
-    query: str
-    params: Optional[Dict[str, Any]] = None
-
-
-class AuthRequest(BaseModel):
-    """Request model for authentication."""
-    username: str
-    password: str
-
-
-class UserCreateRequest(BaseModel):
-    """Request model for user creation."""
-    username: str
-    email: str
-    password: str
-    role: Optional[str] = "user"
-
-
-# Initialize services
+# Initialize service instances
 search_service = SearchService()
 fact_check_service = FactCheckService()
 synthesis_service = SynthesisService()
@@ -88,364 +32,276 @@ crawler_service = CrawlerService()
 vector_service = VectorService()
 graph_service = GraphService()
 
-
 # Create router
-router = APIRouter(prefix="/api/v1")
+router = APIRouter()
 
+# Pydantic models for requests
+class QueryRequest(BaseModel):
+    query: str = Field(..., description="Search query")
+    filters: Optional[Dict[str, Any]] = Field(None, description="Search filters")
+    limit: int = Field(10, description="Number of results to return")
 
-# Authentication middleware
-async def get_current_user(request: Request):
-    """Get current user from request."""
-    # This is a simplified implementation
-    # In a real implementation, you'd verify JWT tokens
-    auth_header = request.headers.get("Authorization")
-    if not auth_header:
-        raise HTTPException(status_code=401, detail="Authentication required")
-    
-    # Extract token and verify
-    token = auth_header.replace("Bearer ", "")
-    user = await auth_service.verify_token(token)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    
-    return user
+class FactCheckRequest(BaseModel):
+    claim: str = Field(..., description="Claim to fact-check")
+    sources: Optional[List[str]] = Field(None, description="Sources to check against")
 
+class SynthesisRequest(BaseModel):
+    content: str = Field(..., description="Content to synthesize")
+    style: Optional[str] = Field("academic", description="Synthesis style")
+    include_citations: bool = Field(True, description="Include citations")
 
-# Health check endpoint
-@router.get("/health")
-async def health_check():
-    """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "services": {
-            "search": search_service.get_status(),
-            "fact_check": fact_check_service.get_status(),
-            "synthesis": synthesis_service.get_status(),
-            "auth": auth_service.get_status(),
-            "crawler": crawler_service.get_status(),
-            "vector": vector_service.get_status(),
-            "graph": graph_service.get_status()
-        }
-    }
+class CrawlRequest(BaseModel):
+    url: str = Field(..., description="URL to crawl")
+    depth: int = Field(1, description="Crawl depth")
+    max_pages: int = Field(10, description="Maximum pages to crawl")
 
+class VectorSearchRequest(BaseModel):
+    query: str = Field(..., description="Vector search query")
+    top_k: int = Field(5, description="Number of similar vectors to return")
+
+class GraphQueryRequest(BaseModel):
+    query: str = Field(..., description="Graph query")
+    limit: int = Field(10, description="Query result limit")
+
+class AuthRequest(BaseModel):
+    username: str = Field(..., description="Username")
+    password: str = Field(..., description="Password")
+
+class UserCreateRequest(BaseModel):
+    username: str = Field(..., description="Username")
+    email: str = Field(..., description="Email")
+    password: str = Field(..., description="Password")
+
+# Authentication dependency
+async def get_current_user(token: str = Depends()):
+    """Get current user from token."""
+    try:
+        user = await auth_service.verify_token(token)
+        return user
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication token"
+        )
 
 # Search endpoints
 @router.post("/search")
-async def search(request: QueryRequest, user: Dict = Depends(get_current_user)):
-    """Search for information using the retrieval service."""
+async def search(request: QueryRequest):
+    """Search for information."""
     try:
         results = await search_service.search(
             query=request.query,
-            user_id=request.user_id or user.get("id"),
-            context=request.context,
-            max_results=request.max_results
+            filters=request.filters,
+            limit=request.limit
         )
-        return {
-            "status": "success",
-            "results": results,
-            "query": request.query
-        }
+        return {"results": results, "query": request.query}
     except Exception as e:
-        logger.error(f"Search failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+        logger.error(f"Search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.get("/search/{query}")
-async def search_get(query: str, user: Dict = Depends(get_current_user)):
-    """GET endpoint for search."""
+@router.post("/search/hybrid")
+async def hybrid_search(request: QueryRequest):
+    """Perform hybrid search combining multiple search methods."""
     try:
-        results = await search_service.search(
-            query=query,
-            user_id=user.get("id"),
-            max_results=10
+        results = await search_service.hybrid_search(
+            query=request.query,
+            filters=request.filters,
+            limit=request.limit
         )
-        return {
-            "status": "success",
-            "results": results,
-            "query": query
-        }
+        return {"results": results, "query": request.query}
     except Exception as e:
-        logger.error(f"Search failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+        logger.error(f"Hybrid search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-# Fact check endpoints
+# Fact-checking endpoints
 @router.post("/fact-check")
-async def fact_check(request: FactCheckRequest, user: Dict = Depends(get_current_user)):
-    """Fact check a claim using the fact check service."""
+async def fact_check(request: FactCheckRequest):
+    """Fact-check a claim."""
     try:
         result = await fact_check_service.fact_check(
             claim=request.claim,
-            sources=request.sources,
-            user_id=request.user_id or user.get("id")
+            sources=request.sources
         )
-        return {
-            "status": "success",
-            "result": result,
-            "claim": request.claim
-        }
+        return {"result": result, "claim": request.claim}
     except Exception as e:
-        logger.error(f"Fact check failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Fact check failed: {str(e)}")
-
+        logger.error(f"Fact-check error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/fact-check/batch")
-async def fact_check_batch(claims: List[str], user: Dict = Depends(get_current_user)):
-    """Fact check multiple claims."""
+async def batch_fact_check(claims: List[str]):
+    """Fact-check multiple claims."""
     try:
-        results = []
-        for claim in claims:
-            result = await fact_check_service.fact_check(
-                claim=claim,
-                user_id=user.get("id")
-            )
-            results.append(result)
-        
-        return {
-            "status": "success",
-            "results": results,
-            "count": len(claims)
-        }
+        results = await fact_check_service.batch_fact_check(claims)
+        return {"results": results}
     except Exception as e:
-        logger.error(f"Batch fact check failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Batch fact check failed: {str(e)}")
-
+        logger.error(f"Batch fact-check error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Synthesis endpoints
 @router.post("/synthesize")
-async def synthesize(request: SynthesisRequest, user: Dict = Depends(get_current_user)):
-    """Synthesize content using the synthesis service."""
+async def synthesize(request: SynthesisRequest):
+    """Synthesize content."""
     try:
         result = await synthesis_service.synthesize(
             content=request.content,
-            query=request.query,
-            user_id=request.user_id or user.get("id"),
-            style=request.style
+            style=request.style,
+            include_citations=request.include_citations
         )
-        return {
-            "status": "success",
-            "result": result,
-            "query": request.query
-        }
+        return {"result": result, "content": request.content}
     except Exception as e:
-        logger.error(f"Synthesis failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Synthesis failed: {str(e)}")
-
+        logger.error(f"Synthesis error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/synthesize/citations")
-async def generate_citations(content: List[Dict[str, Any]], user: Dict = Depends(get_current_user)):
+async def generate_citations(content: str):
     """Generate citations for content."""
     try:
-        citations = await synthesis_service.generate_citations(
-            content=content,
-            user_id=user.get("id")
-        )
-        return {
-            "status": "success",
-            "citations": citations
-        }
+        citations = await synthesis_service.generate_citations(content)
+        return {"citations": citations}
     except Exception as e:
-        logger.error(f"Citation generation failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Citation generation failed: {str(e)}")
-
+        logger.error(f"Citation generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Crawler endpoints
 @router.post("/crawl")
-async def crawl(request: CrawlRequest, user: Dict = Depends(get_current_user)):
-    """Crawl a website using the crawler service."""
+async def crawl(request: CrawlRequest):
+    """Crawl a website."""
     try:
         result = await crawler_service.crawl(
             url=request.url,
             depth=request.depth,
-            max_pages=request.max_pages,
-            user_id=user.get("id")
+            max_pages=request.max_pages
         )
-        return {
-            "status": "success",
-            "result": result,
-            "url": request.url
-        }
+        return {"result": result, "url": request.url}
     except Exception as e:
-        logger.error(f"Crawling failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Crawling failed: {str(e)}")
-
+        logger.error(f"Crawl error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/crawl/status/{job_id}")
-async def crawl_status(job_id: str, user: Dict = Depends(get_current_user)):
-    """Get crawling job status."""
+async def get_crawl_status(job_id: str):
+    """Get crawl job status."""
     try:
-        status = await crawler_service.get_status(job_id)
-        return {
-            "status": "success",
-            "job_status": status
-        }
+        status = await crawler_service.get_status()
+        return {"job_id": job_id, "status": status}
     except Exception as e:
-        logger.error(f"Failed to get crawl status: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get crawl status: {str(e)}")
-
+        logger.error(f"Get crawl status error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Vector search endpoints
 @router.post("/vector/search")
-async def vector_search(request: VectorSearchRequest, user: Dict = Depends(get_current_user)):
-    """Search using vector embeddings."""
+async def vector_search(request: VectorSearchRequest):
+    """Search for similar vectors."""
     try:
         results = await vector_service.search_similar(
             query=request.query,
             top_k=request.top_k
         )
-        return {
-            "status": "success",
-            "results": [result.__dict__ for result in results],
-            "query": request.query
-        }
+        return {"results": results, "query": request.query}
     except Exception as e:
-        logger.error(f"Vector search failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Vector search failed: {str(e)}")
+        logger.error(f"Vector search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.post("/vector/upsert")
-async def vector_upsert(documents: List[Dict[str, Any]], user: Dict = Depends(get_current_user)):
-    """Upsert documents to vector database."""
+@router.post("/vector/embed")
+async def get_embedding(text: str):
+    """Get embedding for text."""
     try:
-        success = await vector_service.upsert_documents(documents)
-        return {
-            "status": "success" if success else "failed",
-            "documents_count": len(documents)
-        }
+        embedding = await vector_service.get_embedding(text)
+        return {"embedding": embedding, "text": text}
     except Exception as e:
-        logger.error(f"Vector upsert failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Vector upsert failed: {str(e)}")
-
+        logger.error(f"Embedding error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Graph endpoints
 @router.post("/graph/query")
-async def graph_query(request: GraphQueryRequest, user: Dict = Depends(get_current_user)):
+async def graph_query(request: GraphQueryRequest):
     """Query the knowledge graph."""
     try:
-        result = await graph_service.query_graph(
+        results = await graph_service.query_graph(
             query=request.query,
-            params=request.params
+            limit=request.limit
         )
-        return {
-            "status": "success",
-            "result": {
-                "nodes": [node.__dict__ for node in result.nodes],
-                "edges": [edge.__dict__ for edge in result.edges],
-                "metadata": result.metadata
-            }
-        }
+        return {"results": results, "query": request.query}
     except Exception as e:
-        logger.error(f"Graph query failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Graph query failed: {str(e)}")
-
+        logger.error(f"Graph query error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/graph/entities")
-async def find_entities(text: str, user: Dict = Depends(get_current_user)):
-    """Find entities in text."""
+async def find_entities(entity_type: Optional[str] = None, properties: Optional[Dict[str, Any]] = None):
+    """Find entities in the knowledge graph."""
     try:
-        entities = await graph_service.find_entities(text)
-        return {
-            "status": "success",
-            "entities": [entity.__dict__ for entity in entities],
-            "text": text
-        }
+        results = await graph_service.find_entities(
+            entity_type=entity_type,
+            properties=properties
+        )
+        return {"results": results}
     except Exception as e:
-        logger.error(f"Entity finding failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Entity finding failed: {str(e)}")
-
-
-@router.post("/graph/triple")
-async def add_triple(subject: str, predicate: str, object_value: str, user: Dict = Depends(get_current_user)):
-    """Add a knowledge triple to the graph."""
-    try:
-        success = await graph_service.add_knowledge_triple(subject, predicate, object_value)
-        return {
-            "status": "success" if success else "failed",
-            "triple": {"subject": subject, "predicate": predicate, "object": object_value}
-        }
-    except Exception as e:
-        logger.error(f"Failed to add triple: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to add triple: {str(e)}")
-
+        logger.error(f"Find entities error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Authentication endpoints
 @router.post("/auth/login")
 async def login(request: AuthRequest):
     """User login."""
     try:
-        token = await auth_service.login(
+        result = await auth_service.login(
             username=request.username,
             password=request.password
         )
-        return {
-            "status": "success",
-            "token": token
-        }
+        return {"result": result}
     except Exception as e:
-        logger.error(f"Login failed: {e}")
-        raise HTTPException(status_code=401, detail=f"Login failed: {str(e)}")
-
+        logger.error(f"Login error: {e}")
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
 @router.post("/auth/register")
 async def register(request: UserCreateRequest):
     """User registration."""
     try:
-        user = await auth_service.create_user(
+        result = await auth_service.register(
             username=request.username,
             email=request.email,
-            password=request.password,
-            role=request.role
+            password=request.password
         )
-        return {
-            "status": "success",
-            "user": user
-        }
+        return {"result": result}
     except Exception as e:
-        logger.error(f"Registration failed: {e}")
-        raise HTTPException(status_code=400, detail=f"Registration failed: {str(e)}")
+        logger.error(f"Registration error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-
-@router.get("/auth/profile")
-async def get_profile(user: Dict = Depends(get_current_user)):
-    """Get user profile."""
+@router.post("/auth/verify")
+async def verify_token(token: str):
+    """Verify authentication token."""
     try:
-        profile = await auth_service.get_user_profile(user.get("id"))
-        return {
-            "status": "success",
-            "profile": profile
-        }
+        user = await auth_service.verify_token(token)
+        return {"user": user}
     except Exception as e:
-        logger.error(f"Failed to get profile: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to get profile: {str(e)}")
+        logger.error(f"Token verification error: {e}")
+        raise HTTPException(status_code=401, detail="Invalid token")
 
+# Health and status endpoints
+@router.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    }
 
-@router.post("/auth/logout")
-async def logout(user: Dict = Depends(get_current_user)):
-    """User logout."""
-    try:
-        await auth_service.logout(user.get("id"))
-        return {
-            "status": "success",
-            "message": "Logged out successfully"
-        }
-    except Exception as e:
-        logger.error(f"Logout failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Logout failed: {str(e)}")
-
-
-# Service status endpoints
 @router.get("/services/status")
 async def get_services_status():
     """Get status of all services."""
-    return {
-        "status": "success",
-        "services": {
-            "search": search_service.get_status(),
-            "fact_check": fact_check_service.get_status(),
-            "synthesis": synthesis_service.get_status(),
-            "auth": auth_service.get_status(),
-            "crawler": crawler_service.get_status(),
-            "vector": vector_service.get_status(),
-            "graph": graph_service.get_status()
-        }
-    } 
+    try:
+        statuses = {}
+        
+        # Get status from each service
+        statuses["search"] = await search_service.get_status()
+        statuses["fact_check"] = await fact_check_service.get_status()
+        statuses["synthesis"] = await synthesis_service.get_status()
+        statuses["auth"] = await auth_service.get_status()
+        statuses["crawler"] = await crawler_service.get_status()
+        statuses["vector"] = await vector_service.get_status()
+        statuses["graph"] = await graph_service.get_status()
+        
+        return {"services": statuses}
+    except Exception as e:
+        logger.error(f"Get services status error: {e}")
+        raise HTTPException(status_code=500, detail=str(e)) 

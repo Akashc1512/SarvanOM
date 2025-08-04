@@ -1,3 +1,8 @@
+# Terraform Variables
+# Variable definitions for infrastructure deployment
+
+# DEAD CODE - Candidate for deletion: This Terraform file is not referenced anywhere in the codebase
+
 variable "aws_region" {
   description = "AWS region"
   type        = string

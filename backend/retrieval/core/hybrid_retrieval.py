@@ -1,7 +1,9 @@
-from shared.core.api.config import get_settings
-settings = get_settings()
 """
-Hybrid retrieval system combining vector search and knowledge graph queries.
+Hybrid Retrieval
+
+This module provides hybrid retrieval logic for the backend retrieval service.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import asyncio

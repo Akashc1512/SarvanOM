@@ -1,8 +1,9 @@
 """
 Fact Check Service
 
-This service provides fact checking functionality by wrapping the existing
-fact check agent and providing a clean interface for the API gateway.
+This module provides fact-checking functionality for the backend.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import logging
@@ -23,7 +24,7 @@ class FactCheckService:
     
     def __init__(self, config: Dict[str, Any] = None):
         self.config = config or {}
-        self.fact_check_agent = FactCheckAgent(config)
+        self.fact_check_agent = FactCheckAgent()
         logger.info("FactCheckService initialized")
     
     async def fact_check(self, claim: str, sources: List[str] = None, user_id: str = None) -> Dict[str, Any]:

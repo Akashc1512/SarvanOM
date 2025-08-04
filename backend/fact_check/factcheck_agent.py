@@ -1,6 +1,9 @@
 """
-Advanced fact-checking agent that verifies claims against retrieved documents.
-Enhanced with temporal validation and source authenticity checking.
+Fact Check Agent
+
+This module provides the fact-checking agent for the backend.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import asyncio

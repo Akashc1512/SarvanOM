@@ -1,7 +1,9 @@
-from shared.core.api.config import get_settings
-settings = get_settings()
 """
-Recommendation service for knowledge synthesis.
+Recommendation Service
+
+This module provides recommendation functionality for the backend synthesis service.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import asyncio

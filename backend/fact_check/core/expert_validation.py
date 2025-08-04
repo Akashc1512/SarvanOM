@@ -1,6 +1,9 @@
 """
-Expert Validation Layer - Universal Knowledge Platform
-Expert validation with consensus scoring and multiple expert networks.
+Expert Validation Module
+
+This module provides expert validation logic for fact-checking in the backend.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 import asyncio
 import logging

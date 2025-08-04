@@ -4,6 +4,8 @@
 Universal Knowledge Platform - Basic Functionality Tests
 
 Runs essential tests to verify core functionality and basic health checks.
+
+# DEAD CODE - Candidate for deletion: This test file is not integrated into any automated test suite
 """
 
 import asyncio

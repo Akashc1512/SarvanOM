@@ -1,22 +1,10 @@
 #!/usr/bin/env python3
 """
-Database Model Test Runner - MAANG Standards
+Database Test Runner
 
-This script provides comprehensive testing for all database models
-with coverage analysis, performance metrics, and detailed reporting.
+This module runs database tests for the application.
 
-Features:
-    - Unit and integration test execution
-    - Coverage analysis and reporting
-    - Performance benchmarking
-    - Test result aggregation
-    - MAANG-level reporting standards
-
-Authors:
-    - Universal Knowledge Platform Engineering Team
-    
-Version:
-    2.0.0 (2024-12-28)
+# DEAD CODE - Candidate for deletion: This test file is not integrated into any automated test suite
 """
 
 import sys

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-QueryClassifier Example - Practical Usage
-Demonstrates how to use the QueryClassifier in a real application.
+Query Classifier Example
+
+This module provides examples of query classification.
+
+# DEAD CODE - Candidate for deletion: This example file is not referenced anywhere in the codebase
 """
 
 import asyncio

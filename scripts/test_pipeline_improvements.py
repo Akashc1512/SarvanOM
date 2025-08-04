@@ -11,8 +11,7 @@ This script tests:
 - Response aggregation improvements
 - Authentication flow
 
-Usage:
-    python scripts/test_pipeline_improvements.py
+# DEAD CODE - Candidate for deletion: This test script is not integrated into any test suite
 """
 
 import asyncio

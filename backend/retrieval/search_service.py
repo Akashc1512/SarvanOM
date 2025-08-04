@@ -1,8 +1,9 @@
 """
-Search Service
+Retrieval Search Service
 
-This service provides search and retrieval functionality by wrapping the existing
-retrieval agent and providing a clean interface for the API gateway.
+This module provides search functionality for the backend retrieval service.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import logging

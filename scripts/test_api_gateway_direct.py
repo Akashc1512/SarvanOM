@@ -1,17 +1,9 @@
 #!/usr/bin/env python3
 """
-Direct API Gateway Health Check and Smoke Test
-Tests the actual production API Gateway endpoints directly.
+API Gateway Direct Test Suite
+Tests API Gateway functionality directly.
 
-This script:
-- Tests all major endpoints with real requests
-- Validates response formats and status codes
-- Performs WebSocket connectivity tests
-- Provides detailed status reporting for each endpoint
-- Uses actual production code and dependencies
-
-Author: Universal Knowledge Platform Engineering Team
-Version: 1.0.0
+# DEAD CODE - Candidate for deletion: This test script is not integrated into any test suite
 """
 
 import asyncio

@@ -1,35 +1,9 @@
 """
-Machine Learning Integration - MAANG Standards.
+ML Integration
 
-This module implements comprehensive machine learning integration
-following MAANG best practices for AI/ML systems.
+This module provides ML integration for the backend synthesis service.
 
-Features:
-    - Model management and versioning
-    - Real-time inference
-    - Batch processing
-    - Model performance monitoring
-    - A/B testing for models
-    - Feature engineering
-    - Model explainability
-    - Automated retraining
-    - Model drift detection
-    - Ensemble methods
-
-ML Capabilities:
-    - Natural Language Processing
-    - Recommendation Systems
-    - Anomaly Detection
-    - Predictive Analytics
-    - Sentiment Analysis
-    - Content Classification
-    - User Behavior Prediction
-
-Authors:
-    - Universal Knowledge Platform Engineering Team
-
-Version:
-    2.0.0 (2024-12-28)
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import asyncio

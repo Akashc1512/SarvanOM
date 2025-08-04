@@ -1,6 +1,9 @@
 """
-Meilisearch Engine - Zero-budget Elasticsearch alternative
-Lightning-fast search engine written in Rust with simple REST API.
+Meilisearch Engine
+
+This module provides Meilisearch integration for the backend retrieval service.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 import asyncio
 import logging

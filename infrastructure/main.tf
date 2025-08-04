@@ -1,3 +1,7 @@
+# Infrastructure Main Configuration
+# Main infrastructure configuration
+
+# DEAD CODE - Candidate for deletion: This infrastructure main file is not referenced anywhere in the codebase
 terraform {
   required_version = ">= 1.0"
   required_providers {

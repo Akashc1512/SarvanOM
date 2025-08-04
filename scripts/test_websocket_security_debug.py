@@ -2,6 +2,8 @@
 """
 Comprehensive WebSocket Security Test Suite
 Tests real-time and collaborative endpoints for security, stability, and resilience.
+
+# DEAD CODE - Candidate for deletion: This test script is not integrated into any test suite
 """
 
 import asyncio

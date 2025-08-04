@@ -1,7 +1,9 @@
 """
-RetrievalAgent Implementation for Multi-Agent Knowledge Platform
-This module implements a sophisticated retrieval agent that combines vector search,
-keyword search, and knowledge graph queries with caching and error handling.
+Retrieval Agent
+
+This module provides the retrieval agent for the backend.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import asyncio

@@ -1,30 +1,9 @@
-from shared.core.api.config import get_settings
-settings = get_settings()
 """
-Secure Authentication System - MAANG Standards
-Fixes critical security issues identified in the analysis.
+Auth Secure Service
 
-Features:
-- Environment-based API key management
-- Proper password hashing with bcrypt
-- Secure JWT token handling
-- Role-based access control
-- Rate limiting integration
-- Audit logging
-- Input validation and sanitization
+This module provides secure authentication functionality for the backend.
 
-Security Improvements:
-- Removes hardcoded credentials
-- Implements proper password hashing
-- Adds comprehensive input validation
-- Implements secure session management
-- Adds audit logging for security events
-
-Authors:
-- Universal Knowledge Platform Engineering Team
-
-Version:
-    2.0.0 (2024-12-28)
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import os

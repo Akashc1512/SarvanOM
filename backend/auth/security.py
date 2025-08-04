@@ -1,33 +1,9 @@
 """
-Security Module - MAANG Standards.
+Auth Security Service
 
-This module implements comprehensive security features following MAANG
-best practices for protecting APIs and user data.
+This module provides security utilities for the backend authentication system.
 
-Features:
-    - Input validation and sanitization
-    - SQL injection prevention
-    - XSS protection
-    - CSRF protection
-    - Content Security Policy
-    - Security headers
-    - Threat detection
-    - Rate limiting integration
-    - Audit logging
-    - Encryption utilities
-
-Security Layers:
-    - Input validation (OWASP Top 10)
-    - Authentication & Authorization
-    - Data protection
-    - Network security
-    - Monitoring & Alerting
-
-Authors:
-    - Universal Knowledge Platform Engineering Team
-
-Version:
-    2.0.0 (2024-12-28)
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import re

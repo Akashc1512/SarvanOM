@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
 Simple WebSocket Test
+Basic WebSocket connectivity test.
+
+# DEAD CODE - Candidate for deletion: This test script is not integrated into any test suite
 """
 
 import asyncio

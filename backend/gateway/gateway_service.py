@@ -1,73 +1,66 @@
 """
 Gateway Service
 
-This service orchestrates all backend services and provides a unified API interface.
-It handles request routing, service discovery, load balancing, and inter-service communication.
+This module provides gateway operations for the backend gateway service.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
-import asyncio
 import logging
-import time
 from typing import Dict, List, Any, Optional
-from contextlib import asynccontextmanager
-
-# FastAPI imports
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import time
+import asyncio
 
-# Import services
-from ..retrieval import SearchService
-from ..fact_check import FactCheckService
-from ..synthesis import SynthesisService
-from ..auth import AuthService
-from ..crawler import CrawlerService
-from ..vector import VectorService
-from ..graph import GraphService
+# Import services using absolute imports
+from backend.retrieval import SearchService
+from backend.fact_check import FactCheckService
+from backend.synthesis import SynthesisService
+from backend.auth import AuthService
+from backend.crawler import CrawlerService
+from backend.vector import VectorService
+from backend.graph import GraphService
 
-# Import router
-from .router import router
+from .router import router # Import router
 
 logger = logging.getLogger(__name__)
 
-
 class GatewayService:
-    """
-    Gateway Service that orchestrates all backend services.
-    Provides unified API interface and handles inter-service communication.
-    """
+    def __init__(self):
+        self.app = None
+        self.services = {}
+        self.service_registry = {}
+        self._initialize_services()
     
-    def __init__(self, config: Dict[str, Any] = None):
-        self.config = config or {}
-        
-        # Initialize all services
-        self.search_service = SearchService()
-        self.fact_check_service = FactCheckService()
-        self.synthesis_service = SynthesisService()
-        self.auth_service = AuthService()
-        self.crawler_service = CrawlerService()
-        self.vector_service = VectorService()
-        self.graph_service = GraphService()
-        
-        # Service registry for discovery
-        self.services = {
-            "search": self.search_service,
-            "fact_check": self.fact_check_service,
-            "synthesis": self.synthesis_service,
-            "auth": self.auth_service,
-            "crawler": self.crawler_service,
-            "vector": self.vector_service,
-            "graph": self.graph_service
-        }
-        
-        # Initialize FastAPI app
-        self.app = self._create_app()
+    def _initialize_services(self):
+        """Initialize all service instances."""
+        try:
+            # Initialize all services
+            self.services["search"] = SearchService()
+            self.services["fact_check"] = FactCheckService()
+            self.services["synthesis"] = SynthesisService()
+            self.services["auth"] = AuthService()
+            self.services["crawler"] = CrawlerService()
+            self.services["vector"] = VectorService()
+            self.services["graph"] = GraphService()
+            
+            # Register services
+            for name, service in self.services.items():
+                self.service_registry[name] = service
+                logger.info(f"Initialized {name} service")
+            
+            logger.info("All services initialized successfully")
+        except Exception as e:
+            logger.error(f"Error initializing services: {e}")
+            raise
     
-    def _create_app(self) -> FastAPI:
-        """Create and configure FastAPI application."""
+    def create_app(self) -> FastAPI:
+        """Create and configure the FastAPI application."""
         app = FastAPI(
-            title="Knowledge Platform API Gateway",
-            description="Unified API gateway for all backend services",
+            title="Universal Knowledge Hub API",
+            description="API Gateway for the Universal Knowledge Platform",
             version="1.0.0",
             docs_url="/docs",
             redoc_url="/redoc"
@@ -97,187 +90,141 @@ class GatewayService:
             
             return response
         
-        # Add exception handler
+        # Add global exception handler
         @app.exception_handler(Exception)
         async def global_exception_handler(request: Request, exc: Exception):
-            logger.error(f"Unhandled exception: {exc}")
+            logger.error(f"Global exception handler: {exc}")
             return JSONResponse(
                 status_code=500,
-                content={
-                    "error": "Internal server error",
-                    "detail": str(exc),
-                    "timestamp": time.time()
-                }
+                content={"detail": "Internal server error"}
             )
         
-        # Include router
-        app.include_router(router)
+        # Include the router
+        app.include_router(router, prefix="/api/v1")
         
-        # Add root endpoint
-        @app.get("/")
-        async def root():
-            return {
-                "message": "Knowledge Platform API Gateway",
-                "version": "1.0.0",
-                "status": "healthy",
-                "services": list(self.services.keys())
-            }
-        
-        # Add health check endpoint
-        @app.get("/health")
-        async def health_check():
-            return await self.get_services_health()
-        
+        self.app = app
         return app
     
     async def get_services_health(self) -> Dict[str, Any]:
         """Get health status of all services."""
-        health_status = {
-            "gateway": "healthy",
-            "timestamp": time.time(),
-            "services": {}
-        }
+        health_status = {}
         
-        for service_name, service in self.services.items():
+        for name, service in self.services.items():
             try:
-                status = service.get_status()
-                health_status["services"][service_name] = status
+                status = await service.get_status()
+                health_status[name] = status
             except Exception as e:
-                logger.error(f"Failed to get status for {service_name}: {e}")
-                health_status["services"][service_name] = {
-                    "status": "unhealthy",
-                    "error": str(e)
-                }
+                logger.error(f"Error getting {name} service status: {e}")
+                health_status[name] = {"status": "error", "error": str(e)}
         
         return health_status
     
     async def route_request(self, service_name: str, method: str, **kwargs) -> Any:
         """Route request to appropriate service."""
         if service_name not in self.services:
-            raise HTTPException(status_code=404, detail=f"Service {service_name} not found")
+            raise ValueError(f"Service {service_name} not found")
         
         service = self.services[service_name]
         
-        try:
-            if hasattr(service, method):
-                method_func = getattr(service, method)
-                if asyncio.iscoroutinefunction(method_func):
-                    return await method_func(**kwargs)
-                else:
-                    return method_func(**kwargs)
-            else:
-                raise HTTPException(
-                    status_code=404, 
-                    detail=f"Method {method} not found in service {service_name}"
-                )
-        except Exception as e:
-            logger.error(f"Service {service_name} method {method} failed: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Service {service_name} error: {str(e)}"
-            )
+        if not hasattr(service, method):
+            raise ValueError(f"Method {method} not found in {service_name} service")
+        
+        method_func = getattr(service, method)
+        return await method_func(**kwargs)
     
-    async def orchestrate_search(self, query: str, user_id: str = None, **kwargs) -> Dict[str, Any]:
-        """Orchestrate a comprehensive search across multiple services."""
+    async def orchestrate_search(self, query: str, filters: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Orchestrate search across multiple services."""
         try:
-            # Start with vector search
-            vector_results = await self.vector_service.search_similar(query)
+            # Perform search
+            search_results = await self.services["search"].search(query, filters)
             
-            # Get graph entities
-            entities = await self.graph_service.find_entities(query)
+            # Get vector search results
+            vector_results = await self.services["vector"].search_similar(query)
             
-            # Combine results
-            combined_results = {
-                "vector_results": [result.__dict__ for result in vector_results],
-                "entities": [entity.__dict__ for entity in entities],
-                "query": query,
-                "timestamp": time.time()
-            }
-            
-            return combined_results
-        except Exception as e:
-            logger.error(f"Orchestrated search failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Search orchestration failed: {str(e)}")
-    
-    async def orchestrate_fact_check(self, claim: str, sources: List[str] = None, **kwargs) -> Dict[str, Any]:
-        """Orchestrate fact checking with multiple services."""
-        try:
-            # Perform fact check
-            fact_check_result = await self.fact_check_service.fact_check(claim, sources)
-            
-            # Get related entities from graph
-            entities = await self.graph_service.find_entities(claim)
-            
-            # Search for supporting evidence
-            evidence_results = await self.vector_service.search_similar(claim, top_k=5)
+            # Get graph results
+            graph_results = await self.services["graph"].query_graph(f"FOR doc IN entities FILTER doc.name CONTAINS '{query}' RETURN doc")
             
             return {
-                "fact_check": fact_check_result,
-                "related_entities": [entity.__dict__ for entity in entities],
-                "supporting_evidence": [result.__dict__ for result in evidence_results],
-                "claim": claim,
-                "timestamp": time.time()
+                "search_results": search_results,
+                "vector_results": vector_results,
+                "graph_results": graph_results,
+                "query": query
             }
         except Exception as e:
-            logger.error(f"Orchestrated fact check failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Fact check orchestration failed: {str(e)}")
+            logger.error(f"Error orchestrating search: {e}")
+            raise
     
-    async def orchestrate_synthesis(self, content: List[Dict[str, Any]], query: str, **kwargs) -> Dict[str, Any]:
-        """Orchestrate content synthesis with multiple services."""
+    async def orchestrate_fact_check(self, claim: str, sources: List[str] = None) -> Dict[str, Any]:
+        """Orchestrate fact-checking process."""
         try:
-            # Synthesize content
-            synthesis_result = await self.synthesis_service.synthesize(content, query)
+            # Perform fact-checking
+            fact_check_result = await self.services["fact_check"].fact_check(claim, sources)
+            
+            # Get related information from search
+            search_results = await self.services["search"].search(claim)
+            
+            # Get vector similarity for claim
+            vector_results = await self.services["vector"].search_similar(claim)
+            
+            return {
+                "fact_check_result": fact_check_result,
+                "search_results": search_results,
+                "vector_results": vector_results,
+                "claim": claim
+            }
+        except Exception as e:
+            logger.error(f"Error orchestrating fact-check: {e}")
+            raise
+    
+    async def orchestrate_synthesis(self, content: str, style: str = "academic") -> Dict[str, Any]:
+        """Orchestrate content synthesis."""
+        try:
+            # Perform synthesis
+            synthesis_result = await self.services["synthesis"].synthesize(content, style)
             
             # Generate citations
-            citations = await self.synthesis_service.generate_citations(content)
+            citations = await self.services["synthesis"].generate_citations(content)
             
-            # Find related entities
-            entities = await self.graph_service.find_entities(query)
+            # Get related content from search
+            search_results = await self.services["search"].search(content[:100])  # Use first 100 chars
             
             return {
-                "synthesis": synthesis_result,
+                "synthesis_result": synthesis_result,
                 "citations": citations,
-                "related_entities": [entity.__dict__ for entity in entities],
-                "query": query,
-                "timestamp": time.time()
+                "search_results": search_results,
+                "content": content
             }
         except Exception as e:
-            logger.error(f"Orchestrated synthesis failed: {e}")
-            raise HTTPException(status_code=500, detail=f"Synthesis orchestration failed: {str(e)}")
+            logger.error(f"Error orchestrating synthesis: {e}")
+            raise
     
-    def get_service(self, service_name: str):
-        """Get a specific service by name."""
-        if service_name not in self.services:
-            raise ValueError(f"Service {service_name} not found")
-        return self.services[service_name]
-    
-    def list_services(self) -> List[str]:
-        """List all available services."""
-        return list(self.services.keys())
+    async def startup(self):
+        """Startup the gateway service."""
+        logger.info("Starting Gateway Service...")
+        
+        # Create the FastAPI app
+        self.create_app()
+        
+        # Initialize all services
+        for name, service in self.services.items():
+            if hasattr(service, 'startup'):
+                await service.startup()
+        
+        logger.info("Gateway Service started successfully")
     
     async def shutdown(self):
-        """Shutdown all services gracefully."""
-        logger.info("Shutting down gateway service...")
+        """Shutdown the gateway service."""
+        logger.info("Shutting down Gateway Service...")
         
         # Shutdown all services
-        for service_name, service in self.services.items():
-            try:
-                if hasattr(service, 'shutdown'):
-                    if asyncio.iscoroutinefunction(service.shutdown):
-                        await service.shutdown()
-                    else:
-                        service.shutdown()
-                logger.info(f"Shutdown {service_name} service")
-            except Exception as e:
-                logger.error(f"Failed to shutdown {service_name} service: {e}")
+        for name, service in self.services.items():
+            if hasattr(service, 'shutdown'):
+                await service.shutdown()
         
-        logger.info("Gateway service shutdown complete")
-
-
-# Create global gateway instance
-gateway = GatewayService()
-
-
-def get_gateway() -> GatewayService:
-    """Get the global gateway instance."""
-    return gateway 
+        logger.info("Gateway Service shut down successfully")
+    
+    def get_app(self) -> FastAPI:
+        """Get the FastAPI application."""
+        if not self.app:
+            self.create_app()
+        return self.app 

@@ -1,21 +1,10 @@
+#!/usr/bin/env python3
 """
-Cache Manager PostgreSQL Integration Example
-Universal Knowledge Platform
+Cache Manager Integration Example
 
-This example demonstrates how to integrate the CacheManagerPostgres
-service with retrieval engine and orchestrator for zero-budget caching.
+This module provides examples of cache manager integration.
 
-Features:
-- Retrieval result caching before Meilisearch + Vector searches
-- LLM answer caching with query fingerprinting
-- TTL-based cache invalidation
-- Integration with existing retrieval and orchestrator patterns
-
-Authors:
-    - Universal Knowledge Platform Engineering Team
-
-Version:
-    1.0.0 (2024-12-28)
+# DEAD CODE - Candidate for deletion: This example file is not referenced anywhere in the codebase
 """
 
 import asyncio

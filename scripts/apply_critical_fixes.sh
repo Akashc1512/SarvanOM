@@ -1,6 +1,8 @@
 #!/bin/bash
-# Quick fixes script for Universal Knowledge Platform
-# Applies critical fixes to bring the app to industry standards
+# Apply Critical Fixes Script
+# Applies critical fixes to the codebase
+
+# DEAD CODE - Candidate for deletion: This script is not referenced anywhere in the codebase
 
 echo "🔧 Applying Critical Fixes for Universal Knowledge Platform"
 echo "=============================================="

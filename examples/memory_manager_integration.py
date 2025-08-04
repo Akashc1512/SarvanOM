@@ -1,21 +1,10 @@
+#!/usr/bin/env python3
 """
-Memory Manager PostgreSQL Integration Example
-Universal Knowledge Platform
+Memory Manager Integration Example
 
-This example demonstrates how to integrate the MemoryManagerPostgres
-service with the orchestrator for session memory management.
+This module provides examples of memory manager integration.
 
-Features:
-- Session context preloading before LLM queries
-- Session context updating after responses
-- TTL-like behavior for memory management
-- Integration with existing orchestrator patterns
-
-Authors:
-    - Universal Knowledge Platform Engineering Team
-
-Version:
-    1.0.0 (2024-12-28)
+# DEAD CODE - Candidate for deletion: This example file is not referenced anywhere in the codebase
 """
 
 import asyncio

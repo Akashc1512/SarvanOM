@@ -1,17 +1,9 @@
 """
-Test suite for metrics and monitoring system.
+Test Metrics Monitoring
 
-Tests:
-- Metrics accuracy after simulated pipeline flow
-- Health check reports accurate component statuses
-- Endpoints handle component failures gracefully
-- Prometheus metrics format
-- Cache hit/miss ratio tracking
-- LLM provider selection tracking
-- Response time breakdown accuracy
+This module tests the metrics monitoring functionality.
 
-Authors: Universal Knowledge Platform Engineering Team
-Version: 1.0.0 (2024-12-28)
+# DEAD CODE - Candidate for deletion: This test file is not integrated into any automated test suite
 """
 
 import pytest

@@ -1,5 +1,7 @@
-# Universal Knowledge Platform - Terraform Variables Example
-# Copy this file to terraform.tfvars and modify as needed
+# Terraform Variables Example
+# Example variable values for infrastructure deployment
+
+# DEAD CODE - Candidate for deletion: This Terraform example file is not referenced anywhere in the codebase
 
 # AWS Configuration
 aws_region = "us-east-1"

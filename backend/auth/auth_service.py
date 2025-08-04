@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 # Import the existing auth modules
 from .auth import AuthManager
-from .user_management import UserManager
+from .user_management import UserManagementService
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ class AuthService:
     def __init__(self, config: Dict[str, Any] = None):
         self.config = config or {}
         self.auth_manager = AuthManager(config)
-        self.user_manager = UserManager(config)
+        self.user_manager = UserManagementService(config)
         logger.info("AuthService initialized")
     
     async def login(self, username: str, password: str) -> Dict[str, Any]:

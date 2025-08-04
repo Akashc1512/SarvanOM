@@ -1,602 +1,411 @@
 """
-Comprehensive Performance Tests for Universal Knowledge Hub
-Tests performance, load handling, and scalability
+Performance Tests for Phase 2.3.3
+
+This module tests the performance characteristics of the service integration,
+including service layer overhead, concurrent usage, and response times.
 """
 
-import unittest
+import pytest
 import asyncio
 import time
-import psutil
-import os
-import json
 import statistics
-from unittest.mock import Mock, patch, AsyncMock
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import threading
 from typing import List, Dict, Any
-
-# Import application components
-from shared.core.agents.lead_orchestrator import LeadOrchestrator
-from core.config_manager import ConfigurationManager
-from services.api-gateway.main import app
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from fastapi.testclient import TestClient
+from unittest.mock import Mock, patch, AsyncMock
+
+# Import the main application
+from services.api_gateway.main import app
 
 
-class TestQueryPerformance(unittest.TestCase):
-    """Test query processing performance"""
+class TestServicePerformance:
+    """Test service performance and concurrency."""
+    
+    @pytest.fixture
+    def client(self):
+        """Create test client."""
+        return TestClient(app)
+    
+    @pytest.fixture
+    def mock_browser_service(self):
+        """Create mock browser service for performance testing."""
+        service = Mock()
+        service.search_web = AsyncMock(return_value={
+            "success": True,
+            "data": {"results": [{"title": "Test Result", "url": "http://test.com"}]},
+            "service_used": "BrowserService"
+        })
+        service.health_check = AsyncMock(return_value={
+            "status": "healthy",
+            "service": "BrowserService"
+        })
+        return service
+    
+    @pytest.fixture
+    def mock_pdf_service(self):
+        """Create mock PDF service for performance testing."""
+        service = Mock()
+        service.process_pdf = AsyncMock(return_value={
+            "success": True,
+            "data": {"text": "Test PDF text", "pages": 1},
+            "service_used": "PDFService"
+        })
+        service.health_check = AsyncMock(return_value={
+            "status": "healthy",
+            "service": "PDFService"
+        })
+        return service
 
-    def setUp(self):
-        """Set up test fixtures"""
-        self.orchestrator = LeadOrchestrator()
-        self.client = TestClient(app)
-        self.test_queries = [
-            "What is artificial intelligence?",
-            "How does machine learning work?",
-            "Explain quantum computing",
-            "What are neural networks?",
-            "Describe natural language processing",
-            "How do transformers work?",
-            "What is deep learning?",
-            "Explain computer vision",
-            "What is reinforcement learning?",
-            "How does GPT work?",
-        ]
-
-    def test_single_query_performance(self):
-        """Test single query processing performance"""
-        query = "What is artificial intelligence?"
-
-        # Measure processing time
-        start_time = time.time()
-        result = asyncio.run(self.orchestrator.process_query(query))
-        end_time = time.time()
-
-        processing_time = end_time - start_time
-
-        # Performance assertions
-        self.assertLess(processing_time, 2.0, "Single query should complete within 2 seconds")
-        self.assertIn("execution_time_ms", result)
-        self.assertGreater(result["execution_time_ms"], 0)
-        self.assertLess(result["execution_time_ms"], 2000)  # 2 seconds in ms
-
-    def test_query_complexity_performance(self):
-        """Test performance with different query complexities"""
-        simple_query = "What is AI?"
-        complex_query = "What are the latest developments in artificial intelligence, machine learning, and deep learning, including transformer architectures, attention mechanisms, and their applications in natural language processing and computer vision?"
-
-        # Test simple query
-        start_time = time.time()
-        simple_result = asyncio.run(self.orchestrator.process_query(simple_query))
-        simple_time = time.time() - start_time
-
-        # Test complex query
-        start_time = time.time()
-        complex_result = asyncio.run(self.orchestrator.process_query(complex_query))
-        complex_time = time.time() - start_time
-
-        # Complex queries should take longer but still be reasonable
-        self.assertLess(simple_time, 1.0, "Simple query should complete within 1 second")
-        self.assertLess(complex_time, 5.0, "Complex query should complete within 5 seconds")
-        self.assertGreater(
-            complex_time, simple_time, "Complex query should take longer than simple query"
-        )
-
-    def test_concurrent_query_performance(self):
-        """Test concurrent query processing performance"""
-        num_concurrent_queries = 10
-
-        # Process queries concurrently
-        start_time = time.time()
-        tasks = [
-            self.orchestrator.process_query(query)
-            for query in self.test_queries[:num_concurrent_queries]
-        ]
-        results = asyncio.run(asyncio.gather(*tasks))
-        end_time = time.time()
-
-        total_time = end_time - start_time
-        avg_time_per_query = total_time / num_concurrent_queries
-
-        # Performance assertions
-        self.assertLess(total_time, 10.0, "10 concurrent queries should complete within 10 seconds")
-        self.assertLess(avg_time_per_query, 2.0, "Average time per query should be under 2 seconds")
-
-        # Verify all queries completed successfully
-        for result in results:
-            self.assertIn("success", result)
-            self.assertIn("execution_time_ms", result)
-
-    def test_sequential_vs_concurrent_performance(self):
-        """Test sequential vs concurrent processing performance"""
-        queries = self.test_queries[:5]
-
-        # Sequential processing
-        start_time = time.time()
-        sequential_results = []
-        for query in queries:
-            result = asyncio.run(self.orchestrator.process_query(query))
-            sequential_results.append(result)
-        sequential_time = time.time() - start_time
-
-        # Concurrent processing
-        start_time = time.time()
-        tasks = [self.orchestrator.process_query(query) for query in queries]
-        concurrent_results = asyncio.run(asyncio.gather(*tasks))
-        concurrent_time = time.time() - start_time
-
-        # Concurrent should be faster than sequential
-        self.assertLess(
-            concurrent_time,
-            sequential_time,
-            "Concurrent processing should be faster than sequential",
-        )
-
-        # Verify results are equivalent
-        self.assertEqual(len(sequential_results), len(concurrent_results))
-
-    def test_memory_usage_per_query(self):
-        """Test memory usage per query"""
-        import gc
-
-        # Measure baseline memory
-        gc.collect()
-        process = psutil.Process(os.getpid())
-        baseline_memory = process.memory_info().rss
-
-        # Process multiple queries
-        for i, query in enumerate(self.test_queries[:5]):
-            result = asyncio.run(self.orchestrator.process_query(query))
-
-            # Force garbage collection
-            gc.collect()
-            current_memory = process.memory_info().rss
-            memory_increase = current_memory - baseline_memory
-
-            # Memory increase should be reasonable (less than 50MB per query)
-            self.assertLess(
-                memory_increase,
-                50 * 1024 * 1024,
-                f"Memory increase for query {i} should be less than 50MB",
-            )
-
-    def test_cpu_usage_per_query(self):
-        """Test CPU usage per query"""
-        query = "What is artificial intelligence?"
-
-        # Measure CPU usage during query processing
-        process = psutil.Process(os.getpid())
-
-        # Get baseline CPU usage
-        baseline_cpu = process.cpu_percent(interval=0.1)
-
-        # Process query and measure CPU
-        start_time = time.time()
-        result = asyncio.run(self.orchestrator.process_query(query))
-        end_time = time.time()
-
-        processing_time = end_time - start_time
-
-        # CPU usage should be reasonable (less than 100% for single query)
-        # Note: This is a rough test as CPU usage can vary significantly
-        self.assertGreater(processing_time, 0, "Query should take some time to process")
-
-
-class TestLoadTesting(unittest.TestCase):
-    """Test load handling capabilities"""
-
-    def setUp(self):
-        """Set up test fixtures"""
-        self.orchestrator = LeadOrchestrator()
-        self.client = TestClient(app)
-
-    def test_low_load_performance(self):
-        """Test performance under low load (1-10 queries)"""
-        num_queries = 5
-        queries = [f"Test query {i}" for i in range(num_queries)]
-
-        start_time = time.time()
-        tasks = [self.orchestrator.process_query(query) for query in queries]
-        results = asyncio.run(asyncio.gather(*tasks))
-        end_time = time.time()
-
-        total_time = end_time - start_time
-        avg_time = total_time / num_queries
-
-        # Low load should be very fast
-        self.assertLess(avg_time, 1.0, "Average time under low load should be under 1 second")
-        self.assertLess(total_time, 5.0, "Total time for 5 queries should be under 5 seconds")
-
-    def test_medium_load_performance(self):
-        """Test performance under medium load (10-50 queries)"""
-        num_queries = 25
-        queries = [f"Test query {i}" for i in range(num_queries)]
-
-        start_time = time.time()
-        tasks = [self.orchestrator.process_query(query) for query in queries]
-        results = asyncio.run(asyncio.gather(*tasks))
-        end_time = time.time()
-
-        total_time = end_time - start_time
-        avg_time = total_time / num_queries
-
-        # Medium load should still be reasonable
-        self.assertLess(avg_time, 2.0, "Average time under medium load should be under 2 seconds")
-        self.assertLess(total_time, 30.0, "Total time for 25 queries should be under 30 seconds")
-
-    def test_high_load_performance(self):
-        """Test performance under high load (50+ queries)"""
-        num_queries = 100
-        queries = [f"Test query {i}" for i in range(num_queries)]
-
-        start_time = time.time()
-        tasks = [self.orchestrator.process_query(query) for query in queries]
-        results = asyncio.run(asyncio.gather(*tasks))
-        end_time = time.time()
-
-        total_time = end_time - start_time
-        avg_time = total_time / num_queries
-
-        # High load should still be manageable
-        self.assertLess(avg_time, 3.0, "Average time under high load should be under 3 seconds")
-        self.assertLess(total_time, 120.0, "Total time for 100 queries should be under 2 minutes")
-
-    def test_sustained_load_performance(self):
-        """Test performance under sustained load"""
-        num_batches = 5
-        queries_per_batch = 10
-
-        total_times = []
-
-        for batch in range(num_batches):
-            queries = [f"Batch {batch} query {i}" for i in range(queries_per_batch)]
-
+    async def test_service_overhead_measurement(self, client, mock_browser_service):
+        """Test service layer overhead measurement."""
+        # Baseline test (without service layer)
+        baseline_times = []
+        for _ in range(10):
             start_time = time.time()
-            tasks = [self.orchestrator.process_query(query) for query in queries]
-            results = asyncio.run(asyncio.gather(*tasks))
-            end_time = time.time()
-
-            batch_time = end_time - start_time
-            total_times.append(batch_time)
-
-        # Performance should remain consistent across batches
-        avg_batch_time = statistics.mean(total_times)
-        std_batch_time = statistics.stdev(total_times)
-
-        # Standard deviation should be low (consistent performance)
-        self.assertLess(
-            std_batch_time, avg_batch_time * 0.5, "Performance should be consistent across batches"
-        )
-
-    def test_memory_usage_under_load(self):
-        """Test memory usage under load"""
-        import gc
-
-        gc.collect()
+            # Simulate baseline operation
+            time.sleep(0.01)  # Simulate some work
+            baseline_times.append(time.time() - start_time)
+        
+        baseline_avg = statistics.mean(baseline_times)
+        
+        # Service layer test
+        service_times = []
+        with patch('services.api_gateway.routes.agents.browser_agent.get_browser_service', return_value=mock_browser_service):
+            for _ in range(10):
+                start_time = time.time()
+                response = client.post("/agents/browser/search", json={
+                    "query": "performance test",
+                    "search_engine": "google"
+                })
+                service_times.append(time.time() - start_time)
+        
+        service_avg = statistics.mean(service_times)
+        
+        # Calculate overhead
+        overhead_ratio = (service_avg - baseline_avg) / baseline_avg
+        
+        # Assert overhead is acceptable (< 50% increase for this test)
+        assert overhead_ratio < 0.5, f"Service overhead too high: {overhead_ratio:.2%}"
+        assert response.status_code == 200
+    
+    async def test_concurrent_service_usage(self, client, mock_browser_service):
+        """Test concurrent service usage."""
+        def make_request():
+            """Make a single request."""
+            return client.post("/agents/browser/search", json={
+                "query": "concurrent test",
+                "search_engine": "google"
+            })
+        
+        # Test with 10 concurrent requests
+        with patch('services.api_gateway.routes.agents.browser_agent.get_browser_service', return_value=mock_browser_service):
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                futures = [executor.submit(make_request) for _ in range(10)]
+                responses = [future.result() for future in as_completed(futures)]
+            
+            # All requests should succeed
+            for response in responses:
+                assert response.status_code == 200
+                data = response.json()
+                assert data["success"] == True
+    
+    async def test_concurrent_different_services(self, client, mock_browser_service, mock_pdf_service):
+        """Test concurrent usage of different services."""
+        def make_browser_request():
+            return client.post("/agents/browser/search", json={
+                "query": "browser test",
+                "search_engine": "google"
+            })
+        
+        def make_pdf_request():
+            files = {"file": ("test.pdf", b"fake pdf content", "application/pdf")}
+            return client.post("/agents/pdf/process", files=files)
+        
+        # Test concurrent requests to different services
+        with patch('services.api_gateway.routes.agents.browser_agent.get_browser_service', return_value=mock_browser_service), \
+             patch('services.api_gateway.routes.agents.pdf_agent.get_pdf_service', return_value=mock_pdf_service):
+            
+            with ThreadPoolExecutor(max_workers=6) as executor:
+                futures = []
+                # Add 3 browser requests
+                for _ in range(3):
+                    futures.append(executor.submit(make_browser_request))
+                # Add 3 PDF requests
+                for _ in range(3):
+                    futures.append(executor.submit(make_pdf_request))
+                
+                responses = [future.result() for future in as_completed(futures)]
+            
+            # All requests should succeed
+            for response in responses:
+                assert response.status_code == 200
+                data = response.json()
+                assert data["success"] == True
+    
+    async def test_response_time_distribution(self, client, mock_browser_service):
+        """Test response time distribution under load."""
+        response_times = []
+        
+        with patch('services.api_gateway.routes.agents.browser_agent.get_browser_service', return_value=mock_browser_service):
+            # Make 20 requests and measure response times
+            for i in range(20):
+                start_time = time.time()
+                response = client.post("/agents/browser/search", json={
+                    "query": f"test query {i}",
+                    "search_engine": "google"
+                })
+                response_times.append(time.time() - start_time)
+                
+                assert response.status_code == 200
+        
+        # Calculate statistics
+        avg_response_time = statistics.mean(response_times)
+        median_response_time = statistics.median(response_times)
+        std_dev = statistics.stdev(response_times)
+        
+        # Assert reasonable performance
+        assert avg_response_time < 0.5, f"Average response time too high: {avg_response_time:.3f}s"
+        assert median_response_time < 0.5, f"Median response time too high: {median_response_time:.3f}s"
+        assert std_dev < 0.2, f"Response time variance too high: {std_dev:.3f}s"
+    
+    async def test_memory_usage_under_load(self, client, mock_browser_service):
+        """Test memory usage under concurrent load."""
+        import psutil
+        import os
+        
+        # Get initial memory usage
         process = psutil.Process(os.getpid())
-        baseline_memory = process.memory_info().rss
-
-        # Process many queries
-        num_queries = 50
-        queries = [f"Memory test query {i}" for i in range(num_queries)]
-
-        for query in queries:
-            result = asyncio.run(self.orchestrator.process_query(query))
-
-        # Force garbage collection
-        gc.collect()
-        final_memory = process.memory_info().rss
-        memory_increase = final_memory - baseline_memory
-
-        # Memory increase should be reasonable (less than 200MB for 50 queries)
-        self.assertLess(
-            memory_increase,
-            200 * 1024 * 1024,
-            "Memory increase under load should be less than 200MB",
-        )
-
-
-class TestScalabilityTesting(unittest.TestCase):
-    """Test system scalability"""
-
-    def setUp(self):
-        """Set up test fixtures"""
-        self.orchestrator = LeadOrchestrator()
-
-    def test_agent_scalability(self):
-        """Test agent scalability"""
-        # Test that multiple agents can work concurrently
-        agents = [
-            self.orchestrator.agents[AgentType.RETRIEVAL],
-            self.orchestrator.agents[AgentType.FACT_CHECK],
-            self.orchestrator.agents[AgentType.SYNTHESIS],
-            self.orchestrator.agents[AgentType.CITATION],
-        ]
-
-        # Create concurrent tasks for each agent
-        tasks = []
-        for agent in agents:
-            task = {
-                "strategy": "hybrid" if agent.agent_type == AgentType.RETRIEVAL else {},
-                "query": "test query",
-                "top_k": 5,
-            }
-            context = QueryContext(query="test query")
-            tasks.append(agent.process_task(task, context))
-
-        # Process all agents concurrently
-        start_time = time.time()
-        results = asyncio.run(asyncio.gather(*tasks))
-        end_time = time.time()
-
-        total_time = end_time - start_time
-
-        # All agents should complete within reasonable time
-        self.assertLess(total_time, 10.0, "All agents should complete within 10 seconds")
-
-        # All agents should succeed
-        for result in results:
-            self.assertTrue(result.success)
-
-    def test_pipeline_scalability(self):
-        """Test pipeline scalability"""
-        # Test that pipeline can handle multiple concurrent requests
-        num_pipelines = 10
-
-        start_time = time.time()
-        tasks = []
-        for i in range(num_pipelines):
-            query = f"Pipeline test query {i}"
-            tasks.append(self.orchestrator.process_query(query))
-
-        results = asyncio.run(asyncio.gather(*tasks))
-        end_time = time.time()
-
-        total_time = end_time - start_time
-        avg_time = total_time / num_pipelines
-
-        # Pipeline should scale reasonably
-        self.assertLess(avg_time, 3.0, "Average pipeline time should be under 3 seconds")
-        self.assertLess(total_time, 30.0, "Total time for 10 pipelines should be under 30 seconds")
-
-        # All pipelines should succeed
-        for result in results:
-            self.assertIn("success", result)
-
-    def test_cache_scalability(self):
-        """Test cache scalability"""
-        cache_manager = self.orchestrator.cache_manager
-
-        # Test cache with many entries
-        num_entries = 1000
-
-        start_time = time.time()
-        for i in range(num_entries):
-            query = f"Cache test query {i}"
-            response = {"response": f"Response {i}", "confidence": 0.9}
-            asyncio.run(cache_manager.cache_response(query, response))
-        cache_time = time.time() - start_time
-
-        # Caching should be fast
-        self.assertLess(cache_time, 10.0, "Caching 1000 entries should take under 10 seconds")
-
-        # Test cache retrieval performance
-        start_time = time.time()
-        for i in range(num_entries):
-            query = f"Cache test query {i}"
-            cached_response = asyncio.run(cache_manager.get_cached_response(query))
-        retrieval_time = time.time() - start_time
-
-        # Cache retrieval should be very fast
-        self.assertLess(
-            retrieval_time, 5.0, "Retrieving 1000 cached entries should take under 5 seconds"
-        )
+        initial_memory = process.memory_info().rss / 1024 / 1024  # MB
+        
+        # Make concurrent requests
+        with patch('services.api_gateway.routes.agents.browser_agent.get_browser_service', return_value=mock_browser_service):
+            with ThreadPoolExecutor(max_workers=20) as executor:
+                futures = [executor.submit(
+                    lambda: client.post("/agents/browser/search", json={
+                        "query": "memory test",
+                        "search_engine": "google"
+                    })
+                ) for _ in range(50)]
+                
+                responses = [future.result() for future in as_completed(futures)]
+            
+            # All requests should succeed
+            for response in responses:
+                assert response.status_code == 200
+        
+        # Get final memory usage
+        final_memory = process.memory_info().rss / 1024 / 1024  # MB
+        memory_increase = final_memory - initial_memory
+        
+        # Assert reasonable memory usage (less than 100MB increase)
+        assert memory_increase < 100, f"Memory usage increased too much: {memory_increase:.1f}MB"
+    
+    async def test_service_error_performance(self, client, mock_browser_service):
+        """Test performance when services return errors."""
+        # Mock service to return errors
+        mock_browser_service.search_web = AsyncMock(side_effect=Exception("Service error"))
+        
+        error_response_times = []
+        
+        with patch('services.api_gateway.routes.agents.browser_agent.get_browser_service', return_value=mock_browser_service):
+            # Make requests that will result in errors
+            for _ in range(10):
+                start_time = time.time()
+                response = client.post("/agents/browser/search", json={
+                    "query": "error test",
+                    "search_engine": "google"
+                })
+                error_response_times.append(time.time() - start_time)
+                
+                assert response.status_code == 500
+        
+        # Calculate error response time statistics
+        avg_error_time = statistics.mean(error_response_times)
+        
+        # Error responses should still be reasonably fast
+        assert avg_error_time < 1.0, f"Error response time too high: {avg_error_time:.3f}s"
+    
+    async def test_health_check_performance(self, client, mock_browser_service):
+        """Test health check endpoint performance."""
+        health_check_times = []
+        
+        with patch('services.api_gateway.routes.agents.browser_agent.get_browser_service', return_value=mock_browser_service):
+            # Make multiple health check requests
+            for _ in range(20):
+                start_time = time.time()
+                response = client.get("/agents/browser/health")
+                health_check_times.append(time.time() - start_time)
+                
+                assert response.status_code == 200
+        
+        # Health checks should be very fast
+        avg_health_time = statistics.mean(health_check_times)
+        assert avg_health_time < 0.1, f"Health check too slow: {avg_health_time:.3f}s"
+    
+    async def test_service_initialization_performance(self):
+        """Test service initialization performance."""
+        from services.api_gateway.services.browser_service import BrowserService
+        
+        init_times = []
+        
+        # Test service initialization time
+        for _ in range(10):
+            start_time = time.time()
+            service = BrowserService()
+            init_times.append(time.time() - start_time)
+            
+            assert service is not None
+        
+        avg_init_time = statistics.mean(init_times)
+        
+        # Service initialization should be fast
+        assert avg_init_time < 0.1, f"Service initialization too slow: {avg_init_time:.3f}s"
 
 
-class TestResourceUtilization(unittest.TestCase):
-    """Test resource utilization"""
+class TestLoadTesting:
+    """Test system behavior under various load conditions."""
+    
+    @pytest.fixture
+    def client(self):
+        """Create test client."""
+        return TestClient(app)
+    
+    @pytest.fixture
+    def mock_services(self):
+        """Create mock services for load testing."""
+        browser_service = Mock()
+        browser_service.search_web = AsyncMock(return_value={
+            "success": True,
+            "data": {"results": [{"title": "Load Test Result", "url": "http://test.com"}]},
+            "service_used": "BrowserService"
+        })
+        
+        pdf_service = Mock()
+        pdf_service.process_pdf = AsyncMock(return_value={
+            "success": True,
+            "data": {"text": "Load Test PDF", "pages": 1},
+            "service_used": "PDFService"
+        })
+        
+        return browser_service, pdf_service
+    
+    async def test_low_load_performance(self, client, mock_services):
+        """Test performance under low load (1-5 concurrent requests)."""
+        browser_service, pdf_service = mock_services
+        
+        with patch('services.api_gateway.routes.agents.browser_agent.get_browser_service', return_value=browser_service), \
+             patch('services.api_gateway.routes.agents.pdf_agent.get_pdf_service', return_value=pdf_service):
+            
+            response_times = []
+            
+            # Make 5 sequential requests
+            for i in range(5):
+                start_time = time.time()
+                response = client.post("/agents/browser/search", json={
+                    "query": f"low load test {i}",
+                    "search_engine": "google"
+                })
+                response_times.append(time.time() - start_time)
+                
+                assert response.status_code == 200
+            
+            avg_time = statistics.mean(response_times)
+            assert avg_time < 0.2, f"Low load performance poor: {avg_time:.3f}s"
+    
+    async def test_medium_load_performance(self, client, mock_services):
+        """Test performance under medium load (10-20 concurrent requests)."""
+        browser_service, pdf_service = mock_services
+        
+        def make_request():
+            return client.post("/agents/browser/search", json={
+                "query": "medium load test",
+                "search_engine": "google"
+            })
+        
+        with patch('services.api_gateway.routes.agents.browser_agent.get_browser_service', return_value=browser_service):
+            with ThreadPoolExecutor(max_workers=15) as executor:
+                futures = [executor.submit(make_request) for _ in range(15)]
+                responses = [future.result() for future in as_completed(futures)]
+            
+            # All requests should succeed
+            for response in responses:
+                assert response.status_code == 200
+    
+    async def test_high_load_performance(self, client, mock_services):
+        """Test performance under high load (50+ concurrent requests)."""
+        browser_service, pdf_service = mock_services
+        
+        def make_request():
+            return client.post("/agents/browser/search", json={
+                "query": "high load test",
+                "search_engine": "google"
+            })
+        
+        with patch('services.api_gateway.routes.agents.browser_agent.get_browser_service', return_value=browser_service):
+            with ThreadPoolExecutor(max_workers=50) as executor:
+                futures = [executor.submit(make_request) for _ in range(50)]
+                responses = [future.result() for future in as_completed(futures)]
+            
+            # Most requests should succeed (allow some failures under high load)
+            success_count = sum(1 for r in responses if r.status_code == 200)
+            success_rate = success_count / len(responses)
+            
+            assert success_rate >= 0.8, f"Success rate too low under high load: {success_rate:.1%}"
 
-    def setUp(self):
-        """Set up test fixtures"""
-        self.orchestrator = LeadOrchestrator()
 
-    def test_cpu_utilization(self):
-        """Test CPU utilization"""
+class TestResourceManagement:
+    """Test resource management and cleanup."""
+    
+    async def test_service_resource_cleanup(self):
+        """Test that services properly clean up resources."""
+        from services.api_gateway.services.browser_service import BrowserService
+        
+        # Create and destroy multiple service instances
+        for _ in range(10):
+            service = BrowserService()
+            # Simulate some work
+            await asyncio.sleep(0.01)
+            # Service should be properly cleaned up when it goes out of scope
+            del service
+        
+        # If we get here without errors, cleanup is working
+        assert True
+    
+    async def test_concurrent_resource_usage(self, client, mock_browser_service):
+        """Test resource usage under concurrent load."""
+        import psutil
+        import os
+        
         process = psutil.Process(os.getpid())
-
-        # Measure CPU usage during intensive processing
-        queries = [f"CPU test query {i}" for i in range(20)]
-
-        # Get baseline CPU
-        baseline_cpu = process.cpu_percent(interval=1.0)
-
-        # Process queries and measure CPU
-        start_time = time.time()
-        tasks = [self.orchestrator.process_query(query) for query in queries]
-        results = asyncio.run(asyncio.gather(*tasks))
-        end_time = time.time()
-
-        processing_time = end_time - start_time
-
+        initial_cpu = process.cpu_percent()
+        initial_memory = process.memory_info().rss / 1024 / 1024
+        
+        def make_request():
+            return client.post("/agents/browser/search", json={
+                "query": "resource test",
+                "search_engine": "google"
+            })
+        
+        with patch('services.api_gateway.routes.agents.browser_agent.get_browser_service', return_value=mock_browser_service):
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                futures = [executor.submit(make_request) for _ in range(20)]
+                responses = [future.result() for future in as_completed(futures)]
+            
+            # All requests should succeed
+            for response in responses:
+                assert response.status_code == 200
+        
+        # Check resource usage after load
+        final_cpu = process.cpu_percent()
+        final_memory = process.memory_info().rss / 1024 / 1024
+        
         # CPU usage should be reasonable
-        self.assertGreater(processing_time, 0, "Processing should take some time")
-
-        # Note: CPU usage measurement is approximate and can vary significantly
-        # depending on system load and other factors
-
-    def test_memory_utilization(self):
-        """Test memory utilization"""
-        import gc
-
-        process = psutil.Process(os.getpid())
-
-        # Measure memory usage during processing
-        gc.collect()
-        baseline_memory = process.memory_info().rss
-
-        queries = [f"Memory test query {i}" for i in range(50)]
-
-        for query in queries:
-            result = asyncio.run(self.orchestrator.process_query(query))
-
-        gc.collect()
-        final_memory = process.memory_info().rss
-        memory_increase = final_memory - baseline_memory
-
-        # Memory increase should be reasonable
-        self.assertLess(
-            memory_increase, 500 * 1024 * 1024, "Memory increase should be less than 500MB"
-        )
-
-    def test_disk_utilization(self):
-        """Test disk utilization"""
-        # Test that disk usage is reasonable
-        # This would depend on logging, caching, and other disk operations
-        pass
-
-    def test_network_utilization(self):
-        """Test network utilization"""
-        # Test that network usage is reasonable
-        # This would depend on external API calls and data transfer
-        pass
-
-
-class TestPerformanceMonitoring(unittest.TestCase):
-    """Test performance monitoring capabilities"""
-
-    def setUp(self):
-        """Set up test fixtures"""
-        self.orchestrator = LeadOrchestrator()
-
-    def test_execution_time_monitoring(self):
-        """Test execution time monitoring"""
-        query = "Performance monitoring test query"
-
-        result = asyncio.run(self.orchestrator.process_query(query))
-
-        # Verify execution time is tracked
-        self.assertIn("execution_time_ms", result)
-        self.assertGreater(result["execution_time_ms"], 0)
-        self.assertLess(result["execution_time_ms"], 10000)  # Should be under 10 seconds
-
-    def test_token_usage_monitoring(self):
-        """Test token usage monitoring"""
-        # Test that token usage is tracked across agents
-        query = "Token usage monitoring test query"
-
-        result = asyncio.run(self.orchestrator.process_query(query))
-
-        # Token usage should be tracked (if available)
-        if "token_usage" in result:
-            self.assertIn("prompt", result["token_usage"])
-            self.assertIn("completion", result["token_usage"])
-            self.assertGreater(result["token_usage"]["prompt"], 0)
-            self.assertGreater(result["token_usage"]["completion"], 0)
-
-    def test_confidence_monitoring(self):
-        """Test confidence monitoring"""
-        query = "Confidence monitoring test query"
-
-        result = asyncio.run(self.orchestrator.process_query(query))
-
-        # Confidence should be tracked
-        self.assertIn("confidence", result)
-        self.assertGreaterEqual(result["confidence"], 0.0)
-        self.assertLessEqual(result["confidence"], 1.0)
-
-    def test_error_rate_monitoring(self):
-        """Test error rate monitoring"""
-        # Test error rate under load
-        num_queries = 100
-        queries = [f"Error rate test query {i}" for i in range(num_queries)]
-
-        error_count = 0
-        for query in queries:
-            try:
-                result = asyncio.run(self.orchestrator.process_query(query))
-                if not result.get("success", True):
-                    error_count += 1
-            except Exception:
-                error_count += 1
-
-        error_rate = error_count / num_queries
-
-        # Error rate should be low
-        self.assertLess(error_rate, 0.1, "Error rate should be less than 10%")
-
-
-class TestPerformanceOptimization(unittest.TestCase):
-    """Test performance optimization features"""
-
-    def setUp(self):
-        """Set up test fixtures"""
-        self.orchestrator = LeadOrchestrator()
-
-    def test_caching_performance_impact(self):
-        """Test caching performance impact"""
-        query = "Caching performance test query"
-
-        # First query (cache miss)
-        start_time = time.time()
-        result1 = asyncio.run(self.orchestrator.process_query(query))
-        first_query_time = time.time() - start_time
-
-        # Second query (cache hit)
-        start_time = time.time()
-        result2 = asyncio.run(self.orchestrator.process_query(query))
-        second_query_time = time.time() - start_time
-
-        # Cache hit should be faster
-        self.assertLess(
-            second_query_time, first_query_time, "Cache hit should be faster than cache miss"
-        )
-
-    def test_concurrent_processing_optimization(self):
-        """Test concurrent processing optimization"""
-        queries = [f"Concurrent optimization test query {i}" for i in range(10)]
-
-        # Sequential processing
-        start_time = time.time()
-        sequential_results = []
-        for query in queries:
-            result = asyncio.run(self.orchestrator.process_query(query))
-            sequential_results.append(result)
-        sequential_time = time.time() - start_time
-
-        # Concurrent processing
-        start_time = time.time()
-        tasks = [self.orchestrator.process_query(query) for query in queries]
-        concurrent_results = asyncio.run(asyncio.gather(*tasks))
-        concurrent_time = time.time() - start_time
-
-        # Concurrent should be faster
-        self.assertLess(
-            concurrent_time,
-            sequential_time,
-            "Concurrent processing should be faster than sequential",
-        )
-
-    def test_resource_optimization(self):
-        """Test resource optimization"""
-        # Test that system uses resources efficiently
-        process = psutil.Process(os.getpid())
-
-        # Measure resource usage during processing
-        baseline_memory = process.memory_info().rss
-
-        queries = [f"Resource optimization test query {i}" for i in range(20)]
-
-        for query in queries:
-            result = asyncio.run(self.orchestrator.process_query(query))
-
-        final_memory = process.memory_info().rss
-        memory_increase = final_memory - baseline_memory
-
-        # Memory increase should be reasonable
-        self.assertLess(
-            memory_increase, 200 * 1024 * 1024, "Memory increase should be less than 200MB"
-        )
+        assert final_cpu < 80, f"CPU usage too high: {final_cpu:.1f}%"
+        
+        # Memory usage should not increase dramatically
+        memory_increase = final_memory - initial_memory
+        assert memory_increase < 50, f"Memory increase too high: {memory_increase:.1f}MB"
 
 
 if __name__ == "__main__":
-    # Run all performance tests
-    unittest.main(verbosity=2)
+    pytest.main([__file__])

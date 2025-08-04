@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Debug WebSocket Gateway - Simplified version to identify issues
+Debug WebSocket Gateway
+Debug utility for WebSocket gateway.
+
+# DEAD CODE - Candidate for deletion: This test script is not integrated into any test suite
 """
 
 import os

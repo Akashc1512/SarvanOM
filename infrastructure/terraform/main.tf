@@ -1,5 +1,7 @@
-# Universal Knowledge Platform - AWS Infrastructure
-# This Terraform configuration sets up a production-ready infrastructure
+# Terraform Main Configuration
+# Main infrastructure configuration
+
+# DEAD CODE - Candidate for deletion: This Terraform main file is not referenced anywhere in the codebase
 
 terraform {
   required_version = ">= 1.0"

@@ -1,8 +1,9 @@
 """
 Crawler Service
 
-This service provides web crawling functionality by wrapping the existing
-crawler service and providing a clean interface for the API gateway.
+This module provides crawling functionality for the backend crawler service.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import logging

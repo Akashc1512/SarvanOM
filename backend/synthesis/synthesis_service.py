@@ -1,8 +1,9 @@
 """
 Synthesis Service
 
-This service provides content synthesis functionality by wrapping the existing
-synthesis agent and providing a clean interface for the API gateway.
+This module provides synthesis functionality for the backend.
+
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import logging
@@ -23,7 +24,7 @@ class SynthesisService:
     
     def __init__(self, config: Dict[str, Any] = None):
         self.config = config or {}
-        self.synthesis_agent = SynthesisAgent(config)
+        self.synthesis_agent = SynthesisAgent()
         logger.info("SynthesisService initialized")
     
     async def synthesize(self, content: List[Dict[str, Any]], query: str, user_id: str = None, style: str = "academic") -> Dict[str, Any]:

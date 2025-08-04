@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
 Quick WebSocket Security Test
+Quick security test for WebSocket endpoints.
+
+# DEAD CODE - Candidate for deletion: This test script is not integrated into any test suite
 """
 
 import asyncio

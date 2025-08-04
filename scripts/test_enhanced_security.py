@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """
-Enhanced Security Test Script
-Tests the comprehensive sanitization and security measures implemented in the API Gateway.
+Enhanced Security Test Suite
+Tests enhanced security features.
+
+# DEAD CODE - Candidate for deletion: This test script is not integrated into any test suite
 """
 
 import asyncio

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Test Debug WebSocket Gateway
+Debug WebSocket Test Suite
+Tests WebSocket debugging functionality.
+
+# DEAD CODE - Candidate for deletion: This test script is not integrated into any test suite
 """
 
 import asyncio

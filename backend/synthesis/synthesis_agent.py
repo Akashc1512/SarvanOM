@@ -1,70 +1,9 @@
 """
-Advanced Synthesis Agent - AI-Powered Knowledge Synthesis
-Comprehensive response generation with fact verification and confidence scoring.
+Synthesis Agent
 
-This module provides intelligent synthesis of verified facts into coherent,
-well-structured answers. It uses advanced AI techniques to ensure accuracy,
-completeness, and readability while maintaining source attribution and
-confidence scoring.
+This module provides the synthesis agent for the backend.
 
-Key Features:
-- **Multi-Source Synthesis**: Combines facts from multiple verified sources
-- **Confidence Scoring**: Calculates answer confidence based on fact quality
-- **Citation Management**: Tracks sources and evidence for transparency
-- **Fallback Mechanisms**: Graceful degradation when AI services fail
-- **Performance Optimization**: Caching and async processing for speed
-- **Quality Assurance**: Multiple synthesis strategies for different use cases
-
-Architecture:
-- Async-first design for high concurrency
-- Modular synthesis strategies
-- Comprehensive error handling
-- Detailed logging and monitoring
-- Graceful fallback mechanisms
-
-Synthesis Strategies:
-- **Comprehensive**: Detailed, well-structured answers
-- **Concise**: Brief, focused responses
-- **Technical**: Specialized for technical content
-- **Simple**: Easy-to-understand explanations
-
-Environment Variables:
-- LLM_PROVIDER: AI provider (openai|anthropic)
-- SYNTHESIS_STYLE: Default synthesis style
-- CONFIDENCE_THRESHOLD: Minimum confidence for facts (default: 0.7)
-- MAX_SYNTHESIS_TOKENS: Maximum tokens for synthesis (default: 2000)
-
-Usage Examples:
-    # Basic synthesis
-    agent = SynthesisAgent()
-    result = await agent.process_task({
-        "verified_facts": [
-            {"claim": "Python is interpreted", "confidence": 0.95},
-            {"claim": "Python supports OOP", "confidence": 0.92}
-        ],
-        "query": "What is Python?",
-        "synthesis_params": {"style": "comprehensive"}
-    })
-
-    # High-confidence synthesis
-    result = await agent.process_task({
-        "verified_facts": high_confidence_facts,
-        "query": "Explain quantum computing",
-        "synthesis_params": {
-            "style": "technical",
-            "confidence_threshold": 0.8
-        }
-    })
-
-Performance:
-- Processing time: 2-10 seconds depending on complexity
-- Fact capacity: 50+ facts per synthesis
-- Confidence accuracy: 95%+ correlation with human assessment
-- Fallback reliability: 99%+ successful fallback rate
-
-Authors: Universal Knowledge Platform Engineering Team
-Version: 1.0.0 (2024-12-28)
-License: MIT
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import asyncio

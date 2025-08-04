@@ -1,54 +1,9 @@
-from shared.core.api.config import get_settings
-settings = get_settings()
 """
-User Management Module for Universal Knowledge Platform.
+User Management v2 Service
 
-This module implements secure user authentication and authorization following
-OWASP security guidelines and MAANG-level engineering standards.
+This module provides advanced user management functionality for the backend.
 
-Architecture:
-    The module follows a layered architecture with clear separation of concerns:
-    - API Layer: REST endpoints for user operations
-    - Service Layer: Business logic and validation
-    - Repository Layer: Data persistence abstraction
-    - Security Layer: Authentication and encryption
-
-Security Features:
-    - Bcrypt password hashing with configurable cost factor
-    - JWT tokens with expiration and refresh tokens
-    - Rate limiting per user with Redis backend
-    - SQL injection prevention via parameterized queries
-    - XSS protection through input sanitization
-    - CSRF protection with double-submit cookies
-
-Performance:
-    - Connection pooling for database operations
-    - Redis caching for session management
-    - Async operations throughout the stack
-    - Lazy loading of user permissions
-    - Batch operations for bulk user management
-
-Example:
-    >>> from api.user_management_v2 import UserService
-    >>> service = UserService()
-    >>> user = await service.create_user(
-    ...     username="john_doe",
-    ...     email="john@example.com",
-    ...     password="SecurePass123!@#"
-    ... )
-    >>> token = await service.authenticate(
-    ...     username="john_doe",
-    ...     password="SecurePass123!@#"
-    ... )
-
-Authors:
-    - Universal Knowledge Platform Engineering Team
-
-Version:
-    2.0.0 (2024-12-28) - MAANG Standards Compliant
-
-License:
-    MIT License - See LICENSE file for details
+# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
 
 import os

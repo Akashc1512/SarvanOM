@@ -1,4 +1,7 @@
-# Universal Knowledge Platform - Infrastructure as Code
+# Terraform Infrastructure README
+# Documentation for Terraform infrastructure deployment
+
+# DEAD CODE - Candidate for deletion: This Terraform README file is not referenced anywhere in the codebase
 
 This directory contains Terraform configurations for deploying the Universal Knowledge Platform on AWS.
 
