@@ -2,6 +2,8 @@
 """
 Simple verification script for agent restructuring.
 This script tests the new modular agent structure without depending on the full application.
+
+# DEAD CODE - Candidate for deletion: This verification script is not used in any workflow
 """
 
 import os

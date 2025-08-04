@@ -1254,6 +1254,7 @@ async def query_knowledge_graph(
         start_time = datetime.now()
         
         # TODO: Implement actual knowledge graph query logic
+# DEAD CODE - Candidate for deletion: This backup file is not imported anywhere and contains duplicate functionality
         kg_results = {
             "query": request.get("query"),
             "entities": [

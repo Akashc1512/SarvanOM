@@ -1,0 +1,261 @@
+version: '3.8'
+
+services:
+  # Main application service
+  app:
+    build:
+      context: ../..
+      dockerfile: services/deployment/docker/Dockerfile
+      target: production
+    container_name: universal-knowledge-platform
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+      - MEILI_HOST=${MEILI_HOST:-meilisearch}
+      - MEILI_PORT=${MEILI_PORT:-7700}
+    volumes:
+      - app_logs:/app/logs
+      - app_data:/app/data
+      - app_cache:/app/cache
+    depends_on:
+      - meilisearch
+      - redis
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Development service
+  app-dev:
+    build:
+      context: ../..
+      dockerfile: services/deployment/docker/Dockerfile
+      target: development
+    container_name: universal-knowledge-platform-dev
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+      - MEILI_HOST=${MEILI_HOST:-meilisearch}
+      - MEILI_PORT=${MEILI_PORT:-7700}
+    volumes:
+      - ../../:/app
+      - app_logs:/app/logs
+      - app_data:/app/data
+      - app_cache:/app/cache
+    depends_on:
+      - meilisearch
+      - redis
+    networks:
+      - app-network
+    profiles:
+      - development
+
+  # Testing service
+  app-test:
+    build:
+      context: ../..
+      dockerfile: services/deployment/docker/Dockerfile
+      target: testing
+    container_name: universal-knowledge-platform-test
+    environment:
+      - ENVIRONMENT=testing
+      - LOG_LEVEL=DEBUG
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+      - MEILI_HOST=${MEILI_HOST:-meilisearch}
+      - MEILI_PORT=${MEILI_PORT:-7700}
+    volumes:
+      - ../../:/app
+      - app_logs:/app/logs
+      - app_data:/app/data
+      - app_cache:/app/cache
+    depends_on:
+      - meilisearch
+      - redis
+    networks:
+      - app-network
+    profiles:
+      - testing
+
+  # Meilisearch service
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    container_name: meilisearch
+    restart: unless-stopped
+    ports:
+      - "7700:7700"
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+    volumes:
+      - meili_data:/meili_data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis service for caching
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - app
+    networks:
+      - app-network
+    profiles:
+      - production
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - app-network
+    profiles:
+      - monitoring
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - app-network
+    profiles:
+      - monitoring
+
+  # Elasticsearch for logging
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.8.0
+    container_name: elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - app-network
+    profiles:
+      - logging
+
+  # Kibana for log visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.8.0
+    container_name: kibana
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - app-network
+    profiles:
+      - logging
+
+  # Filebeat for log collection
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.8.0
+    container_name: filebeat
+    restart: unless-stopped
+    volumes:
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - app_logs:/app/logs:ro
+    depends_on:
+      - elasticsearch
+    networks:
+      - app-network
+    profiles:
+      - logging
+
+volumes:
+  app_logs:
+    driver: local
+  app_data:
+    driver: local
+  app_cache:
+    driver: local
+  meili_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16 

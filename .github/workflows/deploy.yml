@@ -1,0 +1,392 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Security scanning
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Bandit security scan
+        run: |
+          pip install bandit
+          bandit -r . -f json -o bandit-report.json || true
+
+      - name: Run Safety check
+        run: |
+          pip install safety
+          safety check --json --output safety-report.json || true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+
+  # Code quality and linting
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run flake8
+        run: |
+          pip install flake8
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run black
+        run: |
+          pip install black
+          black --check --diff .
+
+      - name: Run isort
+        run: |
+          pip install isort
+          isort --check-only --diff .
+
+  # Testing
+  test:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ -v --cov=services --cov-report=xml --cov-report=html
+
+      - name: Run integration tests
+        run: |
+          pytest tests/integration/ -v --cov=services --cov-append
+
+      - name: Run end-to-end tests
+        run: |
+          pytest tests/e2e/ -v --cov=services --cov-append
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: htmlcov/
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            .pytest_cache/
+            test-results.xml
+
+  # Build and test Docker image
+  build:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Build and push production image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./services/deployment/docker/Dockerfile
+          target: production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push development image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./services/deployment/docker/Dockerfile
+          target: development
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:dev
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push testing image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./services/deployment/docker/Dockerfile
+          target: testing
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Deploy to staging
+  deploy-staging:
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          # Add your staging deployment logic here
+          # Example: kubectl apply -f k8s/staging/
+          # Example: docker-compose -f docker-compose.staging.yml up -d
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests on staging..."
+          # Add smoke test logic here
+          # Example: curl -f http://staging.example.com/health
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          echo "Staging deployment completed"
+          # Add notification logic here
+
+  # Deploy to production
+  deploy-production:
+    needs: [build]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'release'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment..."
+          # Add your production deployment logic here
+          # Example: kubectl apply -f k8s/production/
+          # Example: docker-compose -f docker-compose.production.yml up -d
+
+      - name: Run health checks
+        run: |
+          echo "Running health checks on production..."
+          # Add health check logic here
+          # Example: curl -f http://production.example.com/health
+
+      - name: Run performance tests
+        run: |
+          echo "Running performance tests..."
+          # Add performance test logic here
+          # Example: k6 run performance-tests/
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          echo "Production deployment completed"
+          # Add notification logic here
+
+  # Performance testing
+  performance:
+    needs: [deploy-staging]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run performance tests
+        run: |
+          echo "Running performance tests..."
+          # Add performance test logic here
+          # Example: pytest tests/performance/ -v
+
+      - name: Upload performance results
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-results
+          path: performance-results/
+
+  # Security audit
+  security-audit:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-results
+          path: trivy-results.sarif
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Dependency updates
+  dependency-updates:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Check for dependency updates
+        run: |
+          pip install pip-review
+          pip-review --local --interactive
+
+      - name: Create dependency update PR
+        if: failure()
+        run: |
+          echo "Dependencies need updating"
+          # Add logic to create PR for dependency updates
+
+  # Documentation
+  documentation:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Generate documentation
+        run: |
+          echo "Generating documentation..."
+          # Add documentation generation logic here
+          # Example: sphinx-build -b html docs/ docs/_build/html
+
+      - name: Deploy documentation
+        run: |
+          echo "Deploying documentation..."
+          # Add documentation deployment logic here
+          # Example: gh-pages deployment
+
+  # Notifications
+  notify:
+    needs: [deploy-production, performance, security-audit]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Notify team
+        run: |
+          echo "Pipeline completed"
+          # Add notification logic here
+          # Example: Slack, email, or other notification systems 

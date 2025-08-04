@@ -1,5 +1,7 @@
 """
 Fallback Orchestrator for when main orchestrator fails.
+
+# DEAD CODE - Candidate for deletion: This class is not imported or used anywhere in the codebase
 """
 
 import asyncio
