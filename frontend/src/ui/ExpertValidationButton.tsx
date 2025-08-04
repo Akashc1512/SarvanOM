@@ -56,6 +56,7 @@ interface ExpertValidationButtonProps {
   variant?: "default" | "outline" | "ghost";
   size?: "default" | "sm" | "lg";
   showBadge?: boolean;
+  onValidationComplete?: (status: string, confidence: number) => void;
 }
 
 export function ExpertValidationButton({
@@ -64,6 +65,7 @@ export function ExpertValidationButton({
   variant = "outline",
   size = "sm",
   showBadge = true,
+  onValidationComplete,
 }: ExpertValidationButtonProps) {
   const { toast } = useToast();
   const [isValidating, setIsValidating] = useState(false);
@@ -82,15 +84,15 @@ export function ExpertValidationButton({
 
     setIsValidating(true);
     try {
-      const response = await fetch("/api/factcheck/validate", {
+      const response = await fetch("/fact-check", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          claim: claim.trim(),
-          query_id: queryId,
-          expert_networks: ["academic", "industry", "ai_model"],
+          content: claim.trim(),
+          user_id: queryId,
+          context: `Query ID: ${queryId}`,
         }),
       });
 
@@ -100,6 +102,11 @@ export function ExpertValidationButton({
 
       const result: ValidationResult = await response.json();
       setValidationResult(result);
+      
+      // Call the callback to update parent component
+      if (onValidationComplete) {
+        onValidationComplete(result.status, result.confidence);
+      }
       
       toast({
         title: "Validation Complete",
@@ -132,6 +139,21 @@ export function ExpertValidationButton({
     }
   };
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "supported":
+        return "Expert Verified ✅";
+      case "contradicted":
+        return "Failed ❌";
+      case "unclear":
+        return "Validation Pending ⏳";
+      case "pending":
+        return "Validation Pending ⏳";
+      default:
+        return "Validation Pending ⏳";
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "supported":
@@ -161,7 +183,7 @@ export function ExpertValidationButton({
           variant={variant}
           size={size}
           onClick={handleValidation}
-          disabled={isValidating}
+          disabled={isValidating || (validationResult && validationResult.status === "supported")}
           className="flex items-center gap-2"
         >
           {isValidating ? (
@@ -169,7 +191,7 @@ export function ExpertValidationButton({
           ) : (
             <Shield className="h-4 w-4" />
           )}
-          {isValidating ? "Validating..." : "Expert Validation"}
+          {isValidating ? "Validating..." : "Request Expert Validation"}
         </Button>
 
         {showBadge && validationResult && (
@@ -179,7 +201,7 @@ export function ExpertValidationButton({
             onClick={() => setShowDetails(true)}
           >
             {getStatusIcon(validationResult.status)}
-            <span className="ml-1 capitalize">{validationResult.status}</span>
+            <span className="ml-1">{getStatusText(validationResult.status)}</span>
             <span className={`ml-1 font-medium ${getConfidenceColor(validationResult.confidence)}`}>
               {(validationResult.confidence * 100).toFixed(0)}%
             </span>

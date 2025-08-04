@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CheckCircle, XCircle, AlertTriangle, Clock } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -43,6 +44,8 @@ export function AnswerDisplay({
   const [feedbackText, setFeedbackText] = useState("");
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   const [isSavingToMemory, setIsSavingToMemory] = useState(false);
+  const [validationStatus, setValidationStatus] = useState<string | null>(null);
+  const [validationConfidence, setValidationConfidence] = useState<number | null>(null);
 
   const handleCopyAnswer = async () => {
     try {
@@ -201,6 +204,29 @@ export function AnswerDisplay({
                   {(query.confidence * 100).toFixed(0)}% confidence
                 </Badge>
               )}
+              {validationStatus && (
+                <Badge 
+                  variant="outline" 
+                  className={`${
+                    validationStatus === "supported" ? "bg-green-100 text-green-800 border-green-200" :
+                    validationStatus === "contradicted" ? "bg-red-100 text-red-800 border-red-200" :
+                    "bg-yellow-100 text-yellow-800 border-yellow-200"
+                  }`}
+                >
+                  {validationStatus === "supported" && <CheckCircle className="h-3 w-3 mr-1" />}
+                  {validationStatus === "contradicted" && <XCircle className="h-3 w-3 mr-1" />}
+                  {validationStatus === "unclear" && <AlertTriangle className="h-3 w-3 mr-1" />}
+                  {validationStatus === "pending" && <Clock className="h-3 w-3 mr-1" />}
+                  {validationStatus === "supported" ? "Expert Verified ✅" : 
+                   validationStatus === "contradicted" ? "Failed ❌" : 
+                   "Validation Pending ⏳"}
+                  {validationConfidence && (
+                    <span className="ml-1 font-medium">
+                      {(validationConfidence * 100).toFixed(0)}%
+                    </span>
+                  )}
+                </Badge>
+              )}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleCopyAnswer}>
@@ -225,6 +251,10 @@ export function AnswerDisplay({
                 queryId={query.query_id}
                 variant="outline"
                 size="sm"
+                onValidationComplete={(status, confidence) => {
+                  setValidationStatus(status);
+                  setValidationConfidence(confidence);
+                }}
               />
             </div>
           </div>
