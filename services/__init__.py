@@ -1,17 +1,37 @@
-# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application
 """
-API Gateway Service
+Services Module
 
-This service handles API routing and orchestration including:
-- Request routing to appropriate services
-- Service discovery and load balancing
-- Authentication and authorization middleware
-- Rate limiting and security
-- Request/response transformation
-- Error handling and logging
+This module provides access to all microservices including:
+- API Gateway for request routing
+- Authentication service
+- Search and retrieval services
+- Fact checking service
+- Synthesis service
+- Crawler service
+- Vector database service
+- Graph service
 """
 
-from .gateway_service import GatewayService
-from .router import APIRouter
+from .gateway import GatewayApp
+from .gateway.routes import (
+    health_router,
+    search_router,
+    fact_check_router,
+    synthesis_router,
+    auth_router,
+    crawler_router,
+    vector_router,
+    graph_router,
+)
 
-__all__ = ["GatewayService", "APIRouter"] 
+__all__ = [
+    "GatewayApp",
+    "health_router",
+    "search_router",
+    "fact_check_router",
+    "synthesis_router",
+    "auth_router",
+    "crawler_router",
+    "vector_router",
+    "graph_router",
+] 
