@@ -187,7 +187,7 @@ async def list_queries(
         # This would typically involve database queries
         
         # Import database service
-        from services.search_service.retrieval_agent import RetrievalAgent
+        from services.retrieval.retrieval_agent import RetrievalAgent
         import asyncpg
         import os
         

@@ -25,8 +25,8 @@ from enum import Enum
 # Import real components instead of mocks
 from shared.core.agents.lead_orchestrator import LeadOrchestrator
 from shared.core.agents.base_agent import QueryContext, AgentType
-from services.search_service.core.query_processor import QueryIntelligenceLayer
-from services.search_service.core.hybrid_retrieval import HybridRetrievalService
+from services.retrieval.core.query_processor import QueryIntelligenceLayer
+from services.retrieval.core.hybrid_retrieval import HybridRetrievalService
 from services.analytics_service.metrics.knowledge_platform_metrics import (
     record_query_intelligence_metrics,
     record_orchestration_metrics,

@@ -1,6 +1,8 @@
 ---
 alwaysApply: true
 ---
+0. Always try to reuse any files before deleting or deprecating it.
+
 1. Code Organization & Structure
     All backend services must follow microservices structure, even if in a monorepo.
 

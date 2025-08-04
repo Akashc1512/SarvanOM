@@ -299,9 +299,9 @@ class QueryService:
         # Implement actual search
         try:
             # Import search services
-            from services.search_service.core.hybrid_retrieval import HybridRetrievalService
-            from services.search_service.core.meilisearch_engine import MeiliSearchEngine
-            from services.search_service.core.query_processor import QueryProcessor
+            from services.retrieval.core.hybrid_retrieval import HybridRetrievalService
+            from services.retrieval.core.meilisearch_engine import MeiliSearchEngine
+            from services.retrieval.core.query_processor import QueryProcessor
             
             # Initialize search components
             search_engine = MeiliSearchEngine()
@@ -360,8 +360,8 @@ class QueryService:
         # Implement actual fact checking
         try:
             # Import fact checking services
-            from services.factcheck_service.core.expert_validation import ExpertValidationService
-            from services.factcheck_service.factcheck_agent import FactCheckAgent
+            from services.fact_check.core.expert_validation import ExpertValidationService
+            from services.fact_check.factcheck_agent import FactCheckAgent
             
             # Initialize fact checking components
             expert_validation = ExpertValidationService()
@@ -487,8 +487,8 @@ class QueryService:
         # Implement actual synthesis
         try:
             # Import synthesis services
-            from services.synthesis_service.core.orchestrator import SynthesisOrchestrator
-            from services.synthesis_service.citation_agent import CitationAgent
+            from services.synthesis.core.orchestrator import SynthesisOrchestrator
+            from services.synthesis.citation_agent import CitationAgent
             
             # Initialize synthesis components
             orchestrator = SynthesisOrchestrator()
@@ -720,9 +720,9 @@ class QueryService:
         # Implement actual multi-source retrieval
         try:
             # Import retrieval services
-            from services.search_service.core.hybrid_retrieval import HybridRetrievalService
-            from services.search_service.core.meilisearch_engine import MeiliSearchEngine
-            from services.search_service.core.query_processor import QueryProcessor
+            from services.retrieval.core.hybrid_retrieval import HybridRetrievalService
+            from services.retrieval.core.meilisearch_engine import MeiliSearchEngine
+            from services.retrieval.core.query_processor import QueryProcessor
             from services.vector.vector_service import VectorService
             from services.graph.graph_service import GraphService
             
@@ -910,8 +910,8 @@ class QueryService:
         # Implement actual advanced verification
         try:
             # Import verification services
-            from services.factcheck_service.core.expert_validation import ExpertValidationService
-            from services.factcheck_service.factcheck_agent import FactCheckAgent
+            from services.fact_check.core.expert_validation import ExpertValidationService
+            from services.fact_check.factcheck_agent import FactCheckAgent
             
             # Initialize verification components
             expert_validation = ExpertValidationService()
@@ -1098,9 +1098,9 @@ class QueryService:
         # Implement actual advanced synthesis
         try:
             # Import synthesis services
-            from services.synthesis_service.core.orchestrator import SynthesisOrchestrator
-            from services.synthesis_service.citation_agent import CitationAgent
-            from services.synthesis_service.ml_integration import MLIntegration
+            from services.synthesis.core.orchestrator import SynthesisOrchestrator
+            from services.synthesis.citation_agent import CitationAgent
+            from services.synthesis.ml_integration import MLIntegration
             
             # Initialize synthesis components
             orchestrator = SynthesisOrchestrator()
