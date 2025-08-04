@@ -194,11 +194,88 @@ async def vector_search_endpoint(request: VectorSearchRequest):
 @app.get("/graph/context")
 async def graph_context_endpoint(topic: str = "", depth: int = 2, user_id: Optional[str] = None):
     """Placeholder for knowledge graph service."""
+    import random
+    
+    # Generate sample graph data based on topic
+    main_topic = topic[:30] if topic else "Query Topic"
+    
+    # Create nodes
+    nodes = [
+        {
+            "id": "main",
+            "name": main_topic,
+            "label": main_topic,
+            "description": f"Main topic: {main_topic}",
+            "type": "main",
+            "weight": 1.0
+        }
+    ]
+    
+    # Add related concepts
+    related_concepts = [
+        f"Related Concept {i+1}" for i in range(min(depth, 3))
+    ]
+    
+    for i, concept in enumerate(related_concepts):
+        nodes.append({
+            "id": f"related_{i}",
+            "name": concept,
+            "label": concept,
+            "description": f"Related to {main_topic}",
+            "type": "related",
+            "weight": 0.8 - (i * 0.1)
+        })
+    
+    # Add sub-concepts
+    sub_concepts = [
+        f"Sub-concept {i+1}" for i in range(min(depth * 2, 4))
+    ]
+    
+    for i, concept in enumerate(sub_concepts):
+        nodes.append({
+            "id": f"sub_{i}",
+            "name": concept,
+            "label": concept,
+            "description": f"Sub-concept of related concept",
+            "type": "sub",
+            "weight": 0.6 - (i * 0.1)
+        })
+    
+    # Create edges
+    edges = []
+    
+    # Connect main topic to related concepts
+    for i in range(len(related_concepts)):
+        edges.append({
+            "from": "main",
+            "to": f"related_{i}",
+            "label": "relates to",
+            "relationship": "relates to",
+            "type": "strong",
+            "weight": 0.9
+        })
+    
+    # Connect related concepts to sub-concepts
+    for i in range(len(sub_concepts)):
+        parent_idx = i % len(related_concepts)
+        edges.append({
+            "from": f"related_{parent_idx}",
+            "to": f"sub_{i}",
+            "label": "contains",
+            "relationship": "contains",
+            "type": "medium",
+            "weight": 0.7
+        })
+    
     return {
         "message": "Knowledge graph service route",
         "topic": topic,
         "depth": depth,
-        "user_id": user_id
+        "user_id": user_id,
+        "nodes": nodes,
+        "edges": edges,
+        "total_nodes": len(nodes),
+        "total_edges": len(edges)
     }
 
 @app.post("/graph/context")

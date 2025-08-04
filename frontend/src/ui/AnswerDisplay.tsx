@@ -16,6 +16,7 @@ import { api, type QueryResponse, type Source } from "@/services/api";
 import { SourcesList } from "@/ui/SourcesList";
 import { CitationPanel } from "@/ui/CitationPanel";
 import { ExpertValidationButton } from "@/ui/ExpertValidationButton";
+import { KnowledgeGraphModal } from "@/ui/KnowledgeGraphModal";
 import { parseCitations } from "@/utils/citation-parser";
 import {
   ExternalLink,
@@ -27,6 +28,7 @@ import {
   Calendar,
   Globe,
   Bookmark,
+  Network,
 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
 
@@ -46,6 +48,7 @@ export function AnswerDisplay({
   const [isSavingToMemory, setIsSavingToMemory] = useState(false);
   const [validationStatus, setValidationStatus] = useState<string | null>(null);
   const [validationConfidence, setValidationConfidence] = useState<number | null>(null);
+  const [isKnowledgeGraphOpen, setIsKnowledgeGraphOpen] = useState(false);
 
   const handleCopyAnswer = async () => {
     try {
@@ -256,6 +259,14 @@ export function AnswerDisplay({
                   setValidationConfidence(confidence);
                 }}
               />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsKnowledgeGraphOpen(true)}
+              >
+                <Network className="h-4 w-4 mr-2" />
+                View Knowledge Graph
+              </Button>
             </div>
           </div>
           <CardDescription>
@@ -385,6 +396,15 @@ export function AnswerDisplay({
           </div>
         </CardContent>
       </Card>
+
+      {/* Knowledge Graph Modal */}
+      <KnowledgeGraphModal
+        topic={query.answer ? query.answer.substring(0, 50) + "..." : ""}
+        depth={2}
+        queryId={query.query_id}
+        isOpen={isKnowledgeGraphOpen}
+        onClose={() => setIsKnowledgeGraphOpen(false)}
+      />
     </div>
   );
 }
