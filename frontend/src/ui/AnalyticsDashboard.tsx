@@ -1,229 +1,244 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
-  ChartBarIcon,
-  ClockIcon,
-  ExclamationTriangleIcon,
-  CheckCircleIcon,
-} from "@heroicons/react/24/outline";
-import { api } from "@/services/api";
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+} from "chart.js";
+import { Line, Bar, Doughnut } from "react-chartjs-2";
 
-interface AnalyticsData {
-  total_requests: number;
-  total_errors: number;
-  average_response_time: number;
-  cache_hit_rate: number;
-  popular_queries: Record<string, number>;
-  timestamp: string;
-}
+// Register Chart.js components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
-interface AnalyticsDashboardProps {
-  isVisible: boolean;
-  onClose: () => void;
+interface AnalyticsChartProps {
+  queriesOverTime: Array<{ date: string; count: number }>;
+  validationsOverTime: Array<{ date: string; count: number }>;
+  topTopics: Array<{ topic: string; count: number }>;
+  isLoading?: boolean;
 }
 
 export function AnalyticsDashboard({
-  isVisible,
-  onClose,
-}: AnalyticsDashboardProps) {
-  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  queriesOverTime,
+  validationsOverTime,
+  topTopics,
+  isLoading = false,
+}: AnalyticsChartProps) {
+  const [chartData, setChartData] = useState({
+    queries: null,
+    validations: null,
+    topics: null,
+  });
 
   useEffect(() => {
-    if (isVisible) {
-      fetchAnalytics();
-    }
-  }, [isVisible]);
+    if (isLoading) return;
 
-  const fetchAnalytics = async () => {
-    setIsLoading(true);
-    setError(null);
+    // Prepare queries over time data
+    const queriesData = {
+      labels: queriesOverTime.map(item => new Date(item.date).toLocaleDateString()),
+      datasets: [
+        {
+          label: "Queries",
+          data: queriesOverTime.map(item => item.count),
+          borderColor: "rgb(59, 130, 246)",
+          backgroundColor: "rgba(59, 130, 246, 0.1)",
+          tension: 0.4,
+          fill: true,
+        },
+      ],
+    };
 
-    try {
-      const data = await api.getAnalytics();
-      setAnalytics(data);
-    } catch (err: any) {
-      setError(err.message || "Failed to load analytics");
-    } finally {
-      setIsLoading(false);
-    }
+    // Prepare validations over time data
+    const validationsData = {
+      labels: validationsOverTime.map(item => new Date(item.date).toLocaleDateString()),
+      datasets: [
+        {
+          label: "Expert Validations",
+          data: validationsOverTime.map(item => item.count),
+          backgroundColor: "rgba(34, 197, 94, 0.8)",
+          borderColor: "rgb(34, 197, 94)",
+          borderWidth: 1,
+        },
+      ],
+    };
+
+    // Prepare top topics data
+    const topicsData = {
+      labels: topTopics.slice(0, 8).map(item => item.topic),
+      datasets: [
+        {
+          label: "Query Count",
+          data: topTopics.slice(0, 8).map(item => item.count),
+          backgroundColor: [
+            "rgba(59, 130, 246, 0.8)",
+            "rgba(16, 185, 129, 0.8)",
+            "rgba(245, 158, 11, 0.8)",
+            "rgba(239, 68, 68, 0.8)",
+            "rgba(139, 92, 246, 0.8)",
+            "rgba(236, 72, 153, 0.8)",
+            "rgba(14, 165, 233, 0.8)",
+            "rgba(34, 197, 94, 0.8)",
+          ],
+          borderColor: [
+            "rgb(59, 130, 246)",
+            "rgb(16, 185, 129)",
+            "rgb(245, 158, 11)",
+            "rgb(239, 68, 68)",
+            "rgb(139, 92, 246)",
+            "rgb(236, 72, 153)",
+            "rgb(14, 165, 233)",
+            "rgb(34, 197, 94)",
+          ],
+          borderWidth: 2,
+        },
+      ],
+    };
+
+    setChartData({
+      queries: queriesData,
+      validations: validationsData,
+      topics: topicsData,
+    });
+  }, [queriesOverTime, validationsOverTime, topTopics, isLoading]);
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "top" as const,
+      },
+      tooltip: {
+        mode: "index" as const,
+        intersect: false,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1,
+        },
+      },
+    },
   };
 
-  if (!isVisible) return null;
+  const lineChartOptions = {
+    ...chartOptions,
+    plugins: {
+      ...chartOptions.plugins,
+      legend: {
+        display: false,
+      },
+    },
+    interaction: {
+      mode: "index" as const,
+      intersect: false,
+    },
+  };
+
+  const barChartOptions = {
+    ...chartOptions,
+    plugins: {
+      ...chartOptions.plugins,
+      legend: {
+        display: false,
+      },
+    },
+  };
+
+  const doughnutOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "bottom" as const,
+      },
+      tooltip: {
+        callbacks: {
+          label: function(context: any) {
+            const label = context.label || "";
+            const value = context.parsed;
+            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+            const percentage = ((value / total) * 100).toFixed(1);
+            return `${label}: ${value} (${percentage}%)`;
+          },
+        },
+      },
+    },
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="h-[300px] bg-gray-100 rounded-lg animate-pulse" />
+          <div className="h-[300px] bg-gray-100 rounded-lg animate-pulse" />
+        </div>
+        <div className="h-[300px] bg-gray-100 rounded-lg animate-pulse" />
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-3">
-            <ChartBarIcon className="h-6 w-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">
-              Analytics Dashboard
-            </h2>
+    <div className="space-y-6">
+      {/* Line and Bar Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Queries Over Time - Line Chart */}
+        <div className="bg-white rounded-lg border p-6">
+          <h3 className="text-lg font-semibold mb-4">Queries Over Time</h3>
+          <div className="h-[300px]">
+            {chartData.queries ? (
+              <Line data={chartData.queries} options={lineChartOptions} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-500">
+                No data available
+              </div>
+            )}
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            aria-label="Close analytics dashboard"
-          >
-            <svg
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
-          {isLoading && (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-              <span className="ml-3 text-gray-600">Loading analytics...</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-              <div className="flex items-center">
-                <ExclamationTriangleIcon className="h-5 w-5 text-red-400 mr-2" />
-                <span className="text-red-700">{error}</span>
+        {/* Validations Over Time - Bar Chart */}
+        <div className="bg-white rounded-lg border p-6">
+          <h3 className="text-lg font-semibold mb-4">Expert Validations</h3>
+          <div className="h-[300px]">
+            {chartData.validations ? (
+              <Bar data={chartData.validations} options={barChartOptions} />
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-500">
+                No data available
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        </div>
+      </div>
 
-          {analytics && (
-            <div className="space-y-6">
-              {/* Key Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <ChartBarIcon className="h-6 w-6 text-blue-600" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-blue-600">
-                        Total Requests
-                      </p>
-                      <p className="text-2xl font-bold text-blue-900">
-                        {analytics.total_requests.toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <CheckCircleIcon className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-green-600">
-                        Success Rate
-                      </p>
-                      <p className="text-2xl font-bold text-green-900">
-                        {analytics.total_requests > 0
-                          ? Math.round(
-                              ((analytics.total_requests -
-                                analytics.total_errors) /
-                                analytics.total_requests) *
-                                100,
-                            )
-                          : 0}
-                        %
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <ClockIcon className="h-6 w-6 text-yellow-600" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-yellow-600">
-                        Avg Response Time
-                      </p>
-                      <p className="text-2xl font-bold text-yellow-900">
-                        {analytics.average_response_time.toFixed(2)}s
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <svg
-                        className="h-6 w-6 text-purple-600"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13 10V3L4 14h7v7l9-11h-7z"
-                        />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-purple-600">
-                        Cache Hit Rate
-                      </p>
-                      <p className="text-2xl font-bold text-purple-900">
-                        {analytics.cache_hit_rate.toFixed(1)}%
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Popular Queries */}
-              {analytics.popular_queries &&
-                Object.keys(analytics.popular_queries).length > 0 && (
-                  <div className="bg-gray-50 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      Popular Query Categories
-                    </h3>
-                    <div className="space-y-3">
-                      {Object.entries(analytics.popular_queries)
-                        .sort(([, a], [, b]) => b - a)
-                        .slice(0, 5)
-                        .map(([category, count]) => (
-                          <div
-                            key={category}
-                            className="flex items-center justify-between"
-                          >
-                            <span className="text-sm font-medium text-gray-700 capitalize">
-                              {category.replace("_", " ")}
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {count} queries
-                            </span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
-
-              {/* Timestamp */}
-              <div className="text-xs text-gray-500 text-center">
-                Last updated: {new Date(analytics.timestamp).toLocaleString()}
-              </div>
+      {/* Top Topics - Doughnut Chart */}
+      <div className="bg-white rounded-lg border p-6">
+        <h3 className="text-lg font-semibold mb-4">Top Queried Topics</h3>
+        <div className="h-[300px]">
+          {chartData.topics ? (
+            <Doughnut data={chartData.topics} options={doughnutOptions} />
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-500">
+              No topic data available
             </div>
           )}
         </div>

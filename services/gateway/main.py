@@ -294,6 +294,86 @@ async def analytics_endpoint():
     """Placeholder for analytics service."""
     return {"message": "Analytics service route"}
 
+@app.get("/analytics/summary")
+async def analytics_summary_endpoint(time_range: str = "30d"):
+    """Analytics summary endpoint with sample data."""
+    import random
+    import datetime
+    
+    # Generate sample data based on time range
+    days = {"7d": 7, "30d": 30, "90d": 90}[time_range]
+    
+    # Generate dates for the time range
+    end_date = datetime.datetime.now()
+    start_date = end_date - datetime.timedelta(days=days)
+    
+    # Generate queries over time
+    queries_over_time = []
+    current_date = start_date
+    while current_date <= end_date:
+        queries_over_time.append({
+            "date": current_date.strftime("%Y-%m-%d"),
+            "count": random.randint(10, 50)
+        })
+        current_date += datetime.timedelta(days=1)
+    
+    # Generate validations over time
+    validations_over_time = []
+    current_date = start_date
+    while current_date <= end_date:
+        validations_over_time.append({
+            "date": current_date.strftime("%Y-%m-%d"),
+            "count": random.randint(2, 15)
+        })
+        current_date += datetime.timedelta(days=1)
+    
+    # Generate top topics
+    topics = [
+        "Machine Learning", "Data Science", "Web Development", 
+        "Artificial Intelligence", "Python Programming", "JavaScript",
+        "React Development", "Database Design", "API Development",
+        "Cloud Computing", "DevOps", "Cybersecurity"
+    ]
+    top_topics = []
+    for topic in random.sample(topics, 8):
+        top_topics.append({
+            "topic": topic,
+            "count": random.randint(5, 25)
+        })
+    
+    # Generate recent activity
+    activity_types = ["query", "validation", "feedback"]
+    recent_activity = []
+    for i in range(10):
+        activity_type = random.choice(activity_types)
+        if activity_type == "query":
+            description = f"Query submitted: {random.choice(['How to implement', 'What is the best way to', 'Can you explain'])} {random.choice(topics)}"
+        elif activity_type == "validation":
+            description = f"Expert validation requested for claim about {random.choice(topics)}"
+        else:
+            description = f"Feedback submitted for {random.choice(['query', 'validation', 'answer'])}"
+        
+        recent_activity.append({
+            "id": f"activity_{i}",
+            "type": activity_type,
+            "description": description,
+            "timestamp": (end_date - datetime.timedelta(hours=random.randint(1, 72))).isoformat(),
+            "user_id": f"user_{random.randint(1, 100)}"
+        })
+    
+    return {
+        "total_queries": sum(item["count"] for item in queries_over_time),
+        "expert_validations": sum(item["count"] for item in validations_over_time),
+        "average_response_time": random.randint(800, 2500),  # milliseconds
+        "time_saved_per_query": random.randint(15, 45),  # minutes
+        "top_topics": sorted(top_topics, key=lambda x: x["count"], reverse=True),
+        "queries_over_time": queries_over_time,
+        "validations_over_time": validations_over_time,
+        "recent_activity": recent_activity,
+        "time_range": time_range,
+        "generated_at": datetime.datetime.now().isoformat()
+    }
+
 @app.post("/analytics/track")
 async def analytics_track_endpoint():
     """Placeholder for analytics tracking."""
