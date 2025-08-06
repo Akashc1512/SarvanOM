@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Network } from "vis-network/standalone";
-import { DataSet } from "vis-data/standalone";
+import dynamic from "next/dynamic";
 import {
   Card,
   CardContent,
@@ -28,8 +27,19 @@ import {
   Loader2,
   Eye,
   ExternalLink,
+  AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
+
+// Dynamically import vis-network components with SSR disabled
+const Network = dynamic(() => import("vis-network/standalone").then(mod => ({ default: mod.Network })), {
+  ssr: false,
+  loading: () => <div className="h-full flex items-center justify-center">Loading network visualization...</div>
+});
+
+const DataSet = dynamic(() => import("vis-data/standalone").then(mod => ({ default: mod.DataSet })), {
+  ssr: false,
+});
 
 interface GraphNode {
   id: string;
@@ -86,7 +96,7 @@ export function KnowledgeGraphVisualization({
 }: KnowledgeGraphVisualizationProps) {
   const { toast } = useToast();
   const containerRef = useRef<HTMLDivElement>(null);
-  const networkRef = useRef<Network | null>(null);
+  const networkRef = useRef<any>(null);
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,25 +105,29 @@ export function KnowledgeGraphVisualization({
   const [showDetails, setShowDetails] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Fetch graph data
   const fetchGraphData = async (searchQuery?: string) => {
-    if (!searchQuery?.trim()) return;
-
+    if (!isClient) return;
+    
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch("/api/knowledge-graph/query", {
+      const response = await fetch("/api/knowledge-graph", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          query: searchQuery.trim(),
-          max_entities: maxNodes,
-          max_relationships: maxEdges,
-          query_type: "context",
+          query: searchQuery || query,
+          max_nodes: maxNodes,
+          max_edges: maxEdges,
         }),
       });
 
@@ -121,14 +135,14 @@ export function KnowledgeGraphVisualization({
         throw new Error(`Failed to fetch graph data: ${response.statusText}`);
       }
 
-      const data: GraphData = await response.json();
+      const data = await response.json();
       setGraphData(data);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to load graph data";
-      setError(errorMessage);
+    } catch (error) {
+      console.error("Error fetching graph data:", error);
+      setError(error instanceof Error ? error.message : "Failed to fetch graph data");
       toast({
         title: "Graph Loading Failed",
-        description: errorMessage,
+        description: "Failed to load knowledge graph data. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -136,108 +150,138 @@ export function KnowledgeGraphVisualization({
     }
   };
 
-  // Initialize network
+  // Initialize network visualization
   useEffect(() => {
-    if (!containerRef.current || !graphData) return;
+    if (!isClient || !graphData || !containerRef.current) return;
 
-    const nodes = new DataSet(graphData.nodes);
-    const edges = new DataSet(graphData.edges);
+    const initializeNetwork = async () => {
+      try {
+        const { Network: VisNetwork, DataSet: VisDataSet } = await import("vis-network/standalone");
+        const { DataSet: VisDataDataSet } = await import("vis-data/standalone");
 
-    const options = {
-      nodes: {
-        shape: "dot",
-        size: 16,
-        font: {
-          size: 12,
-          face: "Arial",
-        },
-        borderWidth: 2,
-        shadow: true,
-      },
-      edges: {
-        width: 2,
-        shadow: true,
-        smooth: {
-          enabled: true,
-          type: "continuous",
-          roundness: 0.5,
-        },
-        font: {
-          size: 10,
-          align: "middle",
-        },
-        color: {
-          color: "#848484",
-          highlight: "#848484",
-          hover: "#848484",
-        },
-      },
-      physics: {
-        stabilization: false,
-        barnesHut: {
-          gravitationalConstant: -80000,
-          springConstant: 0.001,
-          springLength: 200,
-        },
-      },
-      interaction: {
-        navigationButtons: true,
-        keyboard: true,
-        hover: true,
-        tooltipDelay: 200,
-      },
+        // Create nodes dataset
+        const nodes = new VisDataDataSet(
+          graphData.nodes.map((node) => ({
+            id: node.id,
+            label: node.label,
+            title: node.title || node.label,
+            group: node.group || "default",
+            size: node.size || 20,
+            color: node.color || getNodeColor(node.group),
+            shape: node.shape || "circle",
+            properties: node.properties || {},
+          }))
+        );
+
+        // Create edges dataset
+        const edges = new VisDataDataSet(
+          graphData.edges.map((edge) => ({
+            id: edge.id,
+            from: edge.from,
+            to: edge.to,
+            label: edge.label || "",
+            title: edge.title || edge.label || "",
+            color: edge.color || "#666",
+            width: edge.width || 1,
+            arrows: edge.arrows || "to",
+            properties: edge.properties || {},
+          }))
+        );
+
+        // Network options
+        const options = {
+          nodes: {
+            font: {
+              size: 12,
+              face: "Arial",
+            },
+            borderWidth: 2,
+            shadow: true,
+          },
+          edges: {
+            width: 1,
+            shadow: true,
+            smooth: {
+              type: "continuous",
+            },
+          },
+          physics: {
+            enabled: true,
+            barnesHut: {
+              gravitationalConstant: -2000,
+              springConstant: 0.04,
+              springLength: 200,
+            },
+          },
+          interaction: {
+            hover: true,
+            tooltipDelay: 200,
+          },
+        };
+
+        // Create network
+        const network = new VisNetwork(containerRef.current, { nodes, edges }, options);
+
+        // Event handlers
+        network.on("click", (params: any) => {
+          if (params.nodes.length > 0) {
+            const nodeId = params.nodes[0];
+            const node = graphData.nodes.find((n) => n.id === nodeId);
+            if (node) {
+              setSelectedNode(node);
+              setShowDetails(true);
+              onNodeClick?.(node);
+            }
+          } else if (params.edges.length > 0) {
+            const edgeId = params.edges[0];
+            const edge = graphData.edges.find((e) => e.id === edgeId);
+            if (edge) {
+              setSelectedEdge(edge);
+              setShowDetails(true);
+              onEdgeClick?.(edge);
+            }
+          }
+        });
+
+        network.on("stabilizationProgress", (params: any) => {
+          // Optional: Show stabilization progress
+        });
+
+        network.on("stabilizationIterationsDone", () => {
+          // Network is ready
+        });
+
+        networkRef.current = network;
+      } catch (error) {
+        console.error("Error initializing network:", error);
+        setError("Failed to initialize network visualization");
+      }
     };
 
-    const network = new Network(containerRef.current, { nodes, edges }, options);
+    initializeNetwork();
 
-    // Event handlers
-    network.on("click", (params) => {
-      if (params.nodes.length > 0) {
-        const nodeId = params.nodes[0];
-        const node = nodes.get(nodeId);
-        if (node) {
-          setSelectedNode(node as unknown as GraphNode);
-          setSelectedEdge(null);
-          onNodeClick?.(node as unknown as GraphNode);
-        }
-      } else if (params.edges.length > 0) {
-        const edgeId = params.edges[0];
-        const edge = edges.get(edgeId);
-        if (edge) {
-          setSelectedEdge(edge as unknown as GraphEdge);
-          setSelectedNode(null);
-          onEdgeClick?.(edge as unknown as GraphEdge);
-        }
-      }
-    });
-
-    network.on("stabilizationProgress", (params) => {
-      // Optional: Show stabilization progress
-    });
-
-    network.on("stabilizationIterationsDone", () => {
-      // Optional: Handle stabilization complete
-    });
-
-    networkRef.current = network;
-
+    // Cleanup
     return () => {
       if (networkRef.current) {
         networkRef.current.destroy();
         networkRef.current = null;
       }
     };
-  }, [graphData, onNodeClick, onEdgeClick]);
+  }, [graphData, isClient, onNodeClick, onEdgeClick]);
 
-  // Handle search
+  // Load initial data
+  useEffect(() => {
+    if (isClient && query) {
+      fetchGraphData();
+    }
+  }, [query, maxNodes, maxEdges, isClient]);
+
   const handleSearch = () => {
-    const queryToSearch = searchTerm.trim() || query;
-    if (queryToSearch) {
-      fetchGraphData(queryToSearch);
+    if (searchTerm.trim()) {
+      fetchGraphData(searchTerm);
     }
   };
 
-  // Handle zoom controls
   const handleZoomIn = () => {
     if (networkRef.current) {
       const scale = networkRef.current.getScale();
@@ -261,159 +305,133 @@ export function KnowledgeGraphVisualization({
     }
   };
 
-  // Auto-fetch when query prop changes
-  useEffect(() => {
-    if (query) {
-      setSearchTerm(query);
-      fetchGraphData(query);
-    }
-  }, [query]);
-
   const getNodeColor = (group?: string) => {
-    switch (group) {
-      case "person":
-        return "#4CAF50";
-      case "organization":
-        return "#2196F3";
-      case "location":
-        return "#FF9800";
-      case "concept":
-        return "#9C27B0";
-      case "event":
-        return "#F44336";
-      default:
-        return "#607D8B";
-    }
+    const colors: Record<string, string> = {
+      person: "#4285f4",
+      organization: "#34a853",
+      location: "#fbbc05",
+      concept: "#ea4335",
+      event: "#9c27b0",
+      default: "#666666",
+    };
+    return colors[group || "default"] || colors.default;
   };
 
   const getGroupLabel = (group?: string) => {
-    switch (group) {
-      case "person":
-        return "Person";
-      case "organization":
-        return "Organization";
-      case "location":
-        return "Location";
-      case "concept":
-        return "Concept";
-      case "event":
-        return "Event";
-      default:
-        return "Entity";
-    }
+    const labels: Record<string, string> = {
+      person: "Person",
+      organization: "Organization",
+      location: "Location",
+      concept: "Concept",
+      event: "Event",
+      default: "Other",
+    };
+    return labels[group || "default"] || labels.default;
   };
+
+  if (!isClient) {
+    return (
+      <div className="bg-white rounded-lg border p-6">
+        <div className="h-96 bg-gray-100 animate-pulse rounded-lg flex items-center justify-center">
+          <div className="text-gray-500">Loading visualization...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      {/* Controls */}
+      {/* Search Controls */}
       {showControls && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <NetworkIcon className="h-5 w-5" />
-              Knowledge Graph Explorer
+              <Search className="h-5 w-5" />
+              Graph Search
             </CardTitle>
             <CardDescription>
-              Visualize relationships and entities in the knowledge graph
+              Search for entities, concepts, or relationships to visualize
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <Label htmlFor="search" className="sr-only">
-                  Search Graph
-                </Label>
-                <Input
-                  id="search"
-                  placeholder="Search for entities or concepts..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                />
-              </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter search terms..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+                className="flex-1"
+              />
               <Button onClick={handleSearch} disabled={isLoading}>
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="h-4 w-4" />
-                )}
-                Search
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               </Button>
             </div>
-
-            {/* Zoom Controls */}
-            <div className="flex items-center gap-2 mt-4">
-              <Button variant="outline" size="sm" onClick={handleZoomIn}>
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleZoomOut}>
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleFit}>
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-              <span className="text-sm text-gray-500 ml-2">
-                Zoom: {(zoomLevel * 100).toFixed(0)}%
-              </span>
-            </div>
-
-            {/* Graph Stats */}
-            {graphData?.metadata && (
-              <div className="flex items-center gap-4 mt-4 text-sm text-gray-600">
-                <span>Nodes: {graphData.metadata.total_nodes}</span>
-                <span>Edges: {graphData.metadata.total_edges}</span>
-                <span>Depth: {graphData.metadata.depth}</span>
-                <span>Query Time: {graphData.metadata.query_time}ms</span>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
 
-      {/* Graph Container */}
+      {/* Graph Visualization */}
       <Card>
-        <CardContent className="p-0">
-          <div
-            ref={containerRef}
-            style={{ height, width: "100%" }}
-            className="relative"
-          >
-            {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                  <span>Loading graph...</span>
-                </div>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <NetworkIcon className="h-5 w-5" />
+                Knowledge Graph
+              </CardTitle>
+              <CardDescription>
+                Interactive visualization of knowledge relationships
+              </CardDescription>
+            </div>
+            {showControls && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleZoomIn}
+                  title="Zoom In"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleZoomOut}
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleFit}
+                  title="Fit to View"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
               </div>
             )}
-
-            {error && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            {error ? (
+              <div className="h-96 flex items-center justify-center text-red-500">
                 <div className="text-center">
-                  <div className="text-red-500 mb-2">
-                    <Info className="h-8 w-8 mx-auto" />
-                  </div>
-                  <p className="text-red-600 font-medium">Failed to load graph</p>
-                  <p className="text-sm text-gray-600 mt-1">{error}</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fetchGraphData(query)}
-                    className="mt-2"
-                  >
-                    Retry
-                  </Button>
+                  <AlertCircle className="h-12 w-12 mx-auto mb-2" />
+                  <p>{error}</p>
                 </div>
               </div>
-            )}
-
-            {!graphData && !isLoading && !error && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <NetworkIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">Enter a search term to visualize the knowledge graph</p>
-                </div>
+            ) : isLoading ? (
+              <div className="h-96 flex items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin" />
               </div>
+            ) : (
+              <div
+                ref={containerRef}
+                style={{ height }}
+                className="border rounded-lg"
+              />
             )}
           </div>
         </CardContent>
@@ -421,97 +439,70 @@ export function KnowledgeGraphVisualization({
 
       {/* Details Dialog */}
       <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Info className="h-5 w-5" />
-              Graph Element Details
+            <DialogTitle>
+              {selectedNode ? "Node Details" : "Edge Details"}
             </DialogTitle>
           </DialogHeader>
-
-          {(selectedNode || selectedEdge) && (
-            <ScrollArea className="max-h-[60vh]">
+          <ScrollArea className="max-h-96">
+            {selectedNode && (
               <div className="space-y-4">
-                {selectedNode && (
-                  <>
-                    <div>
-                      <h3 className="font-semibold text-lg mb-2">{selectedNode.label}</h3>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Badge variant="outline">
-                          {getGroupLabel(selectedNode.group)}
-                        </Badge>
-                        {selectedNode.size && (
-                          <Badge variant="outline">
-                            Size: {selectedNode.size}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedNode.properties && Object.keys(selectedNode.properties).length > 0 && (
-                      <>
-                        <Separator />
-                        <div>
-                          <h4 className="font-medium mb-2">Properties</h4>
-                          <div className="space-y-2">
-                            {Object.entries(selectedNode.properties).map(([key, value]) => (
-                              <div key={key} className="flex justify-between text-sm">
-                                <span className="font-medium text-gray-600">{key}:</span>
-                                <span className="text-gray-900">{String(value)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-
-                {selectedEdge && (
-                  <>
-                    <div>
-                      <h3 className="font-semibold text-lg mb-2">
-                        {selectedEdge.label || "Relationship"}
-                      </h3>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Badge variant="outline">
-                          Edge ID: {selectedEdge.id}
-                        </Badge>
-                        {selectedEdge.width && (
-                          <Badge variant="outline">
-                            Width: {selectedEdge.width}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedEdge.properties && Object.keys(selectedEdge.properties).length > 0 && (
-                      <>
-                        <Separator />
-                        <div>
-                          <h4 className="font-medium mb-2">Properties</h4>
-                          <div className="space-y-2">
-                            {Object.entries(selectedEdge.properties).map(([key, value]) => (
-                              <div key={key} className="flex justify-between text-sm">
-                                <span className="font-medium text-gray-600">{key}:</span>
-                                <span className="text-gray-900">{String(value)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-
-                <Separator />
-
-                <div className="text-xs text-gray-500">
-                  Click on nodes or edges in the graph to see their details
+                <div>
+                  <Label className="text-sm font-medium">Label</Label>
+                  <p className="text-lg font-semibold">{selectedNode.label}</p>
                 </div>
+                {selectedNode.group && (
+                  <div>
+                    <Label className="text-sm font-medium">Type</Label>
+                    <Badge variant="outline">{getGroupLabel(selectedNode.group)}</Badge>
+                  </div>
+                )}
+                {selectedNode.properties && Object.keys(selectedNode.properties).length > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium">Properties</Label>
+                    <div className="space-y-2">
+                      {Object.entries(selectedNode.properties).map(([key, value]) => (
+                        <div key={key} className="flex justify-between">
+                          <span className="text-sm text-gray-600">{key}:</span>
+                          <span className="text-sm">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </ScrollArea>
-          )}
+            )}
+            {selectedEdge && (
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium">Relationship</Label>
+                  <p className="text-lg font-semibold">{selectedEdge.label || "Unknown"}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">From</Label>
+                  <p className="text-sm">{selectedEdge.from}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">To</Label>
+                  <p className="text-sm">{selectedEdge.to}</p>
+                </div>
+                {selectedEdge.properties && Object.keys(selectedEdge.properties).length > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium">Properties</Label>
+                    <div className="space-y-2">
+                      {Object.entries(selectedEdge.properties).map(([key, value]) => (
+                        <div key={key} className="flex justify-between">
+                          <span className="text-sm text-gray-600">{key}:</span>
+                          <span className="text-sm">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

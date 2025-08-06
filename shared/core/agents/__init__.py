@@ -7,6 +7,7 @@ This module provides:
 - Specialized agents (Retrieval, Synthesis, FactCheck, Citation)
 - LLM client integration
 - Data models for agent communication
+- Graph database components (GraphDBClient, KnowledgeGraphService)
 
 Authors: Universal Knowledge Platform Engineering Team
 Version: 1.0.0 (2024-12-28)
@@ -20,6 +21,11 @@ from .lead_orchestrator import LeadOrchestrator
 from .data_models import *
 from .llm_client import LLMClient
 
+# Graph database components
+from .graph_db_client import GraphDBClient, GraphNode, GraphEdge
+from .knowledge_graph_service import KnowledgeGraphService, KnowledgeGraphResult, EntityNode, Relationship
+from .arangodb_knowledge_graph_agent import ArangoDBKnowledgeGraphAgent
+
 __all__ = [
     "BaseAgent",
     "AgentType", 
@@ -31,4 +37,13 @@ __all__ = [
     "CitationAgent",
     "LeadOrchestrator",
     "LLMClient",
+    # Graph database components
+    "GraphDBClient",
+    "GraphNode",
+    "GraphEdge",
+    "KnowledgeGraphService",
+    "KnowledgeGraphResult",
+    "EntityNode",
+    "Relationship",
+    "ArangoDBKnowledgeGraphAgent",
 ] 

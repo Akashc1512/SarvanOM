@@ -6,6 +6,7 @@ It provides entity queries, relationship exploration, and graph analysis capabil
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 import asyncio
 from typing import Dict, Any, Optional, List, Set, Tuple
 from datetime import datetime
@@ -15,7 +16,7 @@ from collections import defaultdict
 
 from .base_service import BaseAgentService, ServiceType, ServiceStatus
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class KnowledgeService(BaseAgentService):

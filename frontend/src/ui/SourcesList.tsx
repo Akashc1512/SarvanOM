@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/ui/card";
 import { Button } from "@/ui/ui/button";
 import { ExternalLink, Globe } from "lucide-react";
@@ -12,6 +12,18 @@ interface SourcesListProps {
 }
 
 export function SourcesList({ sources, className }: SourcesListProps) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const handleOpenUrl = (url: string) => {
+    if (isClient && typeof window !== "undefined") {
+      window.open(url, "_blank");
+    }
+  };
+
   if (!sources || sources.length === 0) {
     return null;
   }
@@ -63,7 +75,7 @@ export function SourcesList({ sources, className }: SourcesListProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => window.open(source.url, "_blank")}
+                  onClick={() => handleOpenUrl(source.url)}
                   className="ml-2 flex-shrink-0"
                 >
                   <ExternalLink className="h-3 w-3 mr-1" />

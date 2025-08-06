@@ -4,6 +4,7 @@ Handles database queries, schema exploration, and data analysis using DatabaseSe
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
@@ -20,7 +21,7 @@ from ...middleware import get_current_user
 from ...di import get_database_service
 from ...services.database_service import DatabaseService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 database_router = APIRouter(prefix="/database", tags=["database-query"])
 

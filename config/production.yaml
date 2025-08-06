@@ -1,0 +1,124 @@
+# Production Environment Configuration
+# This file contains production-specific settings for the SarvanOM platform
+# IMPORTANT: All sensitive values MUST be set via environment variables
+# NO SECRETS SHOULD EVER BE STORED IN THIS FILE
+
+# Core Settings
+name: "production"
+debug: false
+testing: false
+log_level: "WARNING"  # Conservative logging in production
+
+# Database Configuration (MUST be set via environment variables)
+# database_url: Set via DATABASE_URL environment variable (REQUIRED)
+# redis_url: Set via REDIS_URL environment variable (REQUIRED)
+
+# AI Provider Configuration (MUST be set via environment variables)
+# openai_api_key: Set via OPENAI_API_KEY environment variable (REQUIRED)
+# anthropic_api_key: Set via ANTHROPIC_API_KEY environment variable (REQUIRED)
+
+# Vector Database Configuration (MUST be set via environment variables)
+# vector_db_url: Set via VECTOR_DB_URL environment variable (REQUIRED)
+# vector_db_api_key: Set via VECTOR_DB_API_KEY environment variable (REQUIRED)
+
+# Search Configuration (MUST be set via environment variables)
+# meilisearch_url: Set via MEILISEARCH_URL environment variable (REQUIRED)
+# meilisearch_master_key: Set via MEILISEARCH_MASTER_KEY environment variable (REQUIRED)
+
+# Knowledge Graph Configuration (MUST be set via environment variables)
+# arangodb_url: Set via ARANGODB_URL environment variable (REQUIRED)
+# arangodb_username: Set via ARANGODB_USERNAME environment variable (REQUIRED)
+# arangodb_password: Set via ARANGODB_PASSWORD environment variable (REQUIRED)
+arangodb_database: "production_knowledge_graph"
+
+# Security Configuration (MUST be set via environment variables)
+# jwt_secret_key: Set via JWT_SECRET_KEY environment variable (REQUIRED)
+cors_origins:
+  - "https://sarvanom.com"
+  - "https://www.sarvanom.com"
+  - "https://api.sarvanom.com"
+
+# Performance Settings (Production - conservative limits)
+rate_limit_per_minute: 60
+max_request_size_mb: 10
+cache_ttl_seconds: 7200  # 2 hours
+session_ttl_seconds: 86400  # 24 hours
+
+# Feature Flags (Production - security-focused)
+backup_enabled: true
+audit_log_enabled: true
+security_headers_enabled: true
+mock_ai_responses: false
+skip_authentication: false
+enable_debug_endpoints: false
+auto_reload: false
+test_mode: false
+mock_providers: false
+
+# Agent Configuration
+agent_timeout_seconds: 30
+agent_max_retries: 2
+agent_backoff_factor: 2.0
+query_cache_ttl_seconds: 7200
+query_max_length: 2000
+query_min_confidence: 0.8
+
+# Database Pool Settings
+db_pool_size: 20
+db_max_overflow: 40
+db_pool_timeout: 30
+
+# Worker Configuration
+worker_processes: 8
+worker_threads: 8
+max_memory_usage_mb: 4096
+garbage_collection_interval: 300
+
+# Monitoring Configuration
+metrics_enabled: true
+metrics_port: 9090
+enable_tracing: true
+jaeger_agent_host: "localhost"
+jaeger_agent_port: 6831
+# sentry_dsn: "your_sentry_dsn"  # Set via environment variable
+sentry_traces_sample_rate: 0.05
+sentry_profiles_sample_rate: 0.05
+health_check_interval: 15
+health_check_timeout: 5
+
+# Service URLs (MUST be set via environment variables)
+# auth_service_url: "https://auth.sarvanom.com"
+# search_service_url: "https://search.sarvanom.com"
+# synthesis_service_url: "https://synthesis.sarvanom.com"
+# factcheck_service_url: "https://factcheck.sarvanom.com"
+# analytics_service_url: "https://analytics.sarvanom.com"
+
+# Service Secrets (MUST be set via environment variables)
+# auth_service_secret: "your_auth_service_secret"
+# search_service_secret: "your_search_service_secret"
+# synthesis_service_secret: "your_synthesis_service_secret"
+# factcheck_service_secret: "your_factcheck_service_secret"
+# analytics_service_secret: "your_analytics_service_secret"
+
+# Feature Flags
+features:
+  streaming: true
+  batch_processing: true
+  websockets: true
+  graphql: false
+  admin_panel: false
+  expert_review: true
+  real_time_collaboration: true
+  advanced_analytics: true
+  multi_tenant: false
+  sso: true
+  admin_panel: false  # Disabled for security
+
+# Production-specific settings
+production_mode: true
+backup_retention_days: 90
+log_retention_days: 365
+security_scan_enabled: true
+ddos_protection_enabled: true
+ip_whitelist_enabled: false
+maintenance_mode: false 

@@ -4,6 +4,7 @@ Handles code execution, syntax validation, and code analysis using CodeService.
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.responses import JSONResponse
@@ -20,7 +21,7 @@ from ...middleware import get_current_user
 from ...di import get_code_service
 from ...services.code_service import CodeService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 code_router = APIRouter(prefix="/code", tags=["code-execution"])
 

@@ -6,11 +6,12 @@ and lifecycle. It supports singleton and factory patterns for service creation.
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 from typing import Dict, Any, Optional, Callable, Type, Union
 from datetime import datetime
 from enum import Enum
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ServiceLifetime(Enum):

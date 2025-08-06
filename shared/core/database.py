@@ -1,95 +1,38 @@
 """
-Database Access Layer - Universal Knowledge Platform
-MAANG-level database access patterns with security, scalability, and maintainability.
+Database Management Module
 
-Features:
-- Connection pooling and session management
-- SQL injection prevention
-- Query optimization and caching
-- Audit logging and security
-- Pagination and sharding support
-- Transaction management
-- Error handling and retry logic
-
-Authors:
-    - Universal Knowledge Platform Engineering Team
-
-Version:
-    2.0.0 (2024-12-28)
+This module provides database connection management, session handling, and repository patterns
+for the Universal Knowledge Platform. It supports async operations and connection pooling.
 """
 
-import asyncio
 import logging
-from contextlib import asynccontextmanager, contextmanager
-from typing import (
-    Any,
-    Dict,
-    List,
-    Optional,
-    Type,
-    TypeVar,
-    Union,
-    AsyncGenerator,
-    Generator,
-    Tuple,
-)
-from functools import wraps
-from datetime import datetime, timezone
+import asyncio
 import uuid
+from typing import Dict, Any, List, Optional, Type, TypeVar, Union, Generator
+from contextlib import asynccontextmanager
+from functools import wraps
+from datetime import datetime
 
-from sqlalchemy import (
-    create_engine,
-    text,
-    select,
-    update,
-    delete,
-    insert,
-    and_,
-    or_,
-    func,
-    desc,
-    asc,
-    distinct,
-)
-from sqlalchemy.orm import (
-    sessionmaker,
-    Session,
-    scoped_session,
-    joinedload,
-    selectinload,
-    subqueryload,
-    contains_eager,
-)
-from sqlalchemy.exc import (
-    SQLAlchemyError,
-    IntegrityError,
-    OperationalError,
-    DisconnectionError,
-    TimeoutError,
-)
+# SQLAlchemy imports
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, AsyncSession
+from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import QueuePool
-from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
-from sqlalchemy.engine import Engine
-from sqlalchemy.sql import Select, Update, Delete, Insert
+from sqlalchemy import text, func
+from sqlalchemy import select, update, delete
+from sqlalchemy.sql import Select
 
-import structlog
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type,
-)
+# Retry mechanism
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-# Type variables
-T = TypeVar("T")
-ModelType = TypeVar("ModelType")
+logger = logging.getLogger(__name__)
 
-logger = structlog.get_logger(__name__)
+T = TypeVar('T')
 
 
 class DatabaseConfig:
-    """Database configuration with security and performance settings."""
-
+    """Database configuration class."""
+    
     def __init__(
         self,
         url: str,
@@ -114,21 +57,21 @@ class DatabaseConfig:
 
 
 class DatabaseManager:
-    """Database manager with connection pooling and session management."""
-
+    """Async database manager with connection pooling."""
+    
     def __init__(self, config: DatabaseConfig):
         self.config = config
-        self._engine: Optional[Engine] = None
-        self._session_factory: Optional[sessionmaker] = None
-        self._scoped_session_factory: Optional[scoped_session] = None
+        self._engine: Optional[AsyncEngine] = None
+        self._session_factory: Optional[async_sessionmaker] = None
+        self._scoped_session_factory: Optional[async_sessionmaker] = None
 
-    def initialize(self) -> None:
-        """Initialize database engine and session factories."""
+    async def initialize(self) -> None:
+        """Initialize database engine and session factories asynchronously."""
         if self._engine is not None:
             return
 
-        # Create engine with connection pooling
-        self._engine = create_engine(
+        # Create async engine with connection pooling
+        self._engine = create_async_engine(
             self.config.url,
             poolclass=QueuePool,
             pool_size=self.config.pool_size,
@@ -145,12 +88,20 @@ class DatabaseManager:
             },
         )
 
-        # Create session factories
-        self._session_factory = sessionmaker(
-            bind=self._engine, expire_on_commit=False, autoflush=False, autocommit=False
+        # Create async session factories
+        self._session_factory = async_sessionmaker(
+            bind=self._engine, 
+            expire_on_commit=False, 
+            autoflush=False, 
+            autocommit=False
         )
 
-        self._scoped_session_factory = scoped_session(self._session_factory)
+        self._scoped_session_factory = async_sessionmaker(
+            bind=self._engine,
+            expire_on_commit=False,
+            autoflush=False,
+            autocommit=False
+        )
 
         logger.info(
             "Database manager initialized",
@@ -159,106 +110,99 @@ class DatabaseManager:
         )
 
     @property
-    def engine(self) -> Engine:
-        """Get database engine."""
+    async def engine(self) -> AsyncEngine:
+        """Get database engine asynchronously."""
         if self._engine is None:
-            self.initialize()
+            await self.initialize()
         return self._engine
 
     @property
-    def session_factory(self) -> sessionmaker:
-        """Get session factory."""
+    async def session_factory(self) -> async_sessionmaker:
+        """Get session factory asynchronously."""
         if self._session_factory is None:
-            self.initialize()
+            await self.initialize()
         return self._session_factory
 
-    def get_session(self) -> Session:
-        """Get a new database session."""
-        return self.session_factory()
+    async def get_session(self) -> AsyncSession:
+        """Get a new async database session."""
+        factory = await self.session_factory
+        return factory()
 
-    def get_scoped_session(self) -> Session:
-        """Get a scoped database session."""
-        return self._scoped_session_factory()
+    async def get_scoped_session(self) -> AsyncSession:
+        """Get a scoped async database session."""
+        factory = await self._scoped_session_factory
+        return factory()
 
-    def dispose(self) -> None:
-        """Dispose of database engine and connections."""
+    async def dispose(self) -> None:
+        """Dispose of database engine and connections asynchronously."""
         if self._engine:
-            self._engine.dispose()
+            await self._engine.dispose()
             logger.info("Database engine disposed")
 
 
 class DatabaseSession:
-    """Database session wrapper with security and error handling."""
+    """Async database session wrapper with security and error handling."""
 
-    def __init__(self, session: Session):
+    def __init__(self, session: AsyncSession):
         self.session = session
         self._transaction_depth = 0
         self._audit_log = []
 
-    def __enter__(self):
-        """Context manager entry."""
+    async def __aenter__(self):
+        """Async context manager entry."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit with proper cleanup."""
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit with proper cleanup."""
         try:
             if exc_type is None:
-                self.session.commit()
+                await self.session.commit()
             else:
-                self.session.rollback()
+                await self.session.rollback()
                 logger.error("Database transaction rolled back", error=str(exc_val))
         finally:
-            self.session.close()
+            await self.session.close()
 
-    def begin_transaction(self) -> None:
-        """Begin a database transaction."""
+    async def begin_transaction(self) -> None:
+        """Begin a database transaction asynchronously."""
         self._transaction_depth += 1
         if self._transaction_depth == 1:
             # Start transaction only at first level
             pass
 
-    def commit_transaction(self) -> None:
-        """Commit the current transaction."""
+    async def commit_transaction(self) -> None:
+        """Commit database transaction asynchronously."""
         self._transaction_depth -= 1
         if self._transaction_depth == 0:
-            self.session.commit()
+            await self.session.commit()
 
-    def rollback_transaction(self) -> None:
-        """Rollback the current transaction."""
+    async def rollback_transaction(self) -> None:
+        """Rollback database transaction asynchronously."""
         self._transaction_depth -= 1
         if self._transaction_depth == 0:
-            self.session.rollback()
+            await self.session.rollback()
 
 
 class QueryBuilder:
-    """Secure query builder with SQL injection prevention."""
-
-    def __init__(self, session: Session):
+    """Async query builder for database operations."""
+    
+    def __init__(self, session: AsyncSession):
         self.session = session
 
     def select(self, model: Type[T]) -> Select:
-        """Create a secure SELECT query."""
+        """Create a select query."""
         return select(model)
 
     def select_active(self, model: Type[T]) -> Select:
-        """Select only active records."""
+        """Create a select query for active records."""
         return select(model).where(model.is_active == True)
 
     def select_by_id(self, model: Type[T], id: Union[str, uuid.UUID]) -> Select:
-        """Select record by ID with proper type handling."""
-        if isinstance(id, str):
-            try:
-                id = uuid.UUID(id)
-            except ValueError:
-                raise ValueError("Invalid UUID format")
-
+        """Create a select query by ID."""
         return select(model).where(model.id == id)
 
     def select_by_field(self, model: Type[T], field: str, value: Any) -> Select:
-        """Select records by field value with validation."""
-        if not hasattr(model, field):
-            raise ValueError(f"Field {field} does not exist on {model.__name__}")
-
+        """Create a select query by field."""
         return select(model).where(getattr(model, field) == value)
 
     def select_paginated(
@@ -268,54 +212,47 @@ class QueryBuilder:
         page_size: int = 50,
         order_by: Optional[str] = None,
         order_desc: bool = True,
-    ) -> Tuple[Select, Select]:
-        """Create paginated query with count."""
+    ) -> tuple[Select, Select]:
+        """Create paginated select queries."""
         query = select(model)
-
-        # Add ordering
-        if order_by and hasattr(model, order_by):
+        
+        if order_by:
             order_column = getattr(model, order_by)
             if order_desc:
-                query = query.order_by(desc(order_column))
+                query = query.order_by(order_column.desc())
             else:
-                query = query.order_by(asc(order_column))
-
-        # Create count query
+                query = query.order_by(order_column.asc())
+        
+        # Count query
         count_query = select(func.count()).select_from(model)
-
-        # Add pagination
+        
+        # Paginated query
         offset = (page - 1) * page_size
-        query = query.offset(offset).limit(page_size)
-
-        return query, count_query
+        paginated_query = query.offset(offset).limit(page_size)
+        
+        return paginated_query, count_query
 
     def select_with_filters(
         self, model: Type[T], filters: Dict[str, Any], exact_match: bool = True
     ) -> Select:
-        """Select records with multiple filters."""
+        """Create a select query with filters."""
         query = select(model)
-
+        
         for field, value in filters.items():
-            if not hasattr(model, field):
-                continue
-
-            column = getattr(model, field)
-            if exact_match:
-                query = query.where(column == value)
-            else:
-                # For string fields, use ILIKE for case-insensitive search
-                if isinstance(column.type, (str, type(None))):
-                    query = query.where(column.ilike(f"%{value}%"))
-                else:
+            if hasattr(model, field):
+                column = getattr(model, field)
+                if exact_match:
                     query = query.where(column == value)
-
+                else:
+                    query = query.where(column.ilike(f"%{value}%"))
+        
         return query
 
 
 class Repository:
-    """Generic repository pattern for database operations."""
-
-    def __init__(self, session: Session, model: Type[T]):
+    """Async repository pattern for database operations."""
+    
+    def __init__(self, session: AsyncSession, model: Type[T]):
         self.session = session
         self.model = model
         self.query_builder = QueryBuilder(session)
@@ -325,117 +262,123 @@ class Repository:
         wait=wait_exponential(multiplier=1, min=4, max=10),
         retry=retry_if_exception_type((OperationalError, DisconnectionError)),
     )
-    def get_by_id(self, id: Union[str, uuid.UUID]) -> Optional[T]:
-        """Get record by ID with retry logic."""
+    async def get_by_id(self, id: Union[str, uuid.UUID]) -> Optional[T]:
+        """Get entity by ID asynchronously."""
         query = self.query_builder.select_by_id(self.model, id)
-        return self.session.execute(query).scalar_one_or_none()
+        result = await self.session.execute(query)
+        return result.scalar_one_or_none()
 
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10),
         retry=retry_if_exception_type((OperationalError, DisconnectionError)),
     )
-    def get_all(self, limit: Optional[int] = None) -> List[T]:
-        """Get all records with optional limit."""
-        query = self.query_builder.select_active(self.model)
+    async def get_all(self, limit: Optional[int] = None) -> List[T]:
+        """Get all entities asynchronously."""
+        query = self.query_builder.select(self.model)
         if limit:
             query = query.limit(limit)
-        return list(self.session.execute(query).scalars().all())
+        
+        result = await self.session.execute(query)
+        return result.scalars().all()
 
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10),
         retry=retry_if_exception_type((OperationalError, DisconnectionError)),
     )
-    def get_paginated(
+    async def get_paginated(
         self,
         page: int = 1,
         page_size: int = 50,
         order_by: Optional[str] = None,
         order_desc: bool = True,
-    ) -> Tuple[List[T], int]:
-        """Get paginated results with total count."""
+    ) -> tuple[List[T], int]:
+        """Get paginated entities asynchronously."""
         query, count_query = self.query_builder.select_paginated(
             self.model, page, page_size, order_by, order_desc
         )
-
-        results = list(self.session.execute(query).scalars().all())
-        total_count = self.session.execute(count_query).scalar()
-
-        return results, total_count
+        
+        # Execute both queries
+        result = await self.session.execute(query)
+        count_result = await self.session.execute(count_query)
+        
+        entities = result.scalars().all()
+        total_count = count_result.scalar()
+        
+        return entities, total_count
 
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10),
         retry=retry_if_exception_type((OperationalError, DisconnectionError)),
     )
-    def find_by_filters(
+    async def find_by_filters(
         self,
         filters: Dict[str, Any],
         exact_match: bool = True,
         limit: Optional[int] = None,
     ) -> List[T]:
-        """Find records by filters."""
+        """Find entities by filters asynchronously."""
         query = self.query_builder.select_with_filters(self.model, filters, exact_match)
-
         if limit:
             query = query.limit(limit)
-
-        return list(self.session.execute(query).scalars().all())
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        retry=retry_if_exception_type((OperationalError, DisconnectionError)),
-    )
-    def create(self, data: Dict[str, Any]) -> T:
-        """Create new record with validation."""
-        try:
-            instance = self.model(**data)
-            self.session.add(instance)
-            self.session.flush()  # Get the ID without committing
-            return instance
-        except IntegrityError as e:
-            self.session.rollback()
-            logger.error("Database integrity error", error=str(e))
-            raise ValueError(f"Database constraint violation: {e}")
+        
+        result = await self.session.execute(query)
+        return result.scalars().all()
 
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10),
         retry=retry_if_exception_type((OperationalError, DisconnectionError)),
     )
-    def update(self, id: Union[str, uuid.UUID], data: Dict[str, Any]) -> Optional[T]:
-        """Update record by ID."""
-        instance = self.get_by_id(id)
-        if not instance:
+    async def create(self, data: Dict[str, Any]) -> T:
+        """Create entity asynchronously."""
+        entity = self.model(**data)
+        self.session.add(entity)
+        await self.session.flush()
+        await self.session.refresh(entity)
+        return entity
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=4, max=10),
+        retry=retry_if_exception_type((OperationalError, DisconnectionError)),
+    )
+    async def update(self, id: Union[str, uuid.UUID], data: Dict[str, Any]) -> Optional[T]:
+        """Update entity asynchronously."""
+        entity = await self.get_by_id(id)
+        if not entity:
             return None
-
-        for key, value in data.items():
-            if hasattr(instance, key) and key not in ["id", "created_at"]:
-                setattr(instance, key, value)
-
-        instance.updated_at = datetime.now(timezone.utc)
-        instance.version += 1  # Optimistic locking
-
-        return instance
+        
+        for field, value in data.items():
+            if hasattr(entity, field):
+                setattr(entity, field, value)
+        
+        entity.updated_at = datetime.utcnow()
+        await self.session.flush()
+        await self.session.refresh(entity)
+        return entity
 
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10),
         retry=retry_if_exception_type((OperationalError, DisconnectionError)),
     )
-    def delete(self, id: Union[str, uuid.UUID], soft_delete: bool = True) -> bool:
-        """Delete record by ID (soft delete by default)."""
-        instance = self.get_by_id(id)
-        if not instance:
+    async def delete(self, id: Union[str, uuid.UUID], soft_delete: bool = True) -> bool:
+        """Delete entity asynchronously."""
+        entity = await self.get_by_id(id)
+        if not entity:
             return False
-
-        if soft_delete:
-            instance.soft_delete()
+        
+        if soft_delete and hasattr(entity, 'is_active'):
+            entity.is_active = False
+            entity.updated_at = datetime.utcnow()
+            await self.session.flush()
         else:
-            self.session.delete(instance)
-
+            await self.session.delete(entity)
+            await self.session.flush()
+        
         return True
 
     @retry(
@@ -443,102 +386,117 @@ class Repository:
         wait=wait_exponential(multiplier=1, min=4, max=10),
         retry=retry_if_exception_type((OperationalError, DisconnectionError)),
     )
-    def bulk_create(self, data_list: List[Dict[str, Any]]) -> List[T]:
-        """Bulk create records efficiently."""
-        instances = []
-        for data in data_list:
-            instance = self.model(**data)
-            instances.append(instance)
-
-        self.session.add_all(instances)
-        self.session.flush()
-        return instances
+    async def bulk_create(self, data_list: List[Dict[str, Any]]) -> List[T]:
+        """Bulk create entities asynchronously."""
+        entities = [self.model(**data) for data in data_list]
+        self.session.add_all(entities)
+        await self.session.flush()
+        
+        # Refresh all entities
+        for entity in entities:
+            await self.session.refresh(entity)
+        
+        return entities
 
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10),
         retry=retry_if_exception_type((OperationalError, DisconnectionError)),
     )
-    def bulk_update(
-        self, updates: List[Tuple[Union[str, uuid.UUID], Dict[str, Any]]]
+    async def bulk_update(
+        self, updates: List[tuple[Union[str, uuid.UUID], Dict[str, Any]]]
     ) -> int:
-        """Bulk update records efficiently."""
+        """Bulk update entities asynchronously."""
         updated_count = 0
+        
         for id, data in updates:
-            if self.update(id, data):
+            entity = await self.update(id, data)
+            if entity:
                 updated_count += 1
-
+        
         return updated_count
 
 
 class DatabaseService:
-    """High-level database service with business logic."""
-
+    """Async database service with session management."""
+    
     def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
 
-    @contextmanager
-    def get_session(self) -> Generator[DatabaseSession, None, None]:
-        """Get database session with proper error handling."""
-        session = self.db_manager.get_session()
+    @asynccontextmanager
+    async def get_session(self) -> Generator[DatabaseSession, None, None]:
+        """Get database session asynchronously."""
+        session = await self.db_manager.get_session()
         db_session = DatabaseSession(session)
-
         try:
             yield db_session
-        except Exception as e:
-            logger.error("Database operation failed", error=str(e))
-            raise
         finally:
-            db_session.session.close()
+            await db_session.session.close()
 
     def get_repository(self, model: Type[T]) -> Repository:
-        """Get repository for specific model."""
-        session = self.db_manager.get_session()
+        """Get repository for a model."""
+        # Note: This will need to be called within a session context
+        session = self.db_manager._session_factory()
         return Repository(session, model)
 
-    def execute_raw_sql(
+    async def execute_raw_sql(
         self, sql: str, params: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
-        """Execute raw SQL with parameter binding for security."""
-        with self.get_session() as session:
-            result = session.session.execute(text(sql), params or {})
+        """Execute raw SQL asynchronously."""
+        async with self.get_session() as session:
+            result = await session.session.execute(text(sql), params or {})
             return [dict(row._mapping) for row in result]
 
-    def health_check(self) -> Dict[str, Any]:
-        """Perform database health check."""
+    async def health_check(self) -> Dict[str, Any]:
+        """Check database health asynchronously."""
         try:
-            with self.get_session() as session:
-                result = session.session.execute(text("SELECT 1 as health"))
-                health_status = result.scalar()
-
-                # Check connection pool status
-                pool = self.db_manager.engine.pool
-                pool_status = {
-                    "size": pool.size(),
-                    "checked_in": pool.checkedin(),
-                    "checked_out": pool.checkedout(),
-                    "overflow": pool.overflow(),
-                }
-
+            async with self.get_session() as session:
+                # Test connection with simple query
+                result = await session.session.execute(text("SELECT 1"))
+                await result.fetchone()
+                
                 return {
-                    "status": "healthy" if health_status == 1 else "unhealthy",
-                    "pool_status": pool_status,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "healthy": True,
+                    "status": "connected",
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "pool_size": self.db_manager.config.pool_size,
+                    "max_overflow": self.db_manager.config.max_overflow,
                 }
+                
         except Exception as e:
-            logger.error("Database health check failed", error=str(e))
+            logger.error(f"Database health check failed: {e}")
             return {
-                "status": "unhealthy",
+                "healthy": False,
+                "status": "disconnected",
                 "error": str(e),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.utcnow().isoformat(),
             }
+
+    async def get_metrics(self) -> Dict[str, Any]:
+        """Get database metrics asynchronously."""
+        try:
+            # Get connection pool info
+            engine = await self.db_manager.engine
+            pool = engine.pool
+            
+            return {
+                "pool_size": pool.size(),
+                "checked_in": pool.checkedin(),
+                "checked_out": pool.checkedout(),
+                "overflow": pool.overflow(),
+                "invalid": pool.invalid(),
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get database metrics: {e}")
+            return {"error": str(e)}
 
 
 # Global database manager instance
 _db_manager: Optional[DatabaseManager] = None
 
 
-def get_database_manager() -> DatabaseManager:
+async def get_database_manager() -> DatabaseManager:
     """Get global database manager instance."""
     global _db_manager
     if _db_manager is None:
@@ -546,42 +504,32 @@ def get_database_manager() -> DatabaseManager:
     return _db_manager
 
 
-def initialize_database(config: DatabaseConfig) -> DatabaseManager:
-    """Initialize global database manager."""
+async def initialize_database(config: DatabaseConfig) -> DatabaseManager:
+    """Initialize database asynchronously."""
     global _db_manager
     _db_manager = DatabaseManager(config)
-    _db_manager.initialize()
+    await _db_manager.initialize()
     return _db_manager
 
 
-def get_database_service() -> DatabaseService:
+async def get_database_service() -> DatabaseService:
     """Get database service instance."""
-    return DatabaseService(get_database_manager())
+    db_manager = await get_database_manager()
+    return DatabaseService(db_manager)
 
 
-# Decorators for database operations
 def with_transaction(func):
-    """Decorator to handle database transactions."""
-
+    """Decorator for database transactions."""
     @wraps(func)
-    def wrapper(*args, **kwargs):
-        db_service = get_database_service()
-        with db_service.get_session() as session:
-            session.begin_transaction()
-            try:
-                result = func(*args, **kwargs)
-                session.commit_transaction()
-                return result
-            except Exception:
-                session.rollback_transaction()
-                raise
-
+    async def wrapper(*args, **kwargs):
+        db_service = await get_database_service()
+        async with db_service.get_session() as session:
+            return await func(*args, **kwargs, session=session)
     return wrapper
 
 
 def with_retry(max_attempts: int = 3):
-    """Decorator to add retry logic to database operations."""
-
+    """Decorator for retrying database operations."""
     def decorator(func):
         @wraps(func)
         @retry(
@@ -589,25 +537,7 @@ def with_retry(max_attempts: int = 3):
             wait=wait_exponential(multiplier=1, min=4, max=10),
             retry=retry_if_exception_type((OperationalError, DisconnectionError)),
         )
-        def wrapper(*args, **kwargs):
-            return func(*args, **kwargs)
-
+        async def wrapper(*args, **kwargs):
+            return await func(*args, **kwargs)
         return wrapper
-
     return decorator
-
-
-# Export main classes
-__all__ = [
-    "DatabaseConfig",
-    "DatabaseManager",
-    "DatabaseSession",
-    "QueryBuilder",
-    "Repository",
-    "DatabaseService",
-    "get_database_manager",
-    "initialize_database",
-    "get_database_service",
-    "with_transaction",
-    "with_retry",
-]

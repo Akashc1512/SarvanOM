@@ -27,8 +27,10 @@ from shared.core.agents.base_agent import (
 from shared.core.agents.data_models import FactCheckResult, VerifiedFactModel, CitationModel
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Import unified logging
+from shared.core.unified_logging import get_logger
+
+logger = get_logger(__name__)
 
 # Environment configuration
 DEFAULT_TOKEN_BUDGET = int(os.getenv("DEFAULT_TOKEN_BUDGET", "1000"))

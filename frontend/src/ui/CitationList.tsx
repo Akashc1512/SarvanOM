@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Citation } from "@/types/api";
+import { Citation } from "@/services/api";
 import {
   ArrowTopRightOnSquareIcon,
   DocumentTextIcon,

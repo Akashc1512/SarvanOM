@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Network } from "vis-network/standalone";
-import { DataSet } from "vis-data/standalone";
+
+// vis-network components are imported dynamically in the initializeNetwork function to prevent SSR issues
 import { Button } from "@/ui/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/ui/card";
@@ -52,8 +52,13 @@ export function KnowledgeGraphModal({
   const [isLoading, setIsLoading] = useState(false);
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
   const networkRef = useRef<HTMLDivElement>(null);
-  const networkInstanceRef = useRef<Network | null>(null);
+  const networkInstanceRef = useRef<any>(null);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const fetchGraphData = async () => {
     if (!topic && !queryId) {
@@ -225,82 +230,98 @@ export function KnowledgeGraphModal({
     }
   };
 
-  const initializeNetwork = () => {
-    if (!networkRef.current || !graphData) return;
+  const initializeNetwork = async () => {
+    if (!networkRef.current || !graphData || !isClient) return;
 
-    const nodes = new DataSet(graphData.nodes);
-    const edges = new DataSet(graphData.edges);
+    try {
+      // Dynamically import vis-network components
+      const [{ Network }, { DataSet }] = await Promise.all([
+        import("vis-network/standalone"),
+        import("vis-data/standalone")
+      ]);
 
-    const options = {
-      nodes: {
-        shape: "dot",
-        font: {
-          size: 14,
-          face: "Arial",
-        },
-        borderWidth: 2,
-        shadow: true,
-      },
-      edges: {
-        width: 2,
-        shadow: true,
-        font: {
-          size: 10,
-          align: "middle",
-        },
-        color: { inherit: "both" },
-        smooth: {
-          type: "continuous",
-        },
-      },
-      physics: {
-        stabilization: false,
-        barnesHut: {
-          gravitationalConstant: -80000,
-          springConstant: 0.001,
-          springLength: 200,
-        },
-      },
-      interaction: {
-        navigationButtons: true,
-        keyboard: true,
-        hover: true,
-        tooltipDelay: 200,
-      },
-      layout: {
-        hierarchical: {
-          enabled: false,
-          levelSeparation: 150,
-          nodeSpacing: 100,
-          treeSpacing: 200,
-          blockShifting: true,
-          edgeMinimization: true,
-          parentCentralization: true,
-          direction: "UD",
-          sortMethod: "hubsize",
-        },
-      },
-    };
+      const nodes = new (DataSet as any)(graphData.nodes);
+      const edges = new (DataSet as any)(graphData.edges);
 
-    const network = new Network(networkRef.current, { nodes, edges }, options);
-    networkInstanceRef.current = network;
+      const options = {
+        nodes: {
+          shape: "dot",
+          font: {
+            size: 14,
+            face: "Arial",
+          },
+          borderWidth: 2,
+          shadow: true,
+        },
+        edges: {
+          width: 2,
+          shadow: true,
+          font: {
+            size: 10,
+            align: "middle",
+          },
+          color: { inherit: "both" },
+          smooth: {
+            type: "continuous",
+          },
+        },
+        physics: {
+          stabilization: false,
+          barnesHut: {
+            gravitationalConstant: -80000,
+            springConstant: 0.001,
+            springLength: 200,
+          },
+        },
+        interaction: {
+          navigationButtons: true,
+          keyboard: true,
+          hover: true,
+          tooltipDelay: 200,
+        },
+        layout: {
+          hierarchical: {
+            enabled: false,
+            levelSeparation: 150,
+            nodeSpacing: 100,
+            treeSpacing: 200,
+            blockShifting: true,
+            edgeMinimization: true,
+            parentCentralization: true,
+            direction: "UD",
+            sortMethod: "hubsize",
+          },
+        },
+      };
 
-    // Add event listeners
-    network.on("click", function (params) {
-      if (params.nodes.length > 0) {
-        const nodeId = params.nodes[0];
-        const node = nodes.get(nodeId);
-        console.log("Clicked node:", node);
-      }
-    });
+      const network = new (Network as any)(networkRef.current, { nodes, edges }, options);
+      networkInstanceRef.current = network;
 
-    network.on("doubleClick", function (params) {
-      if (params.nodes.length > 0) {
-        const nodeId = params.nodes[0];
-        const node = nodes.get(nodeId);
-        console.log("Double-clicked node:", node);
-      }
-    });
+      // Add event listeners
+      network.on("click", function (params: any) {
+        if (params.nodes.length > 0) {
+          const nodeId = params.nodes[0];
+          const node = nodes.get(nodeId);
+          console.log("Clicked node:", node);
+        }
+      });
+
+      network.on("doubleClick", function (params: any) {
+        if (params.nodes.length > 0) {
+          const nodeId = params.nodes[0];
+          const node = nodes.get(nodeId);
+          console.log("Double-clicked node:", node);
+        }
+      });
+    } catch (error) {
+      console.error("Failed to initialize network:", error);
+      setError("Failed to initialize network visualization");
+      toast({
+        title: "Network Initialization Failed",
+        description: "Could not load the network visualization. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleZoomIn = () => {
@@ -328,10 +349,10 @@ export function KnowledgeGraphModal({
   }, [isOpen, topic, depth, queryId]);
 
   useEffect(() => {
-    if (graphData && networkRef.current) {
+    if (graphData && networkRef.current && isClient) {
       initializeNetwork();
     }
-  }, [graphData]);
+  }, [graphData, isClient]);
 
   useEffect(() => {
     return () => {

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/ui/ui/card';
 import { Button } from '@/ui/ui/button';
 import { Input } from '@/ui/ui/input';
 import { Label } from '@/ui/ui/label';
-import { Textarea } from '@/ui/ui/TextArea';
+import { Textarea } from '@/ui/ui/textarea';
 import { Badge } from '@/ui/ui/badge';
 import { Alert, AlertDescription } from '@/ui/ui/alert';
 import { Loader2, Save, ArrowLeft, Tag, X } from 'lucide-react';

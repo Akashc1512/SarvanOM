@@ -1,66 +1,72 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, XCircle, AlertTriangle, Clock } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/ui/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/ui/card";
 import { Button } from "@/ui/ui/button";
 import { Badge } from "@/ui/ui/badge";
-
-import { api, type QueryResponse, type Source } from "@/services/api";
-import { SourcesList } from "@/ui/SourcesList";
-import { CitationPanel } from "@/ui/CitationPanel";
-import { ExpertValidationButton } from "@/ui/ExpertValidationButton";
-import { KnowledgeGraphModal } from "@/ui/KnowledgeGraphModal";
-import { parseCitations } from "@/utils/citation-parser";
-import {
-  ExternalLink,
-  Copy,
-  ThumbsUp,
-  ThumbsDown,
-  Share2,
-  MessageSquare,
-  Calendar,
-  Globe,
+import { Textarea } from "@/ui/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/ui/dialog";
+import { 
+  Copy, 
+  Share2, 
+  ThumbsUp, 
+  ThumbsDown, 
+  MessageSquare, 
   Bookmark,
-  Network,
+  Check,
+  X,
+  Star,
+  Clock,
+  User,
+  TrendingUp,
+  AlertCircle,
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/useToast";
+import { api, type QueryResponse } from "@/services/api";
+import { CitationPanel } from "./CitationPanel";
+import { ConfidenceBadge } from "./ConfidenceBadge";
+import { AnswerSkeleton } from "@/ui/atoms/skeleton";
+import { LoadingSpinner } from "@/ui/atoms/loading-spinner";
+import { QueryErrorBoundary } from "./ErrorBoundary";
 
 interface AnswerDisplayProps {
   query: QueryResponse;
   onFeedback?: (_rating: number, _helpful: boolean, _feedback?: string) => void;
+  isLoading?: boolean;
 }
 
 export function AnswerDisplay({
   query,
   onFeedback,
+  isLoading = false,
 }: AnswerDisplayProps) {
   const { toast } = useToast();
-  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
-  const [feedbackText, setFeedbackText] = useState("");
   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [isSavingToMemory, setIsSavingToMemory] = useState(false);
-  const [validationStatus, setValidationStatus] = useState<string | null>(null);
-  const [validationConfidence, setValidationConfidence] = useState<number | null>(null);
-  const [isKnowledgeGraphOpen, setIsKnowledgeGraphOpen] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // Ensure we're on the client side
+  useState(() => {
+    setIsClient(true);
+  });
 
   const handleCopyAnswer = async () => {
     try {
-      await navigator.clipboard.writeText(query.answer || "");
-      toast({
-        title: "Copied to clipboard",
-        description: "The answer has been copied to your clipboard",
-      });
+      if (isClient && navigator.clipboard) {
+        await navigator.clipboard.writeText(query.answer || "");
+        toast({
+          title: "Copied",
+          description: "Answer copied to clipboard",
+        });
+      }
     } catch (error) {
       toast({
         title: "Copy failed",
-        description: "Failed to copy to clipboard",
+        description: "Failed to copy answer to clipboard",
         variant: "destructive",
       });
     }
@@ -71,12 +77,12 @@ export function AnswerDisplay({
       const shareData = {
         title: "Research Answer",
         text: query.answer || "",
-        url: window.location.href,
+        url: isClient && typeof window !== "undefined" ? window.location.href : "",
       };
 
-      if (navigator.share) {
+      if (isClient && navigator.share) {
         await navigator.share(shareData);
-      } else {
+      } else if (isClient && navigator.clipboard) {
         await navigator.clipboard.writeText(shareData.text);
         toast({
           title: "Shared",
@@ -103,28 +109,24 @@ export function AnswerDisplay({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          title: `Research: ${query.query_id}`,
-          content: query.answer,
-          summary: query.answer.substring(0, 200) + '...',
-          tags: ['research', 'ai-answer'],
-          category: 'Research',
-          source_query: query.query_id,
-          confidence: query.confidence || 0.8
+          query_id: query.query_id,
+          answer: query.answer,
+          query_text: query.query_type || "research",
         }),
       });
 
-      if (!response.ok) {
+      if (response.ok) {
+        toast({
+          title: "Saved to Memory",
+          description: "Answer has been saved to your memory",
+        });
+      } else {
         throw new Error('Failed to save to memory');
       }
-
-      toast({
-        title: "Saved to Memory",
-        description: "Your research answer has been saved to your knowledge workspace",
-      });
     } catch (error) {
       toast({
-        title: "Save failed",
-        description: "Failed to save to memory",
+        title: "Save Failed",
+        description: "Failed to save answer to memory",
         variant: "destructive",
       });
     } finally {
@@ -137,26 +139,34 @@ export function AnswerDisplay({
 
     setIsSubmittingFeedback(true);
     try {
-      await api.submitFeedback({
-        query_id: query.query_id,
-        rating,
-        feedback_text: feedbackText,
-        helpful,
+      const response = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query_id: query.query_id,
+          rating,
+          helpful,
+          feedback: feedbackText,
+        }),
       });
 
+      if (response.ok) {
+        toast({
+          title: "Feedback Submitted",
+          description: "Thank you for your feedback!",
+        });
+        setShowFeedbackForm(false);
+        setFeedbackText("");
+        onFeedback?.(rating, helpful, feedbackText);
+      } else {
+        throw new Error('Failed to submit feedback');
+      }
+    } catch (error) {
       toast({
-        title: "Feedback submitted",
-        description: "Thank you for your feedback!",
-      });
-
-      onFeedback?.(rating, helpful, feedbackText);
-      setShowFeedbackForm(false);
-      setFeedbackText("");
-    } catch (error: any) {
-      toast({
-        title: "Feedback failed",
-        description:
-          error.response?.data?.detail || "Failed to submit feedback",
+        title: "Feedback Failed",
+        description: "Failed to submit feedback. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -180,231 +190,198 @@ export function AnswerDisplay({
     return "bg-red-100 text-red-800";
   };
 
-  if (!query.answer) {
+  // Show loading skeleton when loading
+  if (isLoading) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div className="text-center text-gray-500">
-            <p>
-              No answer available yet. Please wait for the query to complete.
+      <QueryErrorBoundary>
+        <Card className="w-full">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <LoadingSpinner size="sm" variant="dots" />
+                <span className="text-sm text-muted-foreground">
+                  Processing your query...
+                </span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <AnswerSkeleton />
+          </CardContent>
+        </Card>
+      </QueryErrorBoundary>
+    );
+  }
+
+  // Show error state if query failed (check if answer is empty and confidence is low)
+  if (!query.answer && query.confidence < 0.3) {
+    return (
+      <QueryErrorBoundary>
+        <Card className="w-full border-destructive/50">
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="h-5 w-5 text-destructive" />
+              <CardTitle className="text-destructive">Query Failed</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              We encountered an error while processing your query. Please try again.
             </p>
-          </div>
-        </CardContent>
-      </Card>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retry Query
+            </Button>
+          </CardContent>
+        </Card>
+      </QueryErrorBoundary>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Main Answer */}
-      <Card>
+    <QueryErrorBoundary>
+      <Card className="w-full">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CardTitle>AI Research Answer</CardTitle>
+            <div className="flex items-center space-x-2">
+              <User className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle className="text-lg">AI Response</CardTitle>
+                <CardDescription>
+                  {query.processing_time && `Processed in ${query.processing_time}ms`}
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
               {query.confidence && (
-                <Badge className={getConfidenceColor(query.confidence)}>
-                  {(query.confidence * 100).toFixed(0)}% confidence
-                </Badge>
+                <ConfidenceBadge confidence={query.confidence} />
               )}
-              {validationStatus && (
-                <Badge 
-                  variant="outline" 
-                  className={`${
-                    validationStatus === "supported" ? "bg-green-100 text-green-800 border-green-200" :
-                    validationStatus === "contradicted" ? "bg-red-100 text-red-800 border-red-200" :
-                    "bg-yellow-100 text-yellow-800 border-yellow-200"
-                  }`}
-                >
-                  {validationStatus === "supported" && <CheckCircle className="h-3 w-3 mr-1" />}
-                  {validationStatus === "contradicted" && <XCircle className="h-3 w-3 mr-1" />}
-                  {validationStatus === "unclear" && <AlertTriangle className="h-3 w-3 mr-1" />}
-                  {validationStatus === "pending" && <Clock className="h-3 w-3 mr-1" />}
-                  {validationStatus === "supported" ? "Expert Verified ✅" : 
-                   validationStatus === "contradicted" ? "Failed ❌" : 
-                   "Validation Pending ⏳"}
-                  {validationConfidence && (
-                    <span className="ml-1 font-medium">
-                      {(validationConfidence * 100).toFixed(0)}%
-                    </span>
-                  )}
+              {query.query_type === "cached" && (
+                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  <Check className="mr-1 h-3 w-3" />
+                  Cached
                 </Badge>
               )}
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleCopyAnswer}>
-                <Copy className="h-4 w-4 mr-2" />
-                Copy
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleShare}>
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleSaveToMemory}
-                disabled={isSavingToMemory}
-              >
-                <Bookmark className="h-4 w-4 mr-2" />
-                {isSavingToMemory ? "Saving..." : "Save to Memory"}
-              </Button>
-              <ExpertValidationButton 
-                claim={query.answer || ""}
-                queryId={query.query_id}
-                variant="outline"
-                size="sm"
-                onValidationComplete={(status, confidence) => {
-                  setValidationStatus(status);
-                  setValidationConfidence(confidence);
-                }}
-              />
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setIsKnowledgeGraphOpen(true)}
-              >
-                <Network className="h-4 w-4 mr-2" />
-                View Knowledge Graph
-              </Button>
-            </div>
           </div>
-          <CardDescription>
-            Generated on {formatDate(query.created_at)}
-            {query.llm_provider && (
-              <span className="block mt-1 text-sm text-gray-500">
-                Answered by: {query.llm_provider} {query.llm_model && `(${query.llm_model})`}
-              </span>
-            )}
-          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="prose prose-gray max-w-none">
-            <div 
-              className="whitespace-pre-wrap text-gray-800 leading-relaxed"
-              dangerouslySetInnerHTML={{ 
-                __html: parseCitations(query.answer || "", query.sources || []) 
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Sources */}
-      {query.sources && query.sources.length > 0 && (
-        <CitationPanel sources={query.sources} />
-      )}
-
-      {/* Feedback Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Feedback
-          </CardTitle>
-          <CardDescription>
-            Help us improve by providing feedback on this answer
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => handleFeedback(5, true)}
-                disabled={isSubmittingFeedback}
-                className="flex-1"
-              >
-                <ThumbsUp className="h-4 w-4 mr-2" />
-                Helpful
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleFeedback(1, false)}
-                disabled={isSubmittingFeedback}
-                className="flex-1"
-              >
-                <ThumbsDown className="h-4 w-4 mr-2" />
-                Not Helpful
-              </Button>
+        <CardContent className="space-y-4">
+          {query.answer ? (
+            <div className="prose prose-sm max-w-none">
+              <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                {query.answer}
+              </div>
             </div>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center space-x-2 text-muted-foreground">
+                <LoadingSpinner size="sm" variant="dots" />
+                <span>Generating answer...</span>
+              </div>
+            </div>
+          )}
 
-            {showFeedbackForm && (
-              <div className="space-y-3">
-                <textarea
-                  placeholder="Additional feedback (optional)..."
-                  value={feedbackText}
-                  onChange={(e) => setFeedbackText(e.target.value)}
-                  className="w-full p-3 border rounded-lg resize-none"
-                  rows={3}
-                />
-                <div className="flex gap-2">
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2 pt-4 border-t">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyAnswer}
+              disabled={!query.answer}
+            >
+              <Copy className="mr-2 h-4 w-4" />
+              Copy
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleShare}
+              disabled={!query.answer}
+            >
+              <Share2 className="mr-2 h-4 w-4" />
+              Share
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveToMemory}
+              disabled={!query.answer || isSavingToMemory}
+            >
+              {isSavingToMemory ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Bookmark className="mr-2 h-4 w-4" />
+              )}
+              {isSavingToMemory ? "Saving..." : "Save"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFeedbackForm(true)}
+            >
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Feedback
+            </Button>
+          </div>
+
+          {/* Feedback Dialog */}
+          <Dialog open={showFeedbackForm} onOpenChange={setShowFeedbackForm}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Provide Feedback</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium">Rating:</span>
+                  <div className="flex space-x-1">
+                    {[1, 2, 3, 4, 5].map((rating) => (
+                      <Button
+                        key={rating}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleFeedback(rating, true)}
+                        disabled={isSubmittingFeedback}
+                      >
+                        <Star className="h-4 w-4" />
+                        {rating}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Additional Feedback:</label>
+                  <Textarea
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    placeholder="Share your thoughts about this answer..."
+                    rows={3}
+                  />
+                </div>
+                <div className="flex justify-end space-x-2">
                   <Button
-                    onClick={() => setShowFeedbackForm(false)}
                     variant="outline"
-                    size="sm"
+                    onClick={() => setShowFeedbackForm(false)}
+                    disabled={isSubmittingFeedback}
                   >
                     Cancel
                   </Button>
                   <Button
-                    onClick={() => handleFeedback(3, true)}
+                    onClick={() => handleFeedback(5, true)}
                     disabled={isSubmittingFeedback}
-                    size="sm"
                   >
+                    {isSubmittingFeedback ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Check className="mr-2 h-4 w-4" />
+                    )}
                     Submit Feedback
                   </Button>
                 </div>
               </div>
-            )}
-
-            {!showFeedbackForm && (
-              <Button
-                variant="ghost"
-                onClick={() => setShowFeedbackForm(true)}
-                className="text-sm"
-              >
-                Add detailed feedback
-              </Button>
-            )}
-          </div>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
-
-      {/* Query Metadata */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Query Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="font-medium text-gray-700">Query ID:</p>
-              <p className="text-gray-900 font-mono">{query.query_id}</p>
-            </div>
-            <div>
-              <p className="font-medium text-gray-700">Status:</p>
-              <p className="text-gray-900 capitalize">{query.status}</p>
-            </div>
-            <div>
-              <p className="font-medium text-gray-700">Created:</p>
-              <p className="text-gray-900">{formatDate(query.created_at)}</p>
-            </div>
-            <div>
-              <p className="font-medium text-gray-700">Updated:</p>
-              <p className="text-gray-900">{formatDate(query.updated_at)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Knowledge Graph Modal */}
-      <KnowledgeGraphModal
-        topic={query.answer ? query.answer.substring(0, 50) + "..." : ""}
-        depth={2}
-        queryId={query.query_id}
-        isOpen={isKnowledgeGraphOpen}
-        onClose={() => setIsKnowledgeGraphOpen(false)}
-      />
-    </div>
+    </QueryErrorBoundary>
   );
 }

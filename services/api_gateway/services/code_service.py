@@ -6,6 +6,7 @@ It provides safe code execution, syntax validation, and code analysis capabiliti
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 import asyncio
 import tempfile
 import os
@@ -20,7 +21,7 @@ from pathlib import Path
 
 from .base_service import BaseAgentService, ServiceType, ServiceStatus
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CodeService(BaseAgentService):

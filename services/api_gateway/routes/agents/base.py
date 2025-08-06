@@ -4,6 +4,7 @@ Provides common functionality for all agent endpoints.
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 from typing import Dict, Any, Optional
 from datetime import datetime
 from fastapi import HTTPException, Depends
@@ -11,7 +12,7 @@ from fastapi import HTTPException, Depends
 from ..models.responses import AgentResponse
 from ..middleware import get_current_user
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AgentResponseFormatter:

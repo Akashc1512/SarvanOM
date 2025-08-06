@@ -17,7 +17,10 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-logger = logging.getLogger(__name__)
+# Import unified logging
+from shared.core.unified_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class AgentType(Enum):
@@ -179,6 +182,63 @@ class BaseAgent(ABC):
             Dictionary with processing results
         """
         pass
+
+    async def execute(self, context: QueryContext) -> AgentResult:
+        """
+        Standardized execute method for all agents.
+        This is the main entry point for agent execution in the pipeline.
+        
+        Args:
+            context: Query context containing all necessary information
+            
+        Returns:
+            AgentResult with execution results
+        """
+        start_time = time.time()
+        
+        try:
+            # Create a standard task from the context
+            task = {
+                "type": self.agent_type.value,
+                "query": context.query,
+                "user_context": context.user_context,
+                "metadata": context.metadata
+            }
+            
+            # Process the task using the agent's specific implementation
+            result = await self.process_task(task, context)
+            
+            # Calculate execution time
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            
+            # Create standardized AgentResult
+            if result and result.get("success", False):
+                return AgentResult(
+                    success=True,
+                    data=result.get("data"),
+                    confidence=result.get("confidence", 0.0),
+                    token_usage=result.get("token_usage", {}),
+                    execution_time_ms=execution_time_ms,
+                    metadata=result.get("metadata", {})
+                )
+            else:
+                return AgentResult(
+                    success=False,
+                    error=result.get("error", "Unknown error"),
+                    execution_time_ms=execution_time_ms,
+                    metadata=result.get("metadata", {})
+                )
+                
+        except Exception as e:
+            execution_time_ms = int((time.time() - start_time) * 1000)
+            logger.error(f"Error in {self.agent_id} execute method: {e}")
+            
+            return AgentResult(
+                success=False,
+                error=str(e),
+                execution_time_ms=execution_time_ms,
+                metadata={"error_type": type(e).__name__}
+            )
 
     async def handle_message(self, message: AgentMessage) -> Optional[AgentMessage]:
         """Handle incoming messages and route to appropriate handlers."""

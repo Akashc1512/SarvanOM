@@ -9,11 +9,12 @@ This module contains patches and improvements to fix:
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 import time
 from typing import Dict, List, Any, Optional
 from shared.core.agents.base_agent import AgentResult, AgentType, QueryContext
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class OrchestrationError(Exception):

@@ -65,9 +65,12 @@ from services.factcheck_service.core.expert_validation import (
     ConsensusLevel
 )
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Import unified logging
+from shared.core.unified_logging import get_logger, setup_logging
+
+# Configure logging for tests
+setup_logging(service_name="integration-tests", log_level="INFO", log_format="text")
+logger = get_logger(__name__)
 
 
 class TestIntegrationLayer:

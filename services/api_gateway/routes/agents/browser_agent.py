@@ -4,6 +4,7 @@ Handles web search and browser-related operations using BrowserService.
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 from typing import Dict, Any
 from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException, Depends
@@ -20,7 +21,7 @@ from ...middleware import get_current_user
 from ...di import get_browser_service
 from ...services.browser_service import BrowserService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter()
 

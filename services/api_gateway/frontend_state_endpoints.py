@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional, List
 import logging
 
+from shared.core.unified_logging import get_logger
 from services.frontend_state_service import FrontendStateService
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy import create_engine
@@ -42,7 +43,7 @@ def get_db_session() -> Session:
     SessionLocal = sessionmaker(bind=engine)
     return SessionLocal()
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Create router for frontend state endpoints
 router = APIRouter(prefix="/api/v1/state", tags=["frontend-state"])

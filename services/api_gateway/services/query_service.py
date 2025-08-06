@@ -7,6 +7,7 @@ It coordinates between different services and manages the query pipeline.
 
 import asyncio
 import logging
+from shared.core.unified_logging import get_logger
 import time
 import uuid
 from typing import Dict, Any, Optional, List
@@ -16,7 +17,7 @@ from dataclasses import dataclass
 from ..models.requests import QueryRequest, ComprehensiveQueryRequest
 from ..models.responses import QueryResponse, ComprehensiveQueryResponse
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

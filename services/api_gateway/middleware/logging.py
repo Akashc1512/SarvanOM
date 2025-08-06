@@ -12,7 +12,10 @@ from typing import Dict, Any, Optional
 from fastapi import Request, Response
 from datetime import datetime
 
-logger = logging.getLogger(__name__)
+# Import unified logging
+from shared.core.unified_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class SafeJSONFormatter(logging.Formatter):

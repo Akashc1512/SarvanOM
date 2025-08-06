@@ -1,5 +1,4 @@
-# from ..\api\config import get_settings
-# settings = get_settings()
+
 """
 LLMClient: Legacy wrapper for backward compatibility.
 This module provides backward compatibility with the old LLM client interface.
@@ -18,7 +17,7 @@ import asyncio
 import concurrent.futures
 from typing import Optional
 
-# Import the new v3 client
+# Import the v3 client
 from shared.core.llm_client_v3 import (
     EnhancedLLMClientV3,
     LLMConfig,

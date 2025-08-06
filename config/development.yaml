@@ -1,0 +1,111 @@
+# Development Environment Configuration
+# This file contains development-specific settings for the SarvanOM platform
+# Safe to include non-sensitive defaults for rapid development setup
+
+# Core Settings
+name: "development"
+debug: true
+testing: false
+log_level: "DEBUG"
+
+# Database Configuration (Development defaults - can be overridden by env vars)
+database_url: "sqlite:///dev.db"
+redis_url: "redis://localhost:6379/0"
+
+# AI Provider Configuration (MUST be set via environment variables)
+# openai_api_key: Set via OPENAI_API_KEY environment variable
+# anthropic_api_key: Set via ANTHROPIC_API_KEY environment variable
+
+# Vector Database Configuration
+vector_db_url: "http://localhost:6333"  # Qdrant default
+vector_db_api_key: null  # Optional for local dev
+
+# Search Configuration
+meilisearch_url: "http://localhost:7700"
+# meilisearch_master_key: Set via MEILISEARCH_MASTER_KEY environment variable
+
+# Knowledge Graph Configuration
+arangodb_url: "http://localhost:8529"
+arangodb_username: "root"
+arangodb_password: ""  # Empty for local dev
+arangodb_database: "knowledge_graph_dev"
+
+# Security Configuration (Development - relaxed settings)
+# jwt_secret_key: Set via JWT_SECRET_KEY environment variable or will be auto-generated
+cors_origins:
+  - "http://localhost:3000"
+  - "http://localhost:8000"
+  - "http://127.0.0.1:3000"
+  - "http://127.0.0.1:8000"
+
+# Performance Settings (Development - generous limits)
+rate_limit_per_minute: 1000
+max_request_size_mb: 50
+cache_ttl_seconds: 1800  # 30 minutes
+session_ttl_seconds: 3600  # 1 hour
+
+# Feature Flags (Development - enable helpful features)
+backup_enabled: false
+audit_log_enabled: true
+security_headers_enabled: false
+mock_ai_responses: true  # Use mocks by default in dev
+skip_authentication: true  # Skip auth for easier development
+enable_debug_endpoints: true
+auto_reload: true
+test_mode: false
+mock_providers: true
+
+# Agent Configuration
+agent_timeout_seconds: 60
+agent_max_retries: 5
+agent_backoff_factor: 1.5
+
+# Query Configuration
+query_cache_ttl_seconds: 1800
+query_max_length: 5000
+query_min_confidence: 0.5
+
+# Database Pool Settings (Development - minimal)
+db_pool_size: 3
+db_max_overflow: 5
+db_pool_timeout: 20
+
+# Worker Configuration (Development - minimal)
+worker_processes: 1
+worker_threads: 2
+max_memory_usage_mb: 1024
+garbage_collection_interval: 300
+
+# Monitoring Configuration (Development - basic)
+metrics_enabled: true
+metrics_port: 9090
+enable_tracing: false
+jaeger_agent_host: "localhost"
+jaeger_agent_port: 6831
+sentry_dsn: null  # Optional for development
+sentry_traces_sample_rate: 0.0
+sentry_profiles_sample_rate: 0.0
+
+# Health Check Configuration
+health_check_interval: 60  # Longer intervals for dev
+health_check_timeout: 10
+
+# Feature Toggles
+features:
+  streaming: true
+  batch_processing: true
+  websockets: true
+  graphql: true  # Enable for development
+  admin_panel: true
+  expert_review: true
+  real_time_collaboration: true
+  advanced_analytics: false  # Disable heavy features in dev
+  multi_tenant: false
+  sso: false
+
+# Development-specific settings
+dev_hot_reload: true
+dev_debug_sql: true
+dev_show_error_details: true
+dev_mock_external_apis: true
+dev_bypass_rate_limits: true

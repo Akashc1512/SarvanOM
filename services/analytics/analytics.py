@@ -23,7 +23,10 @@ except ImportError:
     # Fallback settings
     DATA_RETENTION_DAYS = 30
 
-logger = logging.getLogger(__name__)
+# Import unified logging
+from shared.core.unified_logging import get_logger
+
+logger = get_logger(__name__)
 
 # Privacy configuration
 DATA_RETENTION_DAYS = int(settings.data_retention_days or "30")

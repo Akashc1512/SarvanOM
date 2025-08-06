@@ -6,12 +6,13 @@ It provides standard methods for health checks, status reporting, and configurat
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 from enum import Enum
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ServiceStatus(Enum):

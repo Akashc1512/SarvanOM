@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 export function Analytics() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) return;
+
     // Track page views
     const trackPageView = () => {
       // Example: Send to analytics service
@@ -21,15 +28,17 @@ export function Analytics() {
       console.log("Page view:", {
         path: pathname,
         search: searchParams.toString(),
-        title: document.title,
+        title: typeof document !== "undefined" ? document.title : "",
       });
     };
 
     trackPageView();
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams, isClient]);
 
   // Track user interactions
   useEffect(() => {
+    if (!isClient || typeof document === "undefined") return;
+
     const trackUserInteraction = (event: MouseEvent | KeyboardEvent) => {
       const target = event.target as HTMLElement;
 
@@ -61,34 +70,31 @@ export function Analytics() {
       document.removeEventListener("click", trackUserInteraction);
       document.removeEventListener("keydown", trackUserInteraction);
     };
-  }, []);
+  }, [isClient]);
 
   // Track performance metrics
   useEffect(() => {
-    if (typeof window !== "undefined" && "performance" in window) {
-      const observer = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-          if (entry.entryType === "navigation") {
-            const navEntry = entry as PerformanceNavigationTiming;
-            console.log("Performance metrics:", {
-              loadTime: navEntry.loadEventEnd - navEntry.loadEventStart,
-              domContentLoaded:
-                navEntry.domContentLoadedEventEnd -
-                navEntry.domContentLoadedEventStart,
-              firstPaint: navEntry.responseStart - navEntry.requestStart,
-            });
-          }
+    if (!isClient || typeof window === "undefined" || !("performance" in window)) return;
+
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.entryType === "navigation") {
+          const navEntry = entry as PerformanceNavigationTiming;
+          console.log("Performance metrics:", {
+            loadTime: navEntry.loadEventEnd - navEntry.loadEventStart,
+            domContentLoaded:
+              navEntry.domContentLoadedEventEnd -
+              navEntry.domContentLoadedEventStart,
+            firstPaint: navEntry.responseStart - navEntry.requestStart,
+          });
         }
-      });
+      }
+    });
 
-      observer.observe({ entryTypes: ["navigation"] });
+    observer.observe({ entryTypes: ["navigation"] });
 
-      return () => observer.disconnect();
-    }
-    
-    // Return undefined when performance API is not available
-    return undefined;
-  }, []);
+    return () => observer.disconnect();
+  }, [isClient]);
 
   return null;
 }

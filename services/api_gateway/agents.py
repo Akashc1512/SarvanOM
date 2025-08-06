@@ -6,6 +6,7 @@ Provides endpoints for various agent types including browser, PDF, code executor
 import asyncio
 import json
 import logging
+from shared.core.unified_logging import get_logger
 import base64
 import io
 from typing import Dict, Any, Optional, List
@@ -25,7 +26,7 @@ from shared.core.agents.retrieval_agent import RetrievalAgent
 from shared.core.agents.knowledge_graph_agent import KnowledgeGraphAgent
 from shared.core.agents.arangodb_knowledge_graph_agent import ArangoDBKnowledgeGraphAgent
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Pydantic models for agent requests/responses
 class BrowserSearchRequest(BaseModel):
@@ -297,33 +298,57 @@ class AgentHandler:
         start_time = datetime.now()
         
         try:
-            # Use knowledge graph agent
-            if request.query_type == "entity_search":
-                results = await self.knowledge_graph_agent.search_entities(
-                    query=request.query,
-                    limit=request.max_entities
-                )
-            elif request.query_type == "relationship_query":
-                results = await self.knowledge_graph_agent.search_relationships(
-                    query=request.query,
-                    limit=request.max_relationships
-                )
-            else:
-                # Default to entity search
-                results = await self.knowledge_graph_agent.search_entities(
-                    query=request.query,
-                    limit=request.max_entities
-                )
+            # Use the refactored ArangoDB Knowledge Graph Agent
+            result = await self.knowledge_graph_agent.query(
+                query=request.query,
+                query_type=request.query_type
+            )
+            
+            # Convert entities to dictionary format
+            entities = []
+            for entity in result.entities:
+                entity_dict = {
+                    "id": entity.id,
+                    "name": entity.name,
+                    "type": entity.type,
+                    "confidence": entity.confidence,
+                    "properties": entity.properties
+                }
+                if not request.include_metadata:
+                    entity_dict.pop("properties", None)
+                if not request.include_confidence:
+                    entity_dict.pop("confidence", None)
+                entities.append(entity_dict)
+            
+            # Convert relationships to dictionary format
+            relationships = []
+            for rel in result.relationships:
+                rel_dict = {
+                    "source_id": rel.source_id,
+                    "target_id": rel.target_id,
+                    "relationship_type": rel.relationship_type,
+                    "confidence": rel.confidence,
+                    "properties": rel.properties
+                }
+                if not request.include_metadata:
+                    rel_dict.pop("properties", None)
+                if not request.include_confidence:
+                    rel_dict.pop("confidence", None)
+                relationships.append(rel_dict)
+            
+            # Limit results based on request parameters
+            entities = entities[:request.max_entities]
+            relationships = relationships[:request.max_relationships]
             
             execution_time = (datetime.now() - start_time).total_seconds()
             
             return KnowledgeGraphQueryResponse(
-                entities=results.get("entities", []),
-                relationships=results.get("relationships", []),
+                entities=entities,
+                relationships=relationships,
                 query=request.query,
                 query_type=request.query_type,
-                total_entities=len(results.get("entities", [])),
-                total_relationships=len(results.get("relationships", [])),
+                total_entities=len(entities),
+                total_relationships=len(relationships),
                 execution_time=execution_time
             )
             

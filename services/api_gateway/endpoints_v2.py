@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from typing import Dict, Any, List, Optional
 import logging
+from shared.core.unified_logging import get_logger
 import asyncio
 import json
 
@@ -22,7 +23,7 @@ from services.api_gateway.main import (
 from services.auth_service.auth import get_current_user
 from services.api_gateway.versioning import get_feature_flag, VersionedResponse
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter()
 

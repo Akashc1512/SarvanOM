@@ -12,6 +12,7 @@ Monitors the health and status of external integrations.
 
 import asyncio
 import logging
+from shared.core.unified_logging import get_logger
 import time
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
@@ -21,7 +22,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

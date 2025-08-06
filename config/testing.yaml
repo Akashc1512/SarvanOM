@@ -1,0 +1,112 @@
+# Testing Environment Configuration
+# This file contains testing-specific settings for the SarvanOM platform
+# Optimized for automated testing with appropriate mocks and test data
+
+# Core Settings
+name: "testing"
+debug: false
+testing: true
+log_level: "WARNING"  # Reduce noise in test output
+
+# Database Configuration (Testing - use memory/temp databases)
+database_url: "sqlite:///:memory:"  # In-memory for tests
+redis_url: "redis://localhost:6379/1"  # Different DB than dev
+
+# AI Provider Configuration (Testing - use mocks)
+openai_api_key: "test-key-openai"  # Mock key for testing
+anthropic_api_key: "test-key-anthropic"  # Mock key for testing
+
+# Vector Database Configuration (Testing)
+vector_db_url: "http://localhost:6334"  # Different port for test instance
+vector_db_api_key: "test-vector-key"
+
+# Search Configuration (Testing)
+meilisearch_url: "http://localhost:7701"  # Different port for test instance
+meilisearch_master_key: "test-meili-key"
+
+# Knowledge Graph Configuration (Testing)
+arangodb_url: "http://localhost:8530"  # Different port for test instance
+arangodb_username: "test"
+arangodb_password: "test"
+arangodb_database: "knowledge_graph_test"
+
+# Security Configuration (Testing - controlled environment)
+jwt_secret_key: "test-jwt-secret-key-do-not-use-in-production"
+cors_origins:
+  - "http://localhost:3001"  # Test frontend port
+  - "http://localhost:8001"  # Test backend port
+
+# Performance Settings (Testing - faster execution)
+rate_limit_per_minute: 10000  # High limits for tests
+max_request_size_mb: 5
+cache_ttl_seconds: 60  # Short cache for tests
+session_ttl_seconds: 300  # Short sessions for tests
+
+# Feature Flags (Testing - enable test-friendly features)
+backup_enabled: false
+audit_log_enabled: false  # Reduce I/O in tests
+security_headers_enabled: false
+mock_ai_responses: true  # Always use mocks in testing
+skip_authentication: true  # Skip auth for easier testing
+enable_debug_endpoints: false
+auto_reload: false
+test_mode: true
+mock_providers: true
+
+# Agent Configuration (Testing - fast timeouts)
+agent_timeout_seconds: 10
+agent_max_retries: 2
+agent_backoff_factor: 1.0
+
+# Query Configuration (Testing)
+query_cache_ttl_seconds: 60
+query_max_length: 1000  # Smaller for tests
+query_min_confidence: 0.3
+
+# Database Pool Settings (Testing - minimal)
+db_pool_size: 1
+db_max_overflow: 2
+db_pool_timeout: 5
+
+# Worker Configuration (Testing - single threaded for predictability)
+worker_processes: 1
+worker_threads: 1
+max_memory_usage_mb: 512
+garbage_collection_interval: 60
+
+# Monitoring Configuration (Testing - disabled for performance)
+metrics_enabled: false
+metrics_port: 9091
+enable_tracing: false
+jaeger_agent_host: "localhost"
+jaeger_agent_port: 6832
+sentry_dsn: null
+sentry_traces_sample_rate: 0.0
+sentry_profiles_sample_rate: 0.0
+
+# Health Check Configuration (Testing - quick checks)
+health_check_interval: 10
+health_check_timeout: 2
+
+# Feature Toggles (Testing - minimal feature set)
+features:
+  streaming: false
+  batch_processing: true
+  websockets: false
+  graphql: false
+  admin_panel: false
+  expert_review: true
+  real_time_collaboration: false
+  advanced_analytics: false
+  multi_tenant: false
+  sso: false
+
+# Testing-specific settings
+test_data_reset: true
+test_cleanup_after_run: true
+test_parallel_execution: false
+test_mock_external_calls: true
+test_record_interactions: false
+test_verbose_logging: false
+test_fail_fast: true
+test_timeout_multiplier: 1.0

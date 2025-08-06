@@ -28,7 +28,8 @@ async def agent_handler(*args, **kwargs):
     Use the individual agent modules instead.
     """
     import logging
-    logger = logging.getLogger(__name__)
+from shared.core.unified_logging import get_logger
+    logger = get_logger(__name__)
     logger.warning("agent_handler is deprecated. Use individual agent modules instead.")
     
     # Return a mock response for backward compatibility

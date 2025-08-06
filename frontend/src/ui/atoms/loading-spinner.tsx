@@ -3,9 +3,10 @@ import { cn } from "@/lib/utils";
 
 interface LoadingSpinnerProps {
   size?: "sm" | "md" | "lg" | "xl";
-  color?: "primary" | "secondary" | "white";
+  color?: "primary" | "secondary" | "white" | "blue" | "green";
   className?: string;
   "aria-label"?: string;
+  variant?: "spinner" | "dots" | "pulse";
 }
 
 const sizeClasses = {
@@ -19,6 +20,8 @@ const colorClasses = {
   primary: "text-primary",
   secondary: "text-secondary",
   white: "text-white",
+  blue: "text-blue-600",
+  green: "text-green-600",
 };
 
 export const LoadingSpinner = React.memo<LoadingSpinnerProps>(
@@ -27,7 +30,46 @@ export const LoadingSpinner = React.memo<LoadingSpinnerProps>(
     color = "primary",
     className,
     "aria-label": ariaLabel = "Loading...",
+    variant = "spinner",
   }) => {
+    if (variant === "dots") {
+      return (
+        <div
+          className={cn("flex space-x-1", className)}
+          role="status"
+          aria-label={ariaLabel}
+        >
+          <div className={cn("animate-bounce", sizeClasses[size], colorClasses[color])}>
+            <div className="w-full h-full rounded-full bg-current" />
+          </div>
+          <div className={cn("animate-bounce", sizeClasses[size], colorClasses[color])} style={{ animationDelay: "0.1s" }}>
+            <div className="w-full h-full rounded-full bg-current" />
+          </div>
+          <div className={cn("animate-bounce", sizeClasses[size], colorClasses[color])} style={{ animationDelay: "0.2s" }}>
+            <div className="w-full h-full rounded-full bg-current" />
+          </div>
+          <span className="sr-only">{ariaLabel}</span>
+        </div>
+      );
+    }
+
+    if (variant === "pulse") {
+      return (
+        <div
+          className={cn(
+            "animate-pulse rounded-full bg-current",
+            sizeClasses[size],
+            colorClasses[color],
+            className,
+          )}
+          role="status"
+          aria-label={ariaLabel}
+        >
+          <span className="sr-only">{ariaLabel}</span>
+        </div>
+      );
+    }
+
     return (
       <div
         className={cn(

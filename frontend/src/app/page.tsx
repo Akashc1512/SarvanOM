@@ -17,7 +17,9 @@ import { TaskList } from "@/ui/TaskList";
 import { ConversationContext } from "@/ui/ConversationContext";
 import { LLMProviderBadge } from "@/ui/LLMProviderBadge";
 import { KnowledgeGraphPanel } from "@/ui/KnowledgeGraphPanel";
-// import { CollaborativeEditor } from "@/ui/CollaborativeEditor";
+import { CitationPanel } from "@/ui/CitationPanel";
+import { ErrorBoundary } from "@/ui/ErrorBoundary";
+import { useQuerySubmission, useQueryPolling } from "@/hooks/useQuerySubmission";
 import { type QueryResponse } from "@/services/api";
 import {
   Search,
@@ -45,16 +47,51 @@ export default function Dashboard() {
   const [recentQueries, setRecentQueries] = useState<QueryResponse[]>([]);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
   const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
+  const [showCitations, setShowCitations] = useState(false);
 
-  const handleQuerySubmit = async (query: QueryResponse) => {
-    setCurrentQuery(query);
-    // Add to recent queries
-    setRecentQueries((prev) => [query, ...prev.slice(0, 4)]);
+  // Use React Query hooks for better data management
+  const querySubmission = useQuerySubmission({
+    onSuccess: (data) => {
+      setCurrentQuery(data);
+      setRecentQueries((prev) => [data, ...prev.slice(0, 4)]);
+      toast({
+        title: "Query Submitted",
+        description: "Your query is being processed. You'll see results shortly.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Query Failed",
+        description: error.message || "Failed to submit query. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Poll for query updates if we have a query ID
+  const queryPolling = useQueryPolling(currentQuery?.query_id || null);
+
+  const handleQuerySubmit = async (query: QueryResponse | { query: string }) => {
+    // If we already have a query response, just update the state
+    if ('answer' in query && query.answer) {
+      setCurrentQuery(query as QueryResponse);
+      setRecentQueries((prev) => [query as QueryResponse, ...prev.slice(0, 4)]);
+      return;
+    }
+
+    // Otherwise, submit the query
+    try {
+      const queryText = 'query' in query ? query.query : '';
+      await querySubmission.mutateAsync({
+        query: queryText,
+      });
+    } catch (error) {
+      console.error("Query submission error:", error);
+    }
   };
 
   const handleQueryUpdate = (query: QueryResponse) => {
     setCurrentQuery(query);
-    // Update in recent queries
     setRecentQueries((prev) =>
       prev.map((q) => (q.query_id === query.query_id ? query : q)),
     );
@@ -66,7 +103,10 @@ export default function Dashboard() {
     feedback?: string,
   ) => {
     console.log("Feedback submitted:", { rating, helpful, feedback });
-    // Analytics tracking could be added here
+    toast({
+      title: "Feedback Received",
+      description: "Thank you for your feedback! It helps us improve our responses.",
+    });
   };
 
   const handleContextSelect = (context: any) => {
@@ -98,444 +138,219 @@ export default function Dashboard() {
     });
   };
 
-  // Mock data for demonstration
-  const platformStats = {
-    totalQueries: 1247,
-    activeUsers: 23,
-    aiInteractions: 156,
-    avgResponseTime: "2.3s",
-  };
-
-  const quickActions = [
-    {
-      title: "Market Research",
-      description: "Analyze market trends and competitive landscape",
-      icon: TrendingUp,
-      query: "What are the latest trends in renewable energy markets?",
-    },
-    {
-      title: "Technical Analysis",
-      description: "Get detailed technical explanations",
-      icon: Zap,
-      query: "How does quantum computing work and what are its applications?",
-    },
-    {
-      title: "Academic Research",
-      description: "Find academic sources and papers",
-      icon: BookOpen,
-      query: "What are the recent developments in machine learning algorithms?",
-    },
-    {
-      title: "Industry Insights",
-      description: "Get industry-specific analysis",
-      icon: Globe,
-      query: "What are the key challenges facing the healthcare industry?",
-    },
-  ];
+  const isProcessing = querySubmission.isPending || (queryPolling.data && !queryPolling.data.answer) || false;
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">
-          Universal Knowledge Hub
-        </h1>
-        <p className="text-lg text-gray-600">
-          Advanced AI-powered research and knowledge discovery platform
-        </p>
-      </div>
-
-      {/* Platform Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Search className="h-5 w-5 text-blue-600" />
+    <ErrorBoundary>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-2xl font-bold">{platformStats.totalQueries}</p>
-                <p className="text-sm text-gray-600">Total Queries</p>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  Universal Knowledge Platform
+                </h1>
+                <p className="text-gray-600">
+                  Advanced AI-powered research and analysis platform
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <LLMProviderBadge provider="ollama" model="llama2" showDetails={false} />
+                <Link href="/analytics">
+                  <Button variant="outline" size="sm">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    Analytics
+                  </Button>
+                </Link>
               </div>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-2xl font-bold">{platformStats.activeUsers}</p>
-                <p className="text-sm text-gray-600">Active Users</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Brain className="h-5 w-5 text-purple-600" />
-              <div>
-                <p className="text-2xl font-bold">{platformStats.aiInteractions}</p>
-                <p className="text-sm text-gray-600">AI Interactions</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-5 w-5 text-orange-600" />
-              <div>
-                <p className="text-2xl font-bold">{platformStats.avgResponseTime}</p>
-                <p className="text-sm text-gray-600">Avg Response</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Loader Demo Link */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            New: SarvanOM Loader Demo
-          </CardTitle>
-          <CardDescription>
-            Check out our beautiful animated loader component
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              Experience the new SarvanOM loader with orbiting nodes and smooth animations
-            </p>
-            <Link href="/loader-demo">
-              <Button variant="outline" className="flex items-center gap-2">
-                <ExternalLink className="h-4 w-4" />
-                View Demo
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* New Features Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        {/* Comprehensive Query Link */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Comprehensive Research Query
-            </CardTitle>
-            <CardDescription>
-              Advanced AI-powered research with fact-checking and citations
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600">
-                Try our comprehensive query system with automatic fact-checking and citation management
-              </p>
-              <Link href="/comprehensive-query">
-                <Button variant="outline" className="flex items-center gap-2">
-                  <ExternalLink className="h-4 w-4" />
-                  Try Comprehensive Query
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Graph Visualization Link */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Network className="h-5 w-5" />
-              Knowledge Graph Explorer
-            </CardTitle>
-            <CardDescription>
-              Interactive visualization of knowledge graph relationships
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600">
-                Explore entities and relationships in the knowledge graph with interactive visualization
-              </p>
-              <Link href="/graph-visualization">
-                <Button variant="outline" className="flex items-center gap-2">
-                  <ExternalLink className="h-4 w-4" />
-                  Explore Graph
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Analytics Link */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Analytics Dashboard
-            </CardTitle>
-            <CardDescription>
-              Comprehensive insights into system performance and usage
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600">
-                View detailed analytics including validation metrics, time saved, and system health
-              </p>
-              <Link href="/analytics">
-                <Button variant="outline" className="flex items-center gap-2">
-                  <ExternalLink className="h-4 w-4" />
-                  View Analytics
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Expert Validation Link */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Expert Validation
-            </CardTitle>
-            <CardDescription>
-              Fact-checking and expert validation capabilities
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600">
-                Validate claims using multiple expert networks including academic and industry sources
-              </p>
-              <Link href="/expert-review">
-                <Button variant="outline" className="flex items-center gap-2">
-                  <ExternalLink className="h-4 w-4" />
-                  Expert Review
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Query Interface */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Conversation Context */}
-          <ConversationContext
-            sessionId={sessionId}
-            maxHistory={5}
-            onContextSelect={handleContextSelect}
-            onQueryReference={handleQueryReference}
-          />
-
-          {/* Query Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Search className="h-5 w-5" />
-                <span>Ask Your Question</span>
-              </CardTitle>
-              <CardDescription>
-                Get comprehensive answers with citations and validation
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <QueryForm
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Query Interface */}
+            <div className="lg:col-span-2 space-y-6">
+              <QueryForm 
                 onQuerySubmit={handleQuerySubmit}
                 onQueryUpdate={handleQueryUpdate}
               />
-            </CardContent>
-          </Card>
 
-          {/* Answer Display */}
-          {currentQuery && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center space-x-2">
-                    <MessageSquare className="h-5 w-5" />
-                    <span>Answer</span>
+              {/* Answer Display */}
+              {currentQuery && (
+                <AnswerDisplay 
+                  query={currentQuery} 
+                  onFeedback={handleFeedback}
+                  isLoading={isProcessing}
+                />
+              )}
+
+              {/* Citations Panel */}
+              {currentQuery && showCitations && currentQuery.citations && (
+                <CitationPanel 
+                  sources={currentQuery.citations.map(citation => ({
+                    title: citation.title || citation.text,
+                    url: citation.url || "",
+                    snippet: citation.text,
+                    source_type: "web",
+                    relevance_score: 0.8,
+                    credibility_score: 0.8
+                  }))} 
+                />
+              )}
+
+              {/* Knowledge Graph Panel */}
+              {currentQuery && showKnowledgeGraph && (
+                <KnowledgeGraphPanel 
+                  query={currentQuery.query_id || ""}
+                />
+              )}
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Quick Actions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5" />
+                    Quick Actions
                   </CardTitle>
-                  <div className="flex items-center space-x-2">
-                    {/* LLM Provider Badge */}
-                    {currentQuery.llm_provider && (
-                      <LLMProviderBadge
-                        provider={currentQuery.llm_provider as any}
-                        model={currentQuery.llm_model || "unknown"}
-                        responseTime={currentQuery.processing_time || undefined}
-                        confidence={currentQuery.confidence || undefined}
-                      />
-                    )}
-                    {/* Knowledge Graph Toggle */}
+                  <CardDescription>
+                    Common research actions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="w-full justify-start"
+                      onClick={() => setShowCitations(!showCitations)}
+                    >
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      {showCitations ? "Hide" : "Show"} Citations
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
                       onClick={() => setShowKnowledgeGraph(!showKnowledgeGraph)}
                     >
-                      <Network className="h-4 w-4 mr-1" />
-                      Knowledge Graph
+                      <Network className="h-4 w-4 mr-2" />
+                      {showKnowledgeGraph ? "Hide" : "Show"} Knowledge Graph
                     </Button>
+                    <Link href="/analytics">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start"
+                      >
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        View Analytics
+                      </Button>
+                    </Link>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <AnswerDisplay
-                  query={currentQuery}
-                  onFeedback={handleFeedback}
-                />
-              </CardContent>
-            </Card>
-          )}
+                </CardContent>
+              </Card>
 
-          {/* Knowledge Graph Panel */}
-          {showKnowledgeGraph && (
-            <KnowledgeGraphPanel
-              query={currentQuery?.answer || ""}
-              onEntityClick={handleEntityClick}
-              onRelationshipClick={handleRelationshipClick}
-              maxEntities={8}
-              maxRelationships={12}
-            />
-          )}
-
-          {/* Task List */}
-          {currentQuery && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Sparkles className="h-5 w-5" />
-                  <span>Generated Tasks</span>
-                </CardTitle>
-                <CardDescription>
-                  AI-generated tasks based on your query
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <TaskList queryId={currentQuery.query_id} />
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Zap className="h-5 w-5" />
-                <span>Quick Actions</span>
-              </CardTitle>
-              <CardDescription>
-                Common research queries to get started
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {quickActions.map((action, index) => (
-                  <Button
-                    key={index}
-                    variant="outline"
-                    className="w-full justify-start h-auto p-3"
-                    onClick={() => {
-                      // This could trigger a query with the suggested text
-                      console.log("Quick action:", action.query);
-                    }}
-                  >
-                    <action.icon className="h-4 w-4 mr-2" />
-                    <div className="text-left">
-                      <div className="font-medium text-sm">{action.title}</div>
-                      <div className="text-xs text-gray-500">
-                        {action.description}
-                      </div>
+              {/* Features Overview */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5" />
+                    Platform Features
+                  </CardTitle>
+                  <CardDescription>
+                    Advanced research capabilities
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Search className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm">Multi-source search</span>
                     </div>
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Queries */}
-          {recentQueries.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Clock className="h-5 w-5" />
-                  <span>Recent Queries</span>
-                </CardTitle>
-                <CardDescription>
-                  Your recent research questions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {recentQueries.slice(0, 3).map((query, index) => (
-                    <div
-                      key={index}
-                      className="p-2 border border-gray-200 rounded text-sm cursor-pointer hover:bg-gray-50"
-                      onClick={() => setCurrentQuery(query)}
-                    >
-                      <div className="font-medium line-clamp-2">
-                        {query.answer?.substring(0, 100)}...
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {new Date(query.created_at).toLocaleDateString()}
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <Brain className="h-4 w-4 text-green-600" />
+                      <span className="text-sm">AI-powered analysis</span>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-purple-600" />
+                      <span className="text-sm">Fact verification</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-indigo-600" />
+                      <span className="text-sm">Expert validation</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-teal-600" />
+                      <span className="text-sm">Web integration</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-pink-600" />
+                      <span className="text-sm">Interactive feedback</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Platform Features */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Star className="h-5 w-5" />
-                <span>Platform Features</span>
-              </CardTitle>
-              <CardDescription>
-                Advanced capabilities available
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center space-x-2">
-                  <Brain className="h-4 w-4 text-blue-600" />
-                  <span>Multi-Agent AI Processing</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Network className="h-4 w-4 text-green-600" />
-                  <span>Knowledge Graph Integration</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <MessageSquare className="h-4 w-4 text-purple-600" />
-                  <span>Citation & Fact Checking</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <BarChart3 className="h-4 w-4 text-orange-600" />
-                  <span>Real-time Analytics</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              {/* Recent Queries */}
+              {recentQueries.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      Recent Queries
+                    </CardTitle>
+                    <CardDescription>
+                      Your recent research activity
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {recentQueries.slice(0, 3).map((query, index) => (
+                        <div
+                          key={query.query_id || index}
+                          className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                          onClick={() => setCurrentQuery(query)}
+                        >
+                          <p className="text-sm font-medium line-clamp-2">
+                            {query.answer ? `${query.answer.substring(0, 50)}...` : "Recent Query"}
+                          </p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Badge variant="outline" className="text-xs">
+                              {query.confidence ? `${(query.confidence * 100).toFixed(0)}%` : "N/A"}
+                            </Badge>
+                            <span className="text-xs text-gray-500">
+                              {query.processing_time ? `${query.processing_time}ms` : ""}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Conversation Context */}
+              <ConversationContext
+                sessionId={sessionId}
+                onContextSelect={handleContextSelect}
+                onQueryReference={handleQueryReference}
+              />
+
+              {/* Task List */}
+              <TaskList />
+
+              {/* Knowledge Graph Panel */}
+              <KnowledgeGraphPanel
+                onEntityClick={handleEntityClick}
+                onRelationshipClick={handleRelationshipClick}
+              />
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

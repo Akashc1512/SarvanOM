@@ -6,6 +6,7 @@ It provides web crawling, content extraction, and sitemap generation capabilitie
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 import asyncio
 import aiohttp
 import tempfile
@@ -21,7 +22,7 @@ from collections import deque
 
 from .base_service import BaseAgentService, ServiceType, ServiceStatus
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CrawlerService(BaseAgentService):

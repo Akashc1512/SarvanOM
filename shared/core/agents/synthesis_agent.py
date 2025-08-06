@@ -94,8 +94,10 @@ from shared.core.agents.data_models import (
 )
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Import unified logging
+from shared.core.unified_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass

@@ -33,6 +33,7 @@ from dotenv import load_dotenv
 from shared.core.agents.base_agent import BaseAgent
 from shared.core.agents.data_models import RetrievalResult, DocumentModel
 from shared.core.api.config import get_settings
+from urllib.parse import urlparse
 
 # Load environment variables
 load_dotenv()
@@ -41,8 +42,10 @@ load_dotenv()
 settings = get_settings()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Import unified logging
+from shared.core.unified_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 # ============================================================================
@@ -2184,31 +2187,21 @@ Source: {doc.source}
     async def process_task(
         self, task: Dict[str, Any], context: QueryContext
     ) -> Dict[str, Any]:
-        """Process a retrieval task with token optimization."""
+        """Process a retrieval task with token optimization and web crawl fallback."""
         try:
             logger.info(f"RetrievalAgent: task={task}, context={context}")
             query = task.get("query", context.query)
             search_type = task.get("search_type", "hybrid")
             top_k = task.get("top_k", 20)
             max_tokens = task.get("max_tokens", 4000)  # Token limit for LLM operations
+            enable_web_fallback = task.get("enable_web_fallback", True)
+            web_fallback_timeout = task.get("web_fallback_timeout", 30)
 
             logger.info(
                 f"RetrievalAgent: Processing {search_type} search for query: {query[:50]}..."
             )
 
-            # Temporarily disable semantic cache to debug
-            # cached_result = await self.semantic_cache.get(query)
-            # if cached_result:
-            #     logger.info(f"Cache HIT for query: {query[:50]}...")
-            #     return {
-            #         "success": True,
-            #         "data": {"documents": [doc.to_dict() for doc in cached_result.documents]},
-            #         "confidence": 0.9,
-            #         "token_usage": {"prompt": 0, "completion": 0},
-            #         "execution_time_ms": 0
-            #     }
-
-            # Perform search based on type
+            # Perform initial search based on type
             if search_type == "vector":
                 result = await self.vector_search(query, top_k)
             elif search_type == "keyword":
@@ -2220,6 +2213,52 @@ Source: {doc.source}
                 # Default to hybrid search
                 entities = task.get("entities", None)
                 result = await self.hybrid_retrieve(query, entities)
+
+            # Check if web crawl fallback is needed
+            if enable_web_fallback and self._should_use_web_crawl_fallback(result.documents, query):
+                logger.info("🔄 Local results insufficient, triggering web crawl fallback")
+                
+                try:
+                    # Perform web crawling with timeout
+                    web_result = await asyncio.wait_for(
+                        self.web_crawl_fallback(query, max_pages=5, timeout=web_fallback_timeout),
+                        timeout=web_fallback_timeout
+                    )
+                    
+                    # Merge web results with local results
+                    if web_result.documents:
+                        logger.info(f"✅ Web crawl returned {len(web_result.documents)} documents")
+                        
+                        # Combine documents from both sources
+                        all_documents = result.documents + web_result.documents
+                        
+                        # Re-rank combined results
+                        reranked_documents = await self._llm_rerank(
+                            f"Query: {query}\n\nRank these documents by relevance:",
+                            all_documents
+                        )
+                        
+                        # Update result with merged documents
+                        result = SearchResult(
+                            documents=reranked_documents,
+                            search_type=f"{result.search_type}+web_crawl",
+                            query_time_ms=result.query_time_ms + web_result.query_time_ms,
+                            total_hits=len(reranked_documents),
+                            metadata={
+                                **result.metadata,
+                                "web_crawl_used": True,
+                                "web_crawl_documents": len(web_result.documents),
+                                "web_crawl_time_ms": web_result.query_time_ms,
+                                "merged_sources": ["local", "web_crawl"]
+                            }
+                        )
+                    else:
+                        logger.warning("⚠️ Web crawl returned no documents")
+                        
+                except asyncio.TimeoutError:
+                    logger.warning("⚠️ Web crawl fallback timed out")
+                except Exception as e:
+                    logger.error(f"❌ Web crawl fallback failed: {e}")
 
             # Optimize documents for token usage
             optimized_documents = self._optimize_documents_for_tokens(
@@ -2246,6 +2285,7 @@ Source: {doc.source}
                     "optimization_applied": len(optimized_documents)
                     < len(result.documents),
                     "agent_id": self.agent_id,
+                    "web_crawl_enabled": enable_web_fallback,
                 },
             )
 
@@ -2384,6 +2424,249 @@ Source: {doc.source}
         # Simple confidence calculation
         avg_score = sum(doc.score for doc in documents) / len(documents)
         return min(avg_score, 1.0)
+
+    async def web_crawl_fallback(
+        self, query: str, max_pages: int = 5, timeout: int = 30
+    ) -> SearchResult:
+        """
+        Perform web crawling as a fallback when local knowledge sources are insufficient.
+        
+        Args:
+            query: The search query
+            max_pages: Maximum number of pages to crawl
+            timeout: Timeout in seconds for crawling operations
+            
+        Returns:
+            SearchResult with crawled web content
+        """
+        try:
+            logger.info(f"🕷️ Initiating web crawl fallback for query: {query[:50]}...")
+            
+            # Get crawler service from service provider
+            from services.api_gateway.di.providers import get_service_provider
+            service_provider = get_service_provider()
+            crawler_service = service_provider.get_crawler_service()
+            
+            # Generate search URLs from query
+            search_urls = await self._generate_search_urls(query)
+            
+            documents = []
+            start_time = time.time()
+            
+            for url in search_urls[:max_pages]:
+                try:
+                    # Extract content from URL
+                    content_result = await crawler_service.extract_content(
+                        url=url,
+                        extract_images=False,  # Focus on text content
+                        extract_links=False
+                    )
+                    
+                    if content_result.get("success", False):
+                        content = content_result.get("data", {}).get("text_content", "")
+                        title = content_result.get("data", {}).get("title", "")
+                        
+                        if content and len(content.strip()) > 100:  # Minimum content threshold
+                            # Create document from crawled content
+                            document = Document(
+                                content=content,
+                                score=0.8,  # Default confidence for web content
+                                source=f"web_crawl:{url}",
+                                metadata={
+                                    "url": url,
+                                    "title": title,
+                                    "crawl_timestamp": datetime.now().isoformat(),
+                                    "content_length": len(content),
+                                    "source_type": "web_crawl"
+                                },
+                                doc_id=f"web_{hashlib.md5(url.encode()).hexdigest()[:8]}",
+                                timestamp=datetime.now().isoformat()
+                            )
+                            documents.append(document)
+                            logger.info(f"✅ Crawled content from {url}")
+                        else:
+                            logger.warning(f"⚠️ Insufficient content from {url}")
+                    else:
+                        logger.warning(f"⚠️ Failed to extract content from {url}")
+                        
+                except Exception as e:
+                    logger.warning(f"⚠️ Error crawling {url}: {e}")
+                    continue
+            
+            query_time_ms = int((time.time() - start_time) * 1000)
+            
+            # Create search result
+            result = SearchResult(
+                documents=documents,
+                search_type="web_crawl",
+                query_time_ms=query_time_ms,
+                total_hits=len(documents),
+                metadata={
+                    "crawl_sources": len(search_urls),
+                    "successful_crawls": len(documents),
+                    "timeout": timeout,
+                    "max_pages": max_pages
+                }
+            )
+            
+            logger.info(f"✅ Web crawl fallback completed: {len(documents)} documents in {query_time_ms}ms")
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Web crawl fallback failed: {e}")
+            return SearchResult(
+                documents=[],
+                search_type="web_crawl",
+                query_time_ms=0,
+                total_hits=0,
+                metadata={"error": str(e)}
+            )
+
+    async def _generate_search_urls(self, query: str) -> List[str]:
+        """
+        Generate search URLs for web crawling based on the query.
+        
+        Args:
+            query: The search query
+            
+        Returns:
+            List of URLs to crawl
+        """
+        try:
+            # Use SERP client to get search results
+            serp_results = await self.serp_client.search_web(query, num_results=10)
+            
+            urls = []
+            for result in serp_results:
+                url = result.get("url", "")
+                if url and self._is_valid_url(url):
+                    urls.append(url)
+            
+            # Add some fallback URLs for common queries
+            fallback_urls = self._get_fallback_urls(query)
+            urls.extend(fallback_urls)
+            
+            # Remove duplicates while preserving order
+            seen = set()
+            unique_urls = []
+            for url in urls:
+                if url not in seen:
+                    seen.add(url)
+                    unique_urls.append(url)
+            
+            logger.info(f"Generated {len(unique_urls)} unique URLs for crawling")
+            return unique_urls[:10]  # Limit to 10 URLs
+            
+        except Exception as e:
+            logger.error(f"Error generating search URLs: {e}")
+            return []
+
+    def _get_fallback_urls(self, query: str) -> List[str]:
+        """
+        Get fallback URLs for common query types.
+        
+        Args:
+            query: The search query
+            
+        Returns:
+            List of fallback URLs
+        """
+        fallback_urls = []
+        
+        # Add Wikipedia for factual queries
+        if any(word in query.lower() for word in ["what is", "definition", "meaning", "who is"]):
+            # Extract potential Wikipedia topic
+            words = query.lower().split()
+            if len(words) > 2:
+                topic = words[-1]  # Last word as potential topic
+                fallback_urls.append(f"https://en.wikipedia.org/wiki/{topic}")
+        
+        # Add news sources for current events
+        if any(word in query.lower() for word in ["latest", "recent", "news", "update", "today"]):
+            fallback_urls.extend([
+                "https://www.bbc.com/news",
+                "https://www.reuters.com",
+                "https://www.theguardian.com"
+            ])
+        
+        # Add technical documentation for technical queries
+        if any(word in query.lower() for word in ["api", "documentation", "guide", "tutorial", "how to"]):
+            fallback_urls.extend([
+                "https://docs.python.org",
+                "https://developer.mozilla.org",
+                "https://stackoverflow.com"
+            ])
+        
+        return fallback_urls
+
+    def _is_valid_url(self, url: str) -> bool:
+        """
+        Check if a URL is valid for crawling.
+        
+        Args:
+            url: URL to validate
+            
+        Returns:
+            True if URL is valid for crawling
+        """
+        try:
+            parsed = urlparse(url)
+            return (
+                parsed.scheme in ["http", "https"] and
+                parsed.netloc and
+                len(url) < 500  # Reasonable URL length
+            )
+        except Exception:
+            return False
+
+    def _should_use_web_crawl_fallback(
+        self, 
+        local_results: List[Document], 
+        query: str,
+        confidence_threshold: float = 0.6
+    ) -> bool:
+        """
+        Determine if web crawling fallback should be used.
+        
+        Args:
+            local_results: Results from local knowledge sources
+            query: The original query
+            confidence_threshold: Minimum confidence threshold
+            
+        Returns:
+            True if web crawling fallback should be used
+        """
+        # Check if we have sufficient local results
+        if not local_results:
+            logger.info("🔄 No local results found, triggering web crawl fallback")
+            return True
+        
+        # Check confidence scores
+        avg_confidence = sum(doc.score for doc in local_results) / len(local_results) if local_results else 0
+        if avg_confidence < confidence_threshold:
+            logger.info(f"🔄 Low confidence local results ({avg_confidence:.2f}), triggering web crawl fallback")
+            return True
+        
+        # Check if user explicitly asks for web data
+        web_keywords = ["web", "internet", "online", "latest", "recent", "current", "news", "live"]
+        if any(keyword in query.lower() for keyword in web_keywords):
+            logger.info("🔄 Web keywords detected, triggering web crawl fallback")
+            return True
+        
+        # Check content relevance
+        query_words = set(query.lower().split())
+        relevant_docs = 0
+        for doc in local_results:
+            doc_words = set(doc.content.lower().split())
+            if len(query_words.intersection(doc_words)) >= 2:  # At least 2 words match
+                relevant_docs += 1
+        
+        relevance_ratio = relevant_docs / len(local_results) if local_results else 0
+        if relevance_ratio < 0.5:  # Less than 50% of docs are relevant
+            logger.info(f"🔄 Low content relevance ({relevance_ratio:.2f}), triggering web crawl fallback")
+            return True
+        
+        return False
 
 
 async def main():

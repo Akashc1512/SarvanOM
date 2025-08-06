@@ -6,6 +6,7 @@ It manages service registration, instantiation, and lifecycle management.
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 from typing import Dict, Any, Optional, Type
 from functools import lru_cache
 
@@ -18,7 +19,7 @@ from ..services.code_service import CodeService
 from ..services.database_service import DatabaseService
 from ..services.crawler_service import CrawlerService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ServiceProvider:

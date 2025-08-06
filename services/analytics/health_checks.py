@@ -8,6 +8,7 @@ Provides actual connectivity checks for all external services.
 import asyncio
 import aiohttp
 import logging
+from shared.core.unified_logging import get_logger
 import os
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -15,7 +16,7 @@ import redis.asyncio as aioredis
 from elasticsearch import AsyncElasticsearch
 import time
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Service URLs from environment
 VECTOR_DB_URL = os.getenv("VECTOR_DB_URL", "http://localhost:6333")

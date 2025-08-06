@@ -8,6 +8,7 @@ It provides system health monitoring, metrics collection, and diagnostics.
 import time
 import psutil
 import logging
+from shared.core.unified_logging import get_logger
 from typing import Dict, Any, Optional
 from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException, Depends
@@ -15,7 +16,7 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from ..models.responses import HealthResponse, MetricsResponse, SystemDiagnosticsResponse
 from ..middleware import get_current_user, require_read
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Create router for health endpoints
 router = APIRouter(prefix="/health", tags=["health"])

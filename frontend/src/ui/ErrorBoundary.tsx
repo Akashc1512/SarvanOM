@@ -1,99 +1,35 @@
 "use client";
 
-import * as React from "react";
+import React from "react";
+import { ErrorBoundary as ReactErrorBoundary } from "react-error-boundary";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/ui/card";
 import { Button } from "@/ui/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/ui/ui/card";
-import { AlertTriangle, RefreshCw, Home } from "lucide-react";
+import { AlertTriangle, RefreshCw, Home, AlertCircle } from "lucide-react";
 
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-  errorInfo: React.ErrorInfo | null;
-}
-
-interface ErrorBoundaryProps {
-  children: React.ReactNode;
-  fallback?: React.ComponentType<{ error: Error; resetError: () => void }>;
-}
-
-export class ErrorBoundary extends React.Component<
-  ErrorBoundaryProps,
-  ErrorBoundaryState
-> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
-  }
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error, errorInfo: null };
-  }
-
-  override componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
-
-    // Log error to analytics/monitoring service
-    if (typeof window !== "undefined") {
-      // Send error to analytics
-      try {
-        // Example: send to error tracking service
-        // analytics.track('error', { error: error.message, stack: error.stack });
-      } catch (analyticsError) {
-        console.error("Failed to send error to analytics:", analyticsError);
-      }
-    }
-  }
-
-  resetError = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null });
-  };
-
-  override render() {
-    if (this.state.hasError) {
-      if (this.props.fallback) {
-        const FallbackComponent = this.props.fallback;
-        return (
-          <FallbackComponent
-            error={this.state.error!}
-            resetError={this.resetError}
-          />
-        );
-      }
-
-      return (
-        <DefaultErrorFallback
-          error={this.state.error!}
-          resetError={this.resetError}
-        />
-      );
-    }
-
-    return this.props.children;
-  }
-}
-
-interface DefaultErrorFallbackProps {
+interface ErrorFallbackProps {
   error: Error;
-  resetError: () => void;
+  resetErrorBoundary: () => void;
+  componentStack?: string;
 }
 
-function DefaultErrorFallback({
-  error,
-  resetError,
-}: DefaultErrorFallbackProps) {
+function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const handleReset = () => {
-    resetError();
-    window.location.reload();
+    resetErrorBoundary();
+    if (isClient && typeof window !== "undefined") {
+      window.location.reload();
+    }
   };
 
   const handleGoHome = () => {
-    window.location.href = "/";
+    if (isClient && typeof window !== "undefined") {
+      window.location.href = "/";
+    }
   };
 
   return (
@@ -134,6 +70,89 @@ function DefaultErrorFallback({
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  fallback?: React.ComponentType<ErrorFallbackProps>;
+  onError?: (error: Error, errorInfo: any) => void;
+}
+
+export function ErrorBoundary({ 
+  children, 
+  fallback = ErrorFallback,
+  onError
+}: ErrorBoundaryProps) {
+  const handleError = (error: Error, errorInfo: any) => {
+    console.error("Error caught by ErrorBoundary:", error, errorInfo);
+    
+    // Send error to analytics
+    try {
+      // analytics.track('error', { error: error.message, stack: error.stack });
+    } catch (analyticsError) {
+      console.error("Failed to send error to analytics:", analyticsError);
+    }
+
+    onError?.(error, errorInfo);
+  };
+
+  return (
+    <ReactErrorBoundary
+      FallbackComponent={fallback}
+      onError={handleError}
+    >
+      {children}
+    </ReactErrorBoundary>
+  );
+}
+
+// Specialized error boundaries for different contexts
+export function QueryErrorBoundary({ children }: { children: React.ReactNode }) {
+  const QueryErrorFallback = ({ error, resetErrorBoundary }: ErrorFallbackProps) => (
+    <div className="p-6 border rounded-lg bg-red-50">
+      <div className="flex items-center space-x-2 mb-4">
+        <AlertCircle className="h-5 w-5 text-red-500" />
+        <h3 className="font-medium text-red-800">Query Error</h3>
+      </div>
+      <p className="text-sm text-red-700 mb-4">
+        There was an error processing your query. Please try again.
+      </p>
+      <Button onClick={resetErrorBoundary} size="sm">
+        <RefreshCw className="mr-2 h-4 w-4" />
+        Retry Query
+      </Button>
+    </div>
+  );
+
+  return (
+    <ErrorBoundary fallback={QueryErrorFallback}>
+      {children}
+    </ErrorBoundary>
+  );
+}
+
+export function AnalyticsErrorBoundary({ children }: { children: React.ReactNode }) {
+  const AnalyticsErrorFallback = ({ error, resetErrorBoundary }: ErrorFallbackProps) => (
+    <div className="p-6 border rounded-lg bg-yellow-50">
+      <div className="flex items-center space-x-2 mb-4">
+        <AlertCircle className="h-5 w-5 text-yellow-500" />
+        <h3 className="font-medium text-yellow-800">Analytics Error</h3>
+      </div>
+      <p className="text-sm text-yellow-700 mb-4">
+        Unable to load analytics data. Please refresh the page.
+      </p>
+      <Button onClick={resetErrorBoundary} size="sm" variant="outline">
+        <RefreshCw className="mr-2 h-4 w-4" />
+        Refresh Data
+      </Button>
+    </div>
+  );
+
+  return (
+    <ErrorBoundary fallback={AnalyticsErrorFallback}>
+      {children}
+    </ErrorBoundary>
   );
 }
 

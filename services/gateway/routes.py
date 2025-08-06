@@ -6,6 +6,7 @@ and placeholder routes for each microservice.
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 from datetime import datetime
 from typing import Dict, Any, Optional
 
@@ -41,7 +42,7 @@ except ImportError:
             for key, value in kwargs.items():
                 setattr(self, key, value)
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # Response Models

@@ -16,6 +16,9 @@ import json
 
 from config.production.monitoring import get_health_config, HealthStatus
 from services.monitoring.metrics import get_metrics_collector
+from shared.core.unified_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass

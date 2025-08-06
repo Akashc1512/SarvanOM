@@ -7,11 +7,11 @@ import { Badge } from "@/ui/ui/badge";
 import { Textarea } from "@/ui/ui/textarea";
 import { Label } from "@/ui/ui/label";
 import { ExpertValidationButton } from "@/ui/ExpertValidationButton";
-import { 
-  Shield, 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle, 
+import {
+  Shield,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
   Clock,
   ArrowLeft,
   BookOpen,
@@ -42,7 +42,7 @@ export default function ExpertReviewPage() {
       timestamp: "2024-01-15T10:30:00Z"
     },
     {
-      id: "2", 
+      id: "2",
       claim: "The Earth is approximately 4.54 billion years old",
       status: "supported",
       confidence: 0.95,
@@ -51,7 +51,7 @@ export default function ExpertReviewPage() {
     {
       id: "3",
       claim: "Quantum computers can solve all problems instantly",
-      status: "contradicted", 
+      status: "contradicted",
       confidence: 0.88,
       timestamp: "2024-01-13T09:20:00Z"
     }
@@ -68,7 +68,7 @@ export default function ExpertReviewPage() {
       ]
     },
     {
-      title: "Historical Facts", 
+      title: "Historical Facts",
       description: "Check historical events and timelines",
       examples: [
         "World War II ended in 1945",
@@ -174,7 +174,7 @@ export default function ExpertReviewPage() {
                   className="mt-1 min-h-[100px]"
                 />
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <ExpertValidationButton
                   claim={claim}
@@ -208,7 +208,7 @@ export default function ExpertReviewPage() {
                     Validates against peer-reviewed research, academic papers, and scholarly sources
                   </p>
                 </div>
-                
+
                 <div className="border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Star className="h-5 w-5 text-green-600" />
@@ -218,7 +218,7 @@ export default function ExpertReviewPage() {
                     Checks against industry reports, expert opinions, and professional insights
                   </p>
                 </div>
-                
+
                 <div className="border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Brain className="h-5 w-5 text-purple-600" />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/ui/ui/button';
-import { Textarea } from '@/ui/ui/TextArea';
+import { Textarea } from '@/ui/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/ui/card';
 import { Badge } from '@/ui/ui/badge';
 import { Send, Users, MessageSquare } from 'lucide-react';

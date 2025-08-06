@@ -1,10 +1,23 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/ui/ui/button";
 import { Shield, Home, ArrowLeft, User } from "lucide-react";
 
 export default function Unauthorized() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const handleGoBack = () => {
+    if (isClient && typeof window !== "undefined") {
+      window.history.back();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -45,7 +58,7 @@ export default function Unauthorized() {
 
               <Button
                 variant="ghost"
-                onClick={() => window.history.back()}
+                onClick={handleGoBack}
                 className="w-full"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />

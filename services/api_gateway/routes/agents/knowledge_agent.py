@@ -4,6 +4,7 @@ Handles knowledge graph queries and operations using KnowledgeService.
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 from typing import Dict, Any, List
 from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException, Depends
@@ -20,7 +21,7 @@ from ...middleware import get_current_user
 from ...di import get_knowledge_service
 from ...services.knowledge_service import KnowledgeService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter()
 

@@ -3,6 +3,7 @@ Knowledge Platform Metrics - Universal Knowledge Platform
 Comprehensive Prometheus-compatible metrics for all platform components.
 """
 import logging
+from shared.core.unified_logging import get_logger
 import time
 from datetime import datetime
 from typing import Dict, List, Optional, Any
@@ -14,7 +15,7 @@ from prometheus_client import (
 )
 
 # Configure logging
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class KnowledgePlatformMetricsCollector:

@@ -7,12 +7,13 @@ It provides security checks, user authentication, and request validation.
 
 import time
 import logging
+from shared.core.unified_logging import get_logger
 import json
 from typing import Optional, Dict, Any
 from fastapi import Request, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Security token scheme
 security = HTTPBearer()

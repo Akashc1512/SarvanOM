@@ -4,13 +4,14 @@ Implements URL-based versioning with backward compatibility.
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 from typing import Optional, Dict, Any, Callable
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import JSONResponse
 from functools import wraps
 from datetime import datetime
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Version configuration
 API_VERSIONS = {

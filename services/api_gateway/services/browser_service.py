@@ -6,6 +6,7 @@ It provides web search, content extraction, and navigation capabilities.
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 import asyncio
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -15,7 +16,7 @@ import json
 
 from .base_service import BaseAgentService, ServiceType, ServiceStatus
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class BrowserService(BaseAgentService):

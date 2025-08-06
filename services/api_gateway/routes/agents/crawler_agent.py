@@ -4,6 +4,7 @@ Handles web crawling, content extraction, and link discovery using CrawlerServic
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
@@ -20,7 +21,7 @@ from ...middleware import get_current_user
 from ...di import get_crawler_service
 from ...services.crawler_service import CrawlerService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 crawler_router = APIRouter(prefix="/crawler", tags=["web-crawler"])
 

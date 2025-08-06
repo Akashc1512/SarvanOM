@@ -1,1 +1,0 @@
-# DEAD CODE - Candidate for deletion: This backend directory is not used by the main application

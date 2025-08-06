@@ -17,9 +17,10 @@ from prometheus_client import (
     multiprocess,
 )
 import logging
+from shared.core.unified_logging import get_logger
 import os
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Create a custom registry for multiprocess support
 registry = CollectorRegistry()

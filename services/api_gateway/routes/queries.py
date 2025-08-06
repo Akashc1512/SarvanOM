@@ -8,6 +8,7 @@ It handles basic queries, comprehensive queries, and query management operations
 import time
 import uuid
 import logging
+from shared.core.unified_logging import get_logger
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Request, HTTPException, Depends
@@ -23,7 +24,7 @@ from ..models.responses import (
 )
 from ..middleware import get_current_user, require_read, require_write
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Create router for query endpoints
 router = APIRouter(prefix="/query", tags=["queries"])

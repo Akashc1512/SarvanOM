@@ -41,6 +41,7 @@ import json
 
 from pydantic import BaseModel, Field
 import structlog
+from .unified_logging import get_logger, log_agent_lifecycle, log_execution_time
 
 from .orchestration import (
     WorkflowEngine,
@@ -51,7 +52,7 @@ from .orchestration import (
     WorkflowStep,
 )
 
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
 
 
 class AgentProtocol(Protocol):

@@ -15,6 +15,7 @@ Version: 1.0.0 (2024-12-28)
 
 import asyncio
 import logging
+from shared.core.unified_logging import get_logger
 import time
 import uuid
 from datetime import datetime
@@ -22,7 +23,7 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 
-# Import real components instead of mocks
+# Import real components instead of mocks  
 from shared.core.agents.lead_orchestrator import LeadOrchestrator
 from shared.core.agents.base_agent import QueryContext, AgentType
 from services.retrieval.core.query_processor import QueryIntelligenceLayer
@@ -36,7 +37,7 @@ from services.analytics_service.metrics.knowledge_platform_metrics import (
     KnowledgePlatformMetricsCollector
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class RoutingStrategy(str, Enum):

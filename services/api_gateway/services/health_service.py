@@ -7,6 +7,7 @@ It provides comprehensive health checks and system status information.
 
 import asyncio
 import logging
+from shared.core.unified_logging import get_logger
 import time
 import psutil
 import platform
@@ -15,7 +16,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime, timedelta
 from dataclasses import dataclass
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

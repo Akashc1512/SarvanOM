@@ -97,7 +97,7 @@ jobs:
         npm run build
       env:
         NEXT_PUBLIC_API_BASE_URL: http://localhost:8002
-        NEXT_PUBLIC_API_KEY: test-key
+        NEXT_PUBLIC_API_KEY: test-ci-key
 
   security:
     runs-on: ubuntu-latest

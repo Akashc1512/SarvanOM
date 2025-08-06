@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Dict, Any
 import logging
 
+from shared.core.unified_logging import get_logger
 from services.api_gateway.main import (
     QueryRequestValidator,
     FeedbackRequestValidator,
@@ -19,7 +20,7 @@ from services.api_gateway.main import (
 from services.auth_service.auth import get_current_user
 from services.api_gateway.versioning import version_deprecated
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter()
 

@@ -4,6 +4,7 @@ Handles PDF processing and document analysis operations using PDFService.
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 import os
 from typing import Dict, Any, List
 from datetime import datetime
@@ -21,7 +22,7 @@ from ...middleware import get_current_user
 from ...di import get_pdf_service
 from ...services.pdf_service import PDFService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter()
 

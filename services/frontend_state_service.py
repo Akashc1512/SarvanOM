@@ -28,8 +28,9 @@ from datetime import datetime
 import json
 
 from shared.models.frontend_state import FrontendState
+from shared.core.unified_logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class FrontendStateService:

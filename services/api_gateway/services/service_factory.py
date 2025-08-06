@@ -6,13 +6,14 @@ It manages service instantiation, configuration, and dependency injection.
 """
 
 import logging
+from shared.core.unified_logging import get_logger
 from typing import Dict, Any, Optional, Type
 from datetime import datetime
 
 from .base_service import BaseAgentService, ServiceType, ServiceStatus
 from ..di.container import get_container, DIContainer
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ServiceFactory:

@@ -62,11 +62,6 @@ PACKAGE_INFO = {
 
 # Export main components
 # Note: Agent imports are available in shared.core.agents module
-# from .agents.lead_orchestrator import LeadOrchestrator
-# from .agents.retrieval_agent import RetrievalAgent
-# from .agents.synthesis_agent import SynthesisAgent
-# from .agents.citation_agent import CitationAgent
-# from .agents.factcheck_agent import FactCheckAgent
 
 __all__ = [
     "__version__",

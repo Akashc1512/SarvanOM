@@ -52,9 +52,12 @@ from .routes import (
     graph_router,
 )
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Import unified logging
+from shared.core.unified_logging import setup_logging, get_logger, setup_fastapi_logging
+
+# Configure unified logging
+logging_config = setup_logging(service_name="sarvanom-gateway")
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
@@ -80,6 +83,9 @@ def create_gateway_app() -> FastAPI:
     )
     
     if FASTAPI_AVAILABLE:
+        # Setup unified logging integration
+        setup_fastapi_logging(app, service_name="sarvanom-gateway")
+        
         # Add CORS middleware
         app.add_middleware(
             CORSMiddleware,

@@ -68,6 +68,13 @@ load_dotenv()
 from shared.core.api.config import get_settings
 settings = get_settings()
 
+# Import the enhanced environment manager
+from shared.core.config.environment_manager import get_environment_manager, Environment
+
+# Get environment manager and configuration
+env_manager = get_environment_manager()
+env_config = env_manager.get_config()
+
 # Import the new modular components
 from .models import *
 from .middleware import (
@@ -79,6 +86,7 @@ from .middleware import (
     get_current_user,
     get_performance_metrics
 )
+from .middleware.error_handling import create_error_handling_middleware
 from .routes import routers
 from .services import query_service, health_service
 
@@ -227,37 +235,118 @@ except ImportError:
 
 # Critical environment variables validation
 def validate_critical_env_vars():
-    """Validate critical environment variables and fail fast if missing."""
-    critical_vars = {
-        "OPENAI_API_KEY": settings.openai_api_key,
-        "ANTHROPIC_API_KEY": settings.anthropic_api_key,
-        "DATABASE_URL": settings.database_url,
-        "REDIS_URL": settings.redis_url,
-    }
-    
-    missing_vars = []
-    for var_name, var_value in critical_vars.items():
-        if not var_value:
-            missing_vars.append(var_name)
-    
-    if missing_vars:
-        print(f"❌ Critical environment variables missing: {', '.join(missing_vars)}")
-        print("Please set these variables in your .env file or environment")
-        sys.exit(1)
-    
-    print("✅ All critical environment variables are configured")
+    """Validate critical environment variables using the enhanced environment manager."""
+    try:
+        # Use the environment manager to validate configuration
+        env_manager = get_environment_manager()
+        config = env_manager.get_config()
+        
+        # Environment-specific validation
+        environment = env_manager.environment.value
+        missing_vars = []
+        
+        if environment in ["production", "staging"]:
+            # Production and staging require all critical variables
+            if not config.database_url:
+                missing_vars.append("DATABASE_URL")
+            if not config.redis_url:
+                missing_vars.append("REDIS_URL")
+            if not config.jwt_secret_key:
+                missing_vars.append("JWT_SECRET_KEY")
+            if not config.openai_api_key and not config.anthropic_api_key:
+                missing_vars.append("OPENAI_API_KEY or ANTHROPIC_API_KEY")
+            if not config.vector_db_url:
+                missing_vars.append("VECTOR_DB_URL")
+            if not config.meilisearch_url:
+                missing_vars.append("MEILISEARCH_URL")
+            if not config.arangodb_url:
+                missing_vars.append("ARANGO_URL")
+        
+        elif environment == "testing":
+            # Testing environment has minimal requirements
+            if not config.test_mode:
+                missing_vars.append("TEST_MODE should be True")
+            if not config.mock_ai_responses:
+                missing_vars.append("MOCK_AI_RESPONSES should be True")
+            if not config.skip_authentication:
+                missing_vars.append("SKIP_AUTHENTICATION should be True")
+        
+        # Development environment has no strict requirements
+        
+        if missing_vars:
+            # Missing environment variables - will be logged after logging setup
+            return False
+        
+        # Environment validation passed - will be logged after logging setup
+        return True
+        
+    except Exception as e:
+        # Will be logged properly after logging setup
+        return False
 
 # Validate critical environment variables at startup
 validate_critical_env_vars()
 
-# Configure structured JSON logging for production monitoring
-logging.basicConfig(
-    level=logging.INFO,
-    format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s", "service": "sarvanom-api", "version": "1.0.0"}',
-    handlers=[logging.StreamHandler()],
-)
+# Import unified logging configuration
+from shared.core.unified_logging import setup_logging, get_logger, setup_fastapi_logging
+from shared.core.production_logging import setup_production_logging, get_production_log_collector
 
-logger = logging.getLogger(__name__)
+# Initialize environment manager first
+env_manager = get_environment_manager()
+env_config = env_manager.get_config()
+
+# Configure unified logging based on environment
+if env_manager.is_production():
+    setup_production_logging("sarvanom-api-gateway", enable_collection=True)
+    log_collector = get_production_log_collector()
+else:
+    logging_config = setup_logging(
+        service_name="sarvanom-api-gateway",
+        version="1.0.0"
+    )
+
+logger = get_logger(__name__)
+
+logger.info("=" * 80)
+logger.info("🚀 UNIVERSAL KNOWLEDGE PLATFORM - STARTING UP")
+logger.info("=" * 80)
+logger.info(f"📋 Environment: {env_manager.environment.value.upper()}")
+logger.info(f"🔧 Configuration: {env_config.name}")
+logger.info(f"🐛 Debug Mode: {env_config.debug}")
+logger.info(f"🧪 Testing Mode: {env_config.testing}")
+logger.info(f"📝 Log Level: {env_config.log_level}")
+logger.info(f"⚡ Auto Reload: {env_config.auto_reload}")
+logger.info(f"🔒 Security Headers: {env_config.security_headers_enabled}")
+logger.info(f"📊 Metrics Enabled: {env_config.metrics_enabled}")
+logger.info(f"🔍 Tracing Enabled: {env_config.enable_tracing}")
+logger.info(f"🎭 Mock AI Responses: {env_config.mock_ai_responses}")
+logger.info(f"🔐 Skip Authentication: {env_config.skip_authentication}")
+logger.info(f"🐛 Debug Endpoints: {env_config.enable_debug_endpoints}")
+logger.info(f"🎭 Mock Providers: {env_config.mock_providers}")
+
+# Log feature flags
+logger.info("🎛️  Feature Flags:")
+for feature, enabled in env_config.features.items():
+    status = "✅" if enabled else "❌"
+    logger.info(f"   {status} {feature}")
+
+# Log environment-specific settings
+if env_manager.is_production():
+    logger.info("🏭 PRODUCTION MODE - All security features enabled")
+    if not env_config.database_url:
+        logger.warning("⚠️  DATABASE_URL not set - required for production")
+    if not env_config.redis_url:
+        logger.warning("⚠️  REDIS_URL not set - required for production")
+    if not env_config.jwt_secret_key:
+        logger.warning("⚠️  JWT_SECRET_KEY not set - required for production")
+elif env_manager.is_development():
+    logger.info("🔧 DEVELOPMENT MODE - Debug features enabled")
+elif env_manager.is_testing():
+    logger.info("🧪 TESTING MODE - Mock providers enabled")
+elif env_manager.is_staging():
+    logger.info("🚀 STAGING MODE - Production-like with monitoring")
+
+logger.info("=" * 80)
 
 # Mock functions for demonstration (these would be actual implementations)
 async def route_query(query: str, user_context: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -475,6 +564,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Setup FastAPI logging integration
+setup_fastapi_logging(app, service_name="sarvanom-api-gateway")
+
 # Setup CORS
 setup_cors(app)
 
@@ -483,6 +575,7 @@ app.middleware("http")(add_request_id)
 app.middleware("http")(log_requests)
 app.middleware("http")(security_check)
 app.middleware("http")(rate_limit_check)
+app.middleware("http")(create_error_handling_middleware())
 
 # Register all routers
 for router in routers:
@@ -518,28 +611,118 @@ async def test_endpoint():
 # Error handlers
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    """Handle HTTP exceptions."""
+    """Handle HTTP exceptions with standardized response format."""
+    logger.warning(f"HTTP {exc.status_code}: {exc.detail} - Path: {request.url}")
+    
     return JSONResponse(
         status_code=exc.status_code,
         content={
             "error": exc.detail,
             "status_code": exc.status_code,
             "timestamp": datetime.now().isoformat(),
-            "path": str(request.url)
+            "path": str(request.url),
+            "request_id": getattr(request.state, "request_id", "unknown"),
+            "error_type": "http_exception"
         }
     )
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
-    """Handle general exceptions."""
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    """Handle general exceptions with comprehensive logging and standardized response."""
+    import traceback
+    
+    # Generate request ID if not present
+    request_id = getattr(request.state, "request_id", f"req_{int(time.time() * 1000)}")
+    
+    # Log the full exception with context
+    logger.error(
+        f"Unhandled exception in {request.url}: {str(exc)}",
+        extra={
+            "request_id": request_id,
+            "path": str(request.url),
+            "method": request.method,
+            "client_ip": request.client.host if request.client else "unknown",
+            "user_agent": request.headers.get("user-agent", "unknown"),
+            "traceback": traceback.format_exc()
+        },
+        exc_info=True
+    )
+    
+    # Determine if this is a known error type that should be handled differently
+    error_type = "internal_server_error"
+    status_code = 500
+    
+    if isinstance(exc, (ValueError, TypeError)):
+        error_type = "validation_error"
+        status_code = 400
+    elif isinstance(exc, (ConnectionError, TimeoutError)):
+        error_type = "service_unavailable"
+        status_code = 503
+    elif isinstance(exc, (PermissionError, OSError)):
+        error_type = "permission_error"
+        status_code = 403
+    
     return JSONResponse(
-        status_code=500,
+        status_code=status_code,
         content={
             "error": "Internal server error",
-            "status_code": 500,
+            "status_code": status_code,
             "timestamp": datetime.now().isoformat(),
-            "path": str(request.url)
+            "path": str(request.url),
+            "request_id": request_id,
+            "error_type": error_type
+        }
+    )
+
+@app.exception_handler(ValidationError)
+async def validation_exception_handler(request: Request, exc: ValidationError):
+    """Handle Pydantic validation errors."""
+    logger.warning(f"Validation error: {exc.errors()} - Path: {request.url}")
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": "Validation error",
+            "status_code": 422,
+            "timestamp": datetime.now().isoformat(),
+            "path": str(request.url),
+            "request_id": getattr(request.state, "request_id", "unknown"),
+            "error_type": "validation_error",
+            "details": exc.errors()
+        }
+    )
+
+@app.exception_handler(TimeoutError)
+async def timeout_exception_handler(request: Request, exc: TimeoutError):
+    """Handle timeout errors."""
+    logger.error(f"Timeout error: {str(exc)} - Path: {request.url}")
+    
+    return JSONResponse(
+        status_code=408,
+        content={
+            "error": "Request timeout",
+            "status_code": 408,
+            "timestamp": datetime.now().isoformat(),
+            "path": str(request.url),
+            "request_id": getattr(request.state, "request_id", "unknown"),
+            "error_type": "timeout_error"
+        }
+    )
+
+@app.exception_handler(ConnectionError)
+async def connection_exception_handler(request: Request, exc: ConnectionError):
+    """Handle connection errors."""
+    logger.error(f"Connection error: {str(exc)} - Path: {request.url}")
+    
+    return JSONResponse(
+        status_code=503,
+        content={
+            "error": "Service temporarily unavailable",
+            "status_code": 503,
+            "timestamp": datetime.now().isoformat(),
+            "path": str(request.url),
+            "request_id": getattr(request.state, "request_id", "unknown"),
+            "error_type": "service_unavailable"
         }
     )
 

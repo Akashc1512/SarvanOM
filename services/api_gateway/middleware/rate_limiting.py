@@ -7,11 +7,12 @@ It provides configurable rate limiting based on IP address, user ID, and API key
 
 import time
 import logging
+from shared.core.unified_logging import get_logger
 from typing import Dict, Any, Optional, Tuple
 from fastapi import Request, HTTPException
 from collections import defaultdict, deque
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class RateLimiter:

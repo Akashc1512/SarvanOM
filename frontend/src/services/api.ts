@@ -40,6 +40,7 @@ export interface QueryResponse {
   status: "pending" | "processing" | "completed" | "failed";
   answer?: string;
   sources?: Source[];
+  citations?: Citation[];  // For compatibility with AnswerDisplay
   confidence?: number;
   created_at: string;
   updated_at: string;
@@ -48,6 +49,15 @@ export interface QueryResponse {
   processing_time?: number;
   error?: string;
   progress?: number;
+}
+
+export interface Citation {
+  id: string;
+  text: string;
+  url?: string;
+  title?: string;
+  author?: string;
+  date?: string;
 }
 
 export interface Source {
