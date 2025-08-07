@@ -1,3 +1,5 @@
+
+
 """
 Universal Knowledge Hub - API Gateway Service
 Main entry point for the knowledge platform with modular architecture.
@@ -29,6 +31,9 @@ Environment Variables:
 Authors: Universal Knowledge Platform Engineering Team
 Version: 1.0.0 (2024-12-28)
 """
+
+# Import Windows compatibility fixes first
+import shared.core.windows_compatibility
 
 import asyncio
 import logging
@@ -348,22 +353,73 @@ elif env_manager.is_staging():
 
 logger.info("=" * 80)
 
-# Mock functions for demonstration (these would be actual implementations)
+# Import the refactored integration layer
+from .refactored_integration_layer import (
+    RefactoredIntegrationLayer,
+    IntegrationRequest,
+    IntegrationResponse,
+    get_refactored_integration_layer
+)
+
+# Update the route_query function to use the refactored integration layer
 async def route_query(query: str, user_context: Dict[str, Any] = None) -> Dict[str, Any]:
-    """Mock route query function."""
-    return {
-        "success": True,
-        "answer": f"Mock answer for: {query}",
-        "sources": ["mock_source_1", "mock_source_2"],
-        "verification": {"overall_status": "verified"},
-        "metadata": {
-            "llm_provider": "mock_provider",
-            "vector_results": [],
-            "keyword_results": [],
-            "knowledge_graph_results": []
-        },
-        "confidence": 0.85
-    }
+    """
+    Route a query through the refactored integration layer.
+    
+    This function uses the refactored integration layer which breaks down
+    the orchestration logic into smaller, focused functions with single responsibilities.
+    """
+    try:
+        # Get the refactored integration layer
+        integration_layer = await get_refactored_integration_layer()
+        
+        # Create integration request
+        request = IntegrationRequest(
+            query=query,
+            user_id=user_context.get("user_id", "anonymous") if user_context else "anonymous",
+            session_id=user_context.get("session_id", "default") if user_context else "default",
+            context=user_context or {},
+            preferences=user_context.get("preferences", {}) if user_context else {},
+            priority=user_context.get("priority", "normal") if user_context else "normal",
+            timeout_seconds=user_context.get("timeout_seconds", 30) if user_context else 30,
+            model=user_context.get("model", "auto") if user_context else "auto"
+        )
+        
+        # Process the query through the refactored integration layer
+        response = await integration_layer.process_query(request)
+        
+        # Convert response to the expected format
+        result = {
+            "success": response.success,
+            "answer": response.orchestration_result.final_answer if response.orchestration_result else None,
+            "confidence": response.orchestration_result.confidence if response.orchestration_result else 0.0,
+            "sources": response.orchestration_result.sources if response.orchestration_result else [],
+            "citations": response.orchestration_result.citations if response.orchestration_result else [],
+            "processing_time_ms": response.processing_time_ms,
+            "metadata": response.metadata,
+            "query_analysis": response.query_analysis,
+            "retrieval_result": response.retrieval_result,
+            "validation_result": response.validation_result,
+            "memory_operations": response.memory_operations
+        }
+        
+        if not response.success:
+            result["error"] = response.error_message
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Query routing failed: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "answer": "I apologize, but I encountered an error processing your query. Please try again.",
+            "confidence": 0.0,
+            "sources": [],
+            "citations": [],
+            "processing_time_ms": 0,
+            "metadata": {"error_type": "routing_failure"}
+        }
 
 async def get_integration_layer():
     """Mock integration layer function."""
@@ -453,7 +509,8 @@ async def lifespan(app: FastAPI):
         logger.info("✅ HTTP session initialized")
         
         # Meilisearch connection
-        meili_url = os.getenv('MEILISEARCH_URL', 'http://localhost:7700')
+        from shared.core.config.central_config import get_meilisearch_url
+        meili_url = os.getenv('MEILISEARCH_URL', get_meilisearch_url())
         meili_key = os.getenv('MEILI_MASTER_KEY', '')
         
         async with app.state.http_session.get(f'{meili_url}/health', timeout=5) as response:
@@ -463,7 +520,8 @@ async def lifespan(app: FastAPI):
                 logger.warning("⚠️ Meilisearch connection failed")
         
         # ArangoDB connection
-        arango_url = os.getenv('ARANGO_URL', 'http://localhost:8529')
+        from shared.core.config.central_config import get_arangodb_url
+        arango_url = os.getenv('ARANGO_URL', get_arangodb_url())
         arango_user = os.getenv('ARANGO_USERNAME', 'root')
         arango_pass = os.getenv('ARANGO_PASSWORD', '')
         
@@ -662,6 +720,13 @@ async def general_exception_handler(request: Request, exc: Exception):
         error_type = "permission_error"
         status_code = 403
     
+    # Add fallback data for graceful degradation
+    fallback_data = {
+        "message": "Service temporarily unavailable",
+        "suggestion": "Please try again later",
+        "status": "degraded"
+    }
+    
     return JSONResponse(
         status_code=status_code,
         content={
@@ -670,7 +735,8 @@ async def general_exception_handler(request: Request, exc: Exception):
             "timestamp": datetime.now().isoformat(),
             "path": str(request.url),
             "request_id": request_id,
-            "error_type": error_type
+            "error_type": error_type,
+            "fallback_data": fallback_data
         }
     )
 

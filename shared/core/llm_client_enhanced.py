@@ -565,7 +565,8 @@ class EnhancedLLMClient:
     def _setup_providers(self):
         """Setup available providers based on environment configuration."""
         # Ollama provider (local, free)
-        ollama_url = settings.ollama_base_url or "http://localhost:11434"
+        from shared.core.config.central_config import get_ollama_url
+        ollama_url = settings.ollama_base_url or get_ollama_url()
         if getattr(settings.ollama_enabled, 'value', "true") if hasattr(settings.ollama_enabled, 'value') else settings.ollama_enabled.lower() == "true":
             ollama_config = ProviderConfig(
                 name=LLMProvider.OLLAMA,

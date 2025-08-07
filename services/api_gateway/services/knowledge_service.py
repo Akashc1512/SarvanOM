@@ -30,7 +30,8 @@ class KnowledgeService(BaseAgentService):
     def __init__(self, service_type: ServiceType, config: Optional[Dict[str, Any]] = None):
         """Initialize the knowledge service."""
         super().__init__(service_type, config)
-        self.graph_db_url = self.get_config("graph_db_url", "http://localhost:8529")
+        from shared.core.config.central_config import get_arangodb_url
+        self.graph_db_url = self.get_config("graph_db_url", get_arangodb_url())
         self.database_name = self.get_config("database_name", "knowledge_graph")
         self.username = self.get_config("username", "root")
         self.password = self.get_config("password", "")

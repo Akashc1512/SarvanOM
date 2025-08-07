@@ -92,7 +92,7 @@ function Activate-VirtualEnvironment {
 function Update-Pip {
     Write-Status "Upgrading pip..."
     try {
-        python -m pip install --upgrade pip
+        .venv\Scripts\python -m pip install --upgrade pip
         Write-Success "Pip upgraded successfully"
     } catch {
         Write-Error "Failed to upgrade pip: $_"
@@ -104,13 +104,13 @@ function Update-Pip {
 function Install-Dependencies {
     Write-Status "Installing core dependencies..."
     try {
-        pip install -r requirements.txt
+        .venv\Scripts\pip install -r requirements.txt
         
         Write-Status "Installing development dependencies..."
-        pip install -r requirements-dev.txt
+        .venv\Scripts\pip install -r requirements-dev.txt
         
         Write-Status "Installing test dependencies..."
-        pip install -r requirements-test.txt
+        .venv\Scripts\pip install -r requirements-test.txt
         
         Write-Success "All dependencies installed successfully"
     } catch {

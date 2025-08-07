@@ -76,7 +76,8 @@ class PDFServiceConfig:
 @dataclass
 class KnowledgeServiceConfig:
     """Configuration for knowledge service."""
-    graph_db_url: str = "http://localhost:8529"
+    from shared.core.config.central_config import get_arangodb_url
+    graph_db_url: str = get_arangodb_url()
     database_name: str = "knowledge_graph"
     username: str = "root"
     password: str = ""

@@ -19,9 +19,11 @@ import time
 logger = get_logger(__name__)
 
 # Service URLs from environment
-VECTOR_DB_URL = os.getenv("VECTOR_DB_URL", "http://localhost:6333")
+from shared.core.config.central_config import get_vector_db_url, get_redis_url
+
+VECTOR_DB_URL = os.getenv("VECTOR_DB_URL", get_vector_db_url())
 ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
-REDIS_URL = settings.redis_url or "redis://localhost:6379"
+REDIS_URL = settings.redis_url or get_redis_url()
 SPARQL_ENDPOINT = os.getenv(
     "SPARQL_ENDPOINT", "http://localhost:7200/repositories/knowledge"
 )

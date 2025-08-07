@@ -95,11 +95,11 @@ setup_dev_environment() {
     
     # Install Python dependencies
     print_status "Installing Python dependencies..."
-    pip install -r requirements.txt
+    .venv/bin/pip install -r requirements.txt
     
     if [ -f "requirements-dev.txt" ]; then
         print_status "Installing development dependencies..."
-        pip install -r requirements-dev.txt
+        .venv/bin/pip install -r requirements-dev.txt
     fi
     
     print_success "Python dependencies installed"

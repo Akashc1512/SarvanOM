@@ -62,7 +62,7 @@ def provide_venv_setup_instructions():
         print("   source venv/bin/activate")
     
     print("\n3️⃣  Install dependencies:")
-    print("   pip install -r requirements.txt")
+    print("   .venv/bin/pip install -r requirements.txt")
     
     print("\n4️⃣  Verify setup:")
     print("   python scripts/setup_venv_config.py")

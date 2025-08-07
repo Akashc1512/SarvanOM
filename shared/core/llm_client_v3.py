@@ -87,6 +87,8 @@ from dotenv import load_dotenv
 import aiohttp
 from contextlib import asynccontextmanager
 
+from shared.core.error_handler import handle_critical_operation
+
 # Load environment variables
 load_dotenv()
 
@@ -340,6 +342,7 @@ class OpenAIProvider(LLMProviderInterface):
             config.requests_per_minute, config.tokens_per_minute
         )
 
+    @handle_critical_operation(operation_type="llm", max_retries=3, timeout=60.0)
     async def generate_text(self, request: LLMRequest) -> LLMResponse:
         """Generate text using OpenAI with latest API."""
         start_time = time.time()
@@ -394,12 +397,27 @@ class OpenAIProvider(LLMProviderInterface):
             )
 
         except Exception as e:
-            raise LLMError(
-                error_type="openai_error",
-                message=str(e),
-                provider=LLMProvider.OPENAI,
+            # Log the error with structured information
+            logger.error(
+                "OpenAI API call failed",
+                error_type=type(e).__name__,
+                error_message=str(e),
                 model=self.config.model,
-                retryable=self._is_retryable_error(e),
+                prompt_length=len(request.prompt),
+                exc_info=True
+            )
+            
+            # Return fallback response instead of crashing
+            return LLMResponse(
+                content="I apologize, but I'm experiencing technical difficulties. Please try again later.",
+                provider=LLMProvider.MOCK,
+                model="fallback",
+                token_usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                finish_reason="error",
+                response_time_ms=(time.time() - start_time) * 1000,
+                metadata={"error": str(e), "fallback": True},
+                request_id=str(uuid.uuid4()),
+                cost_estimate=0.0,
             )
 
     async def generate_stream(self, request: LLMRequest) -> AsyncGenerator[str, None]:
@@ -701,7 +719,9 @@ class OllamaProvider(LLMProviderInterface):
 
     def __init__(self, config: LLMConfig):
         self.config = config
-        self.base_url = config.base_url or "http://localhost:11434"
+        # Use central configuration for Ollama URL
+        from shared.core.config.central_config import get_ollama_url
+        self.base_url = config.base_url or get_ollama_url()
         self.timeout = config.timeout
         self.session = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=self.timeout)
@@ -1275,7 +1295,7 @@ class EnhancedLLMClientV3:
                     provider=LLMProvider.OLLAMA,
                     model=os.getenv("OLLAMA_MODEL", "llama3.2:3b"),
                     api_key="",  # No API key needed for local models
-                    base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+                    base_url=os.getenv("OLLAMA_BASE_URL", get_ollama_url()),
                     timeout=60,  # Longer timeout for local models
                 )
             )

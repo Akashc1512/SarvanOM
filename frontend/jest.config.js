@@ -12,7 +12,7 @@ const customJestConfig = {
   testEnvironmentOptions: {
     url: 'http://localhost:3000',
   },
-  moduleNameMapping: {
+  moduleNameMapper: {
     // Handle module aliases (this will be automatically configured for you based on your tsconfig.json paths)
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@/components/(.*)$': '<rootDir>/src/components/$1',
@@ -100,14 +100,14 @@ const customJestConfig = {
   // Test environment setup
   setupFiles: ['<rootDir>/src/jest.polyfills.js'],
   // Mock static assets
-  moduleNameMapping: {
+  moduleNameMapper: {
     ...require('./jest.moduleNameMapping.js'),
   },
-  // Watch plugins
-  watchPlugins: [
-    'jest-watch-typeahead/filename',
-    'jest-watch-typeahead/testname',
-  ],
+  // Watch plugins (commented out due to missing dependencies)
+  // watchPlugins: [
+  //   'jest-watch-typeahead/filename',
+  //   'jest-watch-typeahead/testname',
+  // ],
   // Snapshot resolver
   snapshotResolver: '<rootDir>/src/jest.snapshotResolver.js',
 };

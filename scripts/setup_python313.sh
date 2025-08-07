@@ -83,20 +83,20 @@ activate_venv() {
 # Upgrade pip
 upgrade_pip() {
     print_status "Upgrading pip..."
-    python -m pip install --upgrade pip
+    .venv/bin/python -m pip install --upgrade pip
     print_success "Pip upgraded successfully"
 }
 
 # Install dependencies
 install_dependencies() {
     print_status "Installing core dependencies..."
-    pip install -r requirements.txt
+    .venv/bin/pip install -r requirements.txt
     
     print_status "Installing development dependencies..."
-    pip install -r requirements-dev.txt
+    .venv/bin/pip install -r requirements-dev.txt
     
     print_status "Installing test dependencies..."
-    pip install -r requirements-test.txt
+    .venv/bin/pip install -r requirements-test.txt
     
     print_success "All dependencies installed successfully"
 }

@@ -275,7 +275,8 @@ class IntegrationMonitor:
 
             import aioredis
 
-            redis_url = settings.redis_url or "redis://localhost:6379"
+            from shared.core.config.central_config import get_redis_url
+    redis_url = settings.redis_url or get_redis_url()
 
             # Test Redis connection
             redis = aioredis.from_url(redis_url)

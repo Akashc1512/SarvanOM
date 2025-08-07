@@ -34,9 +34,11 @@ POOL_TIMEOUT = float(os.getenv("CONNECTION_POOL_TIMEOUT", "30.0"))
 MAX_KEEPALIVE_TIME = int(os.getenv("MAX_KEEPALIVE_TIME", "300"))  # 5 minutes
 
 # Service URLs
-VECTOR_DB_URL = os.getenv("VECTOR_DB_URL", "http://localhost:6333")
+from shared.core.config.central_config import get_vector_db_url, get_redis_url, get_arangodb_url
+
+VECTOR_DB_URL = os.getenv("VECTOR_DB_URL", get_vector_db_url())
 ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
-REDIS_URL = settings.redis_url or "redis://localhost:6379"
+REDIS_URL = settings.redis_url or get_redis_url()
 SPARQL_ENDPOINT = os.getenv(
     "SPARQL_ENDPOINT", "http://localhost:7200/repositories/knowledge"
 )

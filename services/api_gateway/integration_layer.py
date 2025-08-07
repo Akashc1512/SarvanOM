@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 # Import real components instead of mocks  
-from shared.core.agents.lead_orchestrator import LeadOrchestrator
+from shared.core.agents.cached_lead_orchestrator import LeadOrchestrator
 from shared.core.agents.base_agent import QueryContext, AgentType
 from services.retrieval.core.query_processor import QueryIntelligenceLayer
 from services.retrieval.core.hybrid_retrieval import HybridRetrievalService
@@ -122,7 +122,9 @@ class MockOrchestrationResult:
 
 
 class MockModelType:
-    GPT_4 = type('Enum', (), {'value': 'gpt-4'})()
+    from shared.core.config.central_config import get_central_config
+    config = get_central_config()
+    GPT_4 = type('Enum', (), {'value': config.openai_model})()
 
 
 class HybridRetrievalService:

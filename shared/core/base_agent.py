@@ -328,7 +328,8 @@ class BaseAgent(ABC):
             try:
                 import aioredis
 
-                redis = aioredis.from_url("redis://localhost")
+                from shared.core.config.central_config import get_redis_url
+        redis = aioredis.from_url(get_redis_url())
                 if recipient:
                     await redis.publish(f"agent:{recipient}", response.json())
                 await redis.close()

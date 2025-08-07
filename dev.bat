@@ -36,7 +36,7 @@ if "%1"=="install" (
     echo Installing Node.js dependencies...
     npm install
     echo Installing Python dependencies...
-    pip install -e .[dev,test,security]
+    .venv\Scripts\pip install -e .[dev,test,security]
     echo Installation complete!
     goto :eof
 )
@@ -44,7 +44,7 @@ if "%1"=="install" (
 if "%1"=="setup" (
     echo Setting up project...
     npm install
-    pip install -e .[dev,test,security]
+    .venv\Scripts\pip install -e .[dev,test,security]
     if not exist ".env" (
         copy ".env.template" ".env"
         echo Created .env file from template. Please configure your environment variables.

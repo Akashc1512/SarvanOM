@@ -496,7 +496,9 @@ async def get_query(
             },
             "metadata": {
                 "processing_time": 1.5,
-                "model_used": "gpt-4"
+                from shared.core.config.central_config import get_central_config
+            config = get_central_config()
+            "model_used": config.openai_model
             },
             "processing_time": 1.5,
             "created_at": datetime.now(),

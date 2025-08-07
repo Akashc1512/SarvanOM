@@ -1,14 +1,14 @@
 import React from "react";
 
-// Loader for Sarvanom - Universal Knowledge Hub
-// All ellipses (edges) and all nodes revolve; center node pulses.
+// Loader for Sarvanom - Enhanced Cosmic Galaxy
+// 200 individual particles with vibrant cosmic colors rotating around a central star
 
 interface SarvanomLoaderProps {
   size?: number;
   className?: string;
 }
 
-export const SarvanomLoader: React.FC<SarvanomLoaderProps> = ({ size = 100, className = "" }) => (
+export const SarvanomLoader: React.FC<SarvanomLoaderProps> = ({ size = 120, className = "" }) => (
   <div 
     className={`flex items-center justify-center ${className}`}
     style={{
@@ -17,129 +17,103 @@ export const SarvanomLoader: React.FC<SarvanomLoaderProps> = ({ size = 100, clas
       background: 'transparent'
     }}
   >
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 64 64"
-      fill="none"
-      style={{ display: "block" }}
-    >
-      {/* Outer blue circle */}
-      <circle cx="32" cy="32" r="30" fill="#2563eb" />
+    <div className="relative" style={{ width: size, height: size }}>
+      {/* 200 individual particles with enhanced cosmic colors */}
+      {[...Array(200)].map((_, i) => {
+        const particleTypes = [
+          { color: 'from-cyan-300 to-blue-400', size: 2.5 }, // Blue stars
+          { color: 'from-purple-300 to-pink-400', size: 2 }, // Purple stars
+          { color: 'from-yellow-300 to-orange-400', size: 1.8 }, // Yellow stars
+          { color: 'from-green-300 to-emerald-400', size: 1.5 }, // Green stars
+          { color: 'from-red-300 to-pink-400', size: 2.2 }, // Red giants
+          { color: 'from-indigo-300 to-purple-400', size: 1.6 }, // Indigo stars
+          { color: 'from-teal-300 to-cyan-400', size: 1.9 }, // Teal stars
+          { color: 'from-amber-300 to-yellow-400', size: 2.1 }, // Amber stars
+        ];
+        const particleType = particleTypes[i % particleTypes.length];
+        
+        return (
+          <div
+            key={i}
+            className={`absolute top-1/2 left-1/2 bg-gradient-to-r ${particleType.color} rounded-full animate-spin-slow`}
+            style={{
+              width: `${Math.random() * particleType.size + 0.5}px`,
+              height: `${Math.random() * particleType.size + 0.5}px`,
+              transform: `rotate(${i * 18}deg) translate(${Math.random() * (size * 0.45) + size * 0.08}px)`,
+              animationDelay: `${-i * 0.1}s`,
+              opacity: `${Math.random() * 0.9 + 0.1}`,
+              zIndex: Math.floor(Math.random() * 15),
+              filter: 'drop-shadow(0 0 2px currentColor)',
+            }}
+          />
+        );
+      })}
 
-      {/* Rotating group: all ellipses and orbiting nodes */}
-      <g style={{
-        transformOrigin: "32px 32px",
-        animation: "sarvanom-spin 4s linear infinite"
-      }}>
-        {/* Globe ellipses (edges) */}
-        <ellipse
-          cx="32"
-          cy="32"
-          rx="20"
-          ry="10"
-          stroke="#fff"
-          strokeWidth={2.5}
-          fill="none"
-        />
-        <ellipse
-          cx="32"
-          cy="32"
-          rx="10"
-          ry="20"
-          stroke="#fff"
-          strokeWidth={2.5}
-          fill="none"
-          transform="rotate(45 32 32)"
-        />
-        <ellipse
-          cx="32"
-          cy="32"
-          rx="10"
-          ry="20"
-          stroke="#fff"
-          strokeWidth={2.5}
-          fill="none"
-          transform="rotate(-45 32 32)"
-        />
-        {/* Animated orbiting nodes */}
-        {/* Top node */}
-        <circle
-          cx="32"
-          cy="12"
-          r="3"
-          fill="#fff"
+      {/* Central star with enhanced glow */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div 
+          className="w-6 h-6 bg-gradient-to-br from-yellow-300 via-orange-400 to-red-500 rounded-full shadow-glow animate-pulse"
           style={{
-            transformOrigin: "32px 32px",
-            animation: "sarvanom-orbit1 2.5s linear infinite"
+            boxShadow: '0 0 20px rgba(251, 191, 36, 0.8), 0 0 30px rgba(251, 146, 60, 0.6), 0 0 40px rgba(239, 68, 68, 0.4), 0 0 50px rgba(220, 38, 38, 0.2)'
           }}
         />
-        {/* Left node */}
-        <circle
-          cx="12"
-          cy="32"
-          r="3"
-          fill="#fff"
+        {/* Inner core */}
+        <div 
+          className="absolute w-3 h-3 bg-gradient-to-br from-white to-yellow-200 rounded-full animate-pulse"
           style={{
-            transformOrigin: "32px 32px",
-            animation: "sarvanom-orbit2 2.5s linear infinite"
+            animationDelay: '0.5s',
+            boxShadow: '0 0 10px rgba(255, 255, 255, 0.9), 0 0 20px rgba(251, 191, 36, 0.7)'
           }}
         />
-        {/* Right node */}
-        <circle
-          cx="52"
-          cy="32"
-          r="3"
-          fill="#fff"
-          style={{
-            transformOrigin: "32px 32px",
-            animation: "sarvanom-orbit3 2.5s linear infinite"
-          }}
-        />
-      </g>
-      {/* Pulsing + rotating center node */}
-      <circle
-        cx="32"
-        cy="32"
-        r="2"
-        fill="#fff"
-        style={{
-          animation: "sarvanom-pulse 1.6s ease-in-out infinite, sarvanom-spin 4s linear infinite"
-        }}
-      />
-      <style>
-        {`
-        @keyframes sarvanom-spin {
+      </div>
+
+      {/* Orbital rings for depth */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-16 h-16 border border-cyan-300/20 rounded-full animate-spin-slow" 
+          style={{ animationDuration: '180s' }} />
+        <div className="w-24 h-24 border border-purple-300/15 rounded-full animate-spin-slow" 
+          style={{ animationDuration: '240s', animationDirection: 'reverse' }} />
+        <div className="w-32 h-32 border border-pink-300/10 rounded-full animate-spin-slow" 
+          style={{ animationDuration: '300s' }} />
+      </div>
+
+      <style jsx>{`
+        @keyframes spin-slow {
+          0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
-        @keyframes sarvanom-orbit1 {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg);}
+
+        .animate-spin-slow {
+          animation: spin-slow 120s linear infinite;
         }
-        @keyframes sarvanom-orbit2 {
-          0% { transform: rotate(120deg);}
-          100% { transform: rotate(480deg);}
+
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 0.9; }
+          50% { transform: scale(1.8); opacity: 0.6; }
         }
-        @keyframes sarvanom-orbit3 {
-          0% { transform: rotate(240deg);}
-          100% { transform: rotate(600deg);}
+
+        .animate-pulse {
+          animation: pulse 3s ease-in-out infinite;
         }
-        @keyframes sarvanom-pulse {
-          0%,100% { r: 2px; opacity: 1; }
-          50% { r: 4px; opacity: 0.65;}
+
+        .shadow-glow {
+          box-shadow: 0 0 20px rgba(251, 191, 36, 0.8),
+                      0 0 30px rgba(251, 146, 60, 0.6),
+                      0 0 40px rgba(239, 68, 68, 0.4),
+                      0 0 50px rgba(220, 38, 38, 0.2);
         }
-        `}
-      </style>
-    </svg>
+      `}</style>
+    </div>
   </div>
 );
 
 export function SarvanomLoaderFullScreen() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900 flex items-center justify-center">
       <div className="text-center">
         <SarvanomLoader size={120} />
-        <p className="mt-4 text-gray-600 text-lg font-medium">Loading SarvanOM...</p>
+        <p className="mt-6 text-cyan-300 text-lg font-medium">Loading SarvanOM...</p>
+        <p className="mt-2 text-purple-300 text-sm">Cosmic knowledge awaits</p>
       </div>
     </div>
   );

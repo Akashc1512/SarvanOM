@@ -438,7 +438,8 @@ class DynamicLLMClient:
     def _setup_providers(self):
         """Setup available LLM providers."""
         # Setup Ollama provider
-        ollama_url = settings.ollama_base_url or "http://localhost:11434"
+        from shared.core.config.central_config import get_ollama_url
+        ollama_url = settings.ollama_base_url or get_ollama_url()
         self.providers[LLMProvider.OLLAMA] = OllamaProvider(
             ProviderConfig(
                 name=LLMProvider.OLLAMA,

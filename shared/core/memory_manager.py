@@ -270,7 +270,10 @@ class MediumTermMemory:
 class LongTermMemory:
     """Knowledge graph-based long-term memory."""
     
-    def __init__(self, kg_url: str = "bolt://localhost:7687"):
+    def __init__(self, kg_url: str = None):
+        from shared.core.config.central_config import get_arangodb_url
+        if kg_url is None:
+            kg_url = get_arangodb_url()
         self.kg_url = kg_url
         self.cache = {}  # Simple in-memory cache for now
         logger.info("LongTermMemory initialized")

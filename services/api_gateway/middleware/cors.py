@@ -14,11 +14,9 @@ class CORSConfig:
     """Configuration for CORS middleware."""
     
     def __init__(self):
-        self.allowed_origins: List[str] = [
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:3001",
+        from shared.core.config.central_config import get_central_config
+        config = get_central_config()
+        self.allowed_origins: List[str] = config.cors_origins + [
             "https://sarvanom.com",
             "https://www.sarvanom.com"
         ]

@@ -56,7 +56,8 @@ class GraphDBClient:
     def __init__(self):
         """Initialize the GraphDBClient."""
         # ArangoDB connection configuration
-        self.arango_url = os.getenv("ARANGO_URL", "http://localhost:8529")
+        from shared.core.config.central_config import get_arangodb_url
+        self.arango_url = os.getenv("ARANGO_URL", get_arangodb_url())
         self.arango_username = os.getenv("ARANGO_USERNAME", "root")
         self.arango_password = os.getenv("ARANGO_PASSWORD", "")
         self.arango_database = os.getenv("ARANGO_DATABASE", "knowledge_graph")

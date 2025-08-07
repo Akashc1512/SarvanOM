@@ -62,7 +62,7 @@ git clone https://github.com/Akashc1512/SarvanOM.git
 cd SarvanOM
 
 # 2. Install dependencies
-pip install -r requirements.txt
+.venv/bin/pip install -r requirements.txt
 
 # 3. Configure environment
 cp env.template .env

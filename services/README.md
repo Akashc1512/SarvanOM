@@ -164,7 +164,7 @@ The gateway provides the following API endpoints:
 ### Installation
 1. Install dependencies:
    ```bash
-   pip install -r requirements.txt
+   .venv/bin/pip install -r requirements.txt
    ```
 
 2. Set up environment variables:

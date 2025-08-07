@@ -29,6 +29,7 @@ from shared.core.api.exceptions import (
 from services.api_gateway.middleware.error_handling import (
     handle_service_error, validate_service_response, log_service_operation
 )
+from shared.core.error_handler import handle_critical_operation
 
 logger = get_logger(__name__)
 
@@ -168,6 +169,7 @@ class DatabaseService(BaseAgentService):
             logger.error(f"Failed to get database service metrics: {e}")
             return {"error": str(e)}
     
+    @handle_critical_operation(operation_type="database", max_retries=3, timeout=30.0)
     async def execute_query(self, database_name: str, query: str,
                           params: Optional[Dict[str, Any]] = None,
                           timeout: Optional[int] = None) -> Dict[str, Any]:

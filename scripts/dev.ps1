@@ -41,14 +41,15 @@ switch ($Command) {
         Write-Host "Installing Node.js dependencies..." -ForegroundColor Green
         npm install
         Write-Host "Installing Python dependencies..." -ForegroundColor Green
-        pip install -e .[dev,test,security]
+
+        .venv\Scripts\pip install -e .[dev,test,security]
         Write-Host "Installation complete!" -ForegroundColor Green
     }
     
     "setup" {
         Write-Host "Setting up project..." -ForegroundColor Green
         npm install
-        pip install -e .[dev,test,security]
+        .venv\Scripts\pip install -e .[dev,test,security]
         if (!(Test-Path ".env")) {
             Copy-Item ".env.template" ".env"
             Write-Host "Created .env file from template. Please configure your environment variables." -ForegroundColor Yellow

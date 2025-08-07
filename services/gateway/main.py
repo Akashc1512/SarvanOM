@@ -11,6 +11,9 @@ This gateway routes requests to various microservices including:
 - Knowledge graph service
 """
 
+# Import Windows compatibility fixes first
+import shared.core.windows_compatibility
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -426,7 +429,9 @@ async def synthesize_endpoint(request: SynthesisRequest):
         
         # Record orchestration metrics
         record_orchestration_metrics(
-            model_type="gpt-4",  # Placeholder - could be dynamic
+            from shared.core.config.central_config import get_central_config
+        config = get_central_config()
+        model_type=config.openai_model,  # Use configured model
             strategy="multi_agent",
             duration_seconds=processing_time,
             fallback_used=False,

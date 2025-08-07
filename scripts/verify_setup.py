@@ -284,7 +284,7 @@ def generate_report(
     if not venv_ok:
         print("  - Activate virtual environment: source .venv/bin/activate")
     if not all_packages_installed:
-        print("  - Install missing packages: pip install -r requirements.txt")
+        print("  - Install missing packages: .venv/bin/pip install -r requirements.txt")
     if not frontend_ok:
         print("  - Install frontend dependencies: cd frontend && npm install")
     

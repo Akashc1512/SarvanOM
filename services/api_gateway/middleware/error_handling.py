@@ -1,387 +1,475 @@
 """
-Error Handling Middleware for Universal Knowledge Platform
+Comprehensive Error Handling Middleware for API Gateway.
 
-This module provides comprehensive error handling middleware that:
-- Catches and logs all exceptions with context
-- Converts exceptions to appropriate HTTP responses
-- Provides standardized error response format
-- Includes request tracking and debugging information
-- Handles different types of errors appropriately
+This module provides middleware for handling errors in critical operations,
+ensuring the server remains stable and provides graceful error responses.
 
 Features:
-- Global exception handling
-- Request context preservation
-- Structured error logging
-- Security-conscious error messages
-- Performance monitoring integration
+    - Request/response error handling
+    - Critical operation wrapping
+    - Graceful fallback mechanisms
+    - Structured error logging
+    - Circuit breaker patterns
+    - Health monitoring integration
+
+Security:
+    - Sanitized error messages
+    - No sensitive data in logs
+    - Rate limiting on error reporting
+    - Audit trail for critical errors
+
+Authors:
+    - Universal Knowledge Platform Engineering Team
+
+Version:
+    1.0.0 (2024-12-28)
 """
 
-import logging
-from shared.core.unified_logging import get_logger
+import asyncio
 import time
 import traceback
-from typing import Dict, Any, Optional
+import uuid
+from contextlib import asynccontextmanager
+from functools import wraps
+from typing import Any, Callable, Dict, Optional, Type, TypeVar
+from typing_extensions import ParamSpec
+
+import structlog
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import HTTPException
-from pydantic import ValidationError
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp
 
-from shared.core.api.exceptions import (
-    UKPHTTPException, AuthenticationError, AuthorizationError,
-    ResourceNotFoundError, DatabaseError, ExternalServiceError,
-    QueryProcessingError, ValidationError as UKPValidationError
+from shared.core.error_handler import (
+    ErrorContext,
+    ErrorInfo,
+    ErrorResponse,
+    error_handler_factory,
+    handle_critical_operation,
+    safe_api_call,
+    safe_llm_call,
+    safe_database_call
 )
 
-logger = get_logger(__name__)
+logger = structlog.get_logger(__name__)
+
+# Type variables for generic error handling
+T = TypeVar('T')
+P = ParamSpec('P')
 
 
-class ErrorHandlingMiddleware:
+class ErrorHandlingMiddleware(BaseHTTPMiddleware):
     """Middleware for comprehensive error handling."""
     
-    def __init__(self):
+    def __init__(self, app: ASGIApp):
+        super().__init__(app)
         self.error_counts = {}
-        self.error_types = {}
+        self.alert_thresholds = {
+            "critical": 5,
+            "high": 10,
+            "medium": 20
+        }
     
-    async def __call__(self, request: Request, call_next):
-        """Process request with comprehensive error handling."""
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Handle requests with comprehensive error handling."""
         start_time = time.time()
-        request_id = getattr(request.state, "request_id", f"req_{int(time.time() * 1000)}")
+        request_id = str(uuid.uuid4())
+        
+        # Add request ID to request state
+        request.state.request_id = request_id
         
         try:
             # Process the request
             response = await call_next(request)
             
-            # Log successful requests (optional)
-            processing_time = time.time() - start_time
-            if processing_time > 1.0:  # Log slow requests
-                logger.warning(
-                    f"Slow request: {request.method} {request.url} - {processing_time:.2f}s",
-                    extra={"request_id": request_id, "processing_time": processing_time}
-                )
+            # Log successful request
+            duration = time.time() - start_time
+            logger.info(
+                "Request processed successfully",
+                request_id=request_id,
+                path=request.url.path,
+                method=request.method,
+                status_code=response.status_code,
+                duration=duration
+            )
             
             return response
             
-        except HTTPException as exc:
-            # HTTP exceptions are already properly formatted
-            return await self._handle_http_exception(request, exc, start_time, request_id)
-            
-        except ValidationError as exc:
-            # Pydantic validation errors
-            return await self._handle_validation_error(request, exc, start_time, request_id)
-            
-        except UKPHTTPException as exc:
-            # Custom HTTP exceptions
-            return await self._handle_ukp_http_exception(request, exc, start_time, request_id)
-            
-        except (ConnectionError, TimeoutError) as exc:
-            # Connection and timeout errors
-            return await self._handle_connection_error(request, exc, start_time, request_id)
-            
-        except (ValueError, TypeError) as exc:
-            # Validation errors
-            return await self._handle_validation_error(request, exc, start_time, request_id)
-            
-        except (PermissionError, OSError) as exc:
-            # Permission and system errors
-            return await self._handle_permission_error(request, exc, start_time, request_id)
-            
-        except Exception as exc:
-            # Generic exceptions
-            return await self._handle_generic_exception(request, exc, start_time, request_id)
+        except Exception as e:
+            # Handle the error comprehensively
+            return await self._handle_request_error(request, e, start_time, request_id)
     
-    async def _handle_http_exception(
-        self, request: Request, exc: HTTPException, start_time: float, request_id: str
-    ) -> JSONResponse:
-        """Handle HTTP exceptions."""
-        processing_time = time.time() - start_time
+    async def _handle_request_error(
+        self, 
+        request: Request, 
+        error: Exception, 
+        start_time: float, 
+        request_id: str
+    ) -> Response:
+        """Handle request errors with comprehensive logging and fallback."""
         
-        logger.warning(
-            f"HTTP {exc.status_code}: {exc.detail}",
-            extra={
-                "request_id": request_id,
-                "path": str(request.url),
-                "method": request.method,
-                "status_code": exc.status_code,
-                "processing_time": processing_time
-            }
-        )
+        duration = time.time() - start_time
         
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={
-                "error": exc.detail,
-                "status_code": exc.status_code,
-                "timestamp": time.time(),
-                "path": str(request.url),
-                "request_id": request_id,
-                "error_type": "http_exception",
-                "processing_time": processing_time
-            }
-        )
-    
-    async def _handle_validation_error(
-        self, request: Request, exc: ValidationError, start_time: float, request_id: str
-    ) -> JSONResponse:
-        """Handle validation errors."""
-        processing_time = time.time() - start_time
-        
-        logger.warning(
-            f"Validation error: {exc.errors()}",
-            extra={
-                "request_id": request_id,
-                "path": str(request.url),
-                "method": request.method,
-                "processing_time": processing_time,
-                "validation_errors": exc.errors()
-            }
-        )
-        
-        return JSONResponse(
-            status_code=422,
-            content={
-                "error": "Validation error",
-                "status_code": 422,
-                "timestamp": time.time(),
-                "path": str(request.url),
-                "request_id": request_id,
-                "error_type": "validation_error",
-                "processing_time": processing_time,
-                "details": exc.errors()
-            }
-        )
-    
-    async def _handle_ukp_http_exception(
-        self, request: Request, exc: UKPHTTPException, start_time: float, request_id: str
-    ) -> JSONResponse:
-        """Handle custom HTTP exceptions."""
-        processing_time = time.time() - start_time
-        
-        logger.error(
-            f"UKP HTTP {exc.status_code}: {exc.internal_message}",
-            extra={
-                "request_id": request_id,
-                "path": str(request.url),
-                "method": request.method,
-                "status_code": exc.status_code,
-                "processing_time": processing_time,
-                "internal_message": exc.internal_message
-            }
-        )
-        
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={
-                "error": exc.detail,
-                "status_code": exc.status_code,
-                "timestamp": time.time(),
-                "path": str(request.url),
-                "request_id": request_id,
-                "error_type": "ukp_http_exception",
-                "processing_time": processing_time
-            },
-            headers=exc.headers
-        )
-    
-    async def _handle_connection_error(
-        self, request: Request, exc: Exception, start_time: float, request_id: str
-    ) -> JSONResponse:
-        """Handle connection and timeout errors."""
-        processing_time = time.time() - start_time
-        
-        logger.error(
-            f"Connection error: {str(exc)}",
-            extra={
-                "request_id": request_id,
-                "path": str(request.url),
-                "method": request.method,
-                "processing_time": processing_time,
-                "error_type": type(exc).__name__
-            },
-            exc_info=True
-        )
-        
-        return JSONResponse(
-            status_code=503,
-            content={
-                "error": "Service temporarily unavailable",
-                "status_code": 503,
-                "timestamp": time.time(),
-                "path": str(request.url),
-                "request_id": request_id,
-                "error_type": "service_unavailable",
-                "processing_time": processing_time
-            }
-        )
-    
-    async def _handle_permission_error(
-        self, request: Request, exc: Exception, start_time: float, request_id: str
-    ) -> JSONResponse:
-        """Handle permission and system errors."""
-        processing_time = time.time() - start_time
-        
-        logger.error(
-            f"Permission error: {str(exc)}",
-            extra={
-                "request_id": request_id,
-                "path": str(request.url),
-                "method": request.method,
-                "processing_time": processing_time,
-                "error_type": type(exc).__name__
-            },
-            exc_info=True
-        )
-        
-        return JSONResponse(
-            status_code=403,
-            content={
-                "error": "Access denied",
-                "status_code": 403,
-                "timestamp": time.time(),
-                "path": str(request.url),
-                "request_id": request_id,
-                "error_type": "permission_error",
-                "processing_time": processing_time
-            }
-        )
-    
-    async def _handle_generic_exception(
-        self, request: Request, exc: Exception, start_time: float, request_id: str
-    ) -> JSONResponse:
-        """Handle generic exceptions with comprehensive logging."""
-        processing_time = time.time() - start_time
-        
-        # Log the full exception with context
-        logger.error(
-            f"Unhandled exception in {request.url}: {str(exc)}",
-            extra={
-                "request_id": request_id,
+        # Create error context
+        context = ErrorContext(
+            operation=f"{request.method}_{request.url.path}",
+            service="api_gateway",
+            request_id=request_id,
+            user_id=getattr(request.state, 'user_id', None),
+            session_id=getattr(request.state, 'session_id', None),
+            metadata={
                 "path": str(request.url),
                 "method": request.method,
                 "client_ip": request.client.host if request.client else "unknown",
                 "user_agent": request.headers.get("user-agent", "unknown"),
-                "processing_time": processing_time,
-                "error_type": type(exc).__name__,
-                "traceback": traceback.format_exc()
-            },
+                "duration": duration
+            }
+        )
+        
+        # Get appropriate error handler
+        error_handler = error_handler_factory.get_handler("api")
+        
+        # Handle the error
+        error_response = await error_handler.handle_error(error, context)
+        
+        # Log the error with structured information
+        logger.error(
+            "Request processing failed",
+            request_id=request_id,
+            path=request.url.path,
+            method=request.method,
+            error_type=type(error).__name__,
+            error_message=str(error),
+            duration=duration,
             exc_info=True
         )
         
-        # Update error statistics
-        error_type = type(exc).__name__
-        self.error_counts[error_type] = self.error_counts.get(error_type, 0) + 1
+        # Update error counts for monitoring
+        self._update_error_counts(error, context)
         
+        # Return graceful error response
         return JSONResponse(
             status_code=500,
             content={
-                "error": "Internal server error",
-                "status_code": 500,
-                "timestamp": time.time(),
-                "path": str(request.url),
+                "success": False,
+                "error": error_response.error,
+                "error_type": error_response.error_type,
+                "error_code": error_response.error_code,
                 "request_id": request_id,
-                "error_type": "internal_server_error",
-                "processing_time": processing_time
+                "timestamp": time.time(),
+                "retryable": error_response.retryable,
+                "fallback_data": error_response.fallback_data,
+                "metadata": error_response.metadata
             }
         )
+    
+    def _update_error_counts(self, error: Exception, context: ErrorContext):
+        """Update error counts for monitoring and alerting."""
+        error_key = f"{type(error).__name__}_{context.operation}"
+        
+        if error_key not in self.error_counts:
+            self.error_counts[error_key] = 0
+        
+        self.error_counts[error_key] += 1
+        
+        # Check for alerting thresholds
+        if self.error_counts[error_key] >= self.alert_thresholds.get("high", 10):
+            logger.error(
+                f"High error rate detected for {error_key}: {self.error_counts[error_key]} errors",
+                error_key=error_key,
+                count=self.error_counts[error_key],
+                threshold=self.alert_thresholds.get("high", 10)
+            )
+
+
+def wrap_critical_operation(
+    operation_type: str = "api",
+    timeout: float = 30.0,
+    max_retries: int = 3
+):
+    """
+    Decorator for wrapping critical operations with comprehensive error handling.
+    
+    Args:
+        operation_type: Type of operation ("api", "llm", "database")
+        timeout: Operation timeout in seconds
+        max_retries: Maximum retry attempts
+    """
+    def decorator(func: Callable[P, T]) -> Callable[P, T]:
+        @wraps(func)
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            return await handle_critical_operation(
+                operation_type=operation_type,
+                max_retries=max_retries,
+                timeout=timeout
+            )(func)(*args, **kwargs)
+        
+        return wrapper
+    return decorator
+
+
+@asynccontextmanager
+async def critical_operation_context(
+    operation_type: str = "api",
+    timeout: float = 30.0,
+    **context_kwargs
+):
+    """
+    Context manager for critical operations with error handling.
+    
+    Args:
+        operation_type: Type of operation ("api", "llm", "database")
+        timeout: Operation timeout in seconds
+        **context_kwargs: Additional context information
+    """
+    from shared.core.error_handler import critical_operation_context as base_context
+    
+    async with base_context(operation_type=operation_type, timeout=timeout, **context_kwargs) as context:
+        yield context
 
 
 def create_error_handling_middleware() -> ErrorHandlingMiddleware:
-    """Create and return error handling middleware instance."""
-    return ErrorHandlingMiddleware()
+    """Create and configure error handling middleware."""
+    return ErrorHandlingMiddleware
 
 
-# Utility functions for service error handling
-def handle_service_error(
-    service_name: str,
-    operation: str,
-    error: Exception,
-    request_id: Optional[str] = None
-) -> Dict[str, Any]:
+# Utility functions for common error handling patterns
+
+async def safe_api_operation(
+    operation: Callable,
+    *args,
+    operation_type: str = "api",
+    timeout: float = 30.0,
+    max_retries: int = 3,
+    fallback_data: Optional[Dict[str, Any]] = None,
+    **kwargs
+) -> Any:
     """
-    Handle service errors and convert them to appropriate HTTP exceptions.
+    Safely execute an API operation with comprehensive error handling.
     
     Args:
-        service_name: Name of the service that encountered the error
-        operation: Operation that failed
-        error: The exception that occurred
-        request_id: Optional request ID for tracking
+        operation: The operation to execute
+        operation_type: Type of operation
+        timeout: Operation timeout
+        max_retries: Maximum retry attempts
+        fallback_data: Fallback data if operation fails
+        **kwargs: Additional arguments for the operation
     
     Returns:
-        Dictionary with error information for logging
+        Operation result or fallback data
     """
-    error_info = {
-        "service": service_name,
-        "operation": operation,
-        "error_type": type(error).__name__,
-        "error_message": str(error),
-        "request_id": request_id,
-        "timestamp": time.time()
-    }
-    
-    # Log the error
-    logger.error(f"Service error in {service_name}.{operation}: {str(error)}", extra=error_info)
-    
-    # Convert to appropriate HTTP exception
-    if isinstance(error, (ConnectionError, TimeoutError)):
-        raise ExternalServiceError(
-            service=service_name,
-            operation=operation,
-            error=str(error),
-            retryable=True
+    try:
+        return await safe_api_call(
+            operation,
+            *args,
+            timeout=timeout,
+            max_retries=max_retries,
+            fallback_data=fallback_data,
+            **kwargs
         )
-    elif isinstance(error, (ValueError, TypeError)):
-        raise UKPValidationError(
-            field="input",
-            message=f"Invalid input for {operation}",
-            value=str(error)
+    except Exception as e:
+        logger.error(
+            "API operation failed",
+            operation=operation.__name__,
+            error=str(e),
+            exc_info=True
         )
-    elif isinstance(error, PermissionError):
-        raise AuthorizationError(f"Permission denied for {operation}")
-    elif isinstance(error, FileNotFoundError):
-        raise ResourceNotFoundError("file", str(error))
-    else:
-        # Generic service error
-        raise QueryProcessingError(
-            query_id=request_id or "unknown",
-            internal_error=f"{service_name}.{operation} failed: {str(error)}",
-            recoverable=True
-        )
-    
-    return error_info
+        if fallback_data:
+            return fallback_data
+        raise
 
+
+async def safe_llm_operation(
+    operation: Callable,
+    *args,
+    timeout: float = 60.0,
+    max_retries: int = 3,
+    fallback_data: Optional[Dict[str, Any]] = None,
+    **kwargs
+) -> Any:
+    """
+    Safely execute an LLM operation with comprehensive error handling.
+    
+    Args:
+        operation: The operation to execute
+        timeout: Operation timeout
+        max_retries: Maximum retry attempts
+        fallback_data: Fallback data if operation fails
+        **kwargs: Additional arguments for the operation
+    
+    Returns:
+        Operation result or fallback data
+    """
+    try:
+        return await safe_llm_call(
+            operation,
+            *args,
+            timeout=timeout,
+            max_retries=max_retries,
+            fallback_data=fallback_data,
+            **kwargs
+        )
+    except Exception as e:
+        logger.error(
+            "LLM operation failed",
+            operation=operation.__name__,
+            error=str(e),
+            exc_info=True
+        )
+        if fallback_data:
+            return fallback_data
+        raise
+
+
+async def safe_database_operation(
+    operation: Callable,
+    *args,
+    timeout: float = 30.0,
+    max_retries: int = 3,
+    fallback_data: Optional[Dict[str, Any]] = None,
+    **kwargs
+) -> Any:
+    """
+    Safely execute a database operation with comprehensive error handling.
+    
+    Args:
+        operation: The operation to execute
+        timeout: Operation timeout
+        max_retries: Maximum retry attempts
+        fallback_data: Fallback data if operation fails
+        **kwargs: Additional arguments for the operation
+    
+    Returns:
+        Operation result or fallback data
+    """
+    try:
+        return await safe_database_call(
+            operation,
+            *args,
+            timeout=timeout,
+            max_retries=max_retries,
+            fallback_data=fallback_data,
+            **kwargs
+        )
+    except Exception as e:
+        logger.error(
+            "Database operation failed",
+            operation=operation.__name__,
+            error=str(e),
+            exc_info=True
+        )
+        if fallback_data:
+            return fallback_data
+        raise
+
+
+# Health monitoring and alerting
+
+class ErrorMonitor:
+    """Monitor for tracking error patterns and alerting."""
+    
+    def __init__(self):
+        self.error_counts = {}
+        self.error_timestamps = {}
+        self.alert_thresholds = {
+            "critical": 5,
+            "high": 10,
+            "medium": 20
+        }
+    
+    def record_error(self, error: Exception, context: Dict[str, Any]):
+        """Record an error for monitoring."""
+        error_key = f"{type(error).__name__}_{context.get('operation', 'unknown')}"
+        
+        # Update error count
+        self.error_counts[error_key] = self.error_counts.get(error_key, 0) + 1
+        
+        # Update timestamps
+        if error_key not in self.error_timestamps:
+            self.error_timestamps[error_key] = []
+        self.error_timestamps[error_key].append(time.time())
+        
+        # Clean old timestamps (keep last hour)
+        current_time = time.time()
+        self.error_timestamps[error_key] = [
+            ts for ts in self.error_timestamps[error_key]
+            if current_time - ts < 3600
+        ]
+        
+        # Check for alerting
+        self._check_alerts(error_key, error, context)
+    
+    def _check_alerts(self, error_key: str, error: Exception, context: Dict[str, Any]):
+        """Check if alerts should be triggered."""
+        recent_count = len(self.error_timestamps[error_key])
+        threshold = self.alert_thresholds.get("high", 10)
+        
+        if recent_count >= threshold:
+            logger.error(
+                f"High error rate detected: {recent_count} {type(error).__name__} errors in the last hour",
+                error_key=error_key,
+                count=recent_count,
+                threshold=threshold,
+                operation=context.get('operation', 'unknown'),
+                request_id=context.get('request_id', 'unknown')
+            )
+
+
+# Global error monitor
+error_monitor = ErrorMonitor()
+
+
+# Middleware setup functions
+
+def setup_error_handling_middleware(app: ASGIApp) -> ErrorHandlingMiddleware:
+    """Setup error handling middleware for the application."""
+    middleware = ErrorHandlingMiddleware(app)
+    return middleware
+
+
+def add_error_handling_to_app(app: ASGIApp):
+    """Add error handling middleware to the application."""
+    app.add_middleware(ErrorHandlingMiddleware)
+
+
+# Validation and response handling
 
 def validate_service_response(
-    response: Any,
-    service_name: str,
-    operation: str,
-    expected_type: type = dict
-) -> None:
+    response: Any, 
+    service_name: str, 
+    operation: str, 
+    expected_type: Type
+) -> bool:
     """
-    Validate service response and raise appropriate errors if invalid.
+    Validate service response format and content.
     
     Args:
         response: The response to validate
         service_name: Name of the service
-        operation: Operation that produced the response
-        expected_type: Expected type of the response
+        operation: Name of the operation
+        expected_type: Expected response type
     
-    Raises:
-        ExternalServiceError: If response is invalid
+    Returns:
+        True if response is valid, False otherwise
     """
-    if response is None:
-        raise ExternalServiceError(
-            service=service_name,
-            operation=operation,
-            error="Service returned None response",
-            retryable=True
+    try:
+        if not isinstance(response, expected_type):
+            logger.error(
+                f"Invalid response type from {service_name}.{operation}",
+                expected_type=expected_type.__name__,
+                actual_type=type(response).__name__
+            )
+            return False
+        
+        return True
+        
+    except Exception as e:
+        logger.error(
+            f"Response validation failed for {service_name}.{operation}",
+            error=str(e),
+            exc_info=True
         )
-    
-    if not isinstance(response, expected_type):
-        raise ExternalServiceError(
-            service=service_name,
-            operation=operation,
-            error=f"Expected {expected_type.__name__}, got {type(response).__name__}",
-            retryable=False
-        )
+        return False
 
 
 def log_service_operation(
@@ -389,36 +477,87 @@ def log_service_operation(
     operation: str,
     success: bool,
     duration: float,
-    request_id: Optional[str] = None,
-    additional_info: Optional[Dict[str, Any]] = None
-) -> None:
+    request_id: str,
+    metadata: Optional[Dict[str, Any]] = None
+):
     """
-    Log service operation with performance metrics.
+    Log service operation with structured information.
     
     Args:
         service_name: Name of the service
-        operation: Operation performed
+        operation: Name of the operation
         success: Whether the operation was successful
-        duration: Duration of the operation in seconds
-        request_id: Optional request ID for tracking
-        additional_info: Additional information to log
+        duration: Operation duration in seconds
+        request_id: Request identifier
+        metadata: Additional metadata
     """
     log_data = {
         "service": service_name,
         "operation": operation,
         "success": success,
         "duration": duration,
-        "request_id": request_id,
-        "timestamp": time.time()
+        "request_id": request_id
     }
     
-    if additional_info:
-        log_data.update(additional_info)
+    if metadata:
+        log_data.update(metadata)
     
     if success:
-        if duration > 1.0:  # Log slow operations
-            logger.warning(f"Slow {service_name}.{operation}: {duration:.2f}s", extra=log_data)
-        else:
-            logger.info(f"{service_name}.{operation} completed in {duration:.3f}s", extra=log_data)
+        logger.info("Service operation completed", **log_data)
     else:
-        logger.error(f"{service_name}.{operation} failed after {duration:.3f}s", extra=log_data) 
+        logger.error("Service operation failed", **log_data)
+
+
+def handle_service_error(
+    error: Exception,
+    service_name: str,
+    operation: str,
+    request_id: str,
+    fallback_data: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Handle service errors with structured logging and fallback.
+    
+    Args:
+        error: The error that occurred
+        service_name: Name of the service
+        operation: Name of the operation
+        request_id: Request identifier
+        fallback_data: Fallback data to return
+    
+    Returns:
+        Error response with fallback data
+    """
+    # Log the error
+    logger.error(
+        f"Service error in {service_name}.{operation}",
+        service=service_name,
+        operation=operation,
+        request_id=request_id,
+        error_type=type(error).__name__,
+        error_message=str(error),
+        exc_info=True
+    )
+    
+    # Record error for monitoring
+    error_monitor.record_error(error, {
+        "service": service_name,
+        "operation": operation,
+        "request_id": request_id
+    })
+    
+    # Return fallback response
+    return {
+        "success": False,
+        "error": f"Service operation failed: {str(error)}",
+        "error_type": type(error).__name__,
+        "service": service_name,
+        "operation": operation,
+        "request_id": request_id,
+        "timestamp": time.time(),
+        "fallback_data": fallback_data or {
+            "message": "Service temporarily unavailable",
+            "suggestion": "Please try again later",
+            "status": "degraded"
+        }
+    } 

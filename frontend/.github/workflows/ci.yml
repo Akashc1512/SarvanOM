@@ -1,0 +1,396 @@
+name: 🚀 Frontend CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/ci.yml'
+
+defaults:
+  run:
+    working-directory: frontend
+
+env:
+  NODE_VERSION: '18'
+  CACHE_DEPENDENCY_PATH: frontend/package-lock.json
+
+jobs:
+  # Lint and Type Check
+  lint-and-typecheck:
+    name: 🔍 Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🔍 Run ESLint
+        run: npm run lint
+
+      - name: 🔧 Check TypeScript
+        run: npm run type-check
+
+      - name: 💅 Check Prettier formatting
+        run: npm run format:check
+
+  # Unit Tests
+  unit-tests:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🧪 Run unit tests
+        run: npm run test:ci
+
+      - name: 📊 Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          directory: frontend/coverage
+          flags: frontend
+          name: frontend-coverage
+
+      - name: 📈 Coverage Report
+        uses: romeovs/lcov-reporter-action@v0.3.1
+        with:
+          lcov-file: frontend/coverage/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          title: Frontend Coverage Report
+
+  # Build Test
+  build:
+    name: 🏗️ Build Application
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 🏗️ Build application
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: 📊 Bundle Analysis
+        run: npm run analyze
+        env:
+          ANALYZE: true
+
+      - name: 💾 Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: |
+            frontend/.next/
+            frontend/out/
+          retention-days: 7
+
+  # E2E Tests
+  e2e-tests:
+    name: 🎭 E2E Tests
+    runs-on: ubuntu-latest
+    needs: [build]
+    strategy:
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: frontend/
+
+      - name: 🎭 Install Playwright
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: 🧪 Run E2E tests
+        run: npm run test:e2e -- --project=${{ matrix.browser }}
+        env:
+          CI: true
+
+      - name: 📊 Upload E2E test results
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: e2e-results-${{ matrix.browser }}
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+          retention-days: 7
+
+  # Performance Tests
+  performance-tests:
+    name: ⚡ Performance Tests
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: frontend/
+
+      - name: 🎭 Install Playwright
+        run: npx playwright install chromium
+
+      - name: ⚡ Run performance tests
+        run: npm run test:perf
+        env:
+          CI: true
+
+      - name: 🏃 Run Lighthouse CI
+        run: |
+          npm install -g @lhci/cli@0.12.x
+          npm run build
+          npm run start &
+          sleep 10
+          lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+      - name: 📊 Upload performance results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-results
+          path: |
+            frontend/lighthouse-report.html
+            frontend/.lighthouseci/
+          retention-days: 7
+
+  # Security Audit
+  security-audit:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: 🔒 Run npm audit
+        run: npm audit --audit-level=moderate
+
+      - name: 🔍 Run Snyk security scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --file=frontend/package.json
+
+  # Accessibility Tests
+  accessibility-tests:
+    name: ♿ Accessibility Tests
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: frontend/
+
+      - name: 🎭 Install Playwright
+        run: npx playwright install chromium
+
+      - name: ♿ Run accessibility tests
+        run: npm run test:a11y
+        env:
+          CI: true
+
+      - name: 📊 Upload accessibility results
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: accessibility-results
+          path: frontend/test-results/
+          retention-days: 7
+
+  # Deploy Preview (for PRs)
+  deploy-preview:
+    name: 🚀 Deploy Preview
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    needs: [lint-and-typecheck, unit-tests, build]
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: frontend/
+
+      - name: 🚀 Deploy to Vercel Preview
+        id: deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: frontend
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+
+  # Production Deploy (for main branch)
+  deploy-production:
+    name: 🚀 Production Deploy
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [lint-and-typecheck, unit-tests, build, e2e-tests, performance-tests, security-audit, accessibility-tests]
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - name: 📦 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🏗️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: ${{ env.CACHE_DEPENDENCY_PATH }}
+
+      - name: 📥 Install dependencies
+        run: npm ci
+
+      - name: 📥 Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: frontend/
+
+      - name: 🚀 Deploy to Production
+        id: deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+          working-directory: frontend
+          scope: ${{ secrets.VERCEL_ORG_ID }}
+
+      - name: 📧 Notify deployment success
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        if: always()
+
+  # Notification Summary
+  ci-summary:
+    name: 📋 CI Summary
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [lint-and-typecheck, unit-tests, build, e2e-tests, performance-tests, security-audit, accessibility-tests]
+    steps:
+      - name: 📋 Generate summary
+        run: |
+          echo "## 🚀 Frontend CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint & Type Check | ${{ needs.lint-and-typecheck.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | ${{ needs.build.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E Tests | ${{ needs.e2e-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Performance Tests | ${{ needs.performance-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Audit | ${{ needs.security-audit.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Accessibility Tests | ${{ needs.accessibility-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY

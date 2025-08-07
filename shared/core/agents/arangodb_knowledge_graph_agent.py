@@ -1,7 +1,6 @@
 
 """
-ArangoDB Knowledge Graph Agent
-Refactored to use modular components: GraphDBClient and KnowledgeGraphService.
+ArangoDB Knowledge Graph Agent Implementation
 """
 
 import asyncio
@@ -9,36 +8,83 @@ import logging
 import time
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
-from datetime import datetime
 
-from shared.core.agents.base_agent import BaseAgent, AgentType, QueryContext, AgentResult
-from shared.core.agents.graph_db_client import GraphDBClient
-from shared.core.agents.knowledge_graph_service import KnowledgeGraphService, KnowledgeGraphResult
+from shared.core.agents.base_agent import (
+    BaseAgent,
+    AgentType,
+    AgentResult,
+    QueryContext,
+)
+from shared.core.agents.data_models import KnowledgeGraphResult
+from shared.core.agents.agent_utilities import (
+    AgentTaskProcessor,
+    ResponseFormatter,
+    time_agent_function
+)
+from shared.core.agents.validation_utilities import CommonValidators
 
-logger = logging.getLogger(__name__)
+# Configure logging
+from shared.core.unified_logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class ArangoDBKnowledgeGraphAgent(BaseAgent):
     """
-    Agent for handling knowledge graph queries using ArangoDB.
-    Refactored to use modular components for better separation of concerns.
+    ArangoDB Knowledge Graph Agent for querying and managing knowledge graphs.
     """
-    
+
     def __init__(self):
-        """Initialize the ArangoDB KnowledgeGraphAgent."""
-        super().__init__("arangodb_knowledge_graph_agent", AgentType.RETRIEVAL)
+        """Initialize the ArangoDB knowledge graph agent."""
+        super().__init__(agent_id="arangodb_knowledge_graph_agent", agent_type=AgentType.KNOWLEDGE_GRAPH)
+
+        # Initialize shared utilities
+        self.task_processor = AgentTaskProcessor(self.agent_id)
+        self.logger = get_logger(f"{__name__}.{self.agent_id}")
+
+        # Initialize knowledge service and graph client
+        from shared.core.services.knowledge_service import KnowledgeService
+        from shared.core.services.graph_client import ArangoDBGraphClient
         
-        # Initialize modular components
-        self.graph_client = GraphDBClient()
-        self.knowledge_service = KnowledgeGraphService()
-        
+        self.knowledge_service = KnowledgeService()
+        self.graph_client = ArangoDBGraphClient()
+
         logger.info("✅ ArangoDB KnowledgeGraphAgent initialized successfully")
-    
+
+    @time_agent_function("arangodb_knowledge_graph_agent")
     async def process_task(
         self, task: Dict[str, Any], context: QueryContext
     ) -> Dict[str, Any]:
         """
-        Process a knowledge graph query task.
+        Process knowledge graph query task using shared utilities.
+        
+        This method now uses the standardized workflow from AgentTaskProcessor
+        to eliminate duplicate logic and ensure consistent behavior.
+        """
+        # Use shared task processor with validation
+        result = await self.task_processor.process_task_with_workflow(
+            task=task,
+            context=context,
+            processing_func=self._process_knowledge_graph_task,
+            validation_func=CommonValidators.validate_query_input,
+            timeout_seconds=60
+        )
+        
+        # Convert TaskResult to standard response format
+        return ResponseFormatter.format_agent_response(
+            success=result.success,
+            data=result.data,
+            error=result.error,
+            confidence=result.confidence,
+            execution_time_ms=result.execution_time_ms,
+            metadata=result.metadata
+        )
+
+    async def _process_knowledge_graph_task(
+        self, task: Dict[str, Any], context: QueryContext
+    ) -> Dict[str, Any]:
+        """
+        Process knowledge graph query task.
         
         Args:
             task: Task containing query and parameters
@@ -47,46 +93,26 @@ class ArangoDBKnowledgeGraphAgent(BaseAgent):
         Returns:
             Knowledge graph query results
         """
-        start_time = time.time()
+        query = task.get("query", context.query)
+        query_type = task.get("query_type", "entity_relationship")
         
-        try:
-            query = task.get("query", context.query)
-            query_type = task.get("query_type", "entity_relationship")
-            
-            logger.info(f"🔍 Processing ArangoDB knowledge graph query: {query[:50]}...")
-            
-            # Use the knowledge service to process the query
-            result = await self.knowledge_service.query(query, query_type)
-            
-            processing_time = (time.time() - start_time) * 1000
-            
-            # Create agent result
-            agent_result = AgentResult(
-                success=True,
-                data=result,
-                confidence=result.confidence,
-                execution_time_ms=int(processing_time),
-                metadata={
-                    "query_type": query_type,
-                    "entities_found": len(result.entities),
-                    "relationships_found": len(result.relationships),
-                    "paths_found": len(result.paths),
-                    "arangodb_connected": self.graph_client.connected
-                }
-            )
-            
-            logger.info(f"✅ ArangoDB knowledge graph query completed in {processing_time:.2f}ms")
-            return agent_result.to_dict()
-            
-        except Exception as e:
-            processing_time = (time.time() - start_time) * 1000
-            logger.error(f"❌ ArangoDB knowledge graph query failed: {e}")
-            
-            return AgentResult(
-                success=False,
-                error=str(e),
-                execution_time_ms=int(processing_time)
-            ).to_dict()
+        logger.info(f"🔍 Processing ArangoDB knowledge graph query: {query[:50]}...")
+        
+        # Use the knowledge service to process the query
+        result = await self.knowledge_service.query(query, query_type)
+        
+        # Create agent result
+        return {
+            "data": result,
+            "confidence": result.confidence,
+            "metadata": {
+                "query_type": query_type,
+                "entities_found": len(result.entities),
+                "relationships_found": len(result.relationships),
+                "paths_found": len(result.paths),
+                "arangodb_connected": self.graph_client.connected
+            }
+        }
     
     async def query(self, query: str, query_type: str = "entity_relationship") -> KnowledgeGraphResult:
         """

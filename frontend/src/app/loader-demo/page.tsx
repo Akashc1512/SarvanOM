@@ -1,329 +1,200 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/ui/card";
-import { Button } from "@/ui/ui/button";
-import { Badge } from "@/ui/ui/badge";
+import React from "react";
 import { SarvanomLoader, SarvanomLoaderFullScreen, SarvanomLoaderInline } from "@/ui/SarvanomLoader";
-import { Loader2, Play, Pause, RotateCcw } from "lucide-react";
 
-export default function LoaderDemo() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [showFullScreen, setShowFullScreen] = useState(false);
-  const [demoType, setDemoType] = useState<'basic' | 'fullscreen' | 'inline'>('basic');
-
-  const simulateLoading = () => {
-    setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 3000);
-  };
-
-  const simulateFullScreenLoading = () => {
-    setShowFullScreen(true);
-    setTimeout(() => setShowFullScreen(false), 3000);
-  };
-
-  if (showFullScreen) {
-    return <SarvanomLoaderFullScreen />;
-  }
-
+export default function LoaderDemoPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            SarvanOM Loader Demo
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-indigo-900">
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-white mb-4">
+            🌌 Cosmic Galaxy Loader Demo
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            A beautiful, animated loader component for the SarvanOM platform. 
-            Features orbiting nodes around a globe design with smooth animations.
+          <p className="text-xl text-cyan-300 mb-2">
+            Enhanced particle-based galaxy with vibrant cosmic colors
+          </p>
+          <p className="text-purple-300">
+            200 individual stars rotating around a central sun with realistic orbital mechanics
           </p>
         </div>
 
-        {/* Demo Controls */}
-        <div className="flex justify-center gap-4 mb-8">
-          <Button
-            onClick={() => setDemoType('basic')}
-            variant={demoType === 'basic' ? 'default' : 'outline'}
-          >
-            Basic Demo
-          </Button>
-          <Button
-            onClick={() => setDemoType('fullscreen')}
-            variant={demoType === 'fullscreen' ? 'default' : 'outline'}
-          >
-            Full Screen Demo
-          </Button>
-          <Button
-            onClick={() => setDemoType('inline')}
-            variant={demoType === 'inline' ? 'default' : 'outline'}
-          >
-            Inline Demo
-          </Button>
+        {/* Main Demo Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+          {/* Standard Loader */}
+          <div className="bg-black/20 backdrop-blur-sm rounded-2xl p-8 border border-purple-500/20">
+            <h2 className="text-2xl font-semibold text-white mb-4 text-center">
+              Standard Galaxy Loader
+            </h2>
+            <div className="flex justify-center">
+              <SarvanomLoader size={120} />
+            </div>
+            <div className="mt-4 text-center">
+              <p className="text-cyan-300 text-sm">
+                • 200 unique particles with 8 different star types
+              </p>
+              <p className="text-purple-300 text-sm">
+                • Realistic orbital mechanics (120s rotation)
+              </p>
+              <p className="text-pink-300 text-sm">
+                • Enhanced glow effects and depth layers
+              </p>
+            </div>
+          </div>
+
+          {/* Inline Loader */}
+          <div className="bg-black/20 backdrop-blur-sm rounded-2xl p-8 border border-cyan-500/20">
+            <h2 className="text-2xl font-semibold text-white mb-4 text-center">
+              Inline Galaxy Loader
+            </h2>
+            <div className="flex justify-center">
+              <SarvanomLoaderInline size={80} />
+            </div>
+            <div className="mt-4 text-center">
+              <p className="text-cyan-300 text-sm">
+                • Compact version for UI integration
+              </p>
+              <p className="text-purple-300 text-sm">
+                • Perfect for buttons and small spaces
+              </p>
+              <p className="text-pink-300 text-sm">
+                • Maintains all cosmic effects
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Basic Demo */}
-        {demoType === 'basic' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Loader2 className="h-5 w-5" />
-                  Small Loader
-                </CardTitle>
-                <CardDescription>
-                  60px size - Perfect for buttons and small spaces
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                <SarvanomLoader size={60} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Loader2 className="h-5 w-5" />
-                  Medium Loader
-                </CardTitle>
-                <CardDescription>
-                  120px size - Default size for most use cases
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                <SarvanomLoader size={120} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Loader2 className="h-5 w-5" />
-                  Large Loader
-                </CardTitle>
-                <CardDescription>
-                  200px size - For prominent loading states
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                <SarvanomLoader size={200} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Play className="h-5 w-5" />
-                  Interactive Demo
-                </CardTitle>
-                <CardDescription>
-                  Click to simulate a loading state
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-center">
-                <Button 
-                  onClick={simulateLoading}
-                  disabled={isLoading}
-                  className="mb-4"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Loading...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4 mr-2" />
-                      Start Loading
-                    </>
-                  )}
-                </Button>
-                {isLoading && (
-                  <div className="mt-4">
-                    <SarvanomLoader size={80} />
-                    <p className="text-sm text-gray-600 mt-2">Processing...</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <RotateCcw className="h-5 w-5" />
-                  Full Screen Demo
-                </CardTitle>
-                <CardDescription>
-                  Experience the full screen loading experience
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-center">
-                <Button 
-                  onClick={simulateFullScreenLoading}
-                  variant="outline"
-                  className="mb-4"
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Show Full Screen
-                </Button>
-                <p className="text-sm text-gray-600">
-                  Will show for 3 seconds
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Badge variant="secondary">Custom</Badge>
-                  Custom Styling
-                </CardTitle>
-                <CardDescription>
-                  Loader with custom background and styling
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex justify-center">
-                <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 rounded-lg">
-                  <SarvanomLoader size={100} />
-                </div>
-              </CardContent>
-            </Card>
+        {/* Color Palette Showcase */}
+        <div className="bg-black/20 backdrop-blur-sm rounded-2xl p-8 border border-pink-500/20 mb-12">
+          <h2 className="text-2xl font-semibold text-white mb-6 text-center">
+            🌈 Cosmic Color Palette
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-cyan-300 to-blue-400 rounded-full mx-auto mb-2"></div>
+              <p className="text-cyan-300 text-sm">Blue Stars</p>
+            </div>
+            <div className="text-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-purple-300 to-pink-400 rounded-full mx-auto mb-2"></div>
+              <p className="text-purple-300 text-sm">Purple Stars</p>
+            </div>
+            <div className="text-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-yellow-300 to-orange-400 rounded-full mx-auto mb-2"></div>
+              <p className="text-yellow-300 text-sm">Yellow Stars</p>
+            </div>
+            <div className="text-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-green-300 to-emerald-400 rounded-full mx-auto mb-2"></div>
+              <p className="text-green-300 text-sm">Green Stars</p>
+            </div>
+            <div className="text-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-red-300 to-pink-400 rounded-full mx-auto mb-2"></div>
+              <p className="text-red-300 text-sm">Red Giants</p>
+            </div>
+            <div className="text-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-indigo-300 to-purple-400 rounded-full mx-auto mb-2"></div>
+              <p className="text-indigo-300 text-sm">Indigo Stars</p>
+            </div>
+            <div className="text-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-teal-300 to-cyan-400 rounded-full mx-auto mb-2"></div>
+              <p className="text-teal-300 text-sm">Teal Stars</p>
+            </div>
+            <div className="text-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-amber-300 to-yellow-400 rounded-full mx-auto mb-2"></div>
+              <p className="text-amber-300 text-sm">Amber Stars</p>
+            </div>
           </div>
-        )}
+        </div>
+
+        {/* Technical Features */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="bg-black/20 backdrop-blur-sm rounded-xl p-6 border border-cyan-500/20">
+            <h3 className="text-lg font-semibold text-white mb-3">🚀 Performance</h3>
+            <ul className="text-sm text-cyan-300 space-y-1">
+              <li>• 200 optimized particles</li>
+              <li>• CSS-based animations</li>
+              <li>• Hardware acceleration</li>
+              <li>• Smooth 60fps rendering</li>
+            </ul>
+          </div>
+          
+          <div className="bg-black/20 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
+            <h3 className="text-lg font-semibold text-white mb-3">✨ Effects</h3>
+            <ul className="text-sm text-purple-300 space-y-1">
+              <li>• Multi-layer glow effects</li>
+              <li>• Orbital ring animations</li>
+              <li>• Staggered particle delays</li>
+              <li>• Realistic depth layers</li>
+            </ul>
+          </div>
+          
+          <div className="bg-black/20 backdrop-blur-sm rounded-xl p-6 border border-pink-500/20">
+            <h3 className="text-lg font-semibold text-white mb-3">🎨 Customization</h3>
+            <ul className="text-sm text-pink-300 space-y-1">
+              <li>• Configurable size prop</li>
+              <li>• Custom className support</li>
+              <li>• Multiple variants</li>
+              <li>• Responsive design</li>
+            </ul>
+          </div>
+        </div>
 
         {/* Full Screen Demo */}
-        {demoType === 'fullscreen' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Full Screen Loader Demo</CardTitle>
-              <CardDescription>
-                The full screen loader provides a complete loading experience
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 bg-gray-50">
-                <div className="text-center">
-                  <SarvanomLoader size={120} />
-                  <p className="mt-4 text-gray-600 text-lg font-medium">
-                    Loading SarvanOM...
-                  </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    This simulates the full screen loading experience
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 text-center">
-                <Button onClick={simulateFullScreenLoading}>
-                  <Play className="h-4 w-4 mr-2" />
-                  Experience Full Screen
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Inline Demo */}
-        {demoType === 'inline' && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Inline Loader Examples</CardTitle>
-                <CardDescription>
-                  Small loaders perfect for inline use in forms, buttons, and content areas
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-4 p-4 bg-white rounded border">
-                  <span className="text-sm font-medium">Processing data...</span>
-                  <SarvanomLoaderInline size={20} />
-                </div>
-                
-                <div className="flex items-center gap-4 p-4 bg-white rounded border">
-                  <span className="text-sm font-medium">Saving changes...</span>
-                  <SarvanomLoaderInline size={24} />
-                </div>
-                
-                <div className="flex items-center gap-4 p-4 bg-white rounded border">
-                  <span className="text-sm font-medium">Loading results...</span>
-                  <SarvanomLoaderInline size={32} />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Button Integration</CardTitle>
-                <CardDescription>
-                  Loaders integrated into buttons for better UX
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex gap-4">
-                <Button disabled={isLoading} onClick={simulateLoading}>
-                  {isLoading ? (
-                    <>
-                      <SarvanomLoader size={16} />
-                      <span className="ml-2">Loading...</span>
-                    </>
-                  ) : (
-                    "Click to Load"
-                  )}
-                </Button>
-                
-                <Button variant="outline" disabled={isLoading} onClick={simulateLoading}>
-                  {isLoading ? (
-                    <>
-                      <SarvanomLoader size={16} />
-                      <span className="ml-2">Processing...</span>
-                    </>
-                  ) : (
-                    "Secondary Action"
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
+        <div className="bg-black/20 backdrop-blur-sm rounded-2xl p-8 border border-yellow-500/20">
+          <h2 className="text-2xl font-semibold text-white mb-4 text-center">
+            🌟 Full Screen Experience
+          </h2>
+          <p className="text-center text-yellow-300 mb-6">
+            Click the button below to experience the full cosmic immersion
+          </p>
+          <div className="flex justify-center">
+            <button 
+              onClick={() => window.open('/loader-demo/fullscreen', '_blank')}
+              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-300 transform hover:scale-105"
+            >
+              Launch Full Screen Demo
+            </button>
           </div>
-        )}
+        </div>
 
-        {/* Technical Details */}
-        <Card className="mt-8">
-          <CardHeader>
-            <CardTitle>Technical Details</CardTitle>
-            <CardDescription>
-              Information about the SarvanOM loader implementation
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-semibold mb-2">Features</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• Smooth orbital animations</li>
-                  <li>• Pulsing center node</li>
-                  <li>• Globe design with ellipses</li>
-                  <li>• Customizable size</li>
-                  <li>• TypeScript support</li>
-                  <li>• Responsive design</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Usage</h4>
-                <div className="text-sm text-gray-600 space-y-2">
-                  <code className="bg-gray-100 px-2 py-1 rounded">
-                    &lt;SarvanomLoader size={120} /&gt;
-                  </code>
-                  <br />
-                  <code className="bg-gray-100 px-2 py-1 rounded">
-                    &lt;SarvanomLoaderFullScreen /&gt;
-                  </code>
-                  <br />
-                  <code className="bg-gray-100 px-2 py-1 rounded">
-                    &lt;SarvanomLoaderInline size={40} /&gt;
-                  </code>
-                </div>
-              </div>
+        {/* Usage Examples */}
+        <div className="mt-12 bg-black/20 backdrop-blur-sm rounded-2xl p-8 border border-emerald-500/20">
+          <h2 className="text-2xl font-semibold text-white mb-6 text-center">
+            💻 Usage Examples
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="text-lg font-semibold text-emerald-300 mb-3">React Component</h3>
+              <pre className="bg-black/50 rounded-lg p-4 text-sm text-emerald-200 overflow-x-auto">
+{`import { SarvanomLoader } from "@/ui/SarvanomLoader";
+
+// Standard usage
+<SarvanomLoader size={120} />
+
+// Custom size
+<SarvanomLoader size={80} className="my-4" />
+
+// Full screen variant
+<SarvanomLoaderFullScreen />
+
+// Inline variant
+<SarvanomLoaderInline size={40} />`}
+              </pre>
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <h3 className="text-lg font-semibold text-emerald-300 mb-3">Features</h3>
+              <ul className="text-sm text-emerald-200 space-y-2">
+                <li>✅ 200 unique cosmic particles</li>
+                <li>✅ 8 different star color types</li>
+                <li>✅ Realistic orbital mechanics</li>
+                <li>✅ Enhanced glow and shadow effects</li>
+                <li>✅ Responsive and customizable</li>
+                <li>✅ Optimized for performance</li>
+                <li>✅ Multiple size variants</li>
+                <li>✅ Full screen immersive mode</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
