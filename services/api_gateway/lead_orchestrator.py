@@ -44,6 +44,9 @@ from shared.core.unified_logging import get_logger, log_agent_lifecycle, log_exe
 # Configure unified logging
 logger = get_logger(__name__)
 
+# Global cache instance for observability endpoints
+GLOBAL_SEMANTIC_CACHE = None
+
 
 class LeadOrchestrator:
     """
@@ -72,7 +75,26 @@ class LeadOrchestrator:
             ttl_seconds = int(get_settings().query_cache_ttl_seconds)
         except Exception:
             ttl_seconds = 3600
-        self.semantic_cache = SemanticCacheManager(ttl_seconds=ttl_seconds)
+        # Create namespace from core model settings to avoid cross-model contamination
+        try:
+            from shared.core.config.central_config import get_central_config
+            cfg = get_central_config()
+            namespace = "|".join(
+                [
+                    f"openai={getattr(cfg, 'openai_model', '')}",
+                    f"anthropic={getattr(cfg, 'anthropic_model', '')}",
+                    f"ollama={getattr(cfg, 'ollama_model', '')}",
+                    f"dyn={getattr(cfg, 'use_dynamic_selection', True)}",
+                    f"free={getattr(cfg, 'prioritize_free_models', True)}",
+                ]
+            )
+        except Exception:
+            namespace = "default"
+
+        self.semantic_cache = SemanticCacheManager(ttl_seconds=ttl_seconds, namespace=namespace)
+        # Expose global reference for observability
+        global GLOBAL_SEMANTIC_CACHE
+        GLOBAL_SEMANTIC_CACHE = self.semantic_cache
         self.response_aggregator = ResponseAggregator()
 
         logger.info("✅ LeadOrchestrator initialized successfully")
@@ -1151,22 +1173,24 @@ class TokenBudgetController:
 
 
 class SemanticCacheManager:
-    """Enhanced semantic cache manager with embedding-based similarity and TTL."""
+    """Enhanced semantic cache manager with embedding-based similarity, TTL and namespacing."""
 
     def __init__(
         self,
         similarity_threshold: float = 0.85,
         max_cache_size: int = 10000,
         ttl_seconds: int = 3600,
+        namespace: str = "default",
     ):
-        # cache maps query -> {"response": dict, "created_at": float, "embedding": Optional[List[float]]}
+        # cache maps cache_key -> {"response": dict, "created_at": float, "embedding": Optional[List[float]], "query": str}
         self.cache: dict[str, dict] = {}
         self.similarity_threshold = similarity_threshold
         self.max_cache_size = max_cache_size
         self.ttl_seconds = ttl_seconds
+        self.namespace = namespace
         self._lock = asyncio.Lock()
-        self.access_times: dict[str, float] = {}  # LRU timestamps
-        self.hit_counts: dict[str, int] = {}  # Hit counters
+        self.access_times: dict[str, float] = {}  # LRU timestamps by cache key
+        self.hit_counts: dict[str, int] = {}  # Hit counters by cache key
 
     async def get_cached_response(self, query: str) -> Optional[Dict[str, Any]]:
         """
@@ -1188,10 +1212,11 @@ class SemanticCacheManager:
                 self.hit_counts.pop(q, None)
 
             # Check exact match first
-            if query in self.cache:
-                self.access_times[query] = now
-                self.hit_counts[query] = self.hit_counts.get(query, 0) + 1
-                return self.cache[query]["response"]
+            key = self._make_key(query)
+            if key in self.cache:
+                self.access_times[key] = now
+                self.hit_counts[key] = self.hit_counts.get(key, 0) + 1
+                return self.cache[key]["response"]
 
             # Check for similar queries using embedding-based similarity
             try:
@@ -1203,14 +1228,18 @@ class SemanticCacheManager:
                 best_match = None
                 best_similarity = 0.0
 
-                for cached_query, record in list(self.cache.items()):
+                for cached_key, record in list(self.cache.items()):
                     # Skip expired just in case
                     if now - record.get("created_at", now) > self.ttl_seconds:
                         continue
                     cached_embedding = record.get("embedding")
                     if cached_embedding is None:
                         # Compute once and store
-                        cached_embedding = await llm_client.create_embedding(cached_query)
+                        rec_query = record.get("query") or cached_key
+                        # strip namespace if included in key
+                        if isinstance(rec_query, str) and "::" in rec_query and not record.get("query"):
+                            rec_query = rec_query.split("::", 1)[1]
+                        cached_embedding = await llm_client.create_embedding(rec_query)
                         record["embedding"] = cached_embedding
                     similarity = self._calculate_cosine_similarity(query_embedding, cached_embedding)
 
@@ -1219,7 +1248,7 @@ class SemanticCacheManager:
                         and similarity > best_similarity
                     ):
                         best_similarity = similarity
-                        best_match = cached_query
+                        best_match = cached_key
 
                 if best_match:
                     self.access_times[best_match] = time.time()
@@ -1235,17 +1264,17 @@ class SemanticCacheManager:
                 )
                 # Fallback to word overlap method
                 query_words = set(query.lower().split())
-                for cached_query in self.cache.keys():
-                    cached_words = set(cached_query.lower().split())
+                for cached_key in self.cache.keys():
+                    cached_words = set(str(cached_key).lower().split())
                     overlap = len(query_words & cached_words) / len(
                         query_words | cached_words
                     )
                     if overlap > 0.7:  # 70% word overlap threshold
-                        self.access_times[cached_query] = time.time()
-                        self.hit_counts[cached_query] = (
-                            self.hit_counts.get(cached_query, 0) + 1
+                        self.access_times[cached_key] = time.time()
+                        self.hit_counts[cached_key] = (
+                            self.hit_counts.get(cached_key, 0) + 1
                         )
-                        return self.cache[cached_query]
+                        return self.cache[cached_key]["response"]
 
             return None
 
@@ -1303,9 +1332,15 @@ class SemanticCacheManager:
                 if oldest_query in self.hit_counts:
                     del self.hit_counts[oldest_query]
 
-            self.cache[query] = {"response": response, "created_at": time.time(), "embedding": None}
-            self.access_times[query] = time.time()
-            self.hit_counts[query] = 0  # Initialize hit count
+            key = self._make_key(query)
+            self.cache[key] = {
+                "response": response,
+                "created_at": time.time(),
+                "embedding": None,
+                "query": query,
+            }
+            self.access_times[key] = time.time()
+            self.hit_counts[key] = 0  # Initialize hit count
 
     async def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics with hit rate tracking."""
@@ -1315,6 +1350,7 @@ class SemanticCacheManager:
             hit_rate = total_hits / max(total_requests, 1)
 
             return {
+                "namespace": self.namespace,
                 "size": len(self.cache),
                 "max_size": self.max_cache_size,
                 "hit_rate": hit_rate,
@@ -1326,12 +1362,24 @@ class SemanticCacheManager:
                 "newest_entry": (
                     max(self.access_times.values()) if self.access_times else None
                 ),
-                "most_hit_query": (
+                "most_hit_key": (
                     max(self.hit_counts.items(), key=lambda x: x[1])
                     if self.hit_counts
                     else None
                 ),
             }
+
+    def _make_key(self, query: str) -> str:
+        return f"{self.namespace}::{query}"
+
+
+async def get_global_cache_stats() -> Dict[str, Any]:
+    try:
+        if GLOBAL_SEMANTIC_CACHE is not None:
+            return await GLOBAL_SEMANTIC_CACHE.get_cache_stats()
+    except Exception:
+        pass
+    return {"namespace": "none", "size": 0, "max_size": 0, "hit_rate": 0.0, "total_hits": 0, "total_requests": 0}
 
 
 class ResponseAggregator:

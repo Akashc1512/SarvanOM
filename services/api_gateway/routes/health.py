@@ -75,6 +75,19 @@ async def simple_health_check():
         )
 
 
+@router.get("/cache", response_model=Dict[str, Any])
+async def cache_stats():
+    """Expose semantic cache stats for observability."""
+    try:
+        from services.api_gateway.lead_orchestrator import GLOBAL_SEMANTIC_CACHE
+        if GLOBAL_SEMANTIC_CACHE is None:
+            return {"namespace": "none", "size": 0, "max_size": 0, "hit_rate": 0.0}
+        return await GLOBAL_SEMANTIC_CACHE.get_cache_stats()
+    except Exception as e:
+        logger.warning(f"Cache stats unavailable: {e}")
+        return {"namespace": "none", "size": 0, "max_size": 0, "hit_rate": 0.0}
+
+
 @router.get("/basic")
 async def basic_health_check():
     """Basic health check with minimal overhead."""
