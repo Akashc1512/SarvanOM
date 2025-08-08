@@ -67,7 +67,12 @@ class LeadOrchestrator:
 
         # Initialize supporting components
         self.token_budget = TokenBudgetController()
-        self.semantic_cache = SemanticCacheManager()
+        try:
+            from shared.core.api.config import get_settings
+            ttl_seconds = int(get_settings().query_cache_ttl_seconds)
+        except Exception:
+            ttl_seconds = 3600
+        self.semantic_cache = SemanticCacheManager(ttl_seconds=ttl_seconds)
         self.response_aggregator = ResponseAggregator()
 
         logger.info("✅ LeadOrchestrator initialized successfully")
@@ -1146,15 +1151,22 @@ class TokenBudgetController:
 
 
 class SemanticCacheManager:
-    """Enhanced semantic cache manager with embedding-based similarity."""
+    """Enhanced semantic cache manager with embedding-based similarity and TTL."""
 
-    def __init__(self, similarity_threshold: float = 0.85, max_cache_size: int = 10000):
-        self.cache = {}
+    def __init__(
+        self,
+        similarity_threshold: float = 0.85,
+        max_cache_size: int = 10000,
+        ttl_seconds: int = 3600,
+    ):
+        # cache maps query -> {"response": dict, "created_at": float, "embedding": Optional[List[float]]}
+        self.cache: dict[str, dict] = {}
         self.similarity_threshold = similarity_threshold
         self.max_cache_size = max_cache_size
+        self.ttl_seconds = ttl_seconds
         self._lock = asyncio.Lock()
-        self.access_times = {}  # Track access times for LRU eviction
-        self.hit_counts = {}  # Track hit counts for hit rate calculation
+        self.access_times: dict[str, float] = {}  # LRU timestamps
+        self.hit_counts: dict[str, int] = {}  # Hit counters
 
     async def get_cached_response(self, query: str) -> Optional[Dict[str, Any]]:
         """
@@ -1167,11 +1179,19 @@ class SemanticCacheManager:
             Cached response if similar query found, None otherwise
         """
         async with self._lock:
+            # Prune expired entries
+            now = time.time()
+            expired = [q for q, rec in self.cache.items() if now - rec.get("created_at", now) > self.ttl_seconds]
+            for q in expired:
+                self.cache.pop(q, None)
+                self.access_times.pop(q, None)
+                self.hit_counts.pop(q, None)
+
             # Check exact match first
             if query in self.cache:
-                self.access_times[query] = time.time()
+                self.access_times[query] = now
                 self.hit_counts[query] = self.hit_counts.get(query, 0) + 1
-                return self.cache[query]
+                return self.cache[query]["response"]
 
             # Check for similar queries using embedding-based similarity
             try:
@@ -1183,11 +1203,16 @@ class SemanticCacheManager:
                 best_match = None
                 best_similarity = 0.0
 
-                for cached_query in self.cache.keys():
-                    cached_embedding = await llm_client.create_embedding(cached_query)
-                    similarity = self._calculate_cosine_similarity(
-                        query_embedding, cached_embedding
-                    )
+                for cached_query, record in list(self.cache.items()):
+                    # Skip expired just in case
+                    if now - record.get("created_at", now) > self.ttl_seconds:
+                        continue
+                    cached_embedding = record.get("embedding")
+                    if cached_embedding is None:
+                        # Compute once and store
+                        cached_embedding = await llm_client.create_embedding(cached_query)
+                        record["embedding"] = cached_embedding
+                    similarity = self._calculate_cosine_similarity(query_embedding, cached_embedding)
 
                     if (
                         similarity > self.similarity_threshold
@@ -1202,7 +1227,7 @@ class SemanticCacheManager:
                     logger.info(
                         f"Semantic cache hit: '{query}' matched '{best_match}' (similarity: {best_similarity:.3f})"
                     )
-                    return self.cache[best_match]
+                    return self.cache[best_match]["response"]
 
             except Exception as e:
                 logger.warning(
@@ -1278,7 +1303,7 @@ class SemanticCacheManager:
                 if oldest_query in self.hit_counts:
                     del self.hit_counts[oldest_query]
 
-            self.cache[query] = response
+            self.cache[query] = {"response": response, "created_at": time.time(), "embedding": None}
             self.access_times[query] = time.time()
             self.hit_counts[query] = 0  # Initialize hit count
 
