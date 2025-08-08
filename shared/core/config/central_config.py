@@ -362,9 +362,9 @@ class CentralConfig(SecureSettings):
     
     # Embedding settings
     embedding_model: str = Field(
-        default="text-embedding-3-small", description="Embedding model"
+        default="sentence-transformers/all-MiniLM-L6-v2", description="Embedding model"
     )
-    embedding_dimension: conint(ge=1) = Field(default=1536, description="Embedding dimension")
+    embedding_dimension: conint(ge=1) = Field(default=384, description="Embedding dimension")
     
     # =============================================================================
     # 7. SEARCH CONFIGURATION

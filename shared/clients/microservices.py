@@ -6,6 +6,7 @@ from typing import Any, Dict
 import httpx
 
 from shared.core.config.central_config import get_central_config
+from shared.contracts.query import RetrievalIndexRequest
 
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,19 @@ async def call_synthesis_generate(payload: Dict[str, Any]) -> Dict[str, Any]:
     timeout = httpx.Timeout(30.0)
     async with httpx.AsyncClient(timeout=timeout) as client:
         resp = await client.post(url, json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+
+async def call_retrieval_index(payload: RetrievalIndexRequest | Dict[str, Any]) -> Dict[str, Any]:
+    """Call retrieval microservice /index endpoint to upsert vectors."""
+    cfg = get_central_config()
+    base = str(cfg.search_service_url) if cfg.search_service_url else "http://localhost:8002"
+    url = f"{base}/index"
+    timeout = httpx.Timeout(30.0)
+    json_payload = payload if isinstance(payload, dict) else payload.dict()
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        resp = await client.post(url, json=json_payload)
         resp.raise_for_status()
         return resp.json()
 

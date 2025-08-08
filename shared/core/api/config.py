@@ -340,7 +340,7 @@ class AISettings(SecureSettings):
         default=0.7, description="Model temperature"
     )
     openai_embedding_model: str = Field(
-        default="text-embedding-3-small", description="OpenAI embedding model"
+        default="sentence-transformers/all-MiniLM-L6-v2", description="Embedding model"
     )
 
     # Anthropic
@@ -410,10 +410,10 @@ class AISettings(SecureSettings):
 
     # Embedding settings
     embedding_model: str = Field(
-        default="text-embedding-ada-002", description="Embedding model"
+        default="sentence-transformers/all-MiniLM-L6-v2", description="Embedding model"
     )
     embedding_dimension: conint(ge=1) = Field(
-        default=1536, description="Embedding dimension"
+        default=384, description="Embedding dimension"
     )
 
     @validator("vector_db_provider")

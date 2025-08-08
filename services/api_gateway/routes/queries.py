@@ -18,7 +18,12 @@ from shared.core.utilities.timing_utilities import time_operation, start_timer, 
 from shared.core.utilities.response_utilities import create_success_response, create_error_response, add_execution_time
 import httpx
 from shared.core.config.central_config import get_central_config
-from shared.contracts.query import SynthesisRequest, RetrievalSearchRequest
+from shared.contracts.query import (
+    SynthesisRequest,
+    RetrievalSearchRequest,
+    RetrievalIndexRequest,
+    RetrievalIndexResponse,
+)
 
 from ..models.requests import QueryRequest, ComprehensiveQueryRequest, QueryUpdateRequest
 from ..models.responses import (
@@ -37,6 +42,31 @@ router = APIRouter(prefix="/query", tags=["queries"])
 
 # Import services
 from ..services import query_service
+
+
+@router.post("/index", response_model=Dict[str, Any])
+async def index_documents(request: Dict[str, Any], current_user=Depends(get_current_user)):
+    """Forward indexing payload to retrieval service /index.
+
+    Expected body shape per RetrievalIndexRequest: { ids: [], texts: [], metadatas: [] }
+    """
+    try:
+        payload = RetrievalIndexRequest(**request)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=f"Invalid payload: {e}")
+
+    cfg = get_central_config()
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            url = f"{cfg.search_service_url}/index"
+            resp = await client.post(str(url), json=payload.dict())
+            resp.raise_for_status()
+            data = resp.json()
+            return {"success": True, **data}
+    except (asyncio.TimeoutError, httpx.TimeoutException):
+        raise HTTPException(status_code=504, detail="Indexing timed out")
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=503, detail=f"Indexing service error: {e}")
 
 
 @router.post("/", response_model=Dict[str, Any])
