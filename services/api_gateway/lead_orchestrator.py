@@ -1372,6 +1372,24 @@ class SemanticCacheManager:
     def _make_key(self, query: str) -> str:
         return f"{self.namespace}::{query}"
 
+    async def clear(self) -> None:
+        """Clear all cache entries."""
+        async with self._lock:
+            self.cache.clear()
+            self.access_times.clear()
+            self.hit_counts.clear()
+
+    async def prune(self) -> int:
+        """Prune expired entries. Returns number of removed entries."""
+        async with self._lock:
+            now = time.time()
+            to_remove = [k for k, rec in self.cache.items() if now - rec.get("created_at", now) > self.ttl_seconds]
+            for k in to_remove:
+                self.cache.pop(k, None)
+                self.access_times.pop(k, None)
+                self.hit_counts.pop(k, None)
+            return len(to_remove)
+
 
 async def get_global_cache_stats() -> Dict[str, Any]:
     try:

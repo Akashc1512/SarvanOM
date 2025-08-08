@@ -88,6 +88,35 @@ async def cache_stats():
         return {"namespace": "none", "size": 0, "max_size": 0, "hit_rate": 0.0}
 
 
+@router.post("/cache/clear", response_model=Dict[str, Any])
+async def cache_clear():
+    """Clear the semantic cache."""
+    try:
+        from services.api_gateway.lead_orchestrator import GLOBAL_SEMANTIC_CACHE
+        if GLOBAL_SEMANTIC_CACHE is None:
+            return {"cleared": 0}
+        size_before = (await GLOBAL_SEMANTIC_CACHE.get_cache_stats()).get("size", 0)
+        await GLOBAL_SEMANTIC_CACHE.clear()
+        return {"cleared": size_before}
+    except Exception as e:
+        logger.warning(f"Cache clear failed: {e}")
+        return {"cleared": 0}
+
+
+@router.post("/cache/prune", response_model=Dict[str, Any])
+async def cache_prune():
+    """Prune expired entries from the semantic cache."""
+    try:
+        from services.api_gateway.lead_orchestrator import GLOBAL_SEMANTIC_CACHE
+        if GLOBAL_SEMANTIC_CACHE is None:
+            return {"pruned": 0}
+        pruned = await GLOBAL_SEMANTIC_CACHE.prune()
+        return {"pruned": pruned}
+    except Exception as e:
+        logger.warning(f"Cache prune failed: {e}")
+        return {"pruned": 0}
+
+
 @router.get("/basic")
 async def basic_health_check():
     """Basic health check with minimal overhead."""

@@ -199,14 +199,14 @@ cython_debug/
 local/
 dev/
 
-# Test files and scripts
-test_*.py
-*_test.py
-quick_*.py
-real_*.py
-diagnostic_*.py
-fix_*.py
-start_*.py
+# Test files and scripts (allow tests to be tracked)
+# test_*.py
+# *_test.py
+# quick_*.py
+# real_*.py
+# diagnostic_*.py
+# fix_*.py
+# start_*.py
 
 # Database files
 *.db
