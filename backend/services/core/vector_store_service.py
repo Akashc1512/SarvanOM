@@ -85,3 +85,93 @@ class InMemoryVectorStore(VectorStoreService):
         return len(self._docs)
 
 
+try:
+    from qdrant_client import QdrantClient
+    from qdrant_client.http.models import Distance, VectorParams, PointStruct
+except Exception:  # pragma: no cover
+    QdrantClient = None  # type: ignore
+
+
+class QdrantVectorStore(VectorStoreService):
+    """Qdrant-backed vector store adapter."""
+
+    def __init__(self, url: str, api_key: Optional[str], collection: str, vector_size: int = 1536):
+        if QdrantClient is None:
+            raise RuntimeError("qdrant-client not available")
+        self.client = QdrantClient(url=url, api_key=api_key)
+        self.collection = collection
+        self.vector_size = vector_size
+        # Ensure collection exists
+        try:
+            self.client.get_collection(collection_name=self.collection)
+        except Exception:
+            self.client.recreate_collection(
+                collection_name=self.collection,
+                vectors_config=VectorParams(size=self.vector_size, distance=Distance.COSINE),
+            )
+
+    async def upsert(self, docs: List[VectorDocument]) -> int:
+        points = [
+            PointStruct(id=d.id, vector=d.embedding, payload={"text": d.text, **d.metadata})
+            for d in docs
+        ]
+        # qdrant client is sync; run in threadpool
+        import anyio
+
+        def _upsert():
+            self.client.upsert(collection_name=self.collection, points=points)
+
+        await anyio.to_thread.run_sync(_upsert)
+        return len(points)
+
+    async def delete(self, doc_ids: List[str]) -> int:
+        import anyio
+        from qdrant_client.http import models as qm
+
+        def _delete():
+            self.client.delete(
+                collection_name=self.collection,
+                points_selector=qm.PointIdsList(points=doc_ids),
+            )
+
+        await anyio.to_thread.run_sync(_delete)
+        return len(doc_ids)
+
+    async def search(self, query_embedding: List[float], top_k: int = 5) -> List[Tuple[VectorDocument, float]]:
+        import anyio
+
+        def _search():
+            return self.client.search(
+                collection_name=self.collection,
+                query_vector=query_embedding,
+                limit=top_k,
+                with_payload=True,
+            )
+
+        res = await anyio.to_thread.run_sync(_search)
+        out: List[Tuple[VectorDocument, float]] = []
+        for r in res:
+            payload = r.payload or {}
+            out.append(
+                (
+                    VectorDocument(
+                        id=str(r.id),
+                        text=str(payload.get("text", "")),
+                        embedding=[],
+                        metadata=payload,
+                    ),
+                    float(r.score),
+                )
+            )
+        return out
+
+    async def count(self) -> int:
+        import anyio
+
+        def _count():
+            info = self.client.get_collection(self.collection)
+            return info.vectors_count
+
+        return await anyio.to_thread.run_sync(_count)
+
+

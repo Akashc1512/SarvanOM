@@ -84,6 +84,10 @@ class QueryRepositoryImpl(QueryRepository, BaseRepository[Query]):
         # TODO: Implement database-backed storage
         if storage_type == "memory":
             self._memory_store = InMemoryRepository[Query]()
+        elif storage_type == "postgres":
+            # Placeholder: a proper SQLAlchemy model/mapper would be added with Alembic migrations
+            # Keep using memory until full DB integration is implemented
+            self._memory_store = InMemoryRepository[Query]()
         
         # Query-specific indices for faster lookups
         self._user_index: Dict[str, List[str]] = {}  # user_id -> [query_ids]
