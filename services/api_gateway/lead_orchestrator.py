@@ -24,6 +24,7 @@ from shared.core.agents.retrieval_agent import RetrievalAgent
 from shared.core.agents.factcheck_agent import FactCheckAgent
 from shared.core.agents.synthesis_agent import SynthesisAgent
 from shared.core.agents.citation_agent import CitationAgent
+from shared.core.agents.reviewer_agent import ReviewerAgent
 from services.api_gateway.lead_orchestrator_fixes import (
     create_safe_agent_result,
     safe_prepare_synthesis_input,
@@ -66,6 +67,11 @@ class LeadOrchestrator:
             AgentType.FACT_CHECK: FactCheckAgent(),
             AgentType.SYNTHESIS: SynthesisAgent(),
             AgentType.CITATION: CitationAgent(),
+            # Reviewer is implemented as a synthesis-type agent for simplicity
+            # and is invoked after synthesis to validate/improve the answer.
+            # It is not part of the standard AgentType set used in pipeline stages.
+            # We'll call it explicitly in the pipeline.
+            "REVIEWER": ReviewerAgent(),
         }
 
         # Initialize supporting components
@@ -345,6 +351,9 @@ class LeadOrchestrator:
             # Phase 4: Citation (depends on synthesis and retrieval)
             results = await self._execute_citation_phase(context, results)
 
+            # Phase 5: Expert review (depends on synthesis)
+            results = await self._execute_reviewer_phase(context, results)
+
             # Log pipeline completion
             total_time = time.time() - pipeline_start_time
             logger.info(
@@ -424,6 +433,61 @@ class LeadOrchestrator:
             results[AgentType.RETRIEVAL] = self._create_error_result(
                 f"Retrieval failed: {str(e)}"
             )
+
+        return results
+
+    async def _execute_reviewer_phase(
+        self, context: QueryContext, results: Dict[AgentType, AgentResult]
+    ) -> Dict[AgentType, AgentResult]:
+        """Execute expert reviewer to validate and improve the answer."""
+        logger.info("Phase 5: Expert Review")
+
+        # Skip if synthesis failed
+        if (
+            AgentType.SYNTHESIS not in results
+            or not results[AgentType.SYNTHESIS].success
+        ):
+            logger.warning("Skipping review due to synthesis failure")
+            return results
+
+        try:
+            draft_answer = (
+                results[AgentType.SYNTHESIS].data.get("answer")
+                or results[AgentType.SYNTHESIS].data.get("response", "")
+            )
+            sources = []
+            if AgentType.RETRIEVAL in results and results[AgentType.RETRIEVAL].success:
+                sources = results[AgentType.RETRIEVAL].data.get("documents", [])
+
+            review_task = {
+                "question": context.query,
+                "draft_answer": draft_answer,
+                "sources": sources,
+            }
+
+            reviewer = self.agents.get("REVIEWER")
+            review_result = await asyncio.wait_for(
+                reviewer.process_task(review_task, context), timeout=20
+            )
+
+            # If reviewer approves with small tweaks, or suggests improved final answer
+            if review_result.get("success"):
+                improved = review_result.get("data", {})
+                approved = improved.get("approved", False)
+                final_answer = improved.get("final_answer") or draft_answer
+                feedback = improved.get("feedback", "")
+
+                # Merge into synthesis result for downstream usage
+                synth = results[AgentType.SYNTHESIS]
+                synth.data["answer"] = final_answer
+                synth.data["review_feedback"] = feedback
+                synth.confidence = max(synth.confidence, float(improved.get("confidence", 0.6)))
+                results[AgentType.SYNTHESIS] = synth
+
+        except asyncio.TimeoutError:
+            logger.warning("Reviewer phase timed out; using draft answer")
+        except Exception as e:
+            logger.warning(f"Reviewer phase failed; using draft answer: {e}")
 
         return results
 
