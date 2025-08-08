@@ -9,7 +9,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from shared.core.config.central_config import initialize_config, get_central_config
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
-from shared.contracts.query import RetrievalSearchRequest, RetrievalSearchResponse
+from shared.contracts.query import (
+    RetrievalSearchRequest,
+    RetrievalSearchResponse,
+    RetrievalIndexRequest,
+    RetrievalIndexResponse,
+)
+from shared.embeddings.local_embedder import embed_texts
+from backend.services.core.vector_store_service import ChromaVectorStore, VectorDocument
 
 
 @asynccontextmanager
@@ -49,6 +56,7 @@ async def health() -> dict:
 _service_start = time.time()
 REQUEST_COUNTER = Counter("retrieval_requests_total", "Total retrieval requests")
 REQUEST_LATENCY = Histogram("retrieval_request_latency_seconds", "Retrieval request latency")
+VECTOR_STORE = ChromaVectorStore(collection_name="knowledge")
 
 
 @app.get("/metrics")
@@ -71,13 +79,44 @@ async def search(payload: RetrievalSearchRequest) -> RetrievalSearchResponse:
     with REQUEST_LATENCY.time():
         query = payload.query
         max_results = int(payload.max_results)
+        # For a real system, compute embedding of query and search vector store
+        # Here we compute an embedding and query Chroma
+        q_vec = (await _embed_async([query]))[0]
+        hits = await VECTOR_STORE.search(q_vec, top_k=max_results)
+        sources = [
+            {"id": d.id, "text": d.text, "score": score, **d.metadata}
+            for (d, score) in hits
+        ]
         return RetrievalSearchResponse(
-            sources=[{"title": "stub", "snippet": query[:80]}],
-            method="stub_retrieval",
-            total_results=1,
-            relevance_scores=[0.5],
+            sources=sources,
+            method="chroma_retrieval",
+            total_results=len(sources),
+            relevance_scores=[float(s["score"]) for s in sources],
             limit=max_results,
         )
+
+
+@app.post("/index", response_model=RetrievalIndexResponse)
+async def index(payload: RetrievalIndexRequest) -> RetrievalIndexResponse:
+    payload.validate_lengths()
+    # Embed texts locally
+    vectors = await _embed_async(payload.texts)
+    docs = [
+        VectorDocument(id=i, text=t, embedding=v, metadata=(payload.metadatas[idx] if payload.metadatas else {}))
+        for idx, (i, t, v) in enumerate(zip(payload.ids, payload.texts, vectors))
+    ]
+    upserted = await VECTOR_STORE.upsert(docs)
+    return RetrievalIndexResponse(upserted=upserted)
+
+
+async def _embed_async(texts: list[str]) -> list[list[float]]:
+    # sentence-transformers is sync; run in a thread to avoid blocking the loop
+    import anyio
+
+    def _run():
+        return embed_texts(texts)
+
+    return await anyio.to_thread.run_sync(_run)
 
 
 if __name__ == "__main__":
