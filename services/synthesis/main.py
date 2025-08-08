@@ -51,6 +51,20 @@ async def root() -> dict:
     return {"service": "synthesis", "version": config.app_version, "status": "ok"}
 
 
+@app.post("/synthesize")
+async def synthesize(payload: dict) -> dict:
+    query = payload.get("query", "")
+    sources = payload.get("sources", [])
+    max_tokens = int(payload.get("max_tokens", 256))
+    # Stub response for now
+    answer = f"SYNTHESIZED: {query[:100]} (using {len(sources)} sources)"
+    return {
+        "answer": answer,
+        "method": "stub_synthesis",
+        "tokens": min(max_tokens, len(answer)),
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
 

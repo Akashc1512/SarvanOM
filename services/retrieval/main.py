@@ -66,6 +66,19 @@ async def root() -> dict:
     }
 
 
+@app.post("/search")
+async def search(payload: dict) -> dict:
+    query = payload.get("query", "")
+    max_results = int(payload.get("max_results", 10))
+    return {
+        "sources": [{"title": "stub", "snippet": query[:80]}],
+        "method": "stub_retrieval",
+        "total_results": 1,
+        "relevance_scores": [0.5],
+        "limit": max_results,
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
 

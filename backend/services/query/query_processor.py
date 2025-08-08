@@ -18,6 +18,7 @@ from ...models.domain.query import Query, QueryResult, QueryType
 from ...models.domain.agent import Agent, AgentType
 from ..agents.agent_coordinator import AgentCoordinator
 from ..core.cache_service import CacheService
+from shared.clients.microservices import call_retrieval_search, call_synthesis_generate
 
 logger = logging.getLogger(__name__)
 
@@ -357,15 +358,23 @@ class QueryProcessor:
     
     async def _execute_search(self, query: Query, classification: Dict[str, Any]) -> Dict[str, Any]:
         """Execute search and retrieval."""
-        retrieval_agent = await self.agent_coordinator.get_agent(AgentType.RETRIEVAL)
-        
-        search_result = await retrieval_agent.process({
-            "task": "search",
-            "query": query.text,
-            "classification": classification,
-            "max_results": 10,
-            "context": query.context.metadata
-        })
+        # Prefer microservice if available; fall back to agent
+        try:
+            search_result = await call_retrieval_search({
+                "query": query.text,
+                "classification": classification,
+                "max_results": 10,
+                "context": query.context.metadata,
+            })
+        except Exception:
+            retrieval_agent = await self.agent_coordinator.get_agent(AgentType.RETRIEVAL)
+            search_result = await retrieval_agent.process({
+                "task": "search",
+                "query": query.text,
+                "classification": classification,
+                "max_results": 10,
+                "context": query.context.metadata,
+            })
         
         return {
             "sources": search_result.get("sources", []),
@@ -399,16 +408,24 @@ class QueryProcessor:
         verification_results: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Execute synthesis."""
-        synthesis_agent = await self.agent_coordinator.get_agent(AgentType.SYNTHESIS)
-        
-        synthesis_result = await synthesis_agent.process({
-            "task": "synthesize",
-            "query": query.text,
-            "sources": search_results.get("sources", []),
-            "verification": verification_results,
-            "max_tokens": query.context.max_tokens,
-            "context": query.context.metadata
-        })
+        try:
+            synthesis_result = await call_synthesis_generate({
+                "query": query.text,
+                "sources": search_results.get("sources", []),
+                "verification": verification_results,
+                "max_tokens": query.context.max_tokens,
+                "context": query.context.metadata,
+            })
+        except Exception:
+            synthesis_agent = await self.agent_coordinator.get_agent(AgentType.SYNTHESIS)
+            synthesis_result = await synthesis_agent.process({
+                "task": "synthesize",
+                "query": query.text,
+                "sources": search_results.get("sources", []),
+                "verification": verification_results,
+                "max_tokens": query.context.max_tokens,
+                "context": query.context.metadata,
+            })
         
         return {
             "answer": synthesis_result.get("answer", ""),
