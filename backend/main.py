@@ -18,6 +18,10 @@ from pydantic import ValidationError
 
 from .api.routers import routers
 from .api.dependencies import get_cache_service, get_metrics_service
+from shared.core.config.central_config import (
+    initialize_config,
+    get_central_config,
+)
 from .api.middleware.error_handling import (
     ErrorHandlingMiddleware, 
     SecurityHeadersMiddleware, 
@@ -61,11 +65,14 @@ async def lifespan(app: FastAPI):
     logger.info("✅ Cleanup completed")
 
 
+# Initialize configuration
+config = initialize_config()
+
 # Create FastAPI application
 app = FastAPI(
-    title="SarvanOM Backend",
+    title=config.app_name or "SarvanOM Backend",
     description="Clean Architecture Backend for SarvanOM Universal Knowledge Hub",
-    version="1.0.0",
+    version=config.app_version or "1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan
@@ -78,7 +85,8 @@ metrics_service = get_metrics_service()
 app.add_middleware(ErrorHandlingMiddleware, metrics_service=metrics_service)
 
 # Security headers
-app.add_middleware(SecurityHeadersMiddleware)
+if config.security_headers_enabled:
+    app.add_middleware(SecurityHeadersMiddleware)
 
 # Performance monitoring
 app.add_middleware(PerformanceMonitoringMiddleware, metrics_service=metrics_service)
@@ -87,7 +95,12 @@ app.add_middleware(PerformanceMonitoringMiddleware, metrics_service=metrics_serv
 app.add_middleware(HealthCheckMiddleware)
 
 # Rate limiting
-app.add_middleware(RateLimitingMiddleware, max_requests=100, time_window=60)
+if config.rate_limit_enabled:
+    app.add_middleware(
+        RateLimitingMiddleware,
+        max_requests=int(config.rate_limit_per_minute),
+        time_window=60,
+    )
 
 # Request logging
 app.add_middleware(RequestLoggingMiddleware, metrics_service=metrics_service)
@@ -95,8 +108,8 @@ app.add_middleware(RequestLoggingMiddleware, metrics_service=metrics_service)
 # CORS (should be outer/first middleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
+    allow_origins=config.cors_origins,
+    allow_credentials=bool(config.cors_credentials),
     allow_methods=["*"],
     allow_headers=["*"],
 )
