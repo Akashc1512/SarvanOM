@@ -16,6 +16,9 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from pydantic import ValidationError
 from shared.core.utilities.timing_utilities import time_operation, start_timer, calculate_execution_time
 from shared.core.utilities.response_utilities import create_success_response, create_error_response, add_execution_time
+import httpx
+from shared.core.config.central_config import get_central_config
+from shared.contracts.query import SynthesisRequest, RetrievalSearchRequest
 
 from ..models.requests import QueryRequest, ComprehensiveQueryRequest, QueryUpdateRequest
 from ..models.responses import (
@@ -58,33 +61,66 @@ async def process_query(
         if not query:
             raise HTTPException(status_code=422, detail="Query is required")
         
-        # Process query using the query service with comprehensive error handling
+        # Call retrieval and synthesis microservices via shared contracts
+        cfg = get_central_config()
         try:
-            result = await query_service.process_basic_query(
-                query=query,
-                user_context={
-                    "user_id": user_id,
-                    "session_id": session_id,
-                    "max_tokens": max_tokens,
-                    "confidence_threshold": confidence_threshold
-                }
-            )
-        except asyncio.TimeoutError as timeout_error:
-            logger.error(f"Query timeout: {timeout_error}", exc_info=True)
-            execution_time = calculate_execution_time(start_time)
-            return create_error_response(
-                error="Query processing timed out. Please try again with a simpler query.",
-                execution_time_ms=execution_time,
-                error_type="timeout_error"
-            )
-        except ConnectionError as conn_error:
-            logger.error(f"Connection error during query processing: {conn_error}", exc_info=True)
-            execution_time = calculate_execution_time(start_time)
-            return create_error_response(
-                error="External service connection failed. Please try again later.",
-                execution_time_ms=execution_time,
-                error_type="connection_error"
-            )
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                # Retrieval
+                try:
+                    retrieval_url = f"{cfg.search_service_url}/search"
+                    retrieval_payload = RetrievalSearchRequest(
+                        query=query,
+                        max_results=10,
+                        context={"user_id": user_id}
+                    ).dict()
+                    retrieval_resp = await client.post(str(retrieval_url), json=retrieval_payload)
+                    retrieval_resp.raise_for_status()
+                    search_data = retrieval_resp.json()
+                except (asyncio.TimeoutError, httpx.TimeoutException) as timeout_error:
+                    logger.error(f"Retrieval call timeout: {timeout_error}", exc_info=True)
+                    execution_time = calculate_execution_time(start_time)
+                    return create_error_response(
+                        error="Retrieval timed out. Please try again.",
+                        execution_time_ms=execution_time,
+                        error_type="timeout_error"
+                    )
+                except httpx.HTTPError as e:
+                    logger.error(f"Retrieval HTTP error: {e}", exc_info=True)
+                    execution_time = calculate_execution_time(start_time)
+                    return create_error_response(
+                        error="Retrieval service unavailable. Please try again later.",
+                        execution_time_ms=execution_time,
+                        error_type="service_unavailable"
+                    )
+
+                # Synthesis
+                try:
+                    synthesis_url = f"{cfg.synthesis_service_url}/synthesize"
+                    synthesis_payload = SynthesisRequest(
+                        query=query,
+                        sources=search_data.get("sources", []),
+                        max_tokens=max_tokens,
+                        context={"user_id": user_id}
+                    ).dict()
+                    synth_resp = await client.post(str(synthesis_url), json=synthesis_payload)
+                    synth_resp.raise_for_status()
+                    result = synth_resp.json()
+                except (asyncio.TimeoutError, httpx.TimeoutException) as timeout_error:
+                    logger.error(f"Query timeout: {timeout_error}", exc_info=True)
+                    execution_time = calculate_execution_time(start_time)
+                    return create_error_response(
+                        error="Query processing timed out. Please try again with a simpler query.",
+                        execution_time_ms=execution_time,
+                        error_type="timeout_error"
+                    )
+                except httpx.HTTPError as e:
+                    logger.error(f"Synthesis HTTP error: {e}", exc_info=True)
+                    execution_time = calculate_execution_time(start_time)
+                    return create_error_response(
+                        error="Synthesis service unavailable. Please try again later.",
+                        execution_time_ms=execution_time,
+                        error_type="service_unavailable"
+                    )
         except Exception as service_error:
             logger.error(f"Query service error: {service_error}", exc_info=True)
             execution_time = calculate_execution_time(start_time)

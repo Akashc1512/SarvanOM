@@ -4,10 +4,12 @@ import time
 from datetime import datetime
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from shared.core.config.central_config import initialize_config
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from shared.contracts.query import SynthesisRequest, SynthesisResponse
 
 
 @asynccontextmanager
@@ -39,11 +41,13 @@ async def health() -> dict:
 
 
 _t0 = time.time()
+REQUEST_COUNTER = Counter("synthesis_requests_total", "Total synthesis requests")
+REQUEST_LATENCY = Histogram("synthesis_request_latency_seconds", "Synthesis request latency")
 
 
 @app.get("/metrics")
-async def metrics() -> dict:
-    return {"service": "synthesis", "uptime_seconds": int(time.time() - _t0)}
+async def metrics() -> Response:
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/")
@@ -51,18 +55,19 @@ async def root() -> dict:
     return {"service": "synthesis", "version": config.app_version, "status": "ok"}
 
 
-@app.post("/synthesize")
-async def synthesize(payload: dict) -> dict:
-    query = payload.get("query", "")
-    sources = payload.get("sources", [])
-    max_tokens = int(payload.get("max_tokens", 256))
-    # Stub response for now
-    answer = f"SYNTHESIZED: {query[:100]} (using {len(sources)} sources)"
-    return {
-        "answer": answer,
-        "method": "stub_synthesis",
-        "tokens": min(max_tokens, len(answer)),
-    }
+@app.post("/synthesize", response_model=SynthesisResponse)
+async def synthesize(payload: SynthesisRequest) -> SynthesisResponse:
+    REQUEST_COUNTER.inc()
+    with REQUEST_LATENCY.time():
+        query = payload.query
+        sources = payload.sources
+        max_tokens = int(payload.max_tokens)
+        answer = f"SYNTHESIZED: {query[:100]} (using {len(sources)} sources)"
+        return SynthesisResponse(
+            answer=answer,
+            method="stub_synthesis",
+            tokens=min(max_tokens, len(answer)),
+        )
 
 
 if __name__ == "__main__":
