@@ -674,8 +674,8 @@ class Settings(
             "expert_review": True,
             "real_time_collaboration": True,
             "advanced_analytics": True,
-            "multi_tenant": False,
-            "sso": False,
+            "multi_tenant": True,
+            "sso": True,
         },
         description="Feature flags",
     )

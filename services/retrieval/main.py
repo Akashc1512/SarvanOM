@@ -108,7 +108,7 @@ async def search(payload: RetrievalSearchRequest) -> RetrievalSearchResponse:
                 return RetrievalSearchResponse(**cached_result)
             
             # Generate embeddings for query
-            query_embedding = await embed_texts([payload.query])
+            query_embedding = embed_texts([payload.query])
             
             # Perform vector search
             search_results = await VECTOR_STORE.search(
@@ -145,7 +145,7 @@ async def search(payload: RetrievalSearchRequest) -> RetrievalSearchResponse:
             )
             
             # Cache result for 1 hour
-            await cache.set(cache_key, response.dict(), ttl=3600)
+            await cache.set(cache_key, response.dict())
             
             logger.info("Search completed", 
                        query=payload.query[:100], 
@@ -171,7 +171,7 @@ async def index(payload: RetrievalIndexRequest) -> RetrievalIndexResponse:
         payload.validate_lengths()
         
         # Generate embeddings
-        embeddings = await embed_texts(payload.texts)
+        embeddings = embed_texts(payload.texts)
         
         # Create vector documents
         documents = []

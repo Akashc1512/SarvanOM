@@ -1,95 +1,271 @@
-import React, { createContext, useContext, useCallback, useMemo } from 'react';
-import { useCollaboration, type CollaborationEvent, type CollaboratorPresence } from '@/hooks/useCollaboration';
-import { useAuth } from '@/hooks/useAuth';
+"use client";
 
-interface CollaborationContextValue {
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useToast } from "@/hooks/useToast";
+
+interface CollaborationContextType {
   // State
   isConnected: boolean;
-  collaborators: CollaboratorPresence[];
-  error: string | null;
+  sessionId: string | null;
+  collaborators: Collaborator[];
+  isSharing: boolean;
+  isAudioEnabled: boolean;
+  isVideoEnabled: boolean;
   
   // Actions
-  sendMessage: (type: string, data: any) => void;
-  sendTypingIndicator: (isTyping: boolean) => void;
-  sendCursorUpdate: (position: number) => void;
-  sendDocumentUpdate: (changes: any[]) => void;
+  joinSession: (sessionId: string) => Promise<void>;
+  leaveSession: () => Promise<void>;
+  inviteUser: (email: string) => Promise<void>;
+  toggleSharing: () => void;
+  toggleAudio: () => void;
+  toggleVideo: () => void;
+  updateCollaboratorPermissions: (userId: string, permission: string) => void;
   
-  // Utilities
-  getOnlineCount: () => number;
-  isUserTyping: (userId: string) => boolean;
-  
-  // Session management
-  sessionId: string;
-  currentUserId: string;
+  // Real-time features
+  sendCursorPosition: (x: number, y: number) => void;
+  sendTypingStatus: (isTyping: boolean) => void;
+  sendMessage: (message: string) => void;
 }
 
-const CollaborationContext = createContext<CollaborationContextValue | null>(null);
+interface Collaborator {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  isOnline: boolean;
+  isTyping: boolean;
+  cursorPosition?: { x: number; y: number };
+  lastSeen: Date;
+  permissions: "view" | "edit" | "admin";
+}
+
+const CollaborationContext = createContext<CollaborationContextType | undefined>(undefined);
 
 interface CollaborationProviderProps {
   children: React.ReactNode;
-  sessionId: string;
-  onEvent?: (event: CollaborationEvent) => void;
-  onPresenceUpdate?: (presence: CollaboratorPresence[]) => void;
 }
 
-export function CollaborationProvider({
-  children,
-  sessionId,
-  onEvent,
-  onPresenceUpdate,
-}: CollaborationProviderProps) {
-  const { user } = useAuth();
-  const currentUserId = user?.id || 'anonymous';
+export function CollaborationProvider({ children }: CollaborationProviderProps) {
+  const [isConnected, setIsConnected] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(false);
+  const [isVideoEnabled, setIsVideoEnabled] = useState(false);
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([
+    {
+      id: "1",
+      name: "Alice Johnson",
+      email: "alice@example.com",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=alice",
+      isOnline: true,
+      isTyping: false,
+      lastSeen: new Date(),
+      permissions: "edit"
+    },
+    {
+      id: "2",
+      name: "Bob Smith",
+      email: "bob@example.com",
+      avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=bob",
+      isOnline: true,
+      isTyping: true,
+      cursorPosition: { x: 150, y: 200 },
+      lastSeen: new Date(),
+      permissions: "view"
+    }
+  ]);
 
-  const {
-    isConnected,
-    collaborators,
-    error,
-    sendMessage,
-    sendTypingIndicator,
-    sendCursorUpdate,
-    sendDocumentUpdate,
-    getOnlineCount,
-    isUserTyping,
-  } = useCollaboration({
-    sessionId,
-    userId: currentUserId,
-    onEvent,
-    onPresenceUpdate,
-  });
+  const { toast } = useToast();
 
-  const contextValue = useMemo<CollaborationContextValue>(() => ({
+  // Simulate WebSocket connection
+  useEffect(() => {
+    if (sessionId) {
+      // Simulate connection to collaboration server
+      const interval = setInterval(() => {
+        // Simulate receiving updates from other collaborators
+        setCollaborators(prev => prev.map(collaborator => {
+          if (collaborator.isOnline && Math.random() > 0.8) {
+            return {
+              ...collaborator,
+              cursorPosition: {
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight
+              },
+              isTyping: Math.random() > 0.9
+            };
+          }
+          return collaborator;
+        }));
+      }, 2000);
+
+      return () => clearInterval(interval);
+    }
+  }, [sessionId]);
+
+  const joinSession = useCallback(async (newSessionId: string) => {
+    try {
+      // Simulate API call to join session
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setSessionId(newSessionId);
+      setIsConnected(true);
+      
+      toast({
+        title: "Connected",
+        description: `Joined collaboration session: ${newSessionId}`,
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Connection Failed",
+        description: "Failed to join collaboration session",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const leaveSession = useCallback(async () => {
+    try {
+      // Simulate API call to leave session
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setSessionId(null);
+      setIsConnected(false);
+      setIsSharing(false);
+      setIsAudioEnabled(false);
+      setIsVideoEnabled(false);
+      
+      toast({
+        title: "Disconnected",
+        description: "Left collaboration session",
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to leave session",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const inviteUser = useCallback(async (email: string) => {
+    try {
+      // Simulate API call to invite user
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Add new collaborator to the list
+      const newCollaborator: Collaborator = {
+        id: Date.now().toString(),
+        name: email.split('@')[0],
+        email,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
+        isOnline: false,
+        isTyping: false,
+        lastSeen: new Date(),
+        permissions: "view"
+      };
+      
+      setCollaborators(prev => [...prev, newCollaborator]);
+      
+      toast({
+        title: "Invitation Sent",
+        description: `Invitation sent to ${email}`,
+        variant: "default",
+      });
+    } catch (error) {
+      toast({
+        title: "Invitation Failed",
+        description: "Failed to send invitation",
+        variant: "destructive",
+      });
+    }
+  }, [toast]);
+
+  const toggleSharing = useCallback(() => {
+    setIsSharing(prev => !prev);
+    toast({
+      title: isSharing ? "Sharing Stopped" : "Sharing Started",
+      description: isSharing ? "Session is no longer shared" : "Session is now shared",
+      variant: "default",
+    });
+  }, [isSharing, toast]);
+
+  const toggleAudio = useCallback(() => {
+    setIsAudioEnabled(prev => !prev);
+    toast({
+      title: isAudioEnabled ? "Audio Disabled" : "Audio Enabled",
+      description: isAudioEnabled ? "Microphone turned off" : "Microphone turned on",
+      variant: "default",
+    });
+  }, [isAudioEnabled, toast]);
+
+  const toggleVideo = useCallback(() => {
+    setIsVideoEnabled(prev => !prev);
+    toast({
+      title: isVideoEnabled ? "Video Disabled" : "Video Enabled",
+      description: isVideoEnabled ? "Camera turned off" : "Camera turned on",
+      variant: "default",
+    });
+  }, [isVideoEnabled, toast]);
+
+  const updateCollaboratorPermissions = useCallback((userId: string, permission: string) => {
+    setCollaborators(prev => prev.map(collaborator => 
+      collaborator.id === userId 
+        ? { ...collaborator, permissions: permission as any }
+        : collaborator
+    ));
+  }, []);
+
+  const sendCursorPosition = useCallback((x: number, y: number) => {
+    // Simulate sending cursor position to other collaborators
+    if (isConnected) {
+      console.log("Sending cursor position:", { x, y });
+    }
+  }, [isConnected]);
+
+  const sendTypingStatus = useCallback((isTyping: boolean) => {
+    // Simulate sending typing status to other collaborators
+    if (isConnected) {
+      console.log("Sending typing status:", isTyping);
+    }
+  }, [isConnected]);
+
+  const sendMessage = useCallback((message: string) => {
+    // Simulate sending message to other collaborators
+    if (isConnected) {
+      console.log("Sending message:", message);
+      toast({
+        title: "Message Sent",
+        description: message,
+        variant: "default",
+      });
+    }
+  }, [isConnected, toast]);
+
+  const contextValue: CollaborationContextType = {
     // State
     isConnected,
+    sessionId,
     collaborators,
-    error,
+    isSharing,
+    isAudioEnabled,
+    isVideoEnabled,
     
     // Actions
-    sendMessage,
-    sendTypingIndicator,
-    sendCursorUpdate,
-    sendDocumentUpdate,
+    joinSession,
+    leaveSession,
+    inviteUser,
+    toggleSharing,
+    toggleAudio,
+    toggleVideo,
+    updateCollaboratorPermissions,
     
-    // Utilities
-    getOnlineCount,
-    isUserTyping,
-    
-    // Session management
-    sessionId,
-    currentUserId,
-  }), [
-    isConnected,
-    collaborators,
-    error,
+    // Real-time features
+    sendCursorPosition,
+    sendTypingStatus,
     sendMessage,
-    sendTypingIndicator,
-    sendCursorUpdate,
-    sendDocumentUpdate,
-    getOnlineCount,
-    isUserTyping,
-    sessionId,
-    currentUserId,
-  ]);
+  };
 
   return (
     <CollaborationContext.Provider value={contextValue}>
@@ -98,10 +274,10 @@ export function CollaborationProvider({
   );
 }
 
-export function useCollaborationContext() {
+export function useCollaboration() {
   const context = useContext(CollaborationContext);
-  if (!context) {
-    throw new Error('useCollaborationContext must be used within a CollaborationProvider');
+  if (context === undefined) {
+    throw new Error("useCollaboration must be used within a CollaborationProvider");
   }
   return context;
 } 

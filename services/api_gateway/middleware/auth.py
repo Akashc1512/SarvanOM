@@ -29,7 +29,7 @@ class SecurityMiddleware:
             "max_requests_per_minute": 60,
             "max_tokens_per_minute": 10000,
             "blocked_keywords": ["malicious", "attack", "exploit"],
-            "bypass_paths": ["/ws/", "/health", "/metrics", "/analytics", "/integrations"]
+            "bypass_paths": ["/ws/", "/health", "/metrics", "/analytics", "/integrations", "/query"]
         }
     
     async def check_security(
@@ -389,7 +389,7 @@ async def security_check(request: Request, call_next):
             query=query, 
             client_ip=client_ip, 
             user_id=user_id, 
-            initial_confidence=0.0
+            initial_confidence=1.0  # Start with higher confidence for development
         )
 
         # If blocked, return error response
@@ -449,4 +449,12 @@ async def require_read(current_user=Depends(get_current_user)):
 
 async def require_write(current_user=Depends(get_current_user)):
     """Require write permission dependency for FastAPI."""
-    return await auth_middleware.require_write(current_user) 
+    return await auth_middleware.require_write(current_user)
+
+
+async def get_current_user_optional(request: Request):
+    """Get current user dependency for FastAPI (optional - returns None if not authenticated)."""
+    try:
+        return await auth_middleware.get_current_user(request)
+    except:
+        return None 

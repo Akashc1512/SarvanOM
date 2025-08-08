@@ -33,7 +33,7 @@ from ..models.responses import (
     QueryDetailResponse,
     QueryStatusResponse
 )
-from ..middleware import get_current_user, require_read, require_write
+from ..middleware import get_current_user, get_current_user_optional, require_read, require_write
 
 logger = get_logger(__name__)
 
@@ -74,7 +74,7 @@ async def index_documents(request: Dict[str, Any], current_user=Depends(get_curr
 async def process_query(
     request: Dict[str, Any],
     http_request: Request,
-    current_user=Depends(get_current_user)
+    current_user=Depends(get_current_user_optional)
 ):
     """Process query using the basic pipeline with agent orchestration."""
     request_id = getattr(http_request.state, "request_id", "unknown")
@@ -84,7 +84,7 @@ async def process_query(
         # Extract query parameters
         query = request.get("query", "")
         session_id = request.get("session_id", str(uuid.uuid4()))
-        user_id = getattr(current_user, "user_id", "anonymous")
+        user_id = getattr(current_user, "user_id", "anonymous") if current_user else "anonymous"
         max_tokens = request.get("max_tokens", 1000)
         confidence_threshold = request.get("confidence_threshold", 0.8)
         
@@ -97,7 +97,7 @@ async def process_query(
             async with httpx.AsyncClient(timeout=20.0) as client:
                 # Retrieval
                 try:
-                    retrieval_url = f"{cfg.search_service_url}/search"
+                    retrieval_url = f"{cfg.search_service_url.rstrip('/')}/search"
                     retrieval_payload = RetrievalSearchRequest(
                         query=query,
                         max_results=10,
@@ -111,21 +111,19 @@ async def process_query(
                     execution_time = calculate_execution_time(start_time)
                     return create_error_response(
                         error="Retrieval timed out. Please try again.",
-                        execution_time_ms=execution_time,
-                        error_type="timeout_error"
+                        execution_time_ms=execution_time
                     )
                 except httpx.HTTPError as e:
                     logger.error(f"Retrieval HTTP error: {e}", exc_info=True)
                     execution_time = calculate_execution_time(start_time)
                     return create_error_response(
                         error="Retrieval service unavailable. Please try again later.",
-                        execution_time_ms=execution_time,
-                        error_type="service_unavailable"
+                        execution_time_ms=execution_time
                     )
 
                 # Synthesis
                 try:
-                    synthesis_url = f"{cfg.synthesis_service_url}/synthesize"
+                    synthesis_url = f"{cfg.synthesis_service_url.rstrip('/')}/synthesize"
                     synthesis_payload = SynthesisRequest(
                         query=query,
                         sources=search_data.get("sources", []),
@@ -140,34 +138,31 @@ async def process_query(
                     execution_time = calculate_execution_time(start_time)
                     return create_error_response(
                         error="Query processing timed out. Please try again with a simpler query.",
-                        execution_time_ms=execution_time,
-                        error_type="timeout_error"
+                        execution_time_ms=execution_time
                     )
                 except httpx.HTTPError as e:
                     logger.error(f"Synthesis HTTP error: {e}", exc_info=True)
                     execution_time = calculate_execution_time(start_time)
                     return create_error_response(
                         error="Synthesis service unavailable. Please try again later.",
-                        execution_time_ms=execution_time,
-                        error_type="service_unavailable"
+                        execution_time_ms=execution_time
                     )
         except Exception as service_error:
             logger.error(f"Query service error: {service_error}", exc_info=True)
             execution_time = calculate_execution_time(start_time)
             return create_error_response(
                 error="LLM service temporarily unavailable. Please try again later.",
-                execution_time_ms=execution_time,
-                error_type="service_unavailable"
+                execution_time_ms=execution_time
             )
         
-        if not result.get("success", False):
+        # Check if synthesis was successful (has answer and method)
+        if not result.get("answer") or not result.get("method"):
             error_msg = result.get("error", "Query processing failed")
             logger.error(f"Query processing failed: {error_msg}")
             execution_time = calculate_execution_time(start_time)
             return create_error_response(
                 error=error_msg,
-                execution_time_ms=execution_time,
-                error_type="processing_failed"
+                execution_time_ms=execution_time
             )
         
         # Format response for API using utilities

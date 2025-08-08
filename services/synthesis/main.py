@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from shared.core.config import get_central_config
 from shared.core.logging import get_logger
-from shared.core.llm_client import get_llm_client
+from shared.core.llm_client_v3 import get_llm_client_v3
 from shared.core.cache import get_cache_manager
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from shared.contracts.query import SynthesisRequest, SynthesisResponse
@@ -97,7 +97,7 @@ async def synthesize(payload: SynthesisRequest) -> SynthesisResponse:
     with REQUEST_LATENCY.time():
         try:
             # Get LLM client and cache
-            llm_client = get_llm_client()
+            llm_client = get_llm_client_v3()
             cache = get_cache_manager()
             
             # Create cache key
@@ -129,29 +129,29 @@ async def synthesize(payload: SynthesisRequest) -> SynthesisResponse:
             """
             
             # Call LLM
-            response = await llm_client.generate(
+            response_content = await llm_client.generate_text(
                 prompt=prompt,
                 max_tokens=payload.max_tokens,
                 temperature=0.3
             )
             
             # Extract citations
-            citations = extract_citations(response.content)
+            citations = extract_citations(response_content)
             
             # Calculate confidence
-            confidence = calculate_confidence(response.content, payload.sources)
+            confidence = calculate_confidence(response_content, payload.sources)
             
             # Create result
             result = SynthesisResponse(
-                answer=response.content,
+                answer=response_content,
                 method="llm_synthesis",
-                tokens=response.usage.total_tokens if hasattr(response.usage, 'total_tokens') else len(response.content),
+                tokens=len(response_content),
                 citations=citations,
                 confidence=confidence
             )
             
             # Cache result for 1 hour
-            await cache.set(cache_key, result.dict(), ttl=3600)
+            await cache.set(cache_key, result.dict())
             
             logger.info("Synthesis completed", 
                        query=payload.query[:100], 

@@ -84,6 +84,20 @@ class StructuredLogger:
     def critical(self, message: str, **kwargs):
         """Log critical message."""
         self.logger.critical(self._format_log("CRITICAL", message, **kwargs))
+    
+    def log(self, level: int, message: str, **kwargs):
+        """Log message with specified level (for compatibility with standard logging)."""
+        level_name = logging.getLevelName(level)
+        if level_name == "WARNING":
+            self.warning(message, **kwargs)
+        elif level_name == "ERROR":
+            self.error(message, **kwargs)
+        elif level_name == "DEBUG":
+            self.debug(message, **kwargs)
+        elif level_name == "CRITICAL":
+            self.critical(message, **kwargs)
+        else:
+            self.info(message, **kwargs)
 
 
 def get_logger(name: str) -> StructuredLogger:

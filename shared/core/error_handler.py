@@ -48,7 +48,8 @@ from tenacity import (
     wait_exponential,
 )
 
-logger = structlog.get_logger(__name__)
+import logging
+logger = logging.getLogger(__name__)
 
 # Type variables for generic error handling
 T = TypeVar('T')
@@ -685,7 +686,7 @@ def handle_critical_operation(
                 stop=stop_after_attempt(max_retries),
                 wait=wait_exponential(multiplier=1, min=2, max=10),
                 retry=retry_if_exception_type(Exception),
-                before_sleep=before_sleep_log(logger, structlog.stdlib.WARNING),
+                before_sleep=before_sleep_log(logger, logging.WARNING),
             )
             async def execute_with_retry():
                 try:

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { StateProvider } from "@/components/state-provider";
+import { CollaborationProvider } from "@/providers/collaboration-provider";
 import { Toaster } from "@/ui/ui/toaster";
 import { Analytics } from "@/ui/Analytics";
 
@@ -160,23 +161,25 @@ export function AppProvider({ children }: AppProviderProps) {
             disableTransitionOnChange
             themes={['light', 'dark', 'system']}
           >
-            <AppContext.Provider value={contextValue}>
-              <PerformanceWrapper>
-                {children}
-                
-                {/* Global UI Components */}
-                <Toaster />
-                <Analytics />
-                
-                {/* Development Tools */}
-                {process.env.NODE_ENV === 'development' && (
-                  <>
-                    <ReactQueryDevtools initialIsOpen={false} />
-                    <DevelopmentTools />
-                  </>
-                )}
-              </PerformanceWrapper>
-            </AppContext.Provider>
+            <CollaborationProvider>
+              <AppContext.Provider value={contextValue}>
+                <PerformanceWrapper>
+                  {children}
+                  
+                  {/* Global UI Components */}
+                  <Toaster />
+                  <Analytics />
+                  
+                  {/* Development Tools */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <>
+                      <ReactQueryDevtools initialIsOpen={false} />
+                      <DevelopmentTools />
+                    </>
+                  )}
+                </PerformanceWrapper>
+              </AppContext.Provider>
+            </CollaborationProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </StateProvider>

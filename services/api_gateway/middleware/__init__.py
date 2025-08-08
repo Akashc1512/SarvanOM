@@ -11,6 +11,7 @@ from .auth import (
     auth_middleware,
     security_check,
     get_current_user,
+    get_current_user_optional,
     require_admin,
     require_read,
     require_write
@@ -52,6 +53,7 @@ __all__ = [
     "auth_middleware",
     "security_check",
     "get_current_user",
+    "get_current_user_optional",
     "require_admin",
     "require_read",
     "require_write",

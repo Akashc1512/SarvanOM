@@ -48,7 +48,7 @@ session_ttl_seconds: 3600  # 1 hour
 backup_enabled: false
 audit_log_enabled: true
 security_headers_enabled: false
-mock_ai_responses: true  # Use mocks by default in dev
+mock_ai_responses: false  # Use real backend responses
 skip_authentication: true  # Skip auth for easier development
 enable_debug_endpoints: true
 auto_reload: true
@@ -99,9 +99,9 @@ features:
   admin_panel: true
   expert_review: true
   real_time_collaboration: true
-  advanced_analytics: false  # Disable heavy features in dev
-  multi_tenant: false
-  sso: false
+  advanced_analytics: true  # Enable for testing
+  multi_tenant: true
+  sso: true
 
 # Development-specific settings
 dev_hot_reload: true
