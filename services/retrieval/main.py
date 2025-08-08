@@ -16,7 +16,12 @@ from shared.contracts.query import (
     RetrievalIndexResponse,
 )
 from shared.embeddings.local_embedder import embed_texts
-from shared.vectorstores.vector_store_service import ChromaVectorStore, VectorDocument
+from shared.vectorstores.vector_store_service import (
+    ChromaVectorStore,
+    QdrantVectorStore,
+    InMemoryVectorStore,
+    VectorDocument,
+)
 
 
 @asynccontextmanager
@@ -56,7 +61,23 @@ async def health() -> dict:
 _service_start = time.time()
 REQUEST_COUNTER = Counter("retrieval_requests_total", "Total retrieval requests")
 REQUEST_LATENCY = Histogram("retrieval_request_latency_seconds", "Retrieval request latency")
-VECTOR_STORE = ChromaVectorStore(collection_name="knowledge")
+def _init_vector_store():
+    cfg = get_central_config()
+    provider = getattr(cfg, "vector_db_provider", "chroma").lower()
+    if provider == "qdrant":
+        return QdrantVectorStore(
+            url=str(cfg.qdrant_url),
+            api_key=(cfg.qdrant_api_key.get_secret_value() if cfg.qdrant_api_key else None),
+            collection=str(cfg.qdrant_collection),
+            vector_size=int(getattr(cfg, "embedding_dimension", 384)),
+        )
+    elif provider == "inmemory" or provider == "memory":
+        return InMemoryVectorStore()
+    # default to chroma (local/in-process)
+    return ChromaVectorStore(collection_name="knowledge")
+
+
+VECTOR_STORE = _init_vector_store()
 
 
 @app.get("/metrics")
@@ -114,7 +135,14 @@ async def _embed_async(texts: list[str]) -> list[list[float]]:
     import anyio
 
     def _run():
-        return embed_texts(texts)
+        # Chunk to avoid large memory spikes
+        CHUNK = 128
+        if len(texts) <= CHUNK:
+            return embed_texts(texts)
+        out: list[list[float]] = []
+        for i in range(0, len(texts), CHUNK):
+            out.extend(embed_texts(texts[i : i + CHUNK]))
+        return out
 
     return await anyio.to_thread.run_sync(_run)
 
