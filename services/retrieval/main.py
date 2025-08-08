@@ -16,7 +16,7 @@ from shared.contracts.query import (
     RetrievalIndexResponse,
 )
 from shared.embeddings.local_embedder import embed_texts
-from backend.services.core.vector_store_service import ChromaVectorStore, VectorDocument
+from shared.vectorstores.vector_store_service import ChromaVectorStore, VectorDocument
 
 
 @asynccontextmanager
