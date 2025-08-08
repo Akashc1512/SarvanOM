@@ -256,7 +256,8 @@ class QueryOrchestrator:
                 processing_time=processing_time
             )
             
-            raise
+            # Propagate a sanitized error up for HTTP layer mapping
+            raise ValueError("Failed to process basic query")
     
     async def process_comprehensive_query(
         self,
@@ -297,6 +298,7 @@ class QueryOrchestrator:
             self.active_queries[query_id] = query
             query.mark_processing()
             
+            # Run retrieval, verification, and synthesis in orchestrated async pipeline
             result = await self.query_processor.process_comprehensive_query(query, request.options)
             
             # Cache result
@@ -326,7 +328,7 @@ class QueryOrchestrator:
                 processing_time=processing_time
             )
             
-            raise
+            raise ValueError("Failed to process comprehensive query")
     
     async def get_query_status(self, query_id: str) -> Dict[str, Any]:
         """Get the status of a query."""

@@ -106,7 +106,9 @@ async def list_queries(
             status_filter=status_filter,
         )
         return QueryListResponse(**data)
-        
+    except ValueError as e:
+        logger.warning(f"List queries validation error: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error listing queries: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -123,7 +125,9 @@ async def get_query(
     try:
         data = await orchestrator.get_query_detail(query_id)
         return QueryDetailResponse(**data)
-        
+    except ValueError as e:
+        logger.warning(f"Query not found: {query_id}")
+        raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -143,7 +147,9 @@ async def update_query(
     try:
         data = await orchestrator.update_query_details(query_id, update_request.dict(exclude_unset=True))
         return QueryDetailResponse(**data)
-        
+    except ValueError as e:
+        logger.warning(f"Update query not found: {query_id}")
+        raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -164,7 +170,6 @@ async def delete_query(
         if not deleted:
             raise HTTPException(status_code=404, detail="Query not found")
         return JSONResponse(status_code=204, content=None)
-        
     except HTTPException:
         raise
     except Exception as e:
@@ -216,9 +221,11 @@ async def reprocess_query(
             {"agent_preferences": reprocess_request.agent_preferences} if reprocess_request else {}
         ))
         return QueryReprocessResponse(**data)
-        
+    except ValueError as e:
+        logger.warning(f"Reprocess query not found: {query_id}")
+        raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error reprocessing query {query_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error") 
+        raise HTTPException(status_code=500, detail="Internal server error")
