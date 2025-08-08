@@ -117,6 +117,33 @@ async def cache_prune():
         return {"pruned": 0}
 
 
+@router.get("/reviewer", response_model=Dict[str, Any])
+async def reviewer_stats():
+    """Get reviewer agent statistics and configuration."""
+    try:
+        from shared.core.config.central_config import get_central_config
+        config = get_central_config()
+        
+        return {
+            "enabled": config.enable_reviewer_agent,
+            "model": config.reviewer_model or "default",
+            "temperature": config.reviewer_temperature,
+            "max_tokens": config.reviewer_max_tokens,
+            "timeout_seconds": config.reviewer_timeout_seconds,
+            "status": "active" if config.enable_reviewer_agent else "disabled"
+        }
+    except Exception as e:
+        logger.warning(f"Reviewer stats unavailable: {e}")
+        return {
+            "enabled": False,
+            "model": "unknown",
+            "temperature": 0.2,
+            "max_tokens": 800,
+            "timeout_seconds": 45,
+            "status": "error"
+        }
+
+
 @router.get("/basic")
 async def basic_health_check():
     """Basic health check with minimal overhead."""

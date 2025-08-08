@@ -64,6 +64,18 @@ class ReviewerAgent(BaseAgent):
         draft_answer: str = task.get("draft_answer", "").strip()
         sources: Optional[List[Dict[str, Any]]] = task.get("sources")
 
+        # Get configuration
+        try:
+            from shared.core.config.central_config import get_central_config
+            config = get_central_config()
+            temperature = config.reviewer_temperature
+            max_tokens = config.reviewer_max_tokens
+            timeout_seconds = config.reviewer_timeout_seconds
+        except Exception:
+            temperature = 0.2
+            max_tokens = 800
+            timeout_seconds = 45
+
         # Build the reviewer prompt
         sources_text = ""
         if sources:
@@ -95,7 +107,7 @@ class ReviewerAgent(BaseAgent):
             from shared.core.agents.llm_client import LLMClient
 
             llm = LLMClient()
-            response_text: str = await llm.generate_text(review_prompt, max_tokens=800, temperature=0.2)
+            response_text: str = await llm.generate_text(review_prompt, max_tokens=max_tokens, temperature=temperature)
 
             approved = ("approved: true" in response_text.lower()) or ("approved" in response_text.lower() and "false" not in response_text.lower())
 

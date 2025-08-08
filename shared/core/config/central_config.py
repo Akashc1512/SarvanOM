@@ -499,6 +499,13 @@ class CentralConfig(SecureSettings):
         default=0.7, description="Query min confidence"
     )
     
+    # Agent settings
+    enable_reviewer_agent: bool = Field(default=True, description="Enable expert reviewer agent")
+    reviewer_model: str = Field(default="", description="Specific model for reviewer agent (empty = use default)")
+    reviewer_temperature: float = Field(default=0.2, description="Temperature for reviewer agent")
+    reviewer_max_tokens: int = Field(default=800, description="Max tokens for reviewer agent")
+    reviewer_timeout_seconds: int = Field(default=45, description="Timeout for reviewer agent")
+    
     # =============================================================================
     # 12. PERFORMANCE & SCALING
     # =============================================================================

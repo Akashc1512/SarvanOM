@@ -442,6 +442,16 @@ class LeadOrchestrator:
         """Execute expert reviewer to validate and improve the answer."""
         logger.info("Phase 5: Expert Review")
 
+        # Check if reviewer is enabled
+        try:
+            from shared.core.config.central_config import get_central_config
+            config = get_central_config()
+            if not config.enable_reviewer_agent:
+                logger.info("Reviewer agent disabled in config")
+                return results
+        except Exception:
+            logger.warning("Could not check reviewer config, proceeding with reviewer")
+
         # Skip if synthesis failed
         if (
             AgentType.SYNTHESIS not in results
