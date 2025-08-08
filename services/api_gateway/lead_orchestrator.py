@@ -97,48 +97,141 @@ class LeadOrchestrator:
             log_query_event(logger, query, "received", 
                           query_id=context.trace_id, 
                           user_context=user_context)
-
+            
             # Check cache first
-            cached_result = await self.semantic_cache.get_cached_response(query)
-            if cached_result:
-                logger.info(f"Cache HIT for query: {query[:50]}...")
-                return cached_result
+            cached_response = await self.semantic_cache.get_cached_response(query)
+            if cached_response:
+                logger.info("Cache hit for query", query_id=context.trace_id)
+                return {
+                    "success": True,
+                    "answer": cached_response["answer"],
+                    "sources": cached_response.get("sources", []),
+                    "verification": cached_response.get("verification", {}),
+                    "metadata": {
+                        **cached_response.get("metadata", {}),
+                        "cache_status": "Hit",
+                        "llm_provider": "cached"
+                    },
+                    "execution_time_ms": int((time.time() - start_time) * 1000)
+                }
 
-            # Allocate token budget
-            query_budget = await self.token_budget.allocate_budget_for_query(query)
-            logger.info(f"Allocated {query_budget} tokens for query")
+            # Continue with full processing if not cached
+            logger.info("Cache miss, processing query", query_id=context.trace_id)
 
-            # Analyze and plan execution
-            plan = await self.analyze_and_plan(context)
+            # Allocate token budget with error handling
+            try:
+                query_budget = await self.token_budget.allocate_budget_for_query(query)
+                logger.info(f"Allocated {query_budget} tokens for query", query_id=context.trace_id)
+            except Exception as budget_error:
+                logger.error(f"Token budget allocation failed: {budget_error}", exc_info=True)
+                query_budget = 1000  # Fallback budget
+                logger.warning(f"Using fallback budget of {query_budget} tokens", query_id=context.trace_id)
 
-            # Execute based on plan
-            if plan["execution_pattern"] == "pipeline":
-                result = await self.execute_pipeline(context, plan, query_budget)
-            elif plan["execution_pattern"] == "fork_join":
-                result = await self.execute_fork_join(context, plan, query_budget)
-            elif plan["execution_pattern"] == "scatter_gather":
-                result = await self.execute_scatter_gather(context, plan, query_budget)
-            else:
-                result = await self.execute_pipeline(
-                    context, plan, query_budget
-                )  # Default to pipeline
+            # Analyze and plan execution with error handling
+            try:
+                plan = await self.analyze_and_plan(context)
+            except Exception as plan_error:
+                logger.error(f"Query analysis and planning failed: {plan_error}", exc_info=True)
+                # Use default pipeline plan
+                plan = {
+                    "execution_pattern": "pipeline",
+                    "agent_sequence": [AgentType.RETRIEVAL, AgentType.SYNTHESIS],
+                    "timeout": 30.0
+                }
+                logger.warning("Using default pipeline plan", query_id=context.trace_id)
+
+            # Execute based on plan with comprehensive error handling
+            try:
+                if plan["execution_pattern"] == "pipeline":
+                    result = await self.execute_pipeline(context, plan, query_budget)
+                elif plan["execution_pattern"] == "fork_join":
+                    result = await self.execute_fork_join(context, plan, query_budget)
+                elif plan["execution_pattern"] == "scatter_gather":
+                    result = await self.execute_scatter_gather(context, plan, query_budget)
+                else:
+                    result = await self.execute_pipeline(
+                        context, plan, query_budget
+                    )  # Default to pipeline
+            except asyncio.TimeoutError as timeout_error:
+                logger.error(f"Query execution timed out: {timeout_error}", exc_info=True)
+                return {
+                    "success": False,
+                    "error": "Query processing timed out. Please try again with a simpler query.",
+                    "answer": "",
+                    "confidence": 0.0,
+                    "citations": [],
+                    "metadata": {
+                        "trace_id": context.trace_id,
+                        "execution_time_ms": int((time.time() - start_time) * 1000),
+                        "error_type": "timeout_error"
+                    }
+                }
+            except ConnectionError as conn_error:
+                logger.error(f"Connection error during query execution: {conn_error}", exc_info=True)
+                return {
+                    "success": False,
+                    "error": "External service connection failed. Please try again later.",
+                    "answer": "",
+                    "confidence": 0.0,
+                    "citations": [],
+                    "metadata": {
+                        "trace_id": context.trace_id,
+                        "execution_time_ms": int((time.time() - start_time) * 1000),
+                        "error_type": "connection_error"
+                    }
+                }
+            except Exception as exec_error:
+                logger.error(f"Query execution failed: {exec_error}", exc_info=True)
+                return {
+                    "success": False,
+                    "error": "Query processing failed. Please try again later.",
+                    "answer": "",
+                    "confidence": 0.0,
+                    "citations": [],
+                    "metadata": {
+                        "trace_id": context.trace_id,
+                        "execution_time_ms": int((time.time() - start_time) * 1000),
+                        "error_type": "execution_error"
+                    }
+                }
 
             # Aggregate results with enhanced aggregator
-            final_response = self.response_aggregator.aggregate_pipeline_results(
-                result, context
-            )
+            try:
+                final_response = self.response_aggregator.aggregate_pipeline_results(
+                    result, context
+                )
+            except Exception as agg_error:
+                logger.error(f"Response aggregation failed: {agg_error}", exc_info=True)
+                return {
+                    "success": False,
+                    "error": "Response processing failed. Please try again later.",
+                    "answer": "",
+                    "confidence": 0.0,
+                    "citations": [],
+                    "metadata": {
+                        "trace_id": context.trace_id,
+                        "execution_time_ms": int((time.time() - start_time) * 1000),
+                        "error_type": "aggregation_error"
+                    }
+                }
 
-            # Track token usage
-            total_tokens = (
-                final_response.get("metadata", {})
-                .get("token_usage", {})
-                .get("total", 0)
-            )
-            await self.token_budget.track_usage(AgentType.ORCHESTRATOR, total_tokens)
+            # Track token usage with error handling
+            try:
+                total_tokens = (
+                    final_response.get("metadata", {})
+                    .get("token_usage", {})
+                    .get("total", 0)
+                )
+                await self.token_budget.track_usage(AgentType.ORCHESTRATOR, total_tokens)
+            except Exception as track_error:
+                logger.warning(f"Token usage tracking failed: {track_error}", query_id=context.trace_id)
 
-            # Cache successful response
+            # Cache successful response with error handling
             if final_response.get("success", False):
-                await self.semantic_cache.cache_response(query, final_response)
+                try:
+                    await self.semantic_cache.cache_response(query, final_response)
+                except Exception as cache_error:
+                    logger.warning(f"Response caching failed: {cache_error}", query_id=context.trace_id)
 
             return final_response
 

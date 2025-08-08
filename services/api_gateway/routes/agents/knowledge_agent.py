@@ -9,7 +9,7 @@ from typing import Dict, Any, List
 from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException, Depends
 
-from ..base import (
+from .base import (
     AgentResponseFormatter,
     AgentErrorHandler,
     AgentPerformanceTracker,
@@ -17,6 +17,7 @@ from ..base import (
     create_agent_metadata
 )
 from ...models.requests import KnowledgeGraphRequest
+from ...models.responses import AgentResponse
 from ...middleware import get_current_user
 from ...di import get_knowledge_service
 from ...services.knowledge_service import KnowledgeService
@@ -32,7 +33,7 @@ async def knowledge_graph_query(
     http_request: Request,
     current_user=Depends(get_current_user),
     knowledge_service: KnowledgeService = Depends(get_knowledge_service)
-):
+) -> AgentResponse:
     """Query the knowledge graph for entities and relationships using knowledge service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
@@ -87,7 +88,7 @@ async def get_entities(
     http_request: Request,
     current_user=Depends(get_current_user),
     knowledge_service: KnowledgeService = Depends(get_knowledge_service)
-):
+) -> AgentResponse:
     """Get entities from the knowledge graph using knowledge service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
@@ -139,7 +140,7 @@ async def get_relationships(
     http_request: Request,
     current_user=Depends(get_current_user),
     knowledge_service: KnowledgeService = Depends(get_knowledge_service)
-):
+) -> AgentResponse:
     """Get relationships from the knowledge graph using knowledge service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
@@ -194,7 +195,7 @@ async def find_paths(
     http_request: Request,
     current_user=Depends(get_current_user),
     knowledge_service: KnowledgeService = Depends(get_knowledge_service)
-):
+) -> AgentResponse:
     """Find paths between entities using knowledge service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
@@ -249,7 +250,7 @@ async def search_entities(
     http_request: Request,
     current_user=Depends(get_current_user),
     knowledge_service: KnowledgeService = Depends(get_knowledge_service)
-):
+) -> AgentResponse:
     """Search for entities using knowledge service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
@@ -299,7 +300,7 @@ async def search_entities(
 async def knowledge_health(
     current_user=Depends(get_current_user),
     knowledge_service: KnowledgeService = Depends(get_knowledge_service)
-):
+) -> AgentResponse:
     """Get knowledge service health status."""
     try:
         health_status = await knowledge_service.health_check()
@@ -328,7 +329,7 @@ async def knowledge_health(
 async def knowledge_status(
     current_user=Depends(get_current_user),
     knowledge_service: KnowledgeService = Depends(get_knowledge_service)
-):
+) -> AgentResponse:
     """Get knowledge service detailed status."""
     try:
         status_info = await knowledge_service.get_status()

@@ -1,19 +1,17 @@
-from ..\shared\core\api\config import get_settings
 #!/usr/bin/env python3
-settings = get_settings()
 """
-Zero Budget LLM Setup Script
-Sets up free LLM alternatives for the Universal Knowledge Platform
+Zero-budget LLM setup script for Universal Knowledge Hub.
 """
 
+import asyncio
 import os
 import sys
-import json
 import subprocess
-import requests
 import time
+import json
+import httpx
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, Any, Optional
 import logging
 
 # Setup logging
@@ -31,30 +29,37 @@ class ZeroBudgetLLMSetup:
             "groq": False
         }
     
-    def run_setup(self):
+    async def run_setup(self):
         """Run the complete setup process."""
-        logger.info("🚀 Starting Zero Budget LLM Setup")
+        logger.info("🚀 Starting Zero-Budget LLM Setup")
+        logger.info("=" * 50)
         
         # Check system requirements
-        self._check_system_requirements()
+        if not self._check_system_requirements():
+            logger.error("❌ System requirements not met")
+            return False
         
-        # Setup Ollama (Primary)
-        self._setup_ollama()
+        # Setup Ollama
+        if not self._check_ollama_installed():
+            self._install_ollama()
         
-        # Setup Hugging Face (Fallback)
-        self._setup_huggingface()
+        await self._start_ollama_service()
+        self._pull_ollama_models()
         
-        # Setup Groq (Ultra-fast fallback)
-        self._setup_groq()
+        # Setup APIs
+        await self._setup_huggingface()
+        await self._setup_groq()
         
-        # Update model selection config
+        # Update configuration
         self._update_model_config()
         
-        # Test the setup
-        self._test_setup()
+        # Test setup
+        await self._test_setup()
         
-        logger.info("✅ Zero Budget LLM Setup Complete!")
+        # Print summary
         self._print_summary()
+        
+        return True
     
     def _check_system_requirements(self):
         """Check if system meets requirements for local models."""
@@ -90,26 +95,6 @@ class ZeroBudgetLLMSetup:
         except Exception as e:
             logger.warning(f"⚠️  Could not check storage: {e}")
     
-    def _setup_ollama(self):
-        """Setup Ollama for local model inference."""
-        logger.info("🔧 Setting up Ollama...")
-        
-        # Check if Ollama is already installed
-        if self._check_ollama_installed():
-            logger.info("✅ Ollama already installed")
-        else:
-            logger.info("📥 Installing Ollama...")
-            self._install_ollama()
-        
-        # Start Ollama service
-        self._start_ollama_service()
-        
-        # Pull required models
-        self._pull_ollama_models()
-        
-        self.setup_status["ollama"] = True
-        logger.info("✅ Ollama setup complete")
-    
     def _check_ollama_installed(self) -> bool:
         """Check if Ollama is installed."""
         try:
@@ -136,15 +121,16 @@ class ZeroBudgetLLMSetup:
             logger.error(f"❌ Failed to install Ollama: {e}")
             raise
     
-    def _start_ollama_service(self):
+    async def _start_ollama_service(self):
         """Start Ollama service."""
         try:
             # Check if Ollama is running
-            response = requests.get("http://localhost:11434/api/tags", timeout=5)
-            if response.status_code == 200:
-                logger.info("✅ Ollama service is running")
-                return
-        except requests.RequestException:
+            async with httpx.AsyncClient() as client:
+                response = await client.get("http://localhost:11434/api/tags", timeout=5.0)
+                if response.status_code == 200:
+                    logger.info("✅ Ollama service is running")
+                    return
+        except Exception:
             pass
         
         logger.info("🚀 Starting Ollama service...")
@@ -162,13 +148,14 @@ class ZeroBudgetLLMSetup:
             # Wait for service to start
             for i in range(30):
                 try:
-                    response = requests.get("http://localhost:11434/api/tags", timeout=2)
-                    if response.status_code == 200:
-                        logger.info("✅ Ollama service started successfully")
-                        return
-                except requests.RequestException:
+                    async with httpx.AsyncClient() as client:
+                        response = await client.get("http://localhost:11434/api/tags", timeout=2.0)
+                        if response.status_code == 200:
+                            logger.info("✅ Ollama service started successfully")
+                            return
+                except Exception:
                     pass
-                time.sleep(1)
+                await asyncio.sleep(1)
             
             logger.warning("⚠️  Ollama service may not have started properly")
             
@@ -197,7 +184,7 @@ class ZeroBudgetLLMSetup:
             except subprocess.CalledProcessError as e:
                 logger.error(f"❌ Failed to pull {model}: {e}")
     
-    def _setup_huggingface(self):
+    async def _setup_huggingface(self):
         """Setup Hugging Face API access."""
         logger.info("🔧 Setting up Hugging Face...")
         
@@ -211,16 +198,17 @@ class ZeroBudgetLLMSetup:
         # Test API key
         try:
             headers = {"Authorization": f"Bearer {api_key}"}
-            response = requests.get("https://huggingface.co/api/models", headers=headers, timeout=10)
-            if response.status_code == 200:
-                logger.info("✅ Hugging Face API key is valid")
-                self.setup_status["huggingface"] = True
-            else:
-                logger.error("❌ Invalid Hugging Face API key")
+            async with httpx.AsyncClient() as client:
+                response = await client.get("https://huggingface.co/api/models", headers=headers, timeout=10.0)
+                if response.status_code == 200:
+                    logger.info("✅ Hugging Face API key is valid")
+                    self.setup_status["huggingface"] = True
+                else:
+                    logger.error("❌ Invalid Hugging Face API key")
         except Exception as e:
             logger.error(f"❌ Failed to test Hugging Face API: {e}")
     
-    def _setup_groq(self):
+    async def _setup_groq(self):
         """Setup Groq API access."""
         logger.info("🔧 Setting up Groq...")
         
@@ -234,12 +222,13 @@ class ZeroBudgetLLMSetup:
         # Test API key
         try:
             headers = {"Authorization": f"Bearer {api_key}"}
-            response = requests.get("https://api.groq.com/openai/v1/models", headers=headers, timeout=10)
-            if response.status_code == 200:
-                logger.info("✅ Groq API key is valid")
-                self.setup_status["groq"] = True
-            else:
-                logger.error("❌ Invalid Groq API key")
+            async with httpx.AsyncClient() as client:
+                response = await client.get("https://api.groq.com/openai/v1/models", headers=headers, timeout=10.0)
+                if response.status_code == 200:
+                    logger.info("✅ Groq API key is valid")
+                    self.setup_status["groq"] = True
+                else:
+                    logger.error("❌ Invalid Groq API key")
         except Exception as e:
             logger.error(f"❌ Failed to test Groq API: {e}")
     
@@ -315,7 +304,7 @@ class ZeroBudgetLLMSetup:
         
         logger.info("✅ Model configuration updated")
     
-    def _test_setup(self):
+    async def _test_setup(self):
         """Test the zero budget LLM setup."""
         logger.info("🧪 Testing setup...")
         
@@ -323,15 +312,15 @@ class ZeroBudgetLLMSetup:
         
         # Test Ollama
         if self.setup_status["ollama"]:
-            test_results["ollama"] = self._test_ollama()
+            test_results["ollama"] = await self._test_ollama()
         
         # Test Hugging Face
         if self.setup_status["huggingface"]:
-            test_results["huggingface"] = self._test_huggingface()
+            test_results["huggingface"] = await self._test_huggingface()
         
         # Test Groq
         if self.setup_status["groq"]:
-            test_results["groq"] = self._test_groq()
+            test_results["groq"] = await self._test_groq()
         
         # Print test results
         logger.info("📊 Test Results:")
@@ -339,43 +328,81 @@ class ZeroBudgetLLMSetup:
             status = "✅ PASS" if result else "❌ FAIL"
             logger.info(f"  {provider}: {status}")
     
-    def _test_ollama(self) -> bool:
+    async def _test_ollama(self) -> bool:
         """Test Ollama functionality."""
+        logger.info("🧪 Testing Ollama...")
+        
         try:
-            # Test with a simple prompt
-            import requests
-            payload = {
+            # Test basic API
+            async with httpx.AsyncClient() as client:
+                response = await client.get("http://localhost:11434/api/tags", timeout=5.0)
+                if response.status_code != 200:
+                    logger.error("❌ Ollama API not responding")
+                    return False
+            
+            # Test model generation
+            test_prompt = "Hello, how are you?"
+            test_data = {
                 "model": "llama3.2:3b",
-                "prompt": "Hello, how are you?",
+                "prompt": test_prompt,
                 "stream": False
             }
-            response = requests.post("http://localhost:11434/api/generate", 
-                                   json=payload, timeout=30)
-            return response.status_code == 200
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post("http://localhost:11434/api/generate", json=test_data, timeout=30.0)
+                if response.status_code == 200:
+                    logger.info("✅ Ollama test successful")
+                    return True
+                else:
+                    logger.error(f"❌ Ollama generation failed: {response.status_code}")
+                    return False
+                    
         except Exception as e:
             logger.error(f"❌ Ollama test failed: {e}")
             return False
     
-    def _test_huggingface(self) -> bool:
+    async def _test_huggingface(self) -> bool:
         """Test Hugging Face API."""
+        logger.info("🧪 Testing Hugging Face...")
+        
         try:
             api_key = settings.huggingface_api_key
+            if not api_key:
+                logger.warning("⚠️  No Hugging Face API key configured")
+                return False
+            
             headers = {"Authorization": f"Bearer {api_key}"}
-            response = requests.get("https://huggingface.co/api/models", 
-                                  headers=headers, timeout=10)
-            return response.status_code == 200
+            async with httpx.AsyncClient() as client:
+                response = await client.get("https://huggingface.co/api/models", headers=headers, timeout=10.0)
+                if response.status_code == 200:
+                    logger.info("✅ Hugging Face test successful")
+                    return True
+                else:
+                    logger.error(f"❌ Hugging Face test failed: {response.status_code}")
+                    return False
         except Exception as e:
             logger.error(f"❌ Hugging Face test failed: {e}")
             return False
     
-    def _test_groq(self) -> bool:
+    async def _test_groq(self) -> bool:
         """Test Groq API."""
+        logger.info("🧪 Testing Groq...")
+        
         try:
             api_key = os.getenv("GROQ_API_KEY")
+            if not api_key:
+                logger.warning("⚠️  No Groq API key configured")
+                return False
+            
             headers = {"Authorization": f"Bearer {api_key}"}
-            response = requests.get("https://api.groq.com/openai/v1/models", 
-                                  headers=headers, timeout=10)
-            return response.status_code == 200
+            async with httpx.AsyncClient() as client:
+                response = await client.get("https://api.groq.com/openai/v1/models", headers=headers, timeout=10.0)
+                if response.status_code == 200:
+                    logger.info("✅ Groq test successful")
+                    return True
+                else:
+                    logger.error(f"❌ Groq test failed: {response.status_code}")
+                    return False
         except Exception as e:
             logger.error(f"❌ Groq test failed: {e}")
             return False
@@ -406,10 +433,11 @@ class ZeroBudgetLLMSetup:
         logger.info("- Hugging Face: https://huggingface.co")
         logger.info("- Groq: https://console.groq.com")
 
-def main():
-    """Main setup function."""
+async def main():
+    """Main function."""
     setup = ZeroBudgetLLMSetup()
-    setup.run_setup()
+    success = await setup.run_setup()
+    return success
 
 if __name__ == "__main__":
-    main() 
+    asyncio.run(main()) 

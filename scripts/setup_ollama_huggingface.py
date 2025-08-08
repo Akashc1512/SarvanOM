@@ -1,19 +1,19 @@
-from ..\shared\core\api\config import get_settings
+
 #!/usr/bin/env python3
-settings = get_settings()
 """
-Setup Ollama and Hugging Face Integration
-Comprehensive setup script for zero-budget LLM alternatives
+Ollama and Hugging Face setup script for Universal Knowledge Hub.
 """
 
+import asyncio
 import os
 import sys
 import subprocess
-import requests
-import json
-import time
 import platform
+import time
+import json
+import httpx
 from pathlib import Path
+from typing import Dict, Any, Optional
 import logging
 from dotenv import load_dotenv
 
@@ -43,38 +43,34 @@ class OllamaHuggingFaceSetup:
             "mixtral:8x7b"
         ]
     
-    def run_complete_setup(self):
+    async def run_complete_setup(self):
         """Run the complete setup process."""
-        logger.info("🚀 Starting Ollama and Hugging Face Setup")
-        print("=" * 60)
+        logger.info("🚀 Starting Ollama & Hugging Face Setup")
+        logger.info("=" * 50)
         
         # Check system requirements
-        self._check_system_requirements()
+        await self._check_system_requirements()
         
         # Setup Ollama
         self._setup_ollama()
         
         # Setup Hugging Face
-        self._setup_huggingface()
+        await self._setup_huggingface()
         
         # Update environment configuration
         self._update_environment_config()
         
-        # Test the setup
-        self._test_setup()
+        # Test setup
+        await self._test_setup()
         
         # Print summary
         self._print_setup_summary()
         
-        logger.info("✅ Setup Complete!")
+        logger.info("✅ Setup complete!")
     
-    def _check_system_requirements(self):
-        """Check if system meets requirements."""
+    async def _check_system_requirements(self):
+        """Check if system meets requirements for local models."""
         logger.info("🔍 Checking system requirements...")
-        
-        # Check OS
-        os_name = platform.system()
-        logger.info(f"📊 Operating System: {os_name}")
         
         # Check available RAM
         try:
@@ -83,9 +79,7 @@ class OllamaHuggingFaceSetup:
             logger.info(f"📊 Available RAM: {ram_gb:.1f} GB")
             
             if ram_gb < 8:
-                logger.warning("⚠️  Warning: Less than 8GB RAM detected.")
-                logger.warning("   Some models may not work optimally.")
-                logger.warning("   Consider using smaller models like phi3:mini")
+                logger.warning("⚠️  Warning: Less than 8GB RAM detected. Some models may not work optimally.")
             elif ram_gb >= 16:
                 logger.info("✅ Sufficient RAM for all models")
             else:
@@ -101,8 +95,7 @@ class OllamaHuggingFaceSetup:
             logger.info(f"💾 Available storage: {free_space_gb:.1f} GB")
             
             if free_space_gb < 10:
-                logger.warning("⚠️  Warning: Less than 10GB free space.")
-                logger.warning("   Consider freeing up space for model downloads.")
+                logger.warning("⚠️  Warning: Less than 10GB free space. Consider freeing up space.")
             else:
                 logger.info("✅ Sufficient storage space")
                 
@@ -111,11 +104,12 @@ class OllamaHuggingFaceSetup:
         
         # Check internet connectivity
         try:
-            response = requests.get("https://ollama.ai", timeout=5)
-            if response.status_code == 200:
-                logger.info("✅ Internet connectivity: Good")
-            else:
-                logger.warning("⚠️  Internet connectivity: Limited")
+            async with httpx.AsyncClient() as client:
+                response = await client.get("https://ollama.ai", timeout=5.0)
+                if response.status_code == 200:
+                    logger.info("✅ Internet connectivity: Good")
+                else:
+                    logger.warning("⚠️  Internet connectivity: Limited")
         except Exception:
             logger.warning("⚠️  Internet connectivity: Poor")
     
@@ -191,15 +185,16 @@ class OllamaHuggingFaceSetup:
             logger.error(f"❌ Unexpected error during Ollama installation: {e}")
             return False
     
-    def _start_ollama_service(self) -> bool:
+    async def _start_ollama_service(self) -> bool:
         """Start Ollama service."""
         try:
             # Check if Ollama is running
-            response = requests.get("http://localhost:11434/api/tags", timeout=5)
-            if response.status_code == 200:
-                logger.info("✅ Ollama service is running")
-                return True
-        except requests.RequestException:
+            async with httpx.AsyncClient() as client:
+                response = await client.get("http://localhost:11434/api/tags", timeout=5.0)
+                if response.status_code == 200:
+                    logger.info("✅ Ollama service is running")
+                    return True
+        except Exception:
             pass
         
         logger.info("🚀 Starting Ollama service...")
@@ -217,13 +212,14 @@ class OllamaHuggingFaceSetup:
             # Wait for service to start
             for i in range(30):
                 try:
-                    response = requests.get("http://localhost:11434/api/tags", timeout=2)
-                    if response.status_code == 200:
-                        logger.info("✅ Ollama service started successfully")
-                        return True
-                except requests.RequestException:
+                    async with httpx.AsyncClient() as client:
+                        response = await client.get("http://localhost:11434/api/tags", timeout=2.0)
+                        if response.status_code == 200:
+                            logger.info("✅ Ollama service started successfully")
+                            return True
+                except Exception:
                     pass
-                time.sleep(1)
+                await asyncio.sleep(1)
             
             logger.warning("⚠️  Ollama service may not have started properly")
             return False
@@ -279,73 +275,57 @@ class OllamaHuggingFaceSetup:
             logger.error(f"❌ Failed to pull {model}: {e}")
             return False
     
-    def _setup_huggingface(self):
+    async def _setup_huggingface(self):
         """Setup Hugging Face API access."""
         logger.info("🔧 Setting up Hugging Face...")
         
-        # Check for existing tokens
-        write_token = settings.huggingface_write_token
-        read_token = settings.huggingface_read_token
-        legacy_api_key = settings.huggingface_api_key
+        # Get API key from user
+        api_key = input("📝 Enter your Hugging Face API key (or press Enter to skip): ").strip()
         
-        if write_token or read_token or legacy_api_key:
-            logger.info("✅ Hugging Face tokens found in environment")
-            if write_token:
-                logger.info("   Write token: Available")
-            if read_token:
-                logger.info("   Read token: Available")
-            if legacy_api_key:
-                logger.info("   Legacy API key: Available")
-            self.setup_status["huggingface"]["api_key"] = True
-        else:
-            logger.info("📝 Hugging Face tokens not found")
-            logger.info("   Get your free tokens from: https://huggingface.co/settings/tokens")
-            logger.info("   - Write token: Full access (recommended)")
-            logger.info("   - Read token: Read-only access")
-            
-            # Ask user for tokens
-            write_token = input("   Enter your Hugging Face Write token (or press Enter to skip): ").strip()
-            read_token = input("   Enter your Hugging Face Read token (or press Enter to skip): ").strip()
-            
-            if write_token or read_token:
-                # Test the tokens
-                if write_token and self._test_huggingface_api_key(write_token):
-                    logger.info("✅ Hugging Face Write token is valid")
-                    self.setup_status["huggingface"]["api_key"] = True
-                    self.setup_status["huggingface"]["configured"] = True
-                    self._save_api_key_to_env("HUGGINGFACE_WRITE_TOKEN", write_token)
-                elif read_token and self._test_huggingface_api_key(read_token):
-                    logger.info("✅ Hugging Face Read token is valid")
-                    self.setup_status["huggingface"]["api_key"] = True
-                    self.setup_status["huggingface"]["configured"] = True
-                    self._save_api_key_to_env("HUGGINGFACE_READ_TOKEN", read_token)
-                else:
-                    logger.error("❌ Invalid Hugging Face tokens")
-            else:
-                logger.info("⚠️  Skipping Hugging Face setup")
+        if not api_key:
+            logger.info("💡 You can get your API key from: https://huggingface.co/settings/tokens")
+            logger.warning("⚠️  Hugging Face setup skipped")
+            return
         
-        # Test API health if configured
-        if self.setup_status["huggingface"]["api_key"]:
-            if self._test_huggingface_health():
+        # Test API key
+        if await self._test_huggingface_api_key(api_key):
+            logger.info("✅ Hugging Face API key is valid")
+            self.setup_status["huggingface"]["configured"] = True
+            
+            # Save to environment
+            self._save_api_key_to_env("HUGGINGFACE_API_KEY", api_key)
+            
+            # Test health
+            if await self._test_huggingface_health():
                 self.setup_status["huggingface"]["health"] = True
+                logger.info("✅ Hugging Face setup complete")
+            else:
+                logger.warning("⚠️  Hugging Face health check failed")
+        else:
+            logger.error("❌ Invalid Hugging Face API key")
     
-    def _test_huggingface_api_key(self, api_key: str) -> bool:
+    async def _test_huggingface_api_key(self, api_key: str) -> bool:
         """Test if the Hugging Face API key is valid."""
         try:
             headers = {"Authorization": f"Bearer {api_key}"}
-            response = requests.get("https://huggingface.co/api/models", 
-                                  headers=headers, timeout=10)
+            async with httpx.AsyncClient() as client:
+                response = await client.get("https://huggingface.co/api/models", 
+                                  headers=headers, timeout=10.0)
             return response.status_code == 200
         except Exception:
             return False
     
-    def _test_huggingface_health(self) -> bool:
+    async def _test_huggingface_health(self) -> bool:
         """Test Hugging Face API health."""
         try:
-            api_key = settings.huggingface_api_key
+            api_key = os.getenv("HUGGINGFACE_API_KEY")
+            if not api_key:
+                return False
+            
             headers = {"Authorization": f"Bearer {api_key}"}
-            response = requests.get("https://huggingface.co/api/models", 
-                                  headers=headers, timeout=10)
+            async with httpx.AsyncClient() as client:
+                response = await client.get("https://huggingface.co/api/models", 
+                                  headers=headers, timeout=10.0)
             return response.status_code == 200
         except Exception:
             return False
@@ -403,11 +383,11 @@ class OllamaHuggingFaceSetup:
             ])
             
             # Add token settings based on what's available
-            if settings.huggingface_write_token:
+            if os.getenv("HUGGINGFACE_WRITE_TOKEN"):
                 env_settings.append("# HUGGINGFACE_WRITE_TOKEN=your_write_token_here")
-            if settings.huggingface_read_token:
+            if os.getenv("HUGGINGFACE_READ_TOKEN"):
                 env_settings.append("# HUGGINGFACE_READ_TOKEN=your_read_token_here")
-            if settings.huggingface_api_key:
+            if os.getenv("HUGGINGFACE_API_KEY"):
                 env_settings.append("# HUGGINGFACE_API_KEY=your_legacy_api_key_here")
         
         # Write to .env file
@@ -433,83 +413,80 @@ class OllamaHuggingFaceSetup:
         except Exception as e:
             logger.warning(f"⚠️  Could not update environment configuration: {e}")
     
-    def _test_setup(self):
+    async def _test_setup(self):
         """Test the complete setup."""
         logger.info("🧪 Testing setup...")
         
         # Test Ollama
         if self.setup_status["ollama"]["installed"]:
-            logger.info("🔧 Testing Ollama...")
-            if self._test_ollama_models():
-                logger.info("✅ Ollama models working")
+            logger.info("🧪 Testing Ollama...")
+            if await self._test_ollama_models():
+                self.setup_status["ollama"]["tested"] = True
+                logger.info("✅ Ollama test successful")
             else:
-                logger.warning("⚠️  Some Ollama models may not be working")
+                logger.error("❌ Ollama test failed")
         
         # Test Hugging Face
         if self.setup_status["huggingface"]["configured"]:
-            logger.info("🔧 Testing Hugging Face...")
-            if self._test_huggingface_models():
-                logger.info("✅ Hugging Face models working")
+            logger.info("🧪 Testing Hugging Face...")
+            if await self._test_huggingface_models():
+                self.setup_status["huggingface"]["tested"] = True
+                logger.info("✅ Hugging Face test successful")
             else:
-                logger.warning("⚠️  Hugging Face models may not be working")
+                logger.error("❌ Hugging Face test failed")
     
-    def _test_ollama_models(self) -> bool:
-        """Test Ollama models."""
+    async def _test_ollama_models(self) -> bool:
+        """Test Ollama model functionality."""
         try:
-            for model in self.setup_status["ollama"]["models"][:1]:  # Test first model
-                payload = {
-                    "model": model,
-                    "prompt": "Hello, this is a test.",
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.1,
-                        "num_predict": 10
-                    }
-                }
-                
-                response = requests.post(
-                    "http://localhost:11434/api/generate",
-                    json=payload,
-                    timeout=30
-                )
-                
+            # Test basic API
+            async with httpx.AsyncClient() as client:
+                response = await client.get("http://localhost:11434/api/tags", timeout=5.0)
+                if response.status_code != 200:
+                    logger.error("❌ Ollama API not responding")
+                    return False
+            
+            # Test model generation
+            test_data = {
+                "model": "llama3.2:3b",
+                "prompt": "Hello, how are you?",
+                "stream": False
+            }
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post("http://localhost:11434/api/generate", 
+                                          json=test_data, timeout=30.0)
                 if response.status_code == 200:
+                    logger.info("✅ Ollama model test successful")
                     return True
+                else:
+                    logger.error(f"❌ Ollama model test failed: {response.status_code}")
+                    return False
                     
         except Exception as e:
-            logger.error(f"❌ Ollama test failed: {e}")
-        
-        return False
-    
-    def _test_huggingface_models(self) -> bool:
-        """Test Hugging Face models."""
+            logger.error(f"❌ Ollama model test failed: {e}")
+            return False
+
+    async def _test_huggingface_models(self) -> bool:
+        """Test Hugging Face model access."""
         try:
-            api_key = settings.huggingface_api_key
+            api_key = os.getenv("HUGGINGFACE_API_KEY")
             if not api_key:
+                logger.warning("⚠️  No Hugging Face API key configured")
                 return False
             
             headers = {"Authorization": f"Bearer {api_key}"}
-            payload = {
-                "inputs": "Hello, this is a test.",
-                "parameters": {
-                    "max_new_tokens": 10,
-                    "temperature": 0.1
-                }
-            }
-            
-            response = requests.post(
-                "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium",
-                json=payload,
-                headers=headers,
-                timeout=30
-            )
-            
-            return response.status_code == 200
-            
+            async with httpx.AsyncClient() as client:
+                response = await client.get("https://huggingface.co/api/models", 
+                                         headers=headers, timeout=10.0)
+                if response.status_code == 200:
+                    logger.info("✅ Hugging Face model test successful")
+                    return True
+                else:
+                    logger.error(f"❌ Hugging Face model test failed: {response.status_code}")
+                    return False
         except Exception as e:
-            logger.error(f"❌ Hugging Face test failed: {e}")
-        
-        return False
+            logger.error(f"❌ Hugging Face model test failed: {e}")
+            return False
     
     def _print_setup_summary(self):
         """Print comprehensive setup summary."""
@@ -554,10 +531,10 @@ class OllamaHuggingFaceSetup:
         print(f"   - Check logs for detailed error messages")
         print(f"   - Test individual components: python test_llm_integration.py")
 
-def main():
-    """Main setup function."""
+async def main():
+    """Main function."""
     setup = OllamaHuggingFaceSetup()
-    setup.run_complete_setup()
+    await setup.run_complete_setup()
 
 if __name__ == "__main__":
-    main() 
+    asyncio.run(main()) 

@@ -33,7 +33,7 @@ POOL_SIZE = int(os.getenv("CONNECTION_POOL_SIZE", "10"))
 POOL_TIMEOUT = float(os.getenv("CONNECTION_POOL_TIMEOUT", "30.0"))
 MAX_KEEPALIVE_TIME = int(os.getenv("MAX_KEEPALIVE_TIME", "300"))  # 5 minutes
 
-# Service URLs
+# Service URLs - All configurable via environment variables
 from shared.core.config.central_config import get_vector_db_url, get_redis_url, get_arangodb_url
 
 VECTOR_DB_URL = os.getenv("VECTOR_DB_URL", get_vector_db_url())

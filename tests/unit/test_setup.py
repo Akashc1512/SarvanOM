@@ -9,6 +9,8 @@ import os
 import asyncio
 import requests
 from pathlib import Path
+import httpx
+from typing import List, Tuple
 
 def test_imports():
     """Test if all required modules can be imported."""
@@ -183,21 +185,22 @@ def test_frontend():
     
     return True
 
-def test_network():
+async def test_network():
     """Test network connectivity."""
     print("\n🔍 Testing network connectivity...")
     
-    try:
-        response = requests.get("https://api.openai.com/v1/models", timeout=5)
-        print("✅ OpenAI API connectivity")
-    except Exception as e:
-        print(f"⚠️  OpenAI API connectivity issue: {e}")
-    
-    try:
-        response = requests.get("https://api.anthropic.com/v1/messages", timeout=5)
-        print("✅ Anthropic API connectivity")
-    except Exception as e:
-        print(f"⚠️  Anthropic API connectivity issue: {e}")
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get("https://api.openai.com/v1/models", timeout=5.0)
+            print("✅ OpenAI API connectivity")
+        except Exception as e:
+            print(f"⚠️  OpenAI API connectivity issue: {e}")
+        
+        try:
+            response = await client.get("https://api.anthropic.com/v1/messages", timeout=5.0)
+            print("✅ Anthropic API connectivity")
+        except Exception as e:
+            print(f"⚠️  Anthropic API connectivity issue: {e}")
     
     # Test LLM Client v3
     try:
@@ -213,7 +216,7 @@ def test_network():
     
     return True
 
-def main():
+async def main():
     """Run all tests."""
     print("🚀 Universal Knowledge Hub - Setup Test")
     print("=" * 50)
@@ -230,7 +233,10 @@ def main():
     results = []
     for test_name, test_func in tests:
         try:
-            result = test_func()
+            if test_name == "Network Tests":
+                result = await test_func()
+            else:
+                result = test_func()
             results.append((test_name, result))
         except Exception as e:
             print(f"❌ {test_name} failed with exception: {e}")
@@ -263,5 +269,5 @@ def main():
     return passed == total
 
 if __name__ == "__main__":
-    success = main()
+    success = asyncio.run(main())
     sys.exit(0 if success else 1) 

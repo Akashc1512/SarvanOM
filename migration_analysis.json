@@ -1,0 +1,419 @@
+{
+  "files": {
+    "main.py": {
+      "size": 32323,
+      "lines": 860,
+      "endpoints": [
+        "GET /",
+        "GET /test"
+      ],
+      "imports": [
+        "import shared.core.windows_compatibility",
+        "import asyncio",
+        "import logging",
+        "import time",
+        "import uuid",
+        "import psutil",
+        "import sys",
+        "import importlib",
+        "import socket",
+        "from contextlib import asynccontextmanager",
+        "from typing import Any, Optional, Dict",
+        "from datetime import datetime, timedelta",
+        "import uvicorn",
+        "from fastapi import (",
+        "from fastapi.middleware.cors import CORSMiddleware",
+        "from fastapi.responses import JSONResponse",
+        "from pydantic import ValidationError, Field, BaseModel",
+        "from dotenv import load_dotenv",
+        "import os",
+        "from shared.core.api.config import get_settings",
+        "from shared.core.config.environment_manager import get_environment_manager, Environment",
+        "from .models import *",
+        "from .middleware import (",
+        "from .middleware.error_handling import create_error_handling_middleware",
+        "from .routes import routers",
+        "from .services import query_service, health_service",
+        "import importlib",
+        "import asyncpg",
+        "import os",
+        "from datetime import datetime",
+        "from .agents import agent_handler",
+        "from shared.core.cache import CacheManager",
+        "from shared.core.unified_logging import setup_logging, get_logger, setup_fastapi_logging",
+        "from shared.core.production_logging import setup_production_logging, get_production_log_collector",
+        "from .refactored_integration_layer import (",
+        "import asyncpg",
+        "import redis.asyncio as redis",
+        "import aiohttp",
+        "from shared.core.config.central_config import get_meilisearch_url",
+        "from shared.core.config.central_config import get_arangodb_url",
+        "import traceback"
+      ]
+    },
+    "routes/agents.py": {
+      "size": 1354,
+      "lines": 40,
+      "endpoints": [],
+      "imports": [
+        "from .agents_new import agents_router",
+        "import logging",
+        "from shared.core.unified_logging import get_logger"
+      ]
+    },
+    "routes/agents_new.py": {
+      "size": 4805,
+      "lines": 142,
+      "endpoints": [],
+      "imports": [
+        "from fastapi import APIRouter, Depends",
+        "from typing import Dict, Any",
+        "from .agents import (",
+        "from ..base import AgentResponseFormatter, AgentErrorHandler, AgentPerformanceTracker",
+        "from ..models.responses import AgentResponse",
+        "from ...middleware import get_current_user"
+      ]
+    },
+    "routes/health.py": {
+      "size": 30865,
+      "lines": 778,
+      "endpoints": [
+        "GET /",
+        "GET /simple",
+        "GET /basic",
+        "GET /metrics",
+        "GET /system/diagnostics",
+        "GET /analytics",
+        "GET /security",
+        "GET /integrations"
+      ],
+      "imports": [
+        "import time",
+        "import psutil",
+        "import logging",
+        "from shared.core.unified_logging import get_logger",
+        "from typing import Dict, Any, Optional",
+        "from datetime import datetime",
+        "from fastapi import APIRouter, Request, HTTPException, Depends",
+        "from ..models.responses import HealthResponse, MetricsResponse, SystemDiagnosticsResponse",
+        "from ..middleware import get_current_user, require_read",
+        "from ..services import health_service",
+        "import asyncpg",
+        "import os",
+        "from datetime import datetime, timedelta",
+        "import asyncpg",
+        "import os",
+        "import psutil",
+        "from datetime import datetime, timedelta",
+        "import aiohttp",
+        "import socket",
+        "import os",
+        "import asyncpg",
+        "import redis.asyncio as redis",
+        "from shared.core.config.central_config import get_meilisearch_url",
+        "from shared.core.config.central_config import get_arangodb_url"
+      ]
+    },
+    "routes/queries.py": {
+      "size": 51911,
+      "lines": 1350,
+      "endpoints": [
+        "POST /",
+        "POST /comprehensive",
+        "GET /",
+        "GET /{query_id}",
+        "PUT /{query_id}",
+        "DELETE /{query_id}",
+        "GET /{query_id}/status",
+        "PATCH /{query_id}/reprocess"
+      ],
+      "imports": [
+        "import asyncio",
+        "import time",
+        "import uuid",
+        "import logging",
+        "from shared.core.unified_logging import get_logger",
+        "from typing import Dict, Any, Optional",
+        "from datetime import datetime, timedelta",
+        "from fastapi import APIRouter, Request, HTTPException, Depends",
+        "from pydantic import ValidationError",
+        "from shared.core.utilities.timing_utilities import time_operation, start_timer, calculate_execution_time",
+        "from shared.core.utilities.response_utilities import create_success_response, create_error_response, add_execution_time",
+        "from ..models.requests import QueryRequest, ComprehensiveQueryRequest, QueryUpdateRequest",
+        "from ..models.responses import (",
+        "from ..middleware import get_current_user, require_read, require_write",
+        "from ..services import query_service",
+        "from services.retrieval.retrieval_agent import RetrievalAgent",
+        "import asyncpg",
+        "import os",
+        "import asyncpg",
+        "import os",
+        "import asyncpg",
+        "import os",
+        "import json",
+        "import asyncpg",
+        "import os",
+        "import asyncpg",
+        "import os",
+        "import asyncpg",
+        "import os",
+        "import json",
+        "from services.api_gateway.services.query_service import QueryService"
+      ]
+    },
+    "services/base_service.py": {
+      "size": 8405,
+      "lines": 276,
+      "classes": [
+        "ServiceStatus",
+        "ServiceType",
+        "BaseAgentService",
+        "ServiceHealthChecker",
+        "ServiceMetricsCollector"
+      ],
+      "imports": [
+        "import logging",
+        "from shared.core.unified_logging import get_logger",
+        "from abc import ABC, abstractmethod",
+        "from typing import Dict, Any, Optional, List",
+        "from datetime import datetime",
+        "from enum import Enum"
+      ]
+    },
+    "services/browser_service.py": {
+      "size": 16145,
+      "lines": 437,
+      "classes": [
+        "BrowserService"
+      ],
+      "imports": [
+        "import logging",
+        "from shared.core.unified_logging import get_logger",
+        "import asyncio",
+        "from typing import Dict, Any, Optional, List",
+        "from datetime import datetime",
+        "import aiohttp",
+        "from bs4 import BeautifulSoup",
+        "import json",
+        "from .base_service import BaseAgentService, ServiceType, ServiceStatus"
+      ]
+    },
+    "services/code_service.py": {
+      "size": 30457,
+      "lines": 808,
+      "classes": [
+        "CodeService"
+      ],
+      "imports": [
+        "import logging",
+        "from shared.core.unified_logging import get_logger",
+        "import asyncio",
+        "import tempfile",
+        "import os",
+        "import subprocess",
+        "import ast",
+        "import re",
+        "from typing import Dict, Any, Optional, List, Tuple",
+        "from datetime import datetime",
+        "import json",
+        "import traceback",
+        "from pathlib import Path",
+        "from .base_service import BaseAgentService, ServiceType, ServiceStatus"
+      ]
+    },
+    "services/crawler_service.py": {
+      "size": 23363,
+      "lines": 656,
+      "classes": [
+        "CrawlerService"
+      ],
+      "imports": [
+        "import logging",
+        "from shared.core.unified_logging import get_logger",
+        "import asyncio",
+        "import aiohttp",
+        "import tempfile",
+        "import os",
+        "from typing import Dict, Any, Optional, List, Set, Tuple",
+        "from datetime import datetime",
+        "from urllib.parse import urljoin, urlparse, urlunparse",
+        "import re",
+        "from bs4 import BeautifulSoup",
+        "import json",
+        "import hashlib",
+        "from collections import deque",
+        "from .base_service import BaseAgentService, ServiceType, ServiceStatus"
+      ]
+    },
+    "services/database_service.py": {
+      "size": 30235,
+      "lines": 856,
+      "classes": [
+        "DatabaseService"
+      ],
+      "imports": [
+        "import logging",
+        "from shared.core.unified_logging import get_logger",
+        "import asyncio",
+        "import json",
+        "import time",
+        "from typing import Dict, Any, Optional, List, Tuple, Union",
+        "from datetime import datetime",
+        "import aiosqlite",
+        "import asyncpg",
+        "from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, AsyncSession",
+        "from sqlalchemy.ext.asyncio import async_sessionmaker",
+        "from sqlalchemy import text, inspect, MetaData",
+        "from sqlalchemy.exc import SQLAlchemyError",
+        "import pandas as pd",
+        "import numpy as np",
+        "from .base_service import BaseAgentService, ServiceType, ServiceStatus",
+        "from shared.core.api.exceptions import (",
+        "from services.api_gateway.middleware.error_handling import (",
+        "from shared.core.error_handler import handle_critical_operation"
+      ]
+    },
+    "services/health_service.py": {
+      "size": 40673,
+      "lines": 970,
+      "classes": [
+        "SystemMetrics",
+        "ServiceHealth",
+        "HealthService"
+      ],
+      "imports": [
+        "import asyncio",
+        "import logging",
+        "from shared.core.unified_logging import get_logger",
+        "import time",
+        "import psutil",
+        "import platform",
+        "import socket",
+        "from typing import Dict, Any, Optional, List",
+        "from datetime import datetime, timedelta",
+        "from dataclasses import dataclass",
+        "import aiohttp",
+        "import asyncio",
+        "import asyncpg",
+        "import os",
+        "from datetime import datetime",
+        "import redis.asyncio as redis",
+        "import os",
+        "import aiohttp",
+        "import os",
+        "import aiohttp",
+        "import os",
+        "import socket",
+        "import os",
+        "import os",
+        "from datetime import datetime, timedelta"
+      ]
+    },
+    "services/knowledge_service.py": {
+      "size": 21514,
+      "lines": 609,
+      "classes": [
+        "KnowledgeService"
+      ],
+      "imports": [
+        "import logging",
+        "from shared.core.unified_logging import get_logger",
+        "import asyncio",
+        "from typing import Dict, Any, Optional, List, Set, Tuple",
+        "from datetime import datetime",
+        "import json",
+        "import networkx as nx",
+        "from collections import defaultdict",
+        "from .base_service import BaseAgentService, ServiceType, ServiceStatus",
+        "from shared.core.config.central_config import get_arangodb_url"
+      ]
+    },
+    "services/pdf_service.py": {
+      "size": 27126,
+      "lines": 784,
+      "classes": [
+        "PDFService"
+      ],
+      "imports": [
+        "import logging",
+        "from shared.core.unified_logging import get_logger",
+        "import asyncio",
+        "import io",
+        "import tempfile",
+        "import os",
+        "import time",
+        "from typing import Dict, Any, Optional, List, Tuple",
+        "from datetime import datetime",
+        "import fitz  # PyMuPDF",
+        "import PyPDF2",
+        "from PIL import Image",
+        "import pytesseract",
+        "from concurrent.futures import ThreadPoolExecutor",
+        "from functools import partial",
+        "from .base_service import BaseAgentService, ServiceType, ServiceStatus",
+        "from shared.core.api.exceptions import (",
+        "from services.api_gateway.middleware.error_handling import ("
+      ]
+    },
+    "services/query_service.py": {
+      "size": 60169,
+      "lines": 1444,
+      "classes": [
+        "QueryContext",
+        "QueryService"
+      ],
+      "imports": [
+        "import asyncio",
+        "import logging",
+        "from shared.core.unified_logging import get_logger",
+        "import time",
+        "import uuid",
+        "from typing import Dict, Any, Optional, List",
+        "from datetime import datetime",
+        "from dataclasses import dataclass",
+        "from ..models.requests import QueryRequest, ComprehensiveQueryRequest",
+        "from ..models.responses import QueryResponse, ComprehensiveQueryResponse",
+        "import re",
+        "from services.retrieval.core.hybrid_retrieval import HybridRetrievalService",
+        "from services.retrieval.core.meilisearch_engine import MeiliSearchEngine",
+        "from services.retrieval.core.query_processor import QueryProcessor",
+        "from services.fact_check.core.expert_validation import ExpertValidationService",
+        "from services.fact_check.factcheck_agent import FactCheckAgent",
+        "import re",
+        "from services.synthesis.core.orchestrator import SynthesisOrchestrator",
+        "from services.synthesis.citation_agent import CitationAgent",
+        "import re",
+        "from services.retrieval.core.hybrid_retrieval import HybridRetrievalService",
+        "from services.retrieval.core.meilisearch_engine import MeiliSearchEngine",
+        "from services.retrieval.core.query_processor import QueryProcessor",
+        "from services.vector.vector_service import VectorService",
+        "from services.graph.graph_service import GraphService",
+        "from services.fact_check.core.expert_validation import ExpertValidationService",
+        "from services.fact_check.factcheck_agent import FactCheckAgent",
+        "import re",
+        "from services.synthesis.core.orchestrator import SynthesisOrchestrator",
+        "from services.synthesis.citation_agent import CitationAgent",
+        "from services.synthesis.ml_integration import MLIntegration"
+      ]
+    },
+    "services/service_factory.py": {
+      "size": 10147,
+      "lines": 322,
+      "classes": [
+        "ServiceFactory"
+      ],
+      "imports": [
+        "import logging",
+        "from shared.core.unified_logging import get_logger",
+        "from typing import Dict, Any, Optional, Type",
+        "from datetime import datetime",
+        "from .base_service import BaseAgentService, ServiceType, ServiceStatus",
+        "from ..di.container import get_container, DIContainer"
+      ]
+    }
+  },
+  "endpoints": [],
+  "services": [],
+  "models": [],
+  "dependencies": []
+}

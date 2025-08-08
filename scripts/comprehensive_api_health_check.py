@@ -18,7 +18,7 @@ Usage:
 import asyncio
 import json
 import time
-import requests
+import httpx
 import websockets
 from datetime import datetime
 from typing import Dict, Any, List, Optional
@@ -44,7 +44,6 @@ class TestResult:
 class APIHealthChecker:
     def __init__(self, base_url: str = BASE_URL):
         self.base_url = base_url
-        self.session = requests.Session()
         self.auth_token = None
         self.test_user = {
             "username": "testuser_health_check",
@@ -66,11 +65,11 @@ class APIHealthChecker:
         """Test a single endpoint and return results"""
         return self.test_endpoint_with_headers(method, endpoint, data, headers, auth_required, expected_status)
     
-    def test_endpoint_with_headers(self, method: str, endpoint: str, 
-                                  data: Optional[Dict] = None, 
-                                  headers: Optional[Dict] = None,
-                                  auth_required: bool = False,
-                                  expected_status: Optional[int] = None) -> TestResult:
+    async def test_endpoint_with_headers(self, method: str, endpoint: str, 
+                                       data: Optional[Dict] = None, 
+                                       headers: Optional[Dict] = None,
+                                       auth_required: bool = False,
+                                       expected_status: Optional[int] = None) -> TestResult:
         """Test a single endpoint and return results"""
         url = urljoin(self.base_url, endpoint)
         start_time = time.time()
@@ -82,16 +81,17 @@ class APIHealthChecker:
             if self.auth_token and auth_required:
                 headers["Authorization"] = f"Bearer {self.auth_token}"
             
-            if method.upper() == "GET":
-                response = self.session.get(url, headers=headers, timeout=10)
-            elif method.upper() == "POST":
-                response = self.session.post(url, json=data, headers=headers, timeout=10)
-            elif method.upper() == "PUT":
-                response = self.session.put(url, json=data, headers=headers, timeout=10)
-            elif method.upper() == "DELETE":
-                response = self.session.delete(url, headers=headers, timeout=10)
-            else:
-                raise ValueError(f"Unsupported method: {method}")
+            async with httpx.AsyncClient() as client:
+                if method.upper() == "GET":
+                    response = await client.get(url, headers=headers, timeout=10.0)
+                elif method.upper() == "POST":
+                    response = await client.post(url, json=data, headers=headers, timeout=10.0)
+                elif method.upper() == "PUT":
+                    response = await client.put(url, json=data, headers=headers, timeout=10.0)
+                elif method.upper() == "DELETE":
+                    response = await client.delete(url, headers=headers, timeout=10.0)
+                else:
+                    raise ValueError(f"Unsupported method: {method}")
             
             response_time = time.time() - start_time
             
@@ -126,7 +126,7 @@ class APIHealthChecker:
             if not success:
                 result.error_message = f"Expected success but got status {response.status_code}"
                 
-        except requests.exceptions.RequestException as e:
+        except httpx.RequestError as e:
             response_time = time.time() - start_time
             result = TestResult(
                 endpoint=endpoint,
@@ -141,22 +141,22 @@ class APIHealthChecker:
         self.results.append(result)
         return result
     
-    def test_health_endpoint(self) -> TestResult:
+    async def test_health_endpoint(self) -> TestResult:
         """Test the health endpoint"""
         self.log("🔍 Testing /health endpoint...")
-        return self.test_endpoint("GET", "/health", expected_status=200)
+        return await self.test_endpoint_with_headers("GET", "/health", expected_status=200)
     
-    def test_docs_endpoint(self) -> TestResult:
+    async def test_docs_endpoint(self) -> TestResult:
         """Test the API documentation endpoint"""
         self.log("📚 Testing /docs endpoint...")
-        return self.test_endpoint("GET", "/docs", expected_status=200)
+        return await self.test_endpoint_with_headers("GET", "/docs", expected_status=200)
     
-    def test_register_endpoint(self) -> TestResult:
+    async def test_register_endpoint(self) -> TestResult:
         """Test user registration"""
         self.log("📝 Testing /auth/register endpoint...")
-        return self.test_endpoint("POST", "/auth/register", data=self.test_user, expected_status=201)
+        return await self.test_endpoint_with_headers("POST", "/auth/register", data=self.test_user, expected_status=201)
     
-    def test_login_endpoint(self) -> TestResult:
+    async def test_login_endpoint(self) -> TestResult:
         """Test user login and capture auth token"""
         self.log("🔐 Testing /auth/login endpoint...")
         
@@ -170,9 +170,9 @@ class APIHealthChecker:
         # Set content type to form data
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
         
-        result = self.test_endpoint_with_headers("POST", "/auth/login", 
-                                               data=data, headers=headers,
-                                               expected_status=200)
+        result = await self.test_endpoint_with_headers("POST", "/auth/login", 
+                                                     data=data, headers=headers,
+                                                     expected_status=200)
         
         # Extract auth token if login successful
         if result.success and result.response_data:
@@ -184,7 +184,7 @@ class APIHealthChecker:
         
         return result
     
-    def test_query_endpoint(self) -> TestResult:
+    async def test_query_endpoint(self) -> TestResult:
         """Test the main query endpoint"""
         self.log("❓ Testing /query endpoint...")
         query_data = {
@@ -195,7 +195,7 @@ class APIHealthChecker:
                 "format": "structured"
             }
         }
-        return self.test_endpoint("POST", "/query", data=query_data, auth_required=True)
+        return await self.test_endpoint_with_headers("POST", "/query", data=query_data, auth_required=True)
     
     def test_integrations_endpoint(self) -> TestResult:
         """Test the integrations status endpoint"""
@@ -271,28 +271,27 @@ class APIHealthChecker:
         self.results.append(result)
         return result
     
-    def run_all_tests(self) -> Dict[str, Any]:
+    async def run_all_tests(self) -> Dict[str, Any]:
         """Run all endpoint tests and return comprehensive results"""
         self.log("🚀 Starting Comprehensive API Health Check")
         self.log("=" * 60)
         
-        # Test public endpoints first
-        self.test_root_endpoint()
-        self.test_health_endpoint()
-        self.test_docs_endpoint()
-        self.test_integrations_endpoint()
+        # Run all tests in parallel for better performance
+        tasks = [
+            self.test_root_endpoint(),
+            self.test_health_endpoint(),
+            self.test_docs_endpoint(),
+            self.test_integrations_endpoint(),
+            self.test_register_endpoint(),
+            self.test_login_endpoint(),
+            self.test_query_endpoint(),
+            self.test_metrics_endpoint(),
+            self.test_analytics_endpoint(),
+            self.test_websocket_endpoint()
+        ]
         
-        # Test authentication flow
-        self.test_register_endpoint()
-        self.test_login_endpoint()
-        
-        # Test protected endpoints
-        self.test_query_endpoint()
-        self.test_metrics_endpoint()
-        self.test_analytics_endpoint()
-        
-        # Test WebSocket (async)
-        asyncio.run(self.test_websocket_endpoint())
+        # Execute all tests concurrently
+        await asyncio.gather(*tasks, return_exceptions=True)
         
         return self.generate_report()
     
@@ -420,19 +419,20 @@ class APIHealthChecker:
         self.log("=" * 60)
         self.log("🏁 Health Check Complete")
 
-def main():
+async def main():
     """Main function to run the comprehensive health check"""
     print("🚀 Universal Knowledge Hub - Comprehensive API Health Check")
     print("=" * 70)
     
     # Check if server is running
     try:
-        response = requests.get(f"{BASE_URL}/health", timeout=5)
-        if response.status_code == 200:
-            print("✅ Backend server is running and accessible")
-        else:
-            print(f"⚠️  Backend server responded with status {response.status_code}")
-    except requests.exceptions.RequestException as e:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{BASE_URL}/health", timeout=5.0)
+            if response.status_code == 200:
+                print("✅ Backend server is running and accessible")
+            else:
+                print(f"⚠️  Backend server responded with status {response.status_code}")
+    except httpx.RequestError as e:
         print(f"❌ Cannot connect to backend server at {BASE_URL}")
         print(f"   Error: {e}")
         print("   Please ensure the server is running with:")
@@ -441,7 +441,7 @@ def main():
     
     # Run comprehensive health check
     checker = APIHealthChecker()
-    report = checker.run_all_tests()
+    report = await checker.run_all_tests()
     checker.print_report(report)
     
     # Save report to file
@@ -456,4 +456,4 @@ def main():
         print(f"⚠️  Could not save report file: {e}")
 
 if __name__ == "__main__":
-    main() 
+    asyncio.run(main()) 

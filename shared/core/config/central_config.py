@@ -165,6 +165,13 @@ class CentralConfig(SecureSettings):
     log_format: str = Field(default="json", description="Log format")
     log_file: Optional[Path] = Field(default=None, description="Log file path")
     
+    @validator("log_level", pre=True)
+    def validate_log_level(cls, v: Any) -> LogLevel:
+        """Validate and convert log level to proper case."""
+        if isinstance(v, str):
+            return LogLevel.from_string(v)
+        return v
+    
     # =============================================================================
     # 2. SECURITY CONFIGURATION
     # =============================================================================

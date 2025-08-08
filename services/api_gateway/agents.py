@@ -12,7 +12,6 @@ import io
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 import aiohttp
-import requests
 from fastapi import HTTPException, UploadFile, File, Form
 from pydantic import BaseModel, Field
 import PyPDF2

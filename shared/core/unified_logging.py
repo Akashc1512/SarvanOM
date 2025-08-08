@@ -150,13 +150,16 @@ class UnifiedLogger:
         """Log message with context information."""
         extra = kwargs.copy()
         
+        # Handle exc_info separately as it's a special logging parameter
+        exc_info = extra.pop('exc_info', None)
+        
         if self._request_id:
             extra['request_id'] = self._request_id
         
         if self._user_id:
             extra['user_id'] = self._user_id
         
-        self.logger.log(level, message, extra=extra)
+        self.logger.log(level, message, extra=extra, exc_info=exc_info)
     
     def debug(self, message: str, **kwargs):
         """Log debug message."""

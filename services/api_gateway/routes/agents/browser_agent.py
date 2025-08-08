@@ -9,7 +9,7 @@ from typing import Dict, Any
 from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException, Depends
 
-from ..base import (
+from .base import (
     AgentResponseFormatter,
     AgentErrorHandler,
     AgentPerformanceTracker,
@@ -17,6 +17,7 @@ from ..base import (
     create_agent_metadata
 )
 from ...models.requests import BrowserSearchRequest
+from ...models.responses import AgentResponse
 from ...middleware import get_current_user
 from ...di import get_browser_service
 from ...services.browser_service import BrowserService
@@ -32,7 +33,7 @@ async def browser_search(
     http_request: Request,
     current_user=Depends(get_current_user),
     browser_service: BrowserService = Depends(get_browser_service)
-):
+) -> AgentResponse:
     """Execute browser search using the browser service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
@@ -89,7 +90,7 @@ async def browser_extract_content(
     http_request: Request,
     current_user=Depends(get_current_user),
     browser_service: BrowserService = Depends(get_browser_service)
-):
+) -> AgentResponse:
     """Extract content from a URL using the browser service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
@@ -142,7 +143,7 @@ async def browser_browse_page(
     http_request: Request,
     current_user=Depends(get_current_user),
     browser_service: BrowserService = Depends(get_browser_service)
-):
+) -> AgentResponse:
     """Browse a page and follow links using the browser service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
@@ -193,7 +194,7 @@ async def browser_browse_page(
 async def browser_health(
     current_user=Depends(get_current_user),
     browser_service: BrowserService = Depends(get_browser_service)
-):
+) -> AgentResponse:
     """Get browser service health status."""
     try:
         health_status = await browser_service.health_check()
@@ -222,7 +223,7 @@ async def browser_health(
 async def browser_status(
     current_user=Depends(get_current_user),
     browser_service: BrowserService = Depends(get_browser_service)
-):
+) -> AgentResponse:
     """Get browser service detailed status."""
     try:
         status_info = await browser_service.get_status()

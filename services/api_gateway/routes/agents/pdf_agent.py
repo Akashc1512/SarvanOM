@@ -10,7 +10,7 @@ from typing import Dict, Any, List
 from datetime import datetime
 from fastapi import APIRouter, Request, HTTPException, Depends, UploadFile, File
 
-from ..base import (
+from .base import (
     AgentResponseFormatter,
     AgentErrorHandler,
     AgentPerformanceTracker,
@@ -18,6 +18,7 @@ from ..base import (
     create_agent_metadata
 )
 from ...models.requests import PDFProcessRequest
+from ...models.responses import AgentResponse
 from ...middleware import get_current_user
 from ...di import get_pdf_service
 from ...services.pdf_service import PDFService
@@ -33,7 +34,7 @@ async def pdf_process(
     http_request: Request,
     current_user=Depends(get_current_user),
     pdf_service: PDFService = Depends(get_pdf_service)
-):
+) -> AgentResponse:
     """Process PDF documents for text extraction and analysis using PDF service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
@@ -87,7 +88,7 @@ async def pdf_upload(
     file: UploadFile = File(...),
     current_user=Depends(get_current_user),
     pdf_service: PDFService = Depends(get_pdf_service)
-):
+) -> AgentResponse:
     """Upload and process PDF file using PDF service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
@@ -141,7 +142,7 @@ async def pdf_extract_text(
     http_request: Request,
     current_user=Depends(get_current_user),
     pdf_service: PDFService = Depends(get_pdf_service)
-):
+) -> AgentResponse:
     """Extract text from PDF using PDF service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
@@ -191,7 +192,7 @@ async def pdf_extract_images(
     http_request: Request,
     current_user=Depends(get_current_user),
     pdf_service: PDFService = Depends(get_pdf_service)
-):
+) -> AgentResponse:
     """Extract images from PDF using PDF service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
@@ -244,7 +245,7 @@ async def pdf_analyze(
     http_request: Request,
     current_user=Depends(get_current_user),
     pdf_service: PDFService = Depends(get_pdf_service)
-):
+) -> AgentResponse:
     """Analyze PDF structure and content using PDF service."""
     tracker = AgentPerformanceTracker()
     tracker.start_tracking()
@@ -292,7 +293,7 @@ async def pdf_analyze(
 async def pdf_health(
     current_user=Depends(get_current_user),
     pdf_service: PDFService = Depends(get_pdf_service)
-):
+) -> AgentResponse:
     """Get PDF service health status."""
     try:
         health_status = await pdf_service.health_check()
@@ -321,7 +322,7 @@ async def pdf_health(
 async def pdf_status(
     current_user=Depends(get_current_user),
     pdf_service: PDFService = Depends(get_pdf_service)
-):
+) -> AgentResponse:
     """Get PDF service detailed status."""
     try:
         status_info = await pdf_service.get_status()

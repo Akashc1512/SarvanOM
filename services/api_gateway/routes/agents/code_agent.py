@@ -9,14 +9,14 @@ from typing import Dict, Any, Optional, List
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.responses import JSONResponse
 
-from ..base import (
+from .base import (
     AgentResponseFormatter,
     AgentErrorHandler,
     AgentPerformanceTracker,
     get_user_id,
     create_agent_metadata
 )
-from ..models.responses import AgentResponse
+from ...models.responses import AgentResponse
 from ...middleware import get_current_user
 from ...di import get_code_service
 from ...services.code_service import CodeService

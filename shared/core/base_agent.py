@@ -28,6 +28,7 @@ class AgentType(Enum):
     FACT_CHECK = "fact_check"
     SYNTHESIS = "synthesis"
     CITATION = "citation"
+    KNOWLEDGE_GRAPH = "knowledge_graph"
 
 
 class MessageType(Enum):
@@ -327,9 +328,9 @@ class BaseAgent(ABC):
             # Implement Redis message broker integration
             try:
                 import aioredis
-
                 from shared.core.config.central_config import get_redis_url
-        redis = aioredis.from_url(get_redis_url())
+                
+                redis = aioredis.from_url(get_redis_url())
                 if recipient:
                     await redis.publish(f"agent:{recipient}", response.json())
                 await redis.close()

@@ -467,7 +467,6 @@ async def lifespan(app: FastAPI):
         import asyncpg
         import redis.asyncio as redis
         import aiohttp
-        import os
         
         # Database connection pool
         db_host = os.getenv('DB_HOST', 'localhost')
@@ -633,7 +632,9 @@ app.middleware("http")(add_request_id)
 app.middleware("http")(log_requests)
 app.middleware("http")(security_check)
 app.middleware("http")(rate_limit_check)
-app.middleware("http")(create_error_handling_middleware())
+# Add error handling middleware
+error_middleware = create_error_handling_middleware()
+app.add_middleware(error_middleware)
 
 # Register all routers
 for router in routers:
@@ -709,16 +710,24 @@ async def general_exception_handler(request: Request, exc: Exception):
     # Determine if this is a known error type that should be handled differently
     error_type = "internal_server_error"
     status_code = 500
+    error_message = "Internal server error. Please try again later."
     
     if isinstance(exc, (ValueError, TypeError)):
         error_type = "validation_error"
         status_code = 400
+        error_message = "Invalid request data. Please check your input."
     elif isinstance(exc, (ConnectionError, TimeoutError)):
         error_type = "service_unavailable"
         status_code = 503
+        error_message = "External service connection failed. Please try again later."
     elif isinstance(exc, (PermissionError, OSError)):
         error_type = "permission_error"
         status_code = 403
+        error_message = "Access denied. Please check your permissions."
+    elif isinstance(exc, asyncio.TimeoutError):
+        error_type = "timeout_error"
+        status_code = 408
+        error_message = "Request timed out. Please try again with a simpler query."
     
     # Add fallback data for graceful degradation
     fallback_data = {
@@ -730,7 +739,7 @@ async def general_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=status_code,
         content={
-            "error": "Internal server error",
+            "error": error_message,
             "status_code": status_code,
             "timestamp": datetime.now().isoformat(),
             "path": str(request.url),

@@ -97,12 +97,12 @@ class EnvironmentConfig:
     test_mode: bool = False
     mock_providers: bool = False
     
-    # Service URLs
-    auth_service_url: str = "http://localhost:8001"
-    search_service_url: str = "http://localhost:8002"
-    synthesis_service_url: str = "http://localhost:8003"
-    factcheck_service_url: str = "http://localhost:8004"
-    analytics_service_url: str = "http://localhost:8005"
+    # Service URLs (configurable via environment variables)
+    auth_service_url: str = "http://localhost:8001"  # AUTH_SERVICE_URL
+    search_service_url: str = "http://localhost:8002"  # SEARCH_SERVICE_URL
+    synthesis_service_url: str = "http://localhost:8003"  # SYNTHESIS_SERVICE_URL
+    factcheck_service_url: str = "http://localhost:8004"  # FACTCHECK_SERVICE_URL
+    analytics_service_url: str = "http://localhost:8005"  # ANALYTICS_SERVICE_URL
     
     # Service secrets
     auth_service_secret: Optional[str] = None
@@ -623,6 +623,12 @@ class EnvironmentManager:
             "SENTRY_PROFILES_SAMPLE_RATE": "sentry_profiles_sample_rate",
             "HEALTH_CHECK_INTERVAL": "health_check_interval",
             "HEALTH_CHECK_TIMEOUT": "health_check_timeout",
+            # Service URLs
+            "AUTH_SERVICE_URL": "auth_service_url",
+            "SEARCH_SERVICE_URL": "search_service_url",
+            "SYNTHESIS_SERVICE_URL": "synthesis_service_url",
+            "FACTCHECK_SERVICE_URL": "factcheck_service_url",
+            "ANALYTICS_SERVICE_URL": "analytics_service_url",
         }
         
         for env_var, config_key in env_mapping.items():

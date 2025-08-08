@@ -1,6 +1,4 @@
-from ..\shared\core\api\config import get_settings
 #!/usr/bin/env python3
-settings = get_settings()
 """
 Manage Zero Budget LLM
 Monitoring and management script for Ollama and Hugging Face integration
@@ -9,13 +7,14 @@ Monitoring and management script for Ollama and Hugging Face integration
 import asyncio
 import os
 import sys
-import requests
-import json
 import time
-import psutil
-from pathlib import Path
+import json
+import httpx
+from datetime import datetime
+from typing import Dict, Any, Optional, List
 import logging
-from datetime import datetime, timedelta
+from pathlib import Path
+import psutil
 import subprocess
 from dotenv import load_dotenv
 
@@ -127,15 +126,16 @@ class ZeroBudgetLLMManager:
         
         print("\n" + "=" * 60)
     
-    def _check_ollama_health(self) -> bool:
+    async def _check_ollama_health(self) -> bool:
         """Check if Ollama is healthy."""
         try:
-            response = requests.get(f"{self.ollama_url}/api/tags", timeout=5)
-            return response.status_code == 200
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.ollama_url}/api/tags", timeout=5.0)
+                return response.status_code == 200
         except Exception:
             return False
     
-    def _check_hf_health(self) -> bool:
+    async def _check_hf_health(self) -> bool:
         """Check if Hugging Face API is healthy."""
         try:
             # Check for any available token
@@ -148,19 +148,21 @@ class ZeroBudgetLLMManager:
                 return False
             
             headers = {"Authorization": f"Bearer {token}"}
-            response = requests.get("https://huggingface.co/api/models", 
-                                  headers=headers, timeout=10)
-            return response.status_code == 200
+            async with httpx.AsyncClient() as client:
+                response = await client.get("https://huggingface.co/api/models", 
+                                          headers=headers, timeout=10.0)
+                return response.status_code == 200
         except Exception:
             return False
     
-    def _get_ollama_models(self) -> list:
+    async def _get_ollama_models(self) -> list:
         """Get list of available Ollama models."""
         try:
-            response = requests.get(f"{self.ollama_url}/api/tags", timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                return [model['name'] for model in data.get('models', [])]
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{self.ollama_url}/api/tags", timeout=5.0)
+                if response.status_code == 200:
+                    data = response.json()
+                    return [model['name'] for model in data.get('models', [])]
         except Exception:
             pass
         return []
@@ -178,13 +180,13 @@ class ZeroBudgetLLMManager:
     async def _check_provider_health(self):
         """Check health of all providers."""
         # Check Ollama
-        if self._check_ollama_health():
+        if await self._check_ollama_health():
             self.metrics['ollama']['last_check'] = datetime.now()
         else:
             self.metrics['ollama']['errors'] += 1
         
         # Check Hugging Face
-        if self._check_hf_health():
+        if await self._check_hf_health():
             self.metrics['huggingface']['last_check'] = datetime.now()
         else:
             self.metrics['huggingface']['errors'] += 1
@@ -192,10 +194,10 @@ class ZeroBudgetLLMManager:
     async def _update_metrics(self):
         """Update usage metrics."""
         # Simulate request tracking (in real implementation, this would come from actual usage)
-        if self._check_ollama_health():
+        if await self._check_ollama_health():
             self.metrics['ollama']['requests'] += 1
         
-        if self._check_hf_health():
+        if await self._check_hf_health():
             self.metrics['huggingface']['requests'] += 1
         
         # Calculate cost savings
@@ -209,7 +211,7 @@ class ZeroBudgetLLMManager:
         logger.info("🧪 Testing providers...")
         
         # Test Ollama
-        if self._check_ollama_health():
+        if await self._check_ollama_health():
             try:
                 client = EnhancedLLMClientV3()
                 response = await client.generate_text(
@@ -225,16 +227,25 @@ class ZeroBudgetLLMManager:
             logger.warning("⚠️  Ollama not available for testing")
         
         # Test Hugging Face
-        if self._check_hf_health():
+        if await self._check_hf_health():
             try:
-                client = EnhancedLLMClientV3()
-                response = await client.generate_text(
-                    prompt="Hello, this is a test.",
-                    max_tokens=20,
-                    temperature=0.1
-                )
-                logger.info("✅ Hugging Face test successful")
-                print(f"   Response: {response[:50]}...")
+                # Test with a simple model
+                model_name = "microsoft/DialoGPT-medium"
+                headers = {"Authorization": f"Bearer {settings.huggingface_api_key}"}
+                
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        f"https://api-inference.huggingface.co/models/{model_name}",
+                        json={"inputs": "Hello, how are you?"},
+                        headers=headers,
+                        timeout=30.0
+                    )
+                    
+                    if response.status_code == 200:
+                        logger.info("✅ Hugging Face test successful")
+                        print(f"   Response: {response.json()[:50]}...")
+                    else:
+                        logger.error(f"❌ Hugging Face test failed: {response.status_code}")
             except Exception as e:
                 logger.error(f"❌ Hugging Face test failed: {e}")
         else:
@@ -388,7 +399,7 @@ class ZeroBudgetLLMManager:
         except Exception as e:
             logger.error(f"❌ Failed to export metrics: {e}")
 
-def main():
+async def main():
     """Main function."""
     import argparse
     
@@ -404,18 +415,18 @@ def main():
     manager = ZeroBudgetLLMManager()
     
     if args.dashboard:
-        asyncio.run(manager.run_monitoring_dashboard())
+        await manager.run_monitoring_dashboard()
     elif args.interactive:
-        asyncio.run(manager.run_interactive_mode())
+        await manager.run_interactive_mode()
     elif args.test:
-        asyncio.run(manager.test_providers())
+        await manager.test_providers()
     elif args.restart_ollama:
         manager.restart_ollama()
     elif args.models:
         manager.show_model_details()
     else:
         # Default to interactive mode
-        asyncio.run(manager.run_interactive_mode())
+        await manager.run_interactive_mode()
 
 if __name__ == "__main__":
-    main() 
+    asyncio.run(main()) 

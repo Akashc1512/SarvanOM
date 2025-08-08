@@ -5,6 +5,7 @@ This module contains all query processing endpoints for the API gateway.
 It handles basic queries, comprehensive queries, and query management operations.
 """
 
+import asyncio
 import time
 import uuid
 import logging
@@ -13,6 +14,8 @@ from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from fastapi import APIRouter, Request, HTTPException, Depends
 from pydantic import ValidationError
+from shared.core.utilities.timing_utilities import time_operation, start_timer, calculate_execution_time
+from shared.core.utilities.response_utilities import create_success_response, create_error_response, add_execution_time
 
 from ..models.requests import QueryRequest, ComprehensiveQueryRequest, QueryUpdateRequest
 from ..models.responses import (
@@ -34,6 +37,7 @@ from ..services import query_service
 
 
 @router.post("/", response_model=Dict[str, Any])
+@time_operation("process_query")
 async def process_query(
     request: Dict[str, Any],
     http_request: Request,
@@ -41,7 +45,7 @@ async def process_query(
 ):
     """Process query using the basic pipeline with agent orchestration."""
     request_id = getattr(http_request.state, "request_id", "unknown")
-    start_time = time.time()
+    start_time = start_timer()
     
     try:
         # Extract query parameters
@@ -54,31 +58,59 @@ async def process_query(
         if not query:
             raise HTTPException(status_code=422, detail="Query is required")
         
-        # Process query using the query service
-        result = await query_service.process_basic_query(
-            query=query,
-            user_context={
-                "user_id": user_id,
-                "session_id": session_id,
-                "max_tokens": max_tokens,
-                "confidence_threshold": confidence_threshold
-            }
-        )
-        
-        if not result.get("success", False):
-            raise HTTPException(
-                status_code=500,
-                detail=result.get("error", "Query processing failed")
+        # Process query using the query service with comprehensive error handling
+        try:
+            result = await query_service.process_basic_query(
+                query=query,
+                user_context={
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "max_tokens": max_tokens,
+                    "confidence_threshold": confidence_threshold
+                }
+            )
+        except asyncio.TimeoutError as timeout_error:
+            logger.error(f"Query timeout: {timeout_error}", exc_info=True)
+            execution_time = calculate_execution_time(start_time)
+            return create_error_response(
+                error="Query processing timed out. Please try again with a simpler query.",
+                execution_time_ms=execution_time,
+                error_type="timeout_error"
+            )
+        except ConnectionError as conn_error:
+            logger.error(f"Connection error during query processing: {conn_error}", exc_info=True)
+            execution_time = calculate_execution_time(start_time)
+            return create_error_response(
+                error="External service connection failed. Please try again later.",
+                execution_time_ms=execution_time,
+                error_type="connection_error"
+            )
+        except Exception as service_error:
+            logger.error(f"Query service error: {service_error}", exc_info=True)
+            execution_time = calculate_execution_time(start_time)
+            return create_error_response(
+                error="LLM service temporarily unavailable. Please try again later.",
+                execution_time_ms=execution_time,
+                error_type="service_unavailable"
             )
         
-        # Format response for API
+        if not result.get("success", False):
+            error_msg = result.get("error", "Query processing failed")
+            logger.error(f"Query processing failed: {error_msg}")
+            execution_time = calculate_execution_time(start_time)
+            return create_error_response(
+                error=error_msg,
+                execution_time_ms=execution_time,
+                error_type="processing_failed"
+            )
+        
+        # Format response for API using utilities
         response_data = {
             "answer": result.get("answer", ""),
             "citations": result.get("sources", []),
             "validation_status": result.get("verification", {}).get("overall_status", "Unverified"),
             "llm_provider": result.get("metadata", {}).get("llm_provider", "Unknown"),
             "cache_status": result.get("cache_status", "Miss"),
-            "execution_time": result.get("processing_time", time.time() - start_time),
             "agent_results": {
                 "retrieval": {
                     "vector_results": result.get("metadata", {}).get("vector_results", []),
@@ -99,15 +131,20 @@ async def process_query(
             "relevance_score": result.get("metadata", {}).get("relevance_score", 0.0)
         }
         
-        return response_data
+        # Use utility to add execution time
+        response = create_success_response(data=response_data)
+        return add_execution_time(response, start_time)
         
     except HTTPException:
+        # Re-raise HTTP exceptions as-is
         raise
     except Exception as e:
-        logger.error(f"Query processing failed: {e}", extra={"request_id": request_id})
-        raise HTTPException(
-            status_code=500,
-            detail=f"Query processing failed: {str(e)}"
+        logger.error(f"Query processing failed: {e}", exc_info=True)
+        execution_time = calculate_execution_time(start_time)
+        return create_error_response(
+            error="An unexpected error occurred. Please try again later.",
+            execution_time_ms=execution_time,
+            error_type="internal_error"
         )
 
 
@@ -119,22 +156,32 @@ async def process_comprehensive_query(
 ):
     """Process query using the complete integration layer pipeline."""
     request_id = getattr(http_request.state, "request_id", "unknown")
+    start_time = start_timer()
     
     try:
-        # Process comprehensive query using the query service
-        result = await query_service.process_comprehensive_query(
-            query=request.get("query", ""),
-            user_context={
-                "user_id": current_user.get("user_id", "anonymous"),
-                "session_id": request.get("session_id", str(uuid.uuid4())),
-                "context": request.get("context", {}),
-                "preferences": request.get("preferences", {}),
-                "priority": request.get("priority", "normal"),
-                "timeout_seconds": request.get("timeout_seconds", 30),
-                "model": request.get("model", "auto")
-            },
-            options=request.get("options", {})
-        )
+        # Process comprehensive query using the query service with comprehensive error handling
+        try:
+            result = await query_service.process_comprehensive_query(
+                query=request.get("query", ""),
+                user_context={
+                    "user_id": current_user.get("user_id", "anonymous"),
+                    "session_id": request.get("session_id", str(uuid.uuid4())),
+                    "context": request.get("context", {}),
+                    "preferences": request.get("preferences", {}),
+                    "priority": request.get("priority", "normal"),
+                    "timeout_seconds": request.get("timeout_seconds", 30),
+                    "model": request.get("model", "auto")
+                },
+                options=request.get("options", {})
+            )
+        except Exception as service_error:
+            logger.error(f"Comprehensive query service error: {service_error}", exc_info=True)
+            execution_time = calculate_execution_time(start_time)
+            return create_error_response(
+                error="Comprehensive query processing temporarily unavailable. Please try again later.",
+                execution_time_ms=execution_time,
+                error_type="service_unavailable"
+            )
         
         # Format response for API
         api_response = {
@@ -158,18 +205,24 @@ async def process_comprehensive_query(
                 "quality": result.get("quality", {})
             })
         else:
-            api_response.update({
-                "error": result.get("error", "Query processing failed"),
-                "error_details": result.get("error_details", {})
-            })
+            error_msg = result.get("error", "Comprehensive query processing failed")
+            logger.error(f"Comprehensive query processing failed: {error_msg}")
+            execution_time = calculate_execution_time(start_time)
+            return create_error_response(
+                error=error_msg,
+                execution_time_ms=execution_time,
+                error_type="processing_failed"
+            )
         
         return api_response
         
     except Exception as e:
-        logger.error(f"Comprehensive query processing failed: {e}", extra={"request_id": request_id})
-        raise HTTPException(
-            status_code=500,
-            detail=f"Comprehensive query processing failed: {str(e)}"
+        logger.error(f"Comprehensive query processing failed: {e}", exc_info=True)
+        execution_time = calculate_execution_time(start_time)
+        return create_error_response(
+            error="An unexpected error occurred during comprehensive query processing. Please try again later.",
+            execution_time_ms=execution_time,
+            error_type="internal_error"
         )
 
 
@@ -200,13 +253,16 @@ async def list_queries(
         db_password = os.getenv('DB_PASSWORD', '')
         
         try:
-            # Connect to database
-            conn = await asyncpg.connect(
-                host=db_host,
-                port=db_port,
-                database=db_name,
-                user=db_user,
-                password=db_password
+            # Connect to database with timeout and retry logic
+            conn = await asyncio.wait_for(
+                asyncpg.connect(
+                    host=db_host,
+                    port=db_port,
+                    database=db_name,
+                    user=db_user,
+                    password=db_password
+                ),
+                timeout=10.0  # 10 second timeout for connection
             )
             
             # Build query with filters
@@ -250,10 +306,21 @@ async def list_queries(
             base_query += f" ORDER BY created_at DESC LIMIT ${param_count + 1} OFFSET ${param_count + 2}"
             params.extend([page_size, offset])
             
-            # Execute query
-            rows = await conn.fetch(base_query, *params)
+            # Execute query with timeout
+            try:
+                rows = await asyncio.wait_for(
+                    conn.fetch(base_query, *params),
+                    timeout=15.0  # 15 second timeout for query execution
+                )
+            except asyncio.TimeoutError:
+                await conn.close()
+                logger.error("Database query timeout for list_queries")
+                raise HTTPException(
+                    status_code=503,
+                    detail="Database query timeout. Please try again later."
+                )
             
-            # Get total count
+            # Get total count with timeout
             count_query = """
                 SELECT COUNT(*) 
                 FROM queries 
@@ -276,7 +343,18 @@ async def list_queries(
                 count_query += f" AND status = ${param_count}"
                 count_params.append(status_filter)
             
-            total_count = await conn.fetchval(count_query, *count_params)
+            try:
+                total_count = await asyncio.wait_for(
+                    conn.fetchval(count_query, *count_params),
+                    timeout=10.0  # 10 second timeout for count query
+                )
+            except asyncio.TimeoutError:
+                await conn.close()
+                logger.error("Database count query timeout for list_queries")
+                raise HTTPException(
+                    status_code=503,
+                    detail="Database count query timeout. Please try again later."
+                )
             
             await conn.close()
             
@@ -308,14 +386,35 @@ async def list_queries(
             )
             
         except asyncpg.InvalidPasswordError:
-            logger.error("Database authentication failed")
-            raise HTTPException(status_code=500, detail="Database connection failed")
+            logger.error("Database authentication failed for list_queries")
+            raise HTTPException(
+                status_code=503, 
+                detail="Database authentication failed. Please contact support."
+            )
         except asyncpg.ConnectionDoesNotExistError:
-            logger.error("Database connection failed")
-            raise HTTPException(status_code=500, detail="Database connection failed")
+            logger.error("Database connection failed for list_queries")
+            raise HTTPException(
+                status_code=503, 
+                detail="Database connection failed. Please try again later."
+            )
+        except asyncpg.PostgresError as e:
+            logger.error(f"PostgreSQL error in list_queries: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail="Database error occurred. Please try again later."
+            )
+        except asyncio.TimeoutError:
+            logger.error("Database operation timeout for list_queries")
+            raise HTTPException(
+                status_code=503,
+                detail="Database operation timeout. Please try again later."
+            )
         except Exception as e:
-            logger.error(f"Database query failed: {e}")
-            raise HTTPException(status_code=500, detail="Failed to retrieve queries")
+            logger.error(f"Database query failed for list_queries: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=500, 
+                detail="Failed to retrieve queries. Please try again later."
+            )
         
     except ImportError:
         logger.warning("asyncpg not available, using mock data")
@@ -376,13 +475,16 @@ async def get_query(
         db_password = os.getenv('DB_PASSWORD', '')
         
         try:
-            # Connect to database
-            conn = await asyncpg.connect(
-                host=db_host,
-                port=db_port,
-                database=db_name,
-                user=db_user,
-                password=db_password
+            # Connect to database with timeout
+            conn = await asyncio.wait_for(
+                asyncpg.connect(
+                    host=db_host,
+                    port=db_port,
+                    database=db_name,
+                    user=db_user,
+                    password=db_password
+                ),
+                timeout=10.0  # 10 second timeout for connection
             )
             
             # Get query details
@@ -407,11 +509,22 @@ async def get_query(
                 WHERE query_id = $1 AND user_id = $2
             """
             
-            row = await conn.fetchrow(
-                query, 
-                query_id, 
-                current_user.get("user_id", "anonymous")
-            )
+            try:
+                row = await asyncio.wait_for(
+                    conn.fetchrow(
+                        query, 
+                        query_id, 
+                        current_user.get("user_id", "anonymous")
+                    ),
+                    timeout=15.0  # 15 second timeout for query execution
+                )
+            except asyncio.TimeoutError:
+                await conn.close()
+                logger.error(f"Database query timeout for get_query: {query_id}")
+                raise HTTPException(
+                    status_code=503,
+                    detail="Database query timeout. Please try again later."
+                )
             
             await conn.close()
             
@@ -474,14 +587,35 @@ async def get_query(
             return QueryDetailResponse(**query_detail)
             
         except asyncpg.InvalidPasswordError:
-            logger.error("Database authentication failed")
-            raise HTTPException(status_code=500, detail="Database connection failed")
+            logger.error("Database authentication failed for get_query")
+            raise HTTPException(
+                status_code=503, 
+                detail="Database authentication failed. Please contact support."
+            )
         except asyncpg.ConnectionDoesNotExistError:
-            logger.error("Database connection failed")
-            raise HTTPException(status_code=500, detail="Database connection failed")
+            logger.error("Database connection failed for get_query")
+            raise HTTPException(
+                status_code=503, 
+                detail="Database connection failed. Please try again later."
+            )
+        except asyncpg.PostgresError as e:
+            logger.error(f"PostgreSQL error in get_query: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail="Database error occurred. Please try again later."
+            )
+        except asyncio.TimeoutError:
+            logger.error(f"Database operation timeout for get_query: {query_id}")
+            raise HTTPException(
+                status_code=503,
+                detail="Database operation timeout. Please try again later."
+            )
         except Exception as e:
-            logger.error(f"Database query failed: {e}")
-            raise HTTPException(status_code=500, detail="Failed to retrieve query")
+            logger.error(f"Database query failed for get_query: {e}", exc_info=True)
+            raise HTTPException(
+                status_code=500, 
+                detail="Failed to retrieve query. Please try again later."
+            )
         
     except ImportError:
         logger.warning("asyncpg not available, using mock data")
@@ -496,9 +630,7 @@ async def get_query(
             },
             "metadata": {
                 "processing_time": 1.5,
-                from shared.core.config.central_config import get_central_config
-            config = get_central_config()
-            "model_used": config.openai_model
+                "model_used": "gpt-4o-mini"
             },
             "processing_time": 1.5,
             "created_at": datetime.now(),

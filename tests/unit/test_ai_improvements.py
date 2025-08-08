@@ -5,10 +5,11 @@ This script tests the enhanced AI features including citations and task generati
 """
 
 import asyncio
-import requests
+import httpx
 import json
 import time
 from typing import Dict, Any, List
+import websockets
 
 # Configuration
 API_BASE_URL = "http://localhost:8002"
@@ -23,13 +24,13 @@ TEST_QUERIES = [
 class AIImprovementsTester:
     def __init__(self, base_url: str):
         self.base_url = base_url
-        self.session = requests.Session()
+        self.session = httpx.AsyncClient()
         
-    def test_basic_query(self, query: str) -> Dict[str, Any]:
+    async def test_basic_query(self, query: str) -> Dict[str, Any]:
         """Test basic query processing with enhanced AI features."""
         print(f"\n🔍 Testing query: {query[:50]}...")
         
-        response = self.session.post(
+        response = await self.session.post(
             f"{self.base_url}/query",
             json={
                 "query": query,
@@ -64,7 +65,7 @@ class AIImprovementsTester:
             print(f"   Error: {response.text}")
             return {}
     
-    def test_task_generation(self, answer: str, query: str = None) -> Dict[str, Any]:
+    async def test_task_generation(self, answer: str, query: str = None) -> Dict[str, Any]:
         """Test task generation from AI answers."""
         print(f"\n🎯 Testing task generation...")
         
@@ -74,7 +75,7 @@ class AIImprovementsTester:
         if query:
             payload["query"] = query
             
-        response = self.session.post(
+        response = await self.session.post(
             f"{self.base_url}/tasks",
             json=payload
         )
@@ -181,7 +182,7 @@ class AIImprovementsTester:
             print(f"❌ WebSocket test failed: {e}")
             return False
     
-    def run_comprehensive_test(self):
+    async def run_comprehensive_test(self):
         """Run comprehensive test of all AI improvements."""
         print("🚀 Starting AI Improvements Comprehensive Test")
         print("=" * 60)
@@ -189,7 +190,7 @@ class AIImprovementsTester:
         # Test basic queries with enhanced AI
         query_results = []
         for query in TEST_QUERIES[:2]:  # Test first 2 queries
-            result = self.test_basic_query(query)
+            result = await self.test_basic_query(query)
             if result:
                 query_results.append(result)
         
@@ -198,7 +199,7 @@ class AIImprovementsTester:
             first_result = query_results[0]
             answer = first_result.get('answer', '')
             if answer:
-                self.test_task_generation(answer)
+                await self.test_task_generation(answer)
         
         # Test WebSocket endpoints
         self.test_collaboration_websocket()
@@ -214,20 +215,21 @@ class AIImprovementsTester:
         
         return len(query_results) > 0
 
-def main():
+async def main():
     """Main test function."""
     print("Universal Knowledge Hub - AI Improvements Test")
     print("Testing enhanced AI summarization and task generation features")
     
     # Check if backend is running
     try:
-        response = requests.get(f"{API_BASE_URL}/health", timeout=5)
-        if response.status_code == 200:
-            print(f"✅ Backend is running at {API_BASE_URL}")
-        else:
-            print(f"❌ Backend health check failed: {response.status_code}")
-            return False
-    except requests.exceptions.RequestException as e:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{API_BASE_URL}/health", timeout=5.0)
+            if response.status_code == 200:
+                print(f"✅ Backend is running at {API_BASE_URL}")
+            else:
+                print(f"❌ Backend health check failed: {response.status_code}")
+                return False
+    except Exception as e:
         print(f"❌ Cannot connect to backend: {e}")
         print("Please start the backend server first:")
         print("  python api/main.py")
@@ -235,7 +237,7 @@ def main():
     
     # Run tests
     tester = AIImprovementsTester(API_BASE_URL)
-    success = tester.run_comprehensive_test()
+    success = await tester.run_comprehensive_test()
     
     if success:
         print("\n🎉 All tests completed successfully!")
@@ -249,4 +251,4 @@ def main():
     return success
 
 if __name__ == "__main__":
-    main() 
+    asyncio.run(main()) 

@@ -125,6 +125,28 @@ class FactCheckResult(AgentDataModel):
     )
 
 
+class KnowledgeGraphResult(AgentDataModel):
+    """Standardized knowledge graph result model."""
+
+    entities: list[dict[str, Any]] = Field(
+        default_factory=list, description="Extracted entities"
+    )
+    relationships: list[dict[str, Any]] = Field(
+        default_factory=list, description="Entity relationships"
+    )
+    graph_data: dict[str, Any] = Field(
+        default_factory=dict, description="Graph visualization data"
+    )
+    entity_count: int = Field(..., ge=0, description="Number of entities extracted")
+    relationship_count: int = Field(..., ge=0, description="Number of relationships found")
+    processing_time_ms: int = Field(
+        ..., ge=0, description="Processing time in milliseconds"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata"
+    )
+
+
 class AgentTaskModel(AgentDataModel):
     """Standardized task model for agent communication."""
 

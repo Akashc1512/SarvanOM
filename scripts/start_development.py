@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Development Startup Script for Universal Knowledge Hub
-This script sets up the development environment and starts all services.
+Development environment manager for Universal Knowledge Hub.
 """
 
-import os
-import sys
+import asyncio
 import subprocess
+import sys
 import time
-import signal
 import threading
-from pathlib import Path
-from typing import List, Optional
+import signal
+import os
+from typing import Optional, List
+import httpx
 
 class DevelopmentManager:
     def __init__(self):
@@ -150,29 +150,29 @@ class DevelopmentManager:
             print(f"❌ Error starting frontend: {e}")
             return None
 
-    def check_health(self) -> None:
+    async def check_health(self) -> None:
         """Check the health of running services."""
         print("\n🏥 Checking service health...")
         
-        import requests
-        
         # Check backend
         try:
-            response = requests.get("http://localhost:8002/health", timeout=5)
-            if response.status_code == 200:
-                print("✅ Backend is healthy")
-            else:
-                print("⚠️  Backend health check failed")
+            async with httpx.AsyncClient() as client:
+                response = await client.get("http://localhost:8002/health", timeout=5.0)
+                if response.status_code == 200:
+                    print("✅ Backend is healthy")
+                else:
+                    print("⚠️  Backend health check failed")
         except Exception as e:
             print(f"❌ Backend health check failed: {e}")
         
         # Check frontend
         try:
-            response = requests.get("http://localhost:3000", timeout=5)
-            if response.status_code == 200:
-                print("✅ Frontend is healthy")
-            else:
-                print("⚠️  Frontend health check failed")
+            async with httpx.AsyncClient() as client:
+                response = await client.get("http://localhost:3000", timeout=5.0)
+                if response.status_code == 200:
+                    print("✅ Frontend is healthy")
+                else:
+                    print("⚠️  Frontend health check failed")
         except Exception as e:
             print(f"❌ Frontend health check failed: {e}")
 
@@ -199,7 +199,7 @@ class DevelopmentManager:
             except Exception as e:
                 print(f"Error stopping process: {e}")
 
-    def run(self) -> None:
+    async def run(self) -> None:
         """Main run method."""
         try:
             # Setup
@@ -226,8 +226,8 @@ class DevelopmentManager:
                 return
             
             # Check health
-            time.sleep(2)
-            self.check_health()
+            await asyncio.sleep(2)
+            await self.check_health()
             
             # Start monitoring in background
             monitor_thread = threading.Thread(target=self.monitor_processes, daemon=True)
@@ -244,28 +244,25 @@ class DevelopmentManager:
             
             # Keep running
             while self.running:
-                time.sleep(1)
+                await asyncio.sleep(1)
                 
         except KeyboardInterrupt:
             print("\n🛑 Received interrupt signal")
-        except Exception as e:
-            print(f"❌ Error: {e}")
         finally:
             self.cleanup()
 
-def main():
-    """Main entry point."""
-    # Set up signal handlers
+async def main():
+    """Main function."""
+    manager = DevelopmentManager()
+    
     def signal_handler(signum, frame):
-        print("\n🛑 Received signal, shutting down...")
-        sys.exit(0)
+        print("\n🛑 Received signal to stop")
+        manager.running = False
     
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
-    # Run the development manager
-    manager = DevelopmentManager()
-    manager.run()
+    await manager.run()
 
 if __name__ == "__main__":
-    main() 
+    asyncio.run(main()) 

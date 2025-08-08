@@ -31,6 +31,7 @@ class AgentType(Enum):
     FACT_CHECK = "fact_check"
     SYNTHESIS = "synthesis"
     CITATION = "citation"
+    KNOWLEDGE_GRAPH = "knowledge_graph"
 
 
 class MessageType(Enum):

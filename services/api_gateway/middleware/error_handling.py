@@ -44,6 +44,7 @@ from shared.core.error_handler import (
     ErrorContext,
     ErrorInfo,
     ErrorResponse,
+    CircuitBreaker,
     error_handler_factory,
     handle_critical_operation,
     safe_api_call,
@@ -69,6 +70,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             "high": 10,
             "medium": 20
         }
+        self.circuit_breaker = CircuitBreaker(failure_threshold=5, recovery_timeout=60)
     
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Handle requests with comprehensive error handling."""
@@ -78,12 +80,30 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
         # Add request ID to request state
         request.state.request_id = request_id
         
+        # Check circuit breaker before processing
+        if not self.circuit_breaker.can_execute():
+            logger.warning(
+                "Circuit breaker is OPEN, returning fallback response",
+                request_id=request_id,
+                path=request.url.path
+            )
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": "Service temporarily unavailable due to high error rate",
+                    "error_type": "circuit_breaker_open",
+                    "request_id": request_id,
+                    "retry_after": self.circuit_breaker.recovery_timeout
+                }
+            )
+        
         try:
             # Process the request
             response = await call_next(request)
             
-            # Log successful request
+            # Log successful request and update circuit breaker
             duration = time.time() - start_time
+            self.circuit_breaker.on_success()
             logger.info(
                 "Request processed successfully",
                 request_id=request_id,
@@ -96,6 +116,8 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             return response
             
         except Exception as e:
+            # Update circuit breaker on failure
+            self.circuit_breaker.on_failure()
             # Handle the error comprehensively
             return await self._handle_request_error(request, e, start_time, request_id)
     
@@ -230,7 +252,9 @@ async def critical_operation_context(
 
 def create_error_handling_middleware() -> ErrorHandlingMiddleware:
     """Create and configure error handling middleware."""
-    return ErrorHandlingMiddleware
+    def middleware_factory(app: ASGIApp) -> ErrorHandlingMiddleware:
+        return ErrorHandlingMiddleware(app)
+    return middleware_factory
 
 
 # Utility functions for common error handling patterns

@@ -71,6 +71,7 @@ class AgentType(Enum):
     CITATION = "citation"
     ROUTER = "router"
     VALIDATOR = "validator"
+    KNOWLEDGE_GRAPH = "knowledge_graph"
 
 
 @dataclass

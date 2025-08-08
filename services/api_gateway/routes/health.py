@@ -153,7 +153,7 @@ async def get_system_diagnostics(current_user=Depends(get_current_user)):
 
 
 @router.get("/analytics", response_model=Dict[str, Any])
-async def get_analytics(current_user=Depends(require_read())):
+async def get_analytics(current_user=Depends(require_read)):
     """Get analytics data for the system."""
     try:
         # Implement actual analytics collection
@@ -617,7 +617,7 @@ async def get_integration_status():
         # Check Meilisearch integration
         try:
             from shared.core.config.central_config import get_meilisearch_url
-    meili_url = os.getenv('MEILISEARCH_URL', get_meilisearch_url())
+            meili_url = os.getenv('MEILISEARCH_URL', get_meilisearch_url())
             meili_key = os.getenv('MEILI_MASTER_KEY')
             
             async with aiohttp.ClientSession() as session:
@@ -699,7 +699,7 @@ async def get_integration_status():
         # Check ArangoDB integration
         try:
             from shared.core.config.central_config import get_arangodb_url
-    arango_url = os.getenv('ARANGO_URL', get_arangodb_url())
+            arango_url = os.getenv('ARANGO_URL', get_arangodb_url())
             arango_user = os.getenv('ARANGO_USERNAME', 'root')
             arango_pass = os.getenv('ARANGO_PASSWORD', '')
             
