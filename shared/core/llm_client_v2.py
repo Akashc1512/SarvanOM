@@ -772,7 +772,22 @@ class EnhancedLLMClient:
                     )
 
     async def create_embedding(self, text: str) -> List[float]:
-        """Create embeddings with fallback."""
+        """Create embeddings with local-first strategy (free) and fallback."""
+        # Prefer free/local embeddings when configured
+        try:
+            from shared.core.config.central_config import get_central_config
+            cfg = get_central_config()
+            if getattr(cfg, "prioritize_free_models", True):
+                import anyio
+
+                def _local_embed() -> List[float]:
+                    from shared.embeddings.local_embedder import embed_texts
+                    return embed_texts([text])[0]
+
+                return await anyio.to_thread.run_sync(_local_embed)
+        except Exception as e:
+            logger.warning(f"Local embedding attempt failed, falling back to providers: {e}")
+
         if not self.providers:
             raise LLMError(
                 error_type="no_providers",

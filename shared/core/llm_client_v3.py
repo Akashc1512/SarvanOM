@@ -66,6 +66,7 @@ License: MIT
 """
 
 import asyncio
+import uuid
 import logging
 import time
 import os
@@ -88,6 +89,7 @@ import aiohttp
 from contextlib import asynccontextmanager
 
 from shared.core.error_handler import handle_critical_operation
+from shared.core.config.central_config import get_ollama_url
 
 # Load environment variables
 load_dotenv()
@@ -1564,7 +1566,22 @@ class EnhancedLLMClientV3:
                     )
 
     async def create_embedding(self, text: str) -> List[float]:
-        """Create embeddings with fallback."""
+        """Create embeddings with local-first strategy (free) and provider fallback."""
+        # Prefer free/local embeddings when configured
+        try:
+            from shared.core.config.central_config import get_central_config
+            cfg = get_central_config()
+            if getattr(cfg, "prioritize_free_models", True):
+                import anyio
+
+                def _local_embed() -> List[float]:
+                    from shared.embeddings.local_embedder import embed_texts
+                    return embed_texts([text])[0]
+
+                return await anyio.to_thread.run_sync(_local_embed)
+        except Exception as e:
+            logger.warning(f"Local embedding attempt failed, falling back to providers: {e}")
+
         if not self.providers:
             raise LLMError(
                 error_type="no_providers",
