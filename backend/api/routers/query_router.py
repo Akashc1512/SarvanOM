@@ -99,15 +99,13 @@ async def list_queries(
 ) -> QueryListResponse:
     """List queries with pagination and filtering."""
     try:
-        # TODO: Implement query listing functionality
-        # For now, return empty list
-        return QueryListResponse(
-            queries=[],
-            total_count=0,
+        data = await orchestrator.list_queries(
             page=page,
             page_size=page_size,
-            total_pages=0
+            user_filter=user_filter,
+            status_filter=status_filter,
         )
+        return QueryListResponse(**data)
         
     except Exception as e:
         logger.error(f"Error listing queries: {e}", exc_info=True)
@@ -123,9 +121,8 @@ async def get_query(
 ) -> QueryDetailResponse:
     """Get detailed information about a specific query."""
     try:
-        # TODO: Implement query detail retrieval
-        # For now, return a placeholder response
-        raise HTTPException(status_code=404, detail="Query not found")
+        data = await orchestrator.get_query_detail(query_id)
+        return QueryDetailResponse(**data)
         
     except HTTPException:
         raise
@@ -144,8 +141,8 @@ async def update_query(
 ) -> QueryDetailResponse:
     """Update a query."""
     try:
-        # TODO: Implement query update functionality
-        raise HTTPException(status_code=404, detail="Query not found")
+        data = await orchestrator.update_query_details(query_id, update_request.dict(exclude_unset=True))
+        return QueryDetailResponse(**data)
         
     except HTTPException:
         raise
@@ -163,8 +160,10 @@ async def delete_query(
 ):
     """Delete a query."""
     try:
-        # TODO: Implement query deletion functionality
-        raise HTTPException(status_code=404, detail="Query not found")
+        deleted = await orchestrator.delete_query(query_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Query not found")
+        return JSONResponse(status_code=204, content=None)
         
     except HTTPException:
         raise
@@ -213,8 +212,10 @@ async def reprocess_query(
 ) -> QueryReprocessResponse:
     """Reprocess a query."""
     try:
-        # TODO: Implement query reprocessing functionality
-        raise HTTPException(status_code=404, detail="Query not found")
+        data = await orchestrator.reprocess_query(query_id, (
+            {"agent_preferences": reprocess_request.agent_preferences} if reprocess_request else {}
+        ))
+        return QueryReprocessResponse(**data)
         
     except HTTPException:
         raise

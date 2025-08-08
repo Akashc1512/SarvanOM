@@ -18,6 +18,16 @@ from pydantic import ValidationError
 
 from .api.routers import routers
 from .api.dependencies import get_cache_service, get_metrics_service
+from .api.middleware.error_handling import (
+    ErrorHandlingMiddleware, 
+    SecurityHeadersMiddleware, 
+    RequestLoggingMiddleware
+)
+from .api.middleware.monitoring import (
+    PerformanceMonitoringMiddleware, 
+    HealthCheckMiddleware, 
+    RateLimitingMiddleware
+)
 from .services.core.cache_service import CacheService
 from .services.core.metrics_service import MetricsService
 
@@ -61,7 +71,28 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Setup CORS
+# Setup Middleware (order matters - last added is first executed)
+
+# Error handling middleware (should be last/innermost)
+metrics_service = get_metrics_service()
+app.add_middleware(ErrorHandlingMiddleware, metrics_service=metrics_service)
+
+# Security headers
+app.add_middleware(SecurityHeadersMiddleware)
+
+# Performance monitoring
+app.add_middleware(PerformanceMonitoringMiddleware, metrics_service=metrics_service)
+
+# Health monitoring
+app.add_middleware(HealthCheckMiddleware)
+
+# Rate limiting
+app.add_middleware(RateLimitingMiddleware, max_requests=100, time_window=60)
+
+# Request logging
+app.add_middleware(RequestLoggingMiddleware, metrics_service=metrics_service)
+
+# CORS (should be outer/first middleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Configure appropriately for production
@@ -140,82 +171,7 @@ async def get_metrics():
         raise HTTPException(status_code=500, detail="Error retrieving metrics")
 
 
-# Exception handlers
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
-    """Handle HTTP exceptions."""
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "error": exc.detail,
-            "status_code": exc.status_code,
-            "timestamp": datetime.now().isoformat(),
-            "path": str(request.url)
-        }
-    )
-
-
-@app.exception_handler(ValidationError)
-async def validation_exception_handler(request: Request, exc: ValidationError):
-    """Handle validation errors."""
-    return JSONResponse(
-        status_code=422,
-        content={
-            "error": "Validation error",
-            "details": exc.errors(),
-            "timestamp": datetime.now().isoformat(),
-            "path": str(request.url)
-        }
-    )
-
-
-@app.exception_handler(Exception)
-async def general_exception_handler(request: Request, exc: Exception):
-    """Handle general exceptions."""
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={
-            "error": "Internal server error",
-            "timestamp": datetime.now().isoformat(),
-            "path": str(request.url)
-        }
-    )
-
-
-# Middleware for request logging
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    """Log all incoming requests."""
-    start_time = time.time()
-    
-    # Log request
-    logger.info(f"📥 {request.method} {request.url}")
-    
-    # Process request
-    response = await call_next(request)
-    
-    # Calculate processing time
-    process_time = time.time() - start_time
-    
-    # Log response
-    logger.info(f"📤 {response.status_code} - {process_time:.3f}s")
-    
-    # Add processing time to response headers
-    response.headers["X-Process-Time"] = str(process_time)
-    
-    return response
-
-
-# Middleware for request ID
-@app.middleware("http")
-async def add_request_id(request: Request, call_next):
-    """Add request ID to request state."""
-    import uuid
-    request.state.request_id = str(uuid.uuid4())
-    response = await call_next(request)
-    response.headers["X-Request-ID"] = request.state.request_id
-    return response
+# Note: Exception handlers and request middleware are now handled by dedicated middleware classes
 
 
 if __name__ == "__main__":

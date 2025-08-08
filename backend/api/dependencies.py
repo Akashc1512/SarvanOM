@@ -18,6 +18,9 @@ from ..services.agents.agent_coordinator import AgentCoordinator
 from ..services.health.health_service import HealthService
 from ..services.agents.agent_service import AgentService
 from ..services.core.database_service import DatabaseService
+from ..repositories.query_repository import QueryRepositoryImpl
+from ..repositories.user_repository import UserRepositoryImpl
+from ..repositories.agent_repository import AgentRepositoryImpl
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +38,11 @@ _query_validator: Optional[QueryValidator] = None
 _query_orchestrator: Optional[QueryOrchestrator] = None
 _health_service: Optional[HealthService] = None
 _database_service: Optional[DatabaseService] = None
+
+# Repository instances (singletons)
+_query_repository: Optional[QueryRepositoryImpl] = None
+_user_repository: Optional[UserRepositoryImpl] = None
+_agent_repository: Optional[AgentRepositoryImpl] = None
 
 
 def get_cache_service() -> CacheService:
@@ -101,11 +109,13 @@ def get_query_orchestrator() -> QueryOrchestrator:
         query_validator = get_query_validator()
         cache_service = get_cache_service()
         metrics_service = get_metrics_service()
+        query_repository = get_query_repository()
         _query_orchestrator = QueryOrchestrator(
             query_processor, 
             query_validator, 
             cache_service, 
-            metrics_service
+            metrics_service,
+            query_repository
         )
         logger.info("Initialized QueryOrchestrator")
     return _query_orchestrator
@@ -191,4 +201,33 @@ def get_user_context(
         "role": current_user.get("role", "anonymous"),
         "is_authenticated": current_user.get("is_authenticated", False),
         "request_id": get_request_id(request) if request else "unknown"
-    } 
+    }
+
+
+# Repository dependency functions
+
+def get_query_repository() -> QueryRepositoryImpl:
+    """Get query repository instance."""
+    global _query_repository
+    if _query_repository is None:
+        _query_repository = QueryRepositoryImpl(storage_type="memory")
+        logger.info("Initialized QueryRepository")
+    return _query_repository
+
+
+def get_user_repository() -> UserRepositoryImpl:
+    """Get user repository instance."""
+    global _user_repository
+    if _user_repository is None:
+        _user_repository = UserRepositoryImpl(storage_type="memory")
+        logger.info("Initialized UserRepository")
+    return _user_repository
+
+
+def get_agent_repository() -> AgentRepositoryImpl:
+    """Get agent repository instance."""
+    global _agent_repository
+    if _agent_repository is None:
+        _agent_repository = AgentRepositoryImpl(storage_type="memory")
+        logger.info("Initialized AgentRepository")
+    return _agent_repository 
