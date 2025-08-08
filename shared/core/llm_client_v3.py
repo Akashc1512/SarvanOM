@@ -90,11 +90,14 @@ from contextlib import asynccontextmanager
 
 from shared.core.error_handler import handle_critical_operation
 from shared.core.config.central_config import get_ollama_url
+from shared.core.logging.structured_logger import get_logger, log_execution_time
+from shared.core.metrics.metrics_service import get_metrics_service
 
 # Load environment variables
 load_dotenv()
 
-logger = structlog.get_logger(__name__)
+logger = get_logger(__name__)
+metrics_service = get_metrics_service()
 
 
 class LLMProvider(str, Enum):

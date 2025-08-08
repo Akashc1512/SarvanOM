@@ -11,8 +11,14 @@ import logging
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 import math
+from abc import ABC, abstractmethod
+import time
 
-logger = logging.getLogger(__name__)
+from shared.core.logging.structured_logger import get_logger, log_execution_time
+from shared.core.metrics.metrics_service import get_metrics_service
+
+logger = get_logger(__name__)
+metrics_service = get_metrics_service()
 
 
 @dataclass
@@ -25,22 +31,28 @@ class VectorDocument:
     metadata: Dict[str, Any]
 
 
-class VectorStoreService:
-    """Abstract vector store interface."""
-
-    async def upsert(self, docs: List[VectorDocument]) -> int:
-        raise NotImplementedError
-
-    async def delete(self, doc_ids: List[str]) -> int:
-        raise NotImplementedError
-
-    async def search(
-        self, query_embedding: List[float], top_k: int = 5
-    ) -> List[Tuple[VectorDocument, float]]:
-        raise NotImplementedError
-
-    async def count(self) -> int:
-        raise NotImplementedError
+class VectorStoreService(ABC):
+    """Abstract base class for vector store operations with logging."""
+    
+    def __init__(self, store_type: str):
+        self.store_type = store_type
+        logger.info("Vector store service initialized", store_type=store_type)
+    
+    @abstractmethod
+    async def add_documents(self, documents: List[Dict[str, Any]], embeddings: List[List[float]]) -> bool:
+        """Add documents to vector store with logging."""
+        pass
+    
+    @abstractmethod
+    async def search(self, query_embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
+        """Search vector store with logging."""
+        pass
+    
+    def _log_operation(self, operation: str, **kwargs):
+        """Log vector store operation."""
+        logger.info(f"Vector store {operation}",
+                   store_type=self.store_type,
+                   **kwargs)
 
 
 class InMemoryVectorStore(VectorStoreService):
@@ -48,6 +60,7 @@ class InMemoryVectorStore(VectorStoreService):
 
     def __init__(self) -> None:
         self._docs: Dict[str, VectorDocument] = {}
+        super().__init__("in_memory")
 
     async def upsert(self, docs: List[VectorDocument]) -> int:
         for d in docs:
@@ -88,73 +101,204 @@ class InMemoryVectorStore(VectorStoreService):
     async def count(self) -> int:
         return len(self._docs)
 
+    @log_execution_time("in_memory_upsert")
+    async def add_documents(self, documents: List[Dict[str, Any]], embeddings: List[List[float]]) -> bool:
+        start_time = time.time()
+        logger.info("Adding documents to InMemoryVectorStore", document_count=len(documents))
+        try:
+            for i, (doc, embedding) in enumerate(zip(documents, embeddings)):
+                self._docs[doc.get("id", str(i))] = VectorDocument(
+                    id=doc.get("id", str(i)),
+                    text=doc.get("content", ""),
+                    embedding=embedding,
+                    metadata=doc.get("metadata", {})
+                )
+            duration = time.time() - start_time
+            metrics_service.record_vector_store_query(
+                store_type="in_memory",
+                operation="add_documents",
+                duration=duration,
+                status="success"
+            )
+            logger.info("Documents added to InMemoryVectorStore successfully", document_count=len(documents), duration_ms=int(duration * 1000))
+            return True
+        except Exception as e:
+            duration = time.time() - start_time
+            metrics_service.record_vector_store_query(
+                store_type="in_memory",
+                operation="add_documents",
+                duration=duration,
+                status="error"
+            )
+            logger.error("Failed to add documents to InMemoryVectorStore", error=str(e), error_type=type(e).__name__, document_count=len(documents), duration_ms=int(duration * 1000))
+            raise
+
+    @log_execution_time("in_memory_search")
+    async def search(self, query_embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
+        start_time = time.time()
+        logger.info("Searching InMemoryVectorStore", top_k=top_k)
+        try:
+            scores: List[Tuple[VectorDocument, float]] = []
+            for doc in self._docs.values():
+                scores.append((doc, cosine(query_embedding, doc.embedding)))
+
+            scores.sort(key=lambda x: x[1], reverse=True)
+            documents = [
+                {
+                    "id": doc.id,
+                    "text": doc.text,
+                    "embedding": doc.embedding,
+                    "metadata": doc.metadata
+                } for doc, _ in scores[:top_k]
+            ]
+            duration = time.time() - start_time
+            metrics_service.record_vector_store_query(
+                store_type="in_memory",
+                operation="search",
+                duration=duration,
+                status="success"
+            )
+            logger.info("InMemoryVectorStore search completed", results_found=len(documents), top_k=top_k, duration_ms=int(duration * 1000))
+            return documents
+        except Exception as e:
+            duration = time.time() - start_time
+            metrics_service.record_vector_store_query(
+                store_type="in_memory",
+                operation="search",
+                duration=duration,
+                status="error"
+            )
+            logger.error("InMemoryVectorStore search failed", error=str(e), error_type=type(e).__name__, top_k=top_k, duration_ms=int(duration * 1000))
+            raise
+
 
 class ChromaVectorStore(VectorStoreService):
-    """Lightweight local vector store using ChromaDB client."""
-
-    def __init__(self, collection_name: str = "knowledge") -> None:
-        import chromadb
-
-        self._client = chromadb.Client()
+    """ChromaDB vector store implementation with comprehensive logging."""
+    
+    def __init__(self, collection_name: str = "documents"):
+        super().__init__("chromadb")
+        self.collection_name = collection_name
+        
         try:
-            self._collection = self._client.get_collection(collection_name)
-        except Exception:
-            self._collection = self._client.create_collection(collection_name)
-
-    async def upsert(self, docs: List[VectorDocument]) -> int:
-        ids = [d.id for d in docs]
-        embeddings = [d.embedding for d in docs]
-        metadatas = [d.metadata | {"text": d.text} for d in docs]
-        # chroma client is sync
-        import anyio
-
-        def _add():
-            # Upsert semantics: delete then add
-            try:
-                self._collection.delete(ids=ids)
-            except Exception:
-                pass
-            self._collection.add(ids=ids, embeddings=embeddings, metadatas=metadatas)
-
-        await anyio.to_thread.run_sync(_add)
-        return len(docs)
-
-    async def delete(self, doc_ids: List[str]) -> int:
-        import anyio
-
-        def _del():
-            self._collection.delete(ids=doc_ids)
-
-        await anyio.to_thread.run_sync(_del)
-        return len(doc_ids)
-
-    async def search(
-        self, query_embedding: List[float], top_k: int = 5
-    ) -> List[Tuple[VectorDocument, float]]:
-        import anyio
-
-        def _query():
-            return self._collection.query(query_embeddings=[query_embedding], n_results=top_k)
-
-        res = await anyio.to_thread.run_sync(_query)
-        out: List[Tuple[VectorDocument, float]] = []
-        ids = res.get("ids", [[]])[0]
-        metas = res.get("metadatas", [[]])[0]
-        dists = res.get("distances", [[]])[0] or []
-        for i, meta in zip(ids, metas):
-            out.append(
-                (
-                    VectorDocument(
-                        id=str(i), text=str(meta.get("text", "")), embedding=[], metadata=meta
-                    ),
-                    1.0 - float(dists[len(out)]) if dists else 0.0,
-                )
+            import chromadb
+            self.client = chromadb.Client()
+            self.collection = self.client.get_or_create_collection(collection_name)
+            logger.info("ChromaDB initialized successfully", collection_name=collection_name)
+        except Exception as e:
+            logger.error("Failed to initialize ChromaDB", error=str(e))
+            raise
+    
+    @log_execution_time("chroma_add_documents")
+    async def add_documents(self, documents: List[Dict[str, Any]], embeddings: List[List[float]]) -> bool:
+        """Add documents to ChromaDB with logging and metrics."""
+        start_time = time.time()
+        
+        logger.info("Adding documents to ChromaDB",
+                   document_count=len(documents),
+                   collection_name=self.collection_name)
+        
+        try:
+            # Prepare data for ChromaDB
+            ids = [doc.get("id", str(i)) for i, doc in enumerate(documents)]
+            texts = [doc.get("content", "") for doc in documents]
+            metadatas = [doc.get("metadata", {}) for doc in documents]
+            
+            # Add to collection
+            self.collection.add(
+                ids=ids,
+                embeddings=embeddings,
+                documents=texts,
+                metadatas=metadatas
             )
-        return out
-
-    async def count(self) -> int:
-        # Chroma doesn't expose count directly per collection in client; return 0 as placeholder
-        return 0
+            
+            duration = time.time() - start_time
+            metrics_service.record_vector_store_query(
+                store_type="chromadb",
+                operation="add_documents",
+                duration=duration,
+                status="success"
+            )
+            
+            logger.info("Documents added to ChromaDB successfully",
+                       document_count=len(documents),
+                       duration_ms=int(duration * 1000))
+            
+            return True
+            
+        except Exception as e:
+            duration = time.time() - start_time
+            metrics_service.record_vector_store_query(
+                store_type="chromadb",
+                operation="add_documents",
+                duration=duration,
+                status="error"
+            )
+            
+            logger.error("Failed to add documents to ChromaDB",
+                        error=str(e),
+                        error_type=type(e).__name__,
+                        document_count=len(documents),
+                        duration_ms=int(duration * 1000))
+            raise
+    
+    @log_execution_time("chroma_search")
+    async def search(self, query_embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
+        """Search ChromaDB with logging and metrics."""
+        start_time = time.time()
+        
+        logger.info("Searching ChromaDB",
+                   top_k=top_k,
+                   collection_name=self.collection_name)
+        
+        try:
+            # Perform search
+            results = self.collection.query(
+                query_embeddings=[query_embedding],
+                n_results=top_k
+            )
+            
+            # Format results
+            documents = []
+            if results["documents"]:
+                for i in range(len(results["documents"][0])):
+                    doc = {
+                        "content": results["documents"][0][i],
+                        "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
+                        "id": results["ids"][0][i],
+                        "distance": results["distances"][0][i] if results["distances"] else 0.0
+                    }
+                    documents.append(doc)
+            
+            duration = time.time() - start_time
+            metrics_service.record_vector_store_query(
+                store_type="chromadb",
+                operation="search",
+                duration=duration,
+                status="success"
+            )
+            
+            logger.info("ChromaDB search completed",
+                       results_found=len(documents),
+                       top_k=top_k,
+                       duration_ms=int(duration * 1000))
+            
+            return documents
+            
+        except Exception as e:
+            duration = time.time() - start_time
+            metrics_service.record_vector_store_query(
+                store_type="chromadb",
+                operation="search",
+                duration=duration,
+                status="error"
+            )
+            
+            logger.error("ChromaDB search failed",
+                        error=str(e),
+                        error_type=type(e).__name__,
+                        top_k=top_k,
+                        duration_ms=int(duration * 1000))
+            raise
 
 
 try:
@@ -165,89 +309,144 @@ except Exception:  # pragma: no cover
 
 
 class QdrantVectorStore(VectorStoreService):
-    """Qdrant-backed vector store adapter."""
-
-    def __init__(
-        self, url: str, api_key: Optional[str], collection: str, vector_size: int = 1536
-    ):
-        if QdrantClient is None:
-            raise RuntimeError("qdrant-client not available")
-        self.client = QdrantClient(url=url, api_key=api_key)
+    """Qdrant vector store implementation with comprehensive logging."""
+    
+    def __init__(self, url: str, api_key: str = None, collection: str = "documents", vector_size: int = 384):
+        super().__init__("qdrant")
+        self.url = url
         self.collection = collection
         self.vector_size = vector_size
-        # Ensure collection exists
+        
         try:
-            self.client.get_collection(collection_name=self.collection)
-        except Exception:
-            self.client.recreate_collection(
+            from qdrant_client import QdrantClient
+            self.client = QdrantClient(url=url, api_key=api_key)
+            
+            # Ensure collection exists
+            self.client.get_collection(collection)
+            logger.info("Qdrant initialized successfully", 
+                       url=url, 
+                       collection=collection,
+                       vector_size=vector_size)
+        except Exception as e:
+            logger.error("Failed to initialize Qdrant", error=str(e))
+            raise
+    
+    @log_execution_time("qdrant_add_documents")
+    async def add_documents(self, documents: List[Dict[str, Any]], embeddings: List[List[float]]) -> bool:
+        """Add documents to Qdrant with logging and metrics."""
+        start_time = time.time()
+        
+        logger.info("Adding documents to Qdrant",
+                   document_count=len(documents),
+                   collection=self.collection)
+        
+        try:
+            # Prepare points for Qdrant
+            points = []
+            for i, (doc, embedding) in enumerate(zip(documents, embeddings)):
+                point = {
+                    "id": doc.get("id", str(i)),
+                    "vector": embedding,
+                    "payload": {
+                        "content": doc.get("content", ""),
+                        "metadata": doc.get("metadata", {})
+                    }
+                }
+                points.append(point)
+            
+            # Add points to collection
+            self.client.upsert(
                 collection_name=self.collection,
-                vectors_config=VectorParams(size=self.vector_size, distance=Distance.COSINE),
+                points=points
             )
-
-    async def upsert(self, docs: List[VectorDocument]) -> int:
-        points = [
-            PointStruct(id=d.id, vector=d.embedding, payload={"text": d.text, **d.metadata})
-            for d in docs
-        ]
-        # qdrant client is sync; run in threadpool
-        import anyio
-
-        def _upsert():
-            self.client.upsert(collection_name=self.collection, points=points)
-
-        await anyio.to_thread.run_sync(_upsert)
-        return len(points)
-
-    async def delete(self, doc_ids: List[str]) -> int:
-        import anyio
-        from qdrant_client.http import models as qm
-
-        def _delete():
-            self.client.delete(
-                collection_name=self.collection,
-                points_selector=qm.PointIdsList(points=doc_ids),
+            
+            duration = time.time() - start_time
+            metrics_service.record_vector_store_query(
+                store_type="qdrant",
+                operation="add_documents",
+                duration=duration,
+                status="success"
             )
-
-        await anyio.to_thread.run_sync(_delete)
-        return len(doc_ids)
-
-    async def search(
-        self, query_embedding: List[float], top_k: int = 5
-    ) -> List[Tuple[VectorDocument, float]]:
-        import anyio
-
-        def _search():
-            return self.client.search(
+            
+            logger.info("Documents added to Qdrant successfully",
+                       document_count=len(documents),
+                       duration_ms=int(duration * 1000))
+            
+            return True
+            
+        except Exception as e:
+            duration = time.time() - start_time
+            metrics_service.record_vector_store_query(
+                store_type="qdrant",
+                operation="add_documents",
+                duration=duration,
+                status="error"
+            )
+            
+            logger.error("Failed to add documents to Qdrant",
+                        error=str(e),
+                        error_type=type(e).__name__,
+                        document_count=len(documents),
+                        duration_ms=int(duration * 1000))
+            raise
+    
+    @log_execution_time("qdrant_search")
+    async def search(self, query_embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
+        """Search Qdrant with logging and metrics."""
+        start_time = time.time()
+        
+        logger.info("Searching Qdrant",
+                   top_k=top_k,
+                   collection=self.collection)
+        
+        try:
+            # Perform search
+            results = self.client.search(
                 collection_name=self.collection,
                 query_vector=query_embedding,
-                limit=top_k,
-                with_payload=True,
+                limit=top_k
             )
-
-        res = await anyio.to_thread.run_sync(_search)
-        out: List[Tuple[VectorDocument, float]] = []
-        for r in res:
-            payload = r.payload or {}
-            out.append(
-                (
-                    VectorDocument(
-                        id=str(r.id),
-                        text=str(payload.get("text", "")),
-                        embedding=[],
-                        metadata=payload,
-                    ),
-                    float(r.score),
-                )
+            
+            # Format results
+            documents = []
+            for result in results:
+                doc = {
+                    "content": result.payload.get("content", ""),
+                    "metadata": result.payload.get("metadata", {}),
+                    "id": result.id,
+                    "distance": result.score
+                }
+                documents.append(doc)
+            
+            duration = time.time() - start_time
+            metrics_service.record_vector_store_query(
+                store_type="qdrant",
+                operation="search",
+                duration=duration,
+                status="success"
             )
-        return out
-
-    async def count(self) -> int:
-        import anyio
-
-        def _count():
-            info = self.client.get_collection(self.collection)
-            return info.vectors_count
-
-        return await anyio.to_thread.run_sync(_count)
+            
+            logger.info("Qdrant search completed",
+                       results_found=len(documents),
+                       top_k=top_k,
+                       duration_ms=int(duration * 1000))
+            
+            return documents
+            
+        except Exception as e:
+            duration = time.time() - start_time
+            metrics_service.record_vector_store_query(
+                store_type="qdrant",
+                operation="search",
+                duration=duration,
+                status="error"
+            )
+            
+            logger.error("Qdrant search failed",
+                        error=str(e),
+                        error_type=type(e).__name__,
+                        top_k=top_k,
+                        duration_ms=int(duration * 1000))
+            raise
 
 

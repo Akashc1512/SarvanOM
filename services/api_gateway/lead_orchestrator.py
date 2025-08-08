@@ -41,19 +41,19 @@ from services.api_gateway.orchestrator_workflow_fixes import (
 
 # Import unified logging
 from shared.core.unified_logging import get_logger, log_agent_lifecycle, log_execution_time, log_query_event
+from shared.core.logging.structured_logger import get_logger, log_execution_time
+from shared.core.metrics.metrics_service import get_metrics_service
 
 # Configure unified logging
 logger = get_logger(__name__)
+metrics_service = get_metrics_service()
 
 # Global cache instance for observability endpoints
 GLOBAL_SEMANTIC_CACHE = None
 
 
 class LeadOrchestrator:
-    """
-    Refactored LeadOrchestrator that uses proper agent implementations
-    and provides clean coordination patterns.
-    """
+    """Multi-agent orchestrator for query processing with comprehensive logging."""
 
     def __init__(self):
         """Initialize orchestrator with proper agent instances."""
@@ -103,7 +103,9 @@ class LeadOrchestrator:
         GLOBAL_SEMANTIC_CACHE = self.semantic_cache
         self.response_aggregator = ResponseAggregator()
 
-        logger.info("✅ LeadOrchestrator initialized successfully")
+        logger.info("LeadOrchestrator initialized",
+                   agent_count=len(self.agents),
+                   cache_enabled=GLOBAL_SEMANTIC_CACHE is not None)
 
     async def process_query(
         self, query: str, user_context: Dict[str, Any] = None
@@ -321,52 +323,44 @@ class LeadOrchestrator:
             "estimated_tokens": len(context.query.split()) * 10,
         }
 
+    @log_execution_time("execute_pipeline")
     async def execute_pipeline(
         self, context: QueryContext, plan: Dict[str, Any], query_budget: int
     ) -> Dict[AgentType, AgentResult]:
-        """
-        Execute the agent pipeline with proper error handling and timeouts.
-
-        Args:
-            context: Query context with user information
-            plan: Execution plan from planning phase
-            query_budget: Token budget for the query
-
-        Returns:
-            Results from all agents in the pipeline
-        """
-        results = {}
-        pipeline_start_time = time.time()
-
+        """Execute the complete multi-agent pipeline with comprehensive logging."""
+        logger.info("Starting pipeline execution", 
+                   query=context.query,
+                   user_id=context.user_id,
+                   pipeline_id=str(uuid.uuid4()))
+        
         try:
-            # Phase 1: Parallel retrieval and entity extraction
+            # Track active queries
+            metrics_service.set_gauge("active_queries", len(self.active_queries) + 1)
+            
+            # Execute pipeline phases
             results = await self._execute_retrieval_phase_parallel(context, results)
-
-            # Phase 2: Fact checking (depends on retrieval)
-            results = await self._execute_fact_checking_phase(context, results)
-
-            # Phase 3: Synthesis (depends on fact checking)
             results = await self._execute_synthesis_phase(context, results)
-
-            # Phase 4: Citation (depends on synthesis and retrieval)
             results = await self._execute_citation_phase(context, results)
-
-            # Phase 5: Expert review (depends on synthesis)
             results = await self._execute_reviewer_phase(context, results)
-
+            
             # Log pipeline completion
-            total_time = time.time() - pipeline_start_time
-            logger.info(
-                f"Pipeline completed in {total_time:.2f}s",
-                extra={"context": context.query, "total_agents": len(results)},
-            )
-
+            total_duration = sum(r.execution_time_ms for r in results.values() if r.success)
+            logger.info("Pipeline completed successfully",
+                       total_duration_ms=total_duration,
+                       agent_results=len(results),
+                       successful_agents=sum(1 for r in results.values() if r.success))
+            
             return results
-
+            
         except Exception as e:
-            logger.error(f"Pipeline execution failed: {e}")
-            # Return partial results with error information
-            return self._handle_pipeline_failure(results, str(e))
+            logger.error("Pipeline execution failed",
+                        error=str(e),
+                        error_type=type(e).__name__,
+                        query=context.query)
+            raise
+        finally:
+            # Update active queries gauge
+            metrics_service.set_gauge("active_queries", len(self.active_queries))
 
     async def _execute_retrieval_phase_parallel(
         self, context: QueryContext, results: Dict[AgentType, AgentResult]
