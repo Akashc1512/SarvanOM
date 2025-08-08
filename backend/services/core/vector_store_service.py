@@ -85,6 +85,69 @@ class InMemoryVectorStore(VectorStoreService):
         return len(self._docs)
 
 
+class ChromaVectorStore(VectorStoreService):
+    """Lightweight local vector store using ChromaDB client."""
+
+    def __init__(self, collection_name: str = "knowledge") -> None:
+        import chromadb
+        self._client = chromadb.Client()
+        try:
+            self._collection = self._client.get_collection(collection_name)
+        except Exception:
+            self._collection = self._client.create_collection(collection_name)
+
+    async def upsert(self, docs: List[VectorDocument]) -> int:
+        ids = [d.id for d in docs]
+        embeddings = [d.embedding for d in docs]
+        metadatas = [d.metadata | {"text": d.text} for d in docs]
+        # chroma client is sync
+        import anyio
+
+        def _add():
+            # Upsert semantics: delete then add
+            try:
+                self._collection.delete(ids=ids)
+            except Exception:
+                pass
+            self._collection.add(ids=ids, embeddings=embeddings, metadatas=metadatas)
+
+        await anyio.to_thread.run_sync(_add)
+        return len(docs)
+
+    async def delete(self, doc_ids: List[str]) -> int:
+        import anyio
+
+        def _del():
+            self._collection.delete(ids=doc_ids)
+
+        await anyio.to_thread.run_sync(_del)
+        return len(doc_ids)
+
+    async def search(self, query_embedding: List[float], top_k: int = 5) -> List[Tuple[VectorDocument, float]]:
+        import anyio
+
+        def _query():
+            return self._collection.query(query_embeddings=[query_embedding], n_results=top_k)
+
+        res = await anyio.to_thread.run_sync(_query)
+        out: List[Tuple[VectorDocument, float]] = []
+        ids = res.get("ids", [[]])[0]
+        metas = res.get("metadatas", [[]])[0]
+        dists = res.get("distances", [[]])[0] or []
+        for i, meta in zip(ids, metas):
+            out.append(
+                (
+                    VectorDocument(id=str(i), text=str(meta.get("text", "")), embedding=[], metadata=meta),
+                    1.0 - float(dists[len(out)]) if dists else 0.0,
+                )
+            )
+        return out
+
+    async def count(self) -> int:
+        # Chroma doesn't expose count directly per collection in client; return 0 as placeholder
+        return 0
+
+
 try:
     from qdrant_client import QdrantClient
     from qdrant_client.http.models import Distance, VectorParams, PointStruct
