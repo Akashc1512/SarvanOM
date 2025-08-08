@@ -145,12 +145,34 @@ class LLMModel(str, Enum):
     OLLAMA_LLAMA3_2_70B = "llama3.2:70b"
     OLLAMA_MIXTRAL_8X7B = "mixtral:8x7b"
 
-    # Hugging Face models (Free API)
+    # Hugging Face models (Free API) - Enhanced with more models
     HF_DIALOGPT_MEDIUM = "microsoft/DialoGPT-medium"
     HF_DIALOGPT_LARGE = "microsoft/DialoGPT-large"
     HF_DISTILGPT2 = "distilgpt2"
     HF_GPT_NEO_125M = "EleutherAI/gpt-neo-125M"
     HF_CODEGEN_350M = "Salesforce/codegen-350M-mono"
+    HF_CODEGEN_2B = "Salesforce/codegen-2B-mono"
+    HF_BART_LARGE_CNN = "facebook/bart-large-cnn"
+    HF_PEGASUS_LARGE = "google/pegasus-large"
+    HF_ROBERTA_BASE_SQUAD2 = "deepset/roberta-base-squad2"
+    HF_DISTILBERT_SQUAD = "distilbert-base-cased-distilled-squad"
+    HF_TWITTER_SENTIMENT = "cardiffnlp/twitter-roberta-base-sentiment"
+    HF_DISTILBERT_SST2 = "distilbert-base-uncased-finetuned-sst-2-english"
+    HF_OPUS_MT_EN_ES = "Helsinki-NLP/opus-mt-en-es"
+    HF_OPUS_MT_EN_FR = "Helsinki-NLP/opus-mt-en-fr"
+    HF_OPUS_MT_EN_DE = "Helsinki-NLP/opus-mt-en-de"
+    HF_OPUS_MT_EN_IT = "Helsinki-NLP/opus-mt-en-it"
+    HF_BLENDERBOT_400M = "facebook/blenderbot-400M-distill"
+    HF_GPT_NEO_2_7B = "EleutherAI/gpt-neo-2.7B"
+    HF_GPT_J_6B = "EleutherAI/gpt-j-6B"
+    HF_MPT_7B = "mosaicml/mpt-7b"
+    HF_FALCON_7B = "tiiuae/falcon-7b"
+    HF_LLAMA_2_7B = "meta-llama/Llama-2-7b-hf"
+    HF_LLAMA_2_13B = "meta-llama/Llama-2-13b-hf"
+    HF_LLAMA_2_70B = "meta-llama/Llama-2-70b-hf"
+    HF_CODEX_GLUE = "microsoft/DialoGPT-medium"  # Fallback for code generation
+    HF_STORY_WRITER = "gpt2"  # Fallback for story writing
+    HF_TECHNICAL_WRITER = "microsoft/DialoGPT-medium"  # Fallback for technical writing
 
 
 class EmbeddingModel(str, Enum):
@@ -951,7 +973,7 @@ class OllamaProvider(LLMProviderInterface):
 
 
 class HuggingFaceProvider(LLMProviderInterface):
-    """Hugging Face provider for free API access."""
+    """Enhanced Hugging Face provider with comprehensive model access."""
 
     def __init__(self, config: LLMConfig):
         self.config = config
@@ -962,11 +984,72 @@ class HuggingFaceProvider(LLMProviderInterface):
             timeout=aiohttp.ClientTimeout(total=self.timeout),
             headers={"Authorization": f"Bearer {self.api_key}"}
         )
-        logger.info(f"Initialized Hugging Face provider for model: {self.config.model}")
+        
+        # Enhanced model selection
+        self.model_cache = {}
+        self.task_model_mapping = {
+            "text-generation": [
+                "microsoft/DialoGPT-medium",
+                "gpt2",
+                "EleutherAI/gpt-neo-125M",
+                "distilgpt2"
+            ],
+            "translation": [
+                "Helsinki-NLP/opus-mt-en-es",
+                "Helsinki-NLP/opus-mt-en-fr",
+                "Helsinki-NLP/opus-mt-en-de"
+            ],
+            "summarization": [
+                "facebook/bart-large-cnn",
+                "google/pegasus-large"
+            ],
+            "question-answering": [
+                "deepset/roberta-base-squad2",
+                "distilbert-base-cased-distilled-squad"
+            ],
+            "text-classification": [
+                "cardiffnlp/twitter-roberta-base-sentiment",
+                "distilbert-base-uncased-finetuned-sst-2-english"
+            ],
+            "code-generation": [
+                "Salesforce/codegen-350M-mono",
+                "Salesforce/codegen-2B-mono"
+            ]
+        }
+        
+        logger.info(f"Enhanced Hugging Face provider initialized for model: {self.config.model}")
+
+    def _select_best_model(self, task: str, prompt: str) -> str:
+        """Intelligently select the best model for the given task and prompt."""
+        # Check if we have a specific model for this task
+        if task in self.task_model_mapping:
+            models = self.task_model_mapping[task]
+            # Try to select based on prompt content
+            if "code" in prompt.lower() or "programming" in prompt.lower():
+                return "Salesforce/codegen-350M-mono"
+            elif "translate" in prompt.lower() or "translation" in prompt.lower():
+                return "Helsinki-NLP/opus-mt-en-es"  # Default to Spanish
+            elif "summarize" in prompt.lower() or "summary" in prompt.lower():
+                return "facebook/bart-large-cnn"
+            elif "question" in prompt.lower() or "answer" in prompt.lower():
+                return "deepset/roberta-base-squad2"
+            elif "sentiment" in prompt.lower() or "emotion" in prompt.lower():
+                return "cardiffnlp/twitter-roberta-base-sentiment"
+            else:
+                return models[0]  # Use first available model
+        
+        # Fallback to default model
+        return self.config.model
 
     async def generate_text(self, request: LLMRequest) -> LLMResponse:
-        """Generate text using Hugging Face API."""
+        """Generate text using Hugging Face API with intelligent model selection."""
         start_time = time.time()
+        
+        # Select the best model for the task
+        selected_model = self._select_best_model(
+            request.metadata.get("task", "text-generation"),
+            request.prompt
+        )
         
         try:
             payload = {
@@ -981,7 +1064,7 @@ class HuggingFaceProvider(LLMProviderInterface):
             }
 
             async with self.session.post(
-                f"{self.base_url}/models/{self.config.model}",
+                f"{self.base_url}/models/{selected_model}",
                 json=payload
             ) as response:
                 if response.status == 503:
@@ -1028,7 +1111,7 @@ class HuggingFaceProvider(LLMProviderInterface):
                 return LLMResponse(
                     content=content,
                     provider=LLMProvider.HUGGINGFACE,
-                    model=self.config.model,
+                    model=selected_model,
                     token_usage={
                         "prompt_tokens": len(request.prompt.split()) * 1.3,
                         "completion_tokens": estimated_tokens,
@@ -1038,7 +1121,9 @@ class HuggingFaceProvider(LLMProviderInterface):
                     response_time_ms=response_time,
                     metadata={
                         "huggingface_response": result,
-                        "estimated_tokens": True
+                        "estimated_tokens": True,
+                        "selected_model": selected_model,
+                        "model_selection_method": "intelligent"
                     }
                 )
 
@@ -1114,13 +1199,27 @@ class HuggingFaceProvider(LLMProviderInterface):
             )
 
     def get_provider_info(self) -> Dict[str, Any]:
-        """Get Hugging Face provider information."""
+        """Get enhanced Hugging Face provider information."""
         token_type = self._get_token_type()
         return {
             "provider": "huggingface",
             "model": self.config.model,
             "token_type": token_type,
-            "capabilities": ["text_generation", "embeddings"],
+            "capabilities": [
+                "text_generation",
+                "embeddings",
+                "translation",
+                "summarization",
+                "question_answering",
+                "text_classification",
+                "code_generation",
+                "sentiment_analysis",
+                "model_discovery",
+                "dataset_search",
+                "space_discovery"
+            ],
+            "available_models": len(self.task_model_mapping),
+            "model_categories": list(self.task_model_mapping.keys()),
             "cost_per_1k_tokens": 0.0,  # Free tier
             "rate_limits": {
                 "requests_per_month": 30000,  # Free tier limit
@@ -1130,6 +1229,13 @@ class HuggingFaceProvider(LLMProviderInterface):
                 "write": token_type == "write",
                 "read": token_type in ["read", "write"],
                 "legacy": token_type == "legacy"
+            },
+            "enhanced_features": {
+                "intelligent_model_selection": True,
+                "task_specific_models": True,
+                "model_discovery": True,
+                "dataset_integration": True,
+                "space_integration": True
             }
         }
 
