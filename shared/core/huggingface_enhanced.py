@@ -32,6 +32,7 @@ import aiohttp
 import json
 import time
 import hashlib
+import logging
 from typing import Dict, Any, List, Optional, Union, AsyncGenerator, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
@@ -259,7 +260,7 @@ class HuggingFaceEnhancedClient:
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
         retry=retry_if_exception_type((aiohttp.ClientError, asyncio.TimeoutError)),
-        before_sleep=before_sleep_log(logger, structlog.stdlib.WARNING),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def _make_request(self, endpoint: str, method: str = "GET", **kwargs) -> Dict[str, Any]:
         """Make a request to Hugging Face API with retry logic."""
