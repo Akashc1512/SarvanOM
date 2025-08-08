@@ -14,7 +14,7 @@ class CORSConfig:
     """Configuration for CORS middleware."""
     
     def __init__(self):
-        from shared.core.config.central_config import get_central_config
+        from shared.core.config import get_central_config
         config = get_central_config()
         self.allowed_origins: List[str] = config.cors_origins + [
             "https://sarvanom.com",

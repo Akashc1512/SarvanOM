@@ -1,9 +1,10 @@
 """
-Shared libraries for Universal Knowledge Hub.
+Shared Modules - SarvanOM
 
-This package contains shared utilities, models, configuration, and middleware
-that are used across all microservices.
+This module contains shared functionality across all services.
 """
 
-__version__ = "1.0.0"
-__author__ = "Universal Knowledge Hub Team"
+# Core modules
+from . import core
+
+__all__ = ['core']

@@ -14,8 +14,8 @@ import math
 from abc import ABC, abstractmethod
 import time
 
-from shared.core.logging.structured_logger import get_logger, log_execution_time
-from shared.core.metrics.metrics_service import get_metrics_service
+from shared.core.logging import get_logger, log_execution_time_decorator
+from shared.core.metrics import get_metrics_service
 
 logger = get_logger(__name__)
 metrics_service = get_metrics_service()
@@ -101,7 +101,7 @@ class InMemoryVectorStore(VectorStoreService):
     async def count(self) -> int:
         return len(self._docs)
 
-    @log_execution_time("in_memory_upsert")
+    @log_execution_time_decorator("in_memory_upsert")
     async def add_documents(self, documents: List[Dict[str, Any]], embeddings: List[List[float]]) -> bool:
         start_time = time.time()
         logger.info("Adding documents to InMemoryVectorStore", document_count=len(documents))
@@ -133,7 +133,7 @@ class InMemoryVectorStore(VectorStoreService):
             logger.error("Failed to add documents to InMemoryVectorStore", error=str(e), error_type=type(e).__name__, document_count=len(documents), duration_ms=int(duration * 1000))
             raise
 
-    @log_execution_time("in_memory_search")
+    @log_execution_time_decorator("in_memory_search")
     async def search(self, query_embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
         start_time = time.time()
         logger.info("Searching InMemoryVectorStore", top_k=top_k)
@@ -188,7 +188,7 @@ class ChromaVectorStore(VectorStoreService):
             logger.error("Failed to initialize ChromaDB", error=str(e))
             raise
     
-    @log_execution_time("chroma_add_documents")
+    @log_execution_time_decorator("chroma_add_documents")
     async def add_documents(self, documents: List[Dict[str, Any]], embeddings: List[List[float]]) -> bool:
         """Add documents to ChromaDB with logging and metrics."""
         start_time = time.time()
@@ -241,7 +241,7 @@ class ChromaVectorStore(VectorStoreService):
                         duration_ms=int(duration * 1000))
             raise
     
-    @log_execution_time("chroma_search")
+    @log_execution_time_decorator("chroma_search")
     async def search(self, query_embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
         """Search ChromaDB with logging and metrics."""
         start_time = time.time()
@@ -331,7 +331,7 @@ class QdrantVectorStore(VectorStoreService):
             logger.error("Failed to initialize Qdrant", error=str(e))
             raise
     
-    @log_execution_time("qdrant_add_documents")
+    @log_execution_time_decorator("qdrant_add_documents")
     async def add_documents(self, documents: List[Dict[str, Any]], embeddings: List[List[float]]) -> bool:
         """Add documents to Qdrant with logging and metrics."""
         start_time = time.time()
@@ -390,7 +390,7 @@ class QdrantVectorStore(VectorStoreService):
                         duration_ms=int(duration * 1000))
             raise
     
-    @log_execution_time("qdrant_search")
+    @log_execution_time_decorator("qdrant_search")
     async def search(self, query_embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
         """Search Qdrant with logging and metrics."""
         start_time = time.time()

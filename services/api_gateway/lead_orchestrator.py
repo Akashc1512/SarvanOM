@@ -41,8 +41,8 @@ from services.api_gateway.orchestrator_workflow_fixes import (
 
 # Import unified logging
 from shared.core.unified_logging import get_logger, log_agent_lifecycle, log_execution_time, log_query_event
-from shared.core.logging.structured_logger import get_logger, log_execution_time
-from shared.core.metrics.metrics_service import get_metrics_service
+from shared.core.logging import get_logger, log_execution_time
+from shared.core.metrics import get_metrics_service
 
 # Configure unified logging
 logger = get_logger(__name__)
@@ -83,7 +83,7 @@ class LeadOrchestrator:
             ttl_seconds = 3600
         # Create namespace from core model settings to avoid cross-model contamination
         try:
-            from shared.core.config.central_config import get_central_config
+            from shared.core.config import get_central_config
             cfg = get_central_config()
             namespace = "|".join(
                 [
@@ -438,7 +438,7 @@ class LeadOrchestrator:
 
         # Check if reviewer is enabled
         try:
-            from shared.core.config.central_config import get_central_config
+            from shared.core.config import get_central_config
             config = get_central_config()
             if not config.enable_reviewer_agent:
                 logger.info("Reviewer agent disabled in config")

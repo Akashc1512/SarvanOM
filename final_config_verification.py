@@ -19,7 +19,7 @@ def verify_central_config():
     print("=" * 50)
     
     try:
-        from shared.core.config.central_config import get_central_config, get_database_url, get_redis_url, get_vector_db_url, get_meilisearch_url, get_arangodb_url, get_ollama_url
+        from shared.core.config import get_central_config, get_database_url, get_redis_url, get_vector_db_url, get_meilisearch_url, get_arangodb_url, get_ollama_url
         
         # Test central config loading
         config = get_central_config()
@@ -176,7 +176,7 @@ def verify_security():
     print("=" * 50)
     
     try:
-        from shared.core.config.central_config import get_central_config
+        from shared.core.config import get_central_config
         config = get_central_config()
         
         # Check for SecretStr usage

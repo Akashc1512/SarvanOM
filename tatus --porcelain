@@ -1,0 +1,5 @@
+[33m2b6b2fb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Observability: implement comprehensive logging and metrics system; add structured logging, request correlation, Prometheus metrics, and performance monitoring across all services
+[33ma8dbe4f[m Reviewer Agent: add comprehensive tests, config options, observability endpoint; wire configurable reviewer with timeout/fallback
+[33m02ede40[m Orchestrator: add Expert Reviewer agent stage to validate/improve synthesis; implement async ReviewerAgent and wire into pipeline
+[33m429291e[m Cache: add namespace-aware TTL semantic cache clear/prune and /health/cache endpoints; enable tests; add cache hit/miss and TTL tests
+[33mb8f3095[m API Gateway: namespace-aware semantic cache + /health/cache observability endpoint; cache TTL from settings

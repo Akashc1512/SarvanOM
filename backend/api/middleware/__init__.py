@@ -1,18 +1,26 @@
 """
 Middleware for SarvanOM Backend
 
-This module contains all FastAPI middleware components.
-Responsible for cross-cutting concerns like authentication, logging, CORS, etc.
+This module aggregates and re-exports available middleware components.
 """
 
-from .auth import *
-from .cors import *
-from .logging import *
-from .rate_limiting import *
+# Export concrete middleware implemented in this backend
+from .error_handling import (
+    ErrorHandlingMiddleware,
+    SecurityHeadersMiddleware,
+    RequestLoggingMiddleware,
+)
+from .monitoring import (
+    PerformanceMonitoringMiddleware,
+    HealthCheckMiddleware,
+    RateLimitingMiddleware,
+)
 
 __all__ = [
-    "auth",
-    "cors",
-    "logging",
-    "rate_limiting"
-] 
+    "ErrorHandlingMiddleware",
+    "SecurityHeadersMiddleware",
+    "RequestLoggingMiddleware",
+    "PerformanceMonitoringMiddleware",
+    "HealthCheckMiddleware",
+    "RateLimitingMiddleware",
+]

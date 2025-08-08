@@ -436,6 +436,57 @@ def log_execution_time(logger: UnifiedLogger, operation: str, **context):
         raise
 
 
+def log_execution_time_decorator(operation: str):
+    """
+    Decorator version of log_execution_time for async functions.
+    
+    Args:
+        operation: Description of the operation
+    """
+    def decorator(func):
+        async def wrapper(*args, **kwargs):
+            logger = get_logger(func.__module__)
+            start_time = time.time()
+            operation_id = str(uuid.uuid4())[:8]
+            
+            logger.info(
+                f"Starting {operation}",
+                operation=operation,
+                operation_id=operation_id,
+                function=func.__name__
+            )
+            
+            try:
+                result = await func(*args, **kwargs)
+                duration = time.time() - start_time
+                logger.info(
+                    f"Completed {operation}",
+                    operation=operation,
+                    operation_id=operation_id,
+                    duration_seconds=round(duration, 3),
+                    duration_ms=round(duration * 1000, 1),
+                    status="success",
+                    function=func.__name__
+                )
+                return result
+            except Exception as e:
+                duration = time.time() - start_time
+                logger.error(
+                    f"Failed {operation}",
+                    operation=operation,
+                    operation_id=operation_id,
+                    duration_seconds=round(duration, 3),
+                    duration_ms=round(duration * 1000, 1),
+                    status="error",
+                    error_type=type(e).__name__,
+                    error_message=str(e),
+                    function=func.__name__
+                )
+                raise
+        return wrapper
+    return decorator
+
+
 def log_agent_lifecycle(logger: UnifiedLogger, agent_name: str, action: str, **context):
     """
     Log agent lifecycle events (start, finish, error).
@@ -573,6 +624,7 @@ __all__ = [
     'setup_logging',
     'get_logger',
     'log_execution_time',
+    'log_execution_time_decorator',
     'log_agent_lifecycle',
     'log_query_event',
     'setup_fastapi_logging',

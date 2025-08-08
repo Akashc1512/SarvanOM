@@ -121,7 +121,7 @@ async def cache_prune():
 async def reviewer_stats():
     """Get reviewer agent statistics and configuration."""
     try:
-        from shared.core.config.central_config import get_central_config
+        from shared.core.config import get_central_config
         config = get_central_config()
         
         return {

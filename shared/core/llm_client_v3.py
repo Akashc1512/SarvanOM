@@ -90,8 +90,8 @@ from contextlib import asynccontextmanager
 
 from shared.core.error_handler import handle_critical_operation
 from shared.core.config.central_config import get_ollama_url
-from shared.core.logging.structured_logger import get_logger, log_execution_time
-from shared.core.metrics.metrics_service import get_metrics_service
+from shared.core.logging import get_logger, log_execution_time
+from shared.core.metrics import get_metrics_service
 
 # Load environment variables
 load_dotenv()
@@ -1572,7 +1572,7 @@ class EnhancedLLMClientV3:
         """Create embeddings with local-first strategy (free) and provider fallback."""
         # Prefer free/local embeddings when configured
         try:
-            from shared.core.config.central_config import get_central_config
+            from shared.core.config import get_central_config
             cfg = get_central_config()
             if getattr(cfg, "prioritize_free_models", True):
                 import anyio

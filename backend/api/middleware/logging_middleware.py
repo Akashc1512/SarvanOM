@@ -12,7 +12,7 @@ from fastapi import Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from shared.core.logging.structured_logger import get_logger, set_request_id, get_request_id
+from shared.core.logging import get_logger, set_request_id, get_request_id
 
 
 logger = get_logger(__name__)

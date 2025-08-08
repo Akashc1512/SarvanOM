@@ -22,7 +22,7 @@ def main():
     # Test 2: Try to import central config
     try:
         sys.path.insert(0, str(Path.cwd()))
-        from shared.core.config.central_config import get_central_config
+        from shared.core.config import get_central_config
         print("✅ Central config import successful")
     except Exception as e:
         print(f"❌ Central config import failed: {e}")

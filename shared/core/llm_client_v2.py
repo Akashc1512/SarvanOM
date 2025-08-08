@@ -775,7 +775,7 @@ class EnhancedLLMClient:
         """Create embeddings with local-first strategy (free) and fallback."""
         # Prefer free/local embeddings when configured
         try:
-            from shared.core.config.central_config import get_central_config
+            from shared.core.config import get_central_config
             cfg = get_central_config()
             if getattr(cfg, "prioritize_free_models", True):
                 import anyio

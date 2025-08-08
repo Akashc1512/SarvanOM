@@ -190,10 +190,10 @@ _legacy_client: Optional[LLMClient] = None
 
 
 def get_legacy_llm_client() -> LLMClient:
-    """Get global legacy LLM client instance."""
-    global _legacy_client
+    """Get a legacy LLM client instance."""
+    return LLMClient()
 
-    if _legacy_client is None:
-        _legacy_client = LLMClient()
 
-    return _legacy_client
+def get_llm_client() -> LLMClient:
+    """Get an LLM client instance (alias for get_legacy_llm_client for compatibility)."""
+    return get_legacy_llm_client()

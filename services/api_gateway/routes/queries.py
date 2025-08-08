@@ -17,7 +17,7 @@ from pydantic import ValidationError
 from shared.core.utilities.timing_utilities import time_operation, start_timer, calculate_execution_time
 from shared.core.utilities.response_utilities import create_success_response, create_error_response, add_execution_time
 import httpx
-from shared.core.config.central_config import get_central_config
+from shared.core.config import get_central_config
 from shared.contracts.query import (
     SynthesisRequest,
     RetrievalSearchRequest,

@@ -122,7 +122,7 @@ class MockOrchestrationResult:
 
 
 class MockModelType:
-    from shared.core.config.central_config import get_central_config
+    from shared.core.config import get_central_config
     config = get_central_config()
     GPT_4 = type('Enum', (), {'value': config.openai_model})()
 

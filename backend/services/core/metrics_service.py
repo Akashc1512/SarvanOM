@@ -165,6 +165,97 @@ class MetricsService:
         except Exception as e:
             logger.error(f"Error getting metrics summary: {e}", exc_info=True)
             return {}
+
+    # ---------------------------------------------------------------------
+    # HTTP request/response metrics (used by middleware)
+    # ---------------------------------------------------------------------
+    async def track_request_success(
+        self,
+        method: str,
+        path: str,
+        status_code: int,
+        processing_time: float,
+    ) -> None:
+        """Track successful HTTP request metrics.
+
+        This method is invoked by the error handling middleware after a
+        successful request completes.
+        """
+        try:
+            key_total = "http_requests_total"
+            self._counters[key_total] += 1
+
+            key_method = f"http_requests_total:{method.upper()}"
+            self._counters[key_method] += 1
+
+            key_path = f"http_requests_path_total:{path}"
+            self._counters[key_path] += 1
+
+            key_status = f"http_status_total:{status_code}"
+            self._counters[key_status] += 1
+
+            # Track processing time distributions
+            self._timers["http_request_duration_seconds"].append(processing_time)
+            self._histograms["http_request_duration_seconds"].append(processing_time)
+
+        except Exception as e:
+            logger.error(f"Error tracking request success metrics: {e}", exc_info=True)
+
+    async def track_request_error(
+        self,
+        method: str,
+        path: str,
+        status_code: int,
+        error_type: str,
+        processing_time: float,
+    ) -> None:
+        """Track errored HTTP request metrics.
+
+        This method is invoked by the error handling middleware when a
+        request results in an exception.
+        """
+        try:
+            self._counters["http_errors_total"] += 1
+            self._counters[f"http_errors_total:{error_type}"] += 1
+            self._counters[f"http_status_total:{status_code}"] += 1
+
+            # Duration even for errored requests
+            self._timers["http_request_duration_seconds"].append(processing_time)
+            self._histograms["http_request_duration_seconds"].append(processing_time)
+
+        except Exception as e:
+            logger.error(f"Error tracking request error metrics: {e}", exc_info=True)
+
+    async def track_performance_metrics(self, data: Dict[str, Any]) -> None:
+        """Track performance metrics provided by monitoring middleware."""
+        try:
+            endpoint = data.get("endpoint", "unknown")
+            processing_time = float(data.get("processing_time", 0.0))
+            status_code = int(data.get("status_code", 0))
+
+            self._timers[f"endpoint_duration_seconds:{endpoint}"].append(processing_time)
+            self._histograms[f"endpoint_duration_seconds:{endpoint}"].append(processing_time)
+            self._counters[f"endpoint_status_total:{endpoint}:{status_code}"] += 1
+
+            # Optional memory metrics if present
+            if "memory_usage" in data:
+                self._metrics["memory_usage_mb"] = data.get("memory_usage")
+            if "memory_delta" in data:
+                self._metrics["memory_delta_mb"] = data.get("memory_delta")
+
+        except Exception as e:
+            logger.error(f"Error tracking performance metrics: {e}", exc_info=True)
+
+    async def track_error_metrics(self, data: Dict[str, Any]) -> None:
+        """Track error metrics provided by monitoring middleware."""
+        try:
+            endpoint = data.get("endpoint", "unknown")
+            error_type = data.get("error_type", "UnknownError")
+            self._counters["http_errors_total"] += 1
+            self._counters[f"endpoint_errors_total:{endpoint}"] += 1
+            self._counters[f"http_errors_total:{error_type}"] += 1
+        except Exception as e:
+            logger.error(f"Error tracking error metrics: {e}", exc_info=True)
     
     def get_agent_metrics(self) -> Dict[str, Any]:
         """Get agent-specific metrics."""
