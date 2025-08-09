@@ -39,7 +39,7 @@ import yaml
 import logging
 
 from shared.core.api.config import get_settings
-from services.api-gateway.main import (
+from services.api_gateway.main import (
     QueryRequestValidator,
     FeedbackRequestValidator,
     QueryResponse,

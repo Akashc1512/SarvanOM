@@ -14,33 +14,40 @@ from typing import Dict, Any, Optional
 try:
     from fastapi import APIRouter, HTTPException, status
     from pydantic import BaseModel
+
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
+
     # Create dummy classes for testing
     class APIRouter:
         def __init__(self):
             pass
+
         def get(self, *args, **kwargs):
             def decorator(func):
                 return func
+
             return decorator
+
         def post(self, *args, **kwargs):
             def decorator(func):
                 return func
+
             return decorator
-    
+
     class HTTPException:
         pass
-    
+
     class status:
         HTTP_200_OK = 200
         HTTP_400_BAD_REQUEST = 400
-    
+
     class BaseModel:
         def __init__(self, **kwargs):
             for key, value in kwargs.items():
                 setattr(self, key, value)
+
 
 logger = get_logger(__name__)
 
@@ -109,7 +116,7 @@ async def health_check():
         status="OK",
         timestamp=datetime.now().isoformat(),
         service="API Gateway",
-        version="1.0.0"
+        version="1.0.0",
     )
 
 
@@ -122,7 +129,7 @@ async def root():
         "status": "running",
         "timestamp": datetime.now().isoformat(),
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
     }
 
 
@@ -142,8 +149,8 @@ async def search(request: SearchRequest):
         data={
             "query": request.query,
             "user_id": request.user_id,
-            "max_results": request.max_results
-        }
+            "max_results": request.max_results,
+        },
     )
 
 
@@ -156,7 +163,7 @@ async def hybrid_search(query: str, user_id: Optional[str] = None):
         message="Hybrid search request received - will route to retrieval service",
         service="search",
         timestamp=datetime.now().isoformat(),
-        data={"query": query, "user_id": user_id, "type": "hybrid"}
+        data={"query": query, "user_id": user_id, "type": "hybrid"},
     )
 
 
@@ -169,7 +176,7 @@ async def vector_search(query: str, top_k: int = 10):
         message="Vector search request received - will route to vector service",
         service="search",
         timestamp=datetime.now().isoformat(),
-        data={"query": query, "top_k": top_k, "type": "vector"}
+        data={"query": query, "top_k": top_k, "type": "vector"},
     )
 
 
@@ -186,10 +193,7 @@ async def fact_check(request: FactCheckRequest):
         message="Fact check request received - will route to fact-check service",
         service="fact-check",
         timestamp=datetime.now().isoformat(),
-        data={
-            "claim": request.claim,
-            "context": request.context
-        }
+        data={"claim": request.claim, "context": request.context},
     )
 
 
@@ -202,7 +206,7 @@ async def verify_claim(claim: str):
         message="Claim verification request received - will route to fact-check service",
         service="fact-check",
         timestamp=datetime.now().isoformat(),
-        data={"claim": claim, "type": "verification"}
+        data={"claim": claim, "type": "verification"},
     )
 
 
@@ -222,8 +226,8 @@ async def synthesize(request: SynthesisRequest):
         data={
             "content": request.content,
             "query": request.query,
-            "style": request.style
-        }
+            "style": request.style,
+        },
     )
 
 
@@ -236,7 +240,7 @@ async def add_citations(content: str, sources: list):
         message="Add citations request received - will route to synthesis service",
         service="synthesis",
         timestamp=datetime.now().isoformat(),
-        data={"content": content, "sources": sources, "type": "citations"}
+        data={"content": content, "sources": sources, "type": "citations"},
     )
 
 
@@ -253,7 +257,7 @@ async def login(request: AuthRequest):
         message="Login request received - will route to auth service",
         service="auth",
         timestamp=datetime.now().isoformat(),
-        data={"username": request.username}
+        data={"username": request.username},
     )
 
 
@@ -266,7 +270,7 @@ async def register(request: AuthRequest):
         message="Register request received - will route to auth service",
         service="auth",
         timestamp=datetime.now().isoformat(),
-        data={"username": request.username}
+        data={"username": request.username},
     )
 
 
@@ -279,7 +283,7 @@ async def get_profile(user_id: str):
         message="Get profile request received - will route to auth service",
         service="auth",
         timestamp=datetime.now().isoformat(),
-        data={"user_id": user_id}
+        data={"user_id": user_id},
     )
 
 
@@ -296,10 +300,7 @@ async def crawl(request: CrawlerRequest):
         message="Crawl request received - will route to crawler service",
         service="crawler",
         timestamp=datetime.now().isoformat(),
-        data={
-            "url": request.url,
-            "depth": request.depth
-        }
+        data={"url": request.url, "depth": request.depth},
     )
 
 
@@ -312,7 +313,7 @@ async def crawl_status(job_id: str):
         message="Crawl status request received - will route to crawler service",
         service="crawler",
         timestamp=datetime.now().isoformat(),
-        data={"job_id": job_id}
+        data={"job_id": job_id},
     )
 
 
@@ -329,10 +330,7 @@ async def vector_operation(request: VectorRequest):
         message="Vector operation request received - will route to vector service",
         service="vector",
         timestamp=datetime.now().isoformat(),
-        data={
-            "text": request.text,
-            "operation": request.operation
-        }
+        data={"text": request.text, "operation": request.operation},
     )
 
 
@@ -345,7 +343,7 @@ async def embed_text(text: str):
         message="Embed text request received - will route to vector service",
         service="vector",
         timestamp=datetime.now().isoformat(),
-        data={"text": text, "operation": "embed"}
+        data={"text": text, "operation": "embed"},
     )
 
 
@@ -358,7 +356,7 @@ async def vector_search_similar(text: str, top_k: int = 10):
         message="Vector similarity search request received - will route to vector service",
         service="vector",
         timestamp=datetime.now().isoformat(),
-        data={"text": text, "top_k": top_k, "operation": "search"}
+        data={"text": text, "top_k": top_k, "operation": "search"},
     )
 
 
@@ -375,10 +373,7 @@ async def graph_query(request: GraphRequest):
         message="Graph query request received - will route to graph service",
         service="graph",
         timestamp=datetime.now().isoformat(),
-        data={
-            "query": request.query,
-            "graph_type": request.graph_type
-        }
+        data={"query": request.query, "graph_type": request.graph_type},
     )
 
 
@@ -391,7 +386,7 @@ async def get_entities(query: str):
         message="Get entities request received - will route to graph service",
         service="graph",
         timestamp=datetime.now().isoformat(),
-        data={"query": query, "operation": "entities"}
+        data={"query": query, "operation": "entities"},
     )
 
 
@@ -404,5 +399,5 @@ async def get_relationships(entity: str):
         message="Get relationships request received - will route to graph service",
         service="graph",
         timestamp=datetime.now().isoformat(),
-        data={"entity": entity, "operation": "relationships"}
-    ) 
+        data={"entity": entity, "operation": "relationships"},
+    )

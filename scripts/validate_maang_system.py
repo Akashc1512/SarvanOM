@@ -45,7 +45,7 @@ from shared.core.api.monitoring import get_monitoring_manager
 from shared.core.performance import get_performance_monitor
 from services.analytics_service.analytics_v2 import get_analytics_processor
 from shared.core.ml_integration import get_model_manager
-from services.api-gateway.realtime import get_connection_manager
+from services.api_gateway.realtime import get_connection_manager
 
 # Configure logging
 structlog.configure(

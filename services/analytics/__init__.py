@@ -17,7 +17,7 @@ from .integration_monitor import IntegrationMonitor
 __all__ = [
     "AnalyticsService",
     "AnalyticsServiceV2",
-    "MetricsCollector", 
+    "MetricsCollector",
     "MonitoringService",
     "FeedbackStorage",
     "HealthCheckService",

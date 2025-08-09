@@ -16,7 +16,13 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from shared.core.agents.base_agent import BaseAgent, QueryContext, AgentResult, AgentMessage, AgentType
+from shared.core.agents.base_agent import (
+    BaseAgent,
+    QueryContext,
+    AgentResult,
+    AgentMessage,
+    AgentType,
+)
 from shared.core.agents.lead_orchestrator import LeadOrchestrator
 from shared.core.agents.retrieval_agent import RetrievalAgent
 from shared.core.agents.factcheck_agent import FactCheckAgent
@@ -64,7 +70,9 @@ class TestBaseAgent(unittest.TestCase):
             async def process_task(
                 self, task: Dict[str, Any], context: QueryContext
             ) -> AgentResult:
-                return AgentResult(success=True, data={"processed": task}, confidence=0.9)
+                return AgentResult(
+                    success=True, data={"processed": task}, confidence=0.9
+                )
 
         agent = TestAgent(self.agent_id, self.agent_type)
 
@@ -389,9 +397,15 @@ class TestSynthesisAgent(unittest.TestCase):
             {"claim": "Fact 3", "confidence": 0.7},
         ]
 
-        params = {"style": "informative", "length": "medium", "include_uncertainty": True}
+        params = {
+            "style": "informative",
+            "length": "medium",
+            "include_uncertainty": True,
+        }
 
-        result = asyncio.run(self.agent.synthesize(verified_facts, self.query_context, params))
+        result = asyncio.run(
+            self.agent.synthesize(verified_facts, self.query_context, params)
+        )
 
         self.assertIn("text", result)
         self.assertIn("key_points", result)
@@ -487,7 +501,9 @@ class TestCitationAgent(unittest.TestCase):
         """Test successful citation task"""
         task = {
             "content": "This is test content.",
-            "sources": [{"id": "source1", "title": "Test Source", "url": "http://example.com"}],
+            "sources": [
+                {"id": "source1", "title": "Test Source", "url": "http://example.com"}
+            ],
             "citation_style": "APA",
         }
 
@@ -502,7 +518,11 @@ class TestCitationAgent(unittest.TestCase):
 
     def test_process_task_error(self):
         """Test citation task with error"""
-        task = {"content": None, "sources": [], "citation_style": "APA"}  # Invalid input
+        task = {
+            "content": None,
+            "sources": [],
+            "citation_style": "APA",
+        }  # Invalid input
 
         result = asyncio.run(self.agent.process_task(task, self.query_context))
 
@@ -594,7 +614,9 @@ class TestLeadOrchestrator(unittest.TestCase):
         query = "cached query"
 
         # Mock cache hit
-        with patch.object(self.orchestrator.cache_manager, "get_cached_response") as mock_cache:
+        with patch.object(
+            self.orchestrator.cache_manager, "get_cached_response"
+        ) as mock_cache:
             mock_cache.return_value = {"response": "cached response"}
 
             result = asyncio.run(self.orchestrator.process_query(query))
@@ -636,7 +658,9 @@ class TestLeadOrchestrator(unittest.TestCase):
             confidence=0.9,
         )
 
-        quality = self.orchestrator._assess_result_quality(AgentType.RETRIEVAL, retrieval_result)
+        quality = self.orchestrator._assess_result_quality(
+            AgentType.RETRIEVAL, retrieval_result
+        )
         self.assertGreater(quality, 0.0)
         self.assertLessEqual(quality, 1.0)
 
@@ -652,15 +676,21 @@ class TestLeadOrchestrator(unittest.TestCase):
             confidence=0.85,
         )
 
-        quality = self.orchestrator._assess_result_quality(AgentType.FACT_CHECK, factcheck_result)
+        quality = self.orchestrator._assess_result_quality(
+            AgentType.FACT_CHECK, factcheck_result
+        )
         self.assertGreater(quality, 0.0)
         self.assertLessEqual(quality, 1.0)
 
     def test_generate_improvement_feedback(self):
         """Test feedback generation"""
-        result = AgentResult(success=True, data={"test": "data"}, confidence=0.5)  # Low confidence
+        result = AgentResult(
+            success=True, data={"test": "data"}, confidence=0.5
+        )  # Low confidence
 
-        feedback = self.orchestrator._generate_improvement_feedback(AgentType.RETRIEVAL, result)
+        feedback = self.orchestrator._generate_improvement_feedback(
+            AgentType.RETRIEVAL, result
+        )
 
         self.assertIn("quality_issues", feedback)
         self.assertIn("suggestions", feedback)
@@ -691,7 +721,10 @@ class TestAgentIntegration(unittest.TestCase):
                 "message_type": MessageType.TASK,
                 "timestamp": datetime.utcnow().isoformat(),
             },
-            payload={"task": {"strategy": "hybrid", "top_k": 5}, "context": self.query_context},
+            payload={
+                "task": {"strategy": "hybrid", "top_k": 5},
+                "context": self.query_context,
+            },
         )
 
         # Process the message

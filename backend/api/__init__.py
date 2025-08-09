@@ -9,8 +9,4 @@ from .routers import *
 from .middleware import *
 from .dependencies import *
 
-__all__ = [
-    "routers",
-    "middleware", 
-    "dependencies"
-] 
+__all__ = ["routers", "middleware", "dependencies"]

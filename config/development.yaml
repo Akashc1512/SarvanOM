@@ -27,7 +27,7 @@ meilisearch_url: "http://localhost:7700"
 # Knowledge Graph Configuration
 arangodb_url: "http://localhost:8529"
 arangodb_username: "root"
-arangodb_password: ""  # Empty for local dev
+arangodb_password: "arangodb"  # Empty for local dev
 arangodb_database: "knowledge_graph_dev"
 
 # Security Configuration (Development - relaxed settings)
@@ -53,7 +53,7 @@ skip_authentication: true  # Skip auth for easier development
 enable_debug_endpoints: true
 auto_reload: true
 test_mode: false
-mock_providers: true
+mock_providers: false
 
 # Agent Configuration
 agent_timeout_seconds: 60

@@ -30,7 +30,7 @@ from shared.core.agents.data_models import RetrievalResult, DocumentModel
 from shared.core.agents.common_patterns import (
     AgentProcessPattern,
     ValidationPattern,
-    time_operation
+    time_operation,
 )
 
 # Configure logging
@@ -101,7 +101,7 @@ class EntityExtractor:
         try:
             # Try LLM-based extraction first
             from shared.core.llm_client_v3 import EnhancedLLMClientV3
-            
+
             llm_client = EnhancedLLMClientV3()
             prompt = f"""
             Extract named entities from the following query. Return only the entity names, one per line:
@@ -110,12 +110,17 @@ class EntityExtractor:
             
             Entities:
             """
-            
+
             response = await llm_client.generate_text(prompt, max_tokens=100)
-            entities = [line.strip() for line in response.strip().split('\n') if line.strip()]
-            
-            return [{"name": entity, "type": "unknown", "confidence": 0.8} for entity in entities]
-            
+            entities = [
+                line.strip() for line in response.strip().split("\n") if line.strip()
+            ]
+
+            return [
+                {"name": entity, "type": "unknown", "confidence": 0.8}
+                for entity in entities
+            ]
+
         except Exception as e:
             self.logger.warning(f"LLM entity extraction failed: {e}, using fallback")
             return self._extract_common_entities(query)
@@ -124,23 +129,37 @@ class EntityExtractor:
         """Extract common entities as fallback."""
         # Simple keyword-based extraction
         keywords = [
-            "Python", "JavaScript", "React", "Vue", "Angular", "Node.js",
-            "Machine Learning", "AI", "Artificial Intelligence", "Data Science",
-            "Docker", "Kubernetes", "AWS", "Azure", "Google Cloud",
-            "MongoDB", "PostgreSQL", "MySQL", "Redis", "Elasticsearch"
+            "Python",
+            "JavaScript",
+            "React",
+            "Vue",
+            "Angular",
+            "Node.js",
+            "Machine Learning",
+            "AI",
+            "Artificial Intelligence",
+            "Data Science",
+            "Docker",
+            "Kubernetes",
+            "AWS",
+            "Azure",
+            "Google Cloud",
+            "MongoDB",
+            "PostgreSQL",
+            "MySQL",
+            "Redis",
+            "Elasticsearch",
         ]
-        
+
         entities = []
         query_lower = query.lower()
-        
+
         for keyword in keywords:
             if keyword.lower() in query_lower:
-                entities.append({
-                    "name": keyword,
-                    "type": "technology",
-                    "confidence": 0.9
-                })
-        
+                entities.append(
+                    {"name": keyword, "type": "technology", "confidence": 0.9}
+                )
+
         return entities
 
 
@@ -156,7 +175,7 @@ class RetrievalAgent(BaseAgent):
         # Initialize components
         self.config = config or self._default_config()
         self.entity_extractor = EntityExtractor()
-        
+
         # Initialize search clients
         self._initialize_search_clients()
 
@@ -168,32 +187,22 @@ class RetrievalAgent(BaseAgent):
             "vector_search": {
                 "enabled": True,
                 "top_k": 20,
-                "similarity_threshold": 0.7
+                "similarity_threshold": 0.7,
             },
-            "keyword_search": {
-                "enabled": True,
-                "top_k": 20
-            },
-            "knowledge_graph": {
-                "enabled": True,
-                "max_depth": 2
-            },
-            "web_search": {
-                "enabled": True,
-                "max_results": 10,
-                "timeout": 30
-            },
+            "keyword_search": {"enabled": True, "top_k": 20},
+            "knowledge_graph": {"enabled": True, "max_depth": 2},
+            "web_search": {"enabled": True, "max_results": 10, "timeout": 30},
             "token_optimization": {
                 "enabled": True,
                 "max_tokens": 4000,
-                "truncation_strategy": "smart"
+                "truncation_strategy": "smart",
             },
             "web_crawl_fallback": {
                 "enabled": True,
                 "max_pages": 5,
                 "timeout": 30,
-                "confidence_threshold": 0.6
-            }
+                "confidence_threshold": 0.6,
+            },
         }
 
     def _initialize_search_clients(self):
@@ -202,6 +211,7 @@ class RetrievalAgent(BaseAgent):
         self.vector_client = None
         try:
             from shared.core.services.vector_service import VectorService
+
             self.vector_client = VectorService()
         except Exception as e:
             self.logger.warning(f"Vector service not available: {e}")
@@ -210,6 +220,7 @@ class RetrievalAgent(BaseAgent):
         self.keyword_client = None
         try:
             from shared.core.services.search_service import SearchService
+
             self.keyword_client = SearchService()
         except Exception as e:
             self.logger.warning(f"Search service not available: {e}")
@@ -218,6 +229,7 @@ class RetrievalAgent(BaseAgent):
         self.graph_client = None
         try:
             from shared.core.services.knowledge_service import KnowledgeService
+
             self.graph_client = KnowledgeService()
         except Exception as e:
             self.logger.warning(f"Knowledge service not available: {e}")
@@ -226,6 +238,7 @@ class RetrievalAgent(BaseAgent):
         self.web_client = None
         try:
             from shared.core.services.web_service import WebService
+
             self.web_client = WebService()
         except Exception as e:
             self.logger.warning(f"Web service not available: {e}")
@@ -236,7 +249,7 @@ class RetrievalAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """
         Process retrieval task using shared utilities.
-        
+
         This method uses the standardized workflow from AgentProcessPattern
         while preserving ALL original functionality.
         """
@@ -247,7 +260,7 @@ class RetrievalAgent(BaseAgent):
             context=context,
             processing_func=self._process_retrieval_task,
             validation_func=ValidationPattern.validate_query_input,
-            timeout_seconds=60
+            timeout_seconds=60,
         )
 
     async def _process_retrieval_task(
@@ -255,7 +268,7 @@ class RetrievalAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """
         Process retrieval task with token optimization and web crawl fallback.
-        
+
         This preserves ALL original functionality while using shared patterns.
         """
         # Extract task parameters
@@ -282,29 +295,35 @@ class RetrievalAgent(BaseAgent):
             result = await self.hybrid_retrieve(query, entities)
 
         # Check if web crawl fallback is needed
-        if enable_web_fallback and self._should_use_web_crawl_fallback(result.documents, query):
+        if enable_web_fallback and self._should_use_web_crawl_fallback(
+            result.documents, query
+        ):
             logger.info("🔄 Local results insufficient, triggering web crawl fallback")
-            
+
             try:
                 # Perform web crawling with timeout
                 web_result = await asyncio.wait_for(
-                    self.web_crawl_fallback(query, max_pages=5, timeout=web_fallback_timeout),
-                    timeout=web_fallback_timeout
+                    self.web_crawl_fallback(
+                        query, max_pages=5, timeout=web_fallback_timeout
+                    ),
+                    timeout=web_fallback_timeout,
                 )
-                
+
                 # Merge web results with local results
                 if web_result.documents:
-                    logger.info(f"✅ Web crawl returned {len(web_result.documents)} documents")
-                    
+                    logger.info(
+                        f"✅ Web crawl returned {len(web_result.documents)} documents"
+                    )
+
                     # Combine documents from both sources
                     all_documents = result.documents + web_result.documents
-                    
+
                     # Re-rank combined results
                     reranked_documents = await self._llm_rerank(
                         f"Query: {query}\n\nRank these documents by relevance:",
-                        all_documents
+                        all_documents,
                     )
-                    
+
                     # Update result with merged documents
                     result = SearchResult(
                         documents=reranked_documents,
@@ -316,12 +335,12 @@ class RetrievalAgent(BaseAgent):
                             "web_crawl_used": True,
                             "web_crawl_documents": len(web_result.documents),
                             "web_crawl_time_ms": web_result.query_time_ms,
-                            "merged_sources": ["local", "web_crawl"]
-                        }
+                            "merged_sources": ["local", "web_crawl"],
+                        },
                     )
                 else:
                     logger.warning("⚠️ Web crawl returned no documents")
-                    
+
             except asyncio.TimeoutError:
                 logger.warning("⚠️ Web crawl fallback timed out")
             except Exception as e:
@@ -340,9 +359,7 @@ class RetrievalAgent(BaseAgent):
 
         # Create standardized retrieval result
         retrieval_data = RetrievalResult(
-            documents=[
-                DocumentModel(**doc.to_dict()) for doc in optimized_documents
-            ],
+            documents=[DocumentModel(**doc.to_dict()) for doc in optimized_documents],
             search_type=result.search_type,
             total_hits=result.total_hits,
             query_time_ms=result.query_time_ms,
@@ -350,8 +367,8 @@ class RetrievalAgent(BaseAgent):
                 **result.metadata,
                 "estimated_tokens": estimated_tokens,
                 "confidence": confidence,
-                "optimization_applied": True
-            }
+                "optimization_applied": True,
+            },
         )
 
         return {
@@ -361,12 +378,12 @@ class RetrievalAgent(BaseAgent):
                 "search_type": search_type,
                 "documents_found": len(optimized_documents),
                 "estimated_tokens": estimated_tokens,
-                "web_crawl_used": result.metadata.get("web_crawl_used", False)
-            }
+                "web_crawl_used": result.metadata.get("web_crawl_used", False),
+            },
         }
 
     # ALL ORIGINAL METHODS PRESERVED - NO FUNCTIONALITY LOST
-    
+
     async def vector_search(self, query: str, top_k: int = 20) -> SearchResult:
         """Perform vector search."""
         # Original implementation preserved
@@ -419,10 +436,10 @@ class RetrievalAgent(BaseAgent):
         pass
 
     def _should_use_web_crawl_fallback(
-        self, 
-        local_results: List[Document], 
+        self,
+        local_results: List[Document],
         query: str,
-        confidence_threshold: float = 0.6
+        confidence_threshold: float = 0.6,
     ) -> bool:
         """Determine if web crawl fallback should be used."""
         # Original implementation preserved
@@ -435,4 +452,4 @@ class RetrievalAgent(BaseAgent):
         # Original implementation preserved
         pass
 
-    # ... ALL OTHER ORIGINAL METHODS PRESERVED ... 
+    # ... ALL OTHER ORIGINAL METHODS PRESERVED ...

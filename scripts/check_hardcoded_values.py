@@ -109,7 +109,9 @@ def scan_directory(directory: str) -> List[Dict[str, Any]]:
 
     for root, dirs, files in os.walk(directory):
         # Skip virtual environments and git directories
-        dirs[:] = [d for d in dirs if not d.startswith(".") and d != "venv" and d != ".venv"]
+        dirs[:] = [
+            d for d in dirs if not d.startswith(".") and d != "venv" and d != ".venv"
+        ]
 
         for file in files:
             if file.endswith(".py"):
@@ -172,7 +174,9 @@ def generate_report(hardcoded_values: List[Dict[str, Any]]) -> str:
         elif category == "HOST":
             suggested_vars.add(f"{item['description'].upper().replace(' ', '_')}_HOST")
         elif category == "TIMEOUT":
-            suggested_vars.add(f"{item['description'].upper().replace(' ', '_')}_TIMEOUT")
+            suggested_vars.add(
+                f"{item['description'].upper().replace(' ', '_')}_TIMEOUT"
+            )
         elif category == "TTL":
             suggested_vars.add(f"{item['description'].upper().replace(' ', '_')}_TTL")
         elif category == "LIMIT":
@@ -180,7 +184,9 @@ def generate_report(hardcoded_values: List[Dict[str, Any]]) -> str:
         elif category == "BUDGET":
             suggested_vars.add(f"{item['description'].upper().replace(' ', '_')}")
         elif category == "THRESHOLD":
-            suggested_vars.add(f"{item['description'].upper().replace(' ', '_')}_THRESHOLD")
+            suggested_vars.add(
+                f"{item['description'].upper().replace(' ', '_')}_THRESHOLD"
+            )
         elif category == "DB":
             suggested_vars.add(f"{item['description'].upper().replace(' ', '_')}_NAME")
 

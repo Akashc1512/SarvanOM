@@ -12,6 +12,7 @@ from enum import Enum
 
 class QueryStatus(Enum):
     """Query processing status."""
+
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -21,6 +22,7 @@ class QueryStatus(Enum):
 
 class QueryType(Enum):
     """Types of queries."""
+
     BASIC = "basic"
     COMPREHENSIVE = "comprehensive"
     FACT_CHECK = "fact_check"
@@ -30,6 +32,7 @@ class QueryType(Enum):
 @dataclass
 class QueryContext:
     """Context information for query processing."""
+
     user_id: str
     session_id: str
     timestamp: datetime = field(default_factory=datetime.now)
@@ -41,6 +44,7 @@ class QueryContext:
 @dataclass
 class QueryResult:
     """Result of query processing."""
+
     query_id: str
     answer: str
     sources: List[Dict[str, Any]] = field(default_factory=list)
@@ -53,6 +57,7 @@ class QueryResult:
 @dataclass
 class Query:
     """Core query domain model."""
+
     id: str
     text: str
     context: QueryContext
@@ -61,45 +66,43 @@ class Query:
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
     result: Optional[QueryResult] = None
-    
+
     def __post_init__(self):
         """Validate query after initialization."""
         if not self.text.strip():
             raise ValueError("Query text cannot be empty")
-        
+
         if len(self.text) > 10000:
             raise ValueError("Query text too long (max 10000 characters)")
-    
+
     def mark_processing(self):
         """Mark query as processing."""
         self.status = QueryStatus.PROCESSING
         self.updated_at = datetime.now()
-    
+
     def mark_completed(self, result: QueryResult):
         """Mark query as completed with result."""
         self.status = QueryStatus.COMPLETED
         self.result = result
         self.updated_at = datetime.now()
-    
+
     def mark_failed(self, error: str):
         """Mark query as failed."""
         self.status = QueryStatus.FAILED
         self.updated_at = datetime.now()
         if self.result is None:
             self.result = QueryResult(
-                query_id=self.id,
-                answer=f"Error: {error}",
-                confidence=0.0
+                query_id=self.id, answer=f"Error: {error}", confidence=0.0
             )
-    
+
     def is_completed(self) -> bool:
         """Check if query is completed."""
         return self.status == QueryStatus.COMPLETED
-    
+
     def is_failed(self) -> bool:
         """Check if query failed."""
         return self.status == QueryStatus.FAILED
-    
+
     def can_be_processed(self) -> bool:
         """Check if query can be processed."""
-        return self.status in [QueryStatus.PENDING, QueryStatus.PROCESSING] 
+        return self.status in [QueryStatus.PENDING, QueryStatus.PROCESSING]

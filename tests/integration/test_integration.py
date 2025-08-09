@@ -20,7 +20,7 @@ sys.path.append("..")
 # Import application components
 from shared.core.agents.lead_orchestrator import LeadOrchestrator
 from core.config_manager import ConfigurationManager
-from services.api-gateway.main import app
+from services.api_gateway.main import app
 from fastapi.testclient import TestClient
 
 

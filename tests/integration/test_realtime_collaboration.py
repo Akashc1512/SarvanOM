@@ -41,7 +41,7 @@ from shared.core.socket_io_manager import (
     SocketIOManager, PresenceManager, RoomManager, OperationalTransformer,
     UserPresence, DocumentOperation, RoomState, PresenceStatus
 )
-from services.api-gateway.realtime import (
+from services.api_gateway.realtime import (
     ConnectionManager, RealtimeMessage, MessageType
 )
 

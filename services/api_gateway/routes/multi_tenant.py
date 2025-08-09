@@ -14,14 +14,14 @@ from ..models.requests import (
     CreateTenantRequest,
     UpdateTenantRequest,
     TenantConfigRequest,
-    UsageTrackingRequest
+    UsageTrackingRequest,
 )
 from ..models.responses import (
     TenantResponse,
     TenantListResponse,
     TenantUsageResponse,
     TenantStatsResponse,
-    TenantConfigResponse
+    TenantConfigResponse,
 )
 from ..middleware import get_current_user
 from shared.core.unified_logging import get_logger
@@ -30,11 +30,12 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/tenants", tags=["Multi-Tenant Management"])
 
+
 @router.post("/", response_model=TenantResponse)
 async def create_tenant(request: CreateTenantRequest):
     """
     Create a new tenant.
-    
+
     Creates a new tenant with the specified configuration and tier.
     """
     try:
@@ -43,9 +44,9 @@ async def create_tenant(request: CreateTenantRequest):
             domain=request.domain,
             owner_id=request.owner_id,
             tier=request.tier,
-            admin_emails=request.admin_emails
+            admin_emails=request.admin_emails,
         )
-        
+
         return TenantResponse(
             id=tenant.id,
             name=tenant.name,
@@ -57,23 +58,28 @@ async def create_tenant(request: CreateTenantRequest):
                 features_enabled=tenant.config.features_enabled,
                 custom_settings=tenant.config.custom_settings,
                 api_rate_limit=tenant.config.api_rate_limit,
-                storage_limit_gb=tenant.config.storage_limit_gb
+                storage_limit_gb=tenant.config.storage_limit_gb,
             ),
             usage=TenantUsageResponse(
                 api_calls_this_month=tenant.usage.api_calls_this_month,
                 storage_used_gb=tenant.usage.storage_used_gb,
                 active_users=tenant.usage.active_users,
-                last_activity=tenant.usage.last_activity.isoformat() if tenant.usage.last_activity else None
+                last_activity=(
+                    tenant.usage.last_activity.isoformat()
+                    if tenant.usage.last_activity
+                    else None
+                ),
             ),
             created_at=tenant.created_at.isoformat(),
-            updated_at=tenant.updated_at.isoformat()
+            updated_at=tenant.updated_at.isoformat(),
         )
     except Exception as e:
         logger.error(f"Failed to create tenant: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create tenant"
+            detail="Failed to create tenant",
         )
+
 
 @router.get("/{tenant_id}", response_model=TenantResponse)
 async def get_tenant(tenant_id: str):
@@ -84,10 +90,9 @@ async def get_tenant(tenant_id: str):
         tenant = await multi_tenant_service.get_tenant(tenant_id)
         if not tenant:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Tenant not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
             )
-        
+
         return TenantResponse(
             id=tenant.id,
             name=tenant.name,
@@ -99,16 +104,20 @@ async def get_tenant(tenant_id: str):
                 features_enabled=tenant.config.features_enabled,
                 custom_settings=tenant.config.custom_settings,
                 api_rate_limit=tenant.config.api_rate_limit,
-                storage_limit_gb=tenant.config.storage_limit_gb
+                storage_limit_gb=tenant.config.storage_limit_gb,
             ),
             usage=TenantUsageResponse(
                 api_calls_this_month=tenant.usage.api_calls_this_month,
                 storage_used_gb=tenant.usage.storage_used_gb,
                 active_users=tenant.usage.active_users,
-                last_activity=tenant.usage.last_activity.isoformat() if tenant.usage.last_activity else None
+                last_activity=(
+                    tenant.usage.last_activity.isoformat()
+                    if tenant.usage.last_activity
+                    else None
+                ),
             ),
             created_at=tenant.created_at.isoformat(),
-            updated_at=tenant.updated_at.isoformat()
+            updated_at=tenant.updated_at.isoformat(),
         )
     except HTTPException:
         raise
@@ -116,8 +125,9 @@ async def get_tenant(tenant_id: str):
         logger.error(f"Failed to get tenant: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get tenant"
+            detail="Failed to get tenant",
         )
+
 
 @router.get("/domain/{domain}", response_model=TenantResponse)
 async def get_tenant_by_domain(domain: str):
@@ -128,10 +138,9 @@ async def get_tenant_by_domain(domain: str):
         tenant = await multi_tenant_service.get_tenant_by_domain(domain)
         if not tenant:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Tenant not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
             )
-        
+
         return TenantResponse(
             id=tenant.id,
             name=tenant.name,
@@ -143,16 +152,20 @@ async def get_tenant_by_domain(domain: str):
                 features_enabled=tenant.config.features_enabled,
                 custom_settings=tenant.config.custom_settings,
                 api_rate_limit=tenant.config.api_rate_limit,
-                storage_limit_gb=tenant.config.storage_limit_gb
+                storage_limit_gb=tenant.config.storage_limit_gb,
             ),
             usage=TenantUsageResponse(
                 api_calls_this_month=tenant.usage.api_calls_this_month,
                 storage_used_gb=tenant.usage.storage_used_gb,
                 active_users=tenant.usage.active_users,
-                last_activity=tenant.usage.last_activity.isoformat() if tenant.usage.last_activity else None
+                last_activity=(
+                    tenant.usage.last_activity.isoformat()
+                    if tenant.usage.last_activity
+                    else None
+                ),
             ),
             created_at=tenant.created_at.isoformat(),
-            updated_at=tenant.updated_at.isoformat()
+            updated_at=tenant.updated_at.isoformat(),
         )
     except HTTPException:
         raise
@@ -160,8 +173,9 @@ async def get_tenant_by_domain(domain: str):
         logger.error(f"Failed to get tenant by domain: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get tenant"
+            detail="Failed to get tenant",
         )
+
 
 @router.put("/{tenant_id}/status")
 async def update_tenant_status(tenant_id: str, status: str):
@@ -170,23 +184,24 @@ async def update_tenant_status(tenant_id: str, status: str):
     """
     try:
         from ..services.multi_tenant_service import TenantStatus
-        
+
         # Convert string to enum
         try:
             tenant_status = TenantStatus(status)
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid status: {status}. Valid values: {[s.value for s in TenantStatus]}"
+                detail=f"Invalid status: {status}. Valid values: {[s.value for s in TenantStatus]}",
             )
-        
-        success = await multi_tenant_service.update_tenant_status(tenant_id, tenant_status)
+
+        success = await multi_tenant_service.update_tenant_status(
+            tenant_id, tenant_status
+        )
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Tenant not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
             )
-        
+
         return {"message": f"Tenant status updated to {status}"}
     except HTTPException:
         raise
@@ -194,8 +209,9 @@ async def update_tenant_status(tenant_id: str, status: str):
         logger.error(f"Failed to update tenant status: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update tenant status"
+            detail="Failed to update tenant status",
         )
+
 
 @router.put("/{tenant_id}/tier")
 async def upgrade_tenant_tier(tenant_id: str, tier: str):
@@ -204,23 +220,22 @@ async def upgrade_tenant_tier(tenant_id: str, tier: str):
     """
     try:
         from ..services.multi_tenant_service import TenantTier
-        
+
         # Convert string to enum
         try:
             tenant_tier = TenantTier(tier)
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid tier: {tier}. Valid values: {[t.value for t in TenantTier]}"
+                detail=f"Invalid tier: {tier}. Valid values: {[t.value for t in TenantTier]}",
             )
-        
+
         success = await multi_tenant_service.upgrade_tenant_tier(tenant_id, tenant_tier)
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Tenant not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
             )
-        
+
         return {"message": f"Tenant tier upgraded to {tier}"}
     except HTTPException:
         raise
@@ -228,8 +243,9 @@ async def upgrade_tenant_tier(tenant_id: str, tier: str):
         logger.error(f"Failed to upgrade tenant tier: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to upgrade tenant tier"
+            detail="Failed to upgrade tenant tier",
         )
+
 
 @router.post("/{tenant_id}/track/api-call")
 async def track_api_call(tenant_id: str):
@@ -240,10 +256,9 @@ async def track_api_call(tenant_id: str):
         success = await multi_tenant_service.track_api_call(tenant_id)
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Tenant not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
             )
-        
+
         return {"message": "API call tracked successfully"}
     except HTTPException:
         raise
@@ -251,8 +266,9 @@ async def track_api_call(tenant_id: str):
         logger.error(f"Failed to track API call: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to track API call"
+            detail="Failed to track API call",
         )
+
 
 @router.post("/{tenant_id}/track/storage")
 async def track_storage_usage(tenant_id: str, request: UsageTrackingRequest):
@@ -260,13 +276,14 @@ async def track_storage_usage(tenant_id: str, request: UsageTrackingRequest):
     Track storage usage for the tenant.
     """
     try:
-        success = await multi_tenant_service.track_storage_usage(tenant_id, request.storage_gb)
+        success = await multi_tenant_service.track_storage_usage(
+            tenant_id, request.storage_gb
+        )
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Tenant not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
             )
-        
+
         return {"message": "Storage usage tracked successfully"}
     except HTTPException:
         raise
@@ -274,8 +291,9 @@ async def track_storage_usage(tenant_id: str, request: UsageTrackingRequest):
         logger.error(f"Failed to track storage usage: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to track storage usage"
+            detail="Failed to track storage usage",
         )
+
 
 @router.post("/{tenant_id}/track/user-activity")
 async def track_user_activity(tenant_id: str, user_id: str):
@@ -286,10 +304,9 @@ async def track_user_activity(tenant_id: str, user_id: str):
         success = await multi_tenant_service.track_user_activity(tenant_id, user_id)
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Tenant not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
             )
-        
+
         return {"message": "User activity tracked successfully"}
     except HTTPException:
         raise
@@ -297,8 +314,9 @@ async def track_user_activity(tenant_id: str, user_id: str):
         logger.error(f"Failed to track user activity: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to track user activity"
+            detail="Failed to track user activity",
         )
+
 
 @router.get("/{tenant_id}/usage", response_model=TenantUsageResponse)
 async def get_tenant_usage(tenant_id: str):
@@ -309,10 +327,9 @@ async def get_tenant_usage(tenant_id: str):
         usage_data = await multi_tenant_service.get_tenant_usage(tenant_id)
         if not usage_data:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Tenant not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
             )
-        
+
         return TenantUsageResponse(**usage_data)
     except HTTPException:
         raise
@@ -320,8 +337,9 @@ async def get_tenant_usage(tenant_id: str):
         logger.error(f"Failed to get tenant usage: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get tenant usage"
+            detail="Failed to get tenant usage",
         )
+
 
 @router.get("/", response_model=TenantListResponse)
 async def get_all_tenants():
@@ -330,39 +348,46 @@ async def get_all_tenants():
     """
     try:
         tenants = await multi_tenant_service.get_all_tenants()
-        
+
         tenant_responses = []
         for tenant in tenants:
-            tenant_responses.append(TenantResponse(
-                id=tenant.id,
-                name=tenant.name,
-                domain=tenant.domain,
-                owner_id=tenant.owner_id,
-                tier=tenant.tier.value,
-                status=tenant.status.value,
-                config=TenantConfigResponse(
-                    features_enabled=tenant.config.features_enabled,
-                    custom_settings=tenant.config.custom_settings,
-                    api_rate_limit=tenant.config.api_rate_limit,
-                    storage_limit_gb=tenant.config.storage_limit_gb
-                ),
-                usage=TenantUsageResponse(
-                    api_calls_this_month=tenant.usage.api_calls_this_month,
-                    storage_used_gb=tenant.usage.storage_used_gb,
-                    active_users=tenant.usage.active_users,
-                    last_activity=tenant.usage.last_activity.isoformat() if tenant.usage.last_activity else None
-                ),
-                created_at=tenant.created_at.isoformat(),
-                updated_at=tenant.updated_at.isoformat()
-            ))
-        
+            tenant_responses.append(
+                TenantResponse(
+                    id=tenant.id,
+                    name=tenant.name,
+                    domain=tenant.domain,
+                    owner_id=tenant.owner_id,
+                    tier=tenant.tier.value,
+                    status=tenant.status.value,
+                    config=TenantConfigResponse(
+                        features_enabled=tenant.config.features_enabled,
+                        custom_settings=tenant.config.custom_settings,
+                        api_rate_limit=tenant.config.api_rate_limit,
+                        storage_limit_gb=tenant.config.storage_limit_gb,
+                    ),
+                    usage=TenantUsageResponse(
+                        api_calls_this_month=tenant.usage.api_calls_this_month,
+                        storage_used_gb=tenant.usage.storage_used_gb,
+                        active_users=tenant.usage.active_users,
+                        last_activity=(
+                            tenant.usage.last_activity.isoformat()
+                            if tenant.usage.last_activity
+                            else None
+                        ),
+                    ),
+                    created_at=tenant.created_at.isoformat(),
+                    updated_at=tenant.updated_at.isoformat(),
+                )
+            )
+
         return TenantListResponse(tenants=tenant_responses, total=len(tenant_responses))
     except Exception as e:
         logger.error(f"Failed to get all tenants: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get tenants"
+            detail="Failed to get tenants",
         )
+
 
 @router.get("/active", response_model=TenantListResponse)
 async def get_active_tenants():
@@ -371,39 +396,46 @@ async def get_active_tenants():
     """
     try:
         tenants = await multi_tenant_service.get_active_tenants()
-        
+
         tenant_responses = []
         for tenant in tenants:
-            tenant_responses.append(TenantResponse(
-                id=tenant.id,
-                name=tenant.name,
-                domain=tenant.domain,
-                owner_id=tenant.owner_id,
-                tier=tenant.tier.value,
-                status=tenant.status.value,
-                config=TenantConfigResponse(
-                    features_enabled=tenant.config.features_enabled,
-                    custom_settings=tenant.config.custom_settings,
-                    api_rate_limit=tenant.config.api_rate_limit,
-                    storage_limit_gb=tenant.config.storage_limit_gb
-                ),
-                usage=TenantUsageResponse(
-                    api_calls_this_month=tenant.usage.api_calls_this_month,
-                    storage_used_gb=tenant.usage.storage_used_gb,
-                    active_users=tenant.usage.active_users,
-                    last_activity=tenant.usage.last_activity.isoformat() if tenant.usage.last_activity else None
-                ),
-                created_at=tenant.created_at.isoformat(),
-                updated_at=tenant.updated_at.isoformat()
-            ))
-        
+            tenant_responses.append(
+                TenantResponse(
+                    id=tenant.id,
+                    name=tenant.name,
+                    domain=tenant.domain,
+                    owner_id=tenant.owner_id,
+                    tier=tenant.tier.value,
+                    status=tenant.status.value,
+                    config=TenantConfigResponse(
+                        features_enabled=tenant.config.features_enabled,
+                        custom_settings=tenant.config.custom_settings,
+                        api_rate_limit=tenant.config.api_rate_limit,
+                        storage_limit_gb=tenant.config.storage_limit_gb,
+                    ),
+                    usage=TenantUsageResponse(
+                        api_calls_this_month=tenant.usage.api_calls_this_month,
+                        storage_used_gb=tenant.usage.storage_used_gb,
+                        active_users=tenant.usage.active_users,
+                        last_activity=(
+                            tenant.usage.last_activity.isoformat()
+                            if tenant.usage.last_activity
+                            else None
+                        ),
+                    ),
+                    created_at=tenant.created_at.isoformat(),
+                    updated_at=tenant.updated_at.isoformat(),
+                )
+            )
+
         return TenantListResponse(tenants=tenant_responses, total=len(tenant_responses))
     except Exception as e:
         logger.error(f"Failed to get active tenants: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get active tenants"
+            detail="Failed to get active tenants",
         )
+
 
 @router.get("/stats", response_model=TenantStatsResponse)
 async def get_tenant_stats():
@@ -417,8 +449,9 @@ async def get_tenant_stats():
         logger.error(f"Failed to get tenant stats: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get tenant statistics"
+            detail="Failed to get tenant statistics",
         )
+
 
 @router.post("/{tenant_id}/reset-usage")
 async def reset_monthly_usage(tenant_id: str):
@@ -429,10 +462,9 @@ async def reset_monthly_usage(tenant_id: str):
         success = await multi_tenant_service.reset_monthly_usage(tenant_id)
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Tenant not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
             )
-        
+
         return {"message": "Monthly usage reset successfully"}
     except HTTPException:
         raise
@@ -440,8 +472,9 @@ async def reset_monthly_usage(tenant_id: str):
         logger.error(f"Failed to reset monthly usage: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to reset monthly usage"
+            detail="Failed to reset monthly usage",
         )
+
 
 @router.get("/{tenant_id}/feature/{feature}")
 async def is_feature_enabled(tenant_id: str, feature: str):
@@ -455,8 +488,9 @@ async def is_feature_enabled(tenant_id: str, feature: str):
         logger.error(f"Failed to check feature: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to check feature"
+            detail="Failed to check feature",
         )
+
 
 @router.get("/{tenant_id}/config", response_model=TenantConfigResponse)
 async def get_tenant_config(tenant_id: str):
@@ -467,15 +501,14 @@ async def get_tenant_config(tenant_id: str):
         config = await multi_tenant_service.get_tenant_config(tenant_id)
         if not config:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Tenant not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
             )
-        
+
         return TenantConfigResponse(
             features_enabled=config.features_enabled,
             custom_settings=config.custom_settings,
             api_rate_limit=config.api_rate_limit,
-            storage_limit_gb=config.storage_limit_gb
+            storage_limit_gb=config.storage_limit_gb,
         )
     except HTTPException:
         raise
@@ -483,8 +516,9 @@ async def get_tenant_config(tenant_id: str):
         logger.error(f"Failed to get tenant config: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get tenant configuration"
+            detail="Failed to get tenant configuration",
         )
+
 
 @router.put("/{tenant_id}/config")
 async def update_tenant_config(tenant_id: str, request: TenantConfigRequest):
@@ -493,21 +527,20 @@ async def update_tenant_config(tenant_id: str, request: TenantConfigRequest):
     """
     try:
         from ..services.multi_tenant_service import TenantConfig
-        
+
         config = TenantConfig(
             features_enabled=request.features_enabled,
             custom_settings=request.custom_settings,
             api_rate_limit=request.api_rate_limit,
-            storage_limit_gb=request.storage_limit_gb
+            storage_limit_gb=request.storage_limit_gb,
         )
-        
+
         success = await multi_tenant_service.update_tenant_config(tenant_id, config)
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Tenant not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Tenant not found"
             )
-        
+
         return {"message": "Tenant configuration updated successfully"}
     except HTTPException:
         raise
@@ -515,5 +548,5 @@ async def update_tenant_config(tenant_id: str, request: TenantConfigRequest):
         logger.error(f"Failed to update tenant config: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update tenant configuration"
+            detail="Failed to update tenant configuration",
         )

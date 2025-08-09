@@ -15,8 +15,12 @@ from httpx import AsyncClient
 # Import application components
 from ..main import app
 from ..api.dependencies import (
-    get_cache_service, get_metrics_service, get_query_orchestrator,
-    get_query_repository, get_user_repository, get_agent_repository
+    get_cache_service,
+    get_metrics_service,
+    get_query_orchestrator,
+    get_query_repository,
+    get_user_repository,
+    get_agent_repository,
 )
 from ..repositories.query_repository import QueryRepositoryImpl
 from ..repositories.user_repository import UserRepositoryImpl
@@ -59,7 +63,9 @@ async def test_query_repository():
     repository = QueryRepositoryImpl(storage_type="memory")
     yield repository
     # Cleanup
-    if hasattr(repository, '_memory_store') and hasattr(repository._memory_store, 'clear'):
+    if hasattr(repository, "_memory_store") and hasattr(
+        repository._memory_store, "clear"
+    ):
         repository._memory_store.clear()
 
 
@@ -69,7 +75,9 @@ async def test_user_repository():
     repository = UserRepositoryImpl(storage_type="memory")
     yield repository
     # Cleanup
-    if hasattr(repository, '_memory_store') and hasattr(repository._memory_store, 'clear'):
+    if hasattr(repository, "_memory_store") and hasattr(
+        repository._memory_store, "clear"
+    ):
         repository._memory_store.clear()
 
 
@@ -79,30 +87,30 @@ async def test_agent_repository():
     repository = AgentRepositoryImpl(storage_type="memory")
     yield repository
     # Cleanup
-    if hasattr(repository, '_memory_store') and hasattr(repository._memory_store, 'clear'):
+    if hasattr(repository, "_memory_store") and hasattr(
+        repository._memory_store, "clear"
+    ):
         repository._memory_store.clear()
 
 
 @pytest.fixture
 async def test_query_orchestrator(
-    test_query_repository,
-    test_cache_service,
-    test_metrics_service
+    test_query_repository, test_cache_service, test_metrics_service
 ):
     """Create a test query orchestrator with mocked dependencies."""
-    
+
     # Mock query processor and validator
     mock_processor = AsyncMock()
     mock_validator = AsyncMock()
-    
+
     # Mock successful processing
     mock_processor.process_basic_query.return_value = {
         "answer": "Test answer",
         "confidence": 0.95,
         "processing_time": 0.1,
-        "metadata": {}
+        "metadata": {},
     }
-    
+
     mock_processor.process_comprehensive_query.return_value = {
         "answer": "Comprehensive test answer",
         "confidence": 0.98,
@@ -110,17 +118,17 @@ async def test_query_orchestrator(
         "sources": ["source1", "source2"],
         "alternatives": [],
         "quality_metrics": {},
-        "metadata": {}
+        "metadata": {},
     }
-    
+
     orchestrator = QueryOrchestrator(
         query_processor=mock_processor,
         query_validator=mock_validator,
         cache_service=test_cache_service,
         metrics_service=test_metrics_service,
-        query_repository=test_query_repository
+        query_repository=test_query_repository,
     )
-    
+
     yield orchestrator
 
 
@@ -129,7 +137,7 @@ def test_client():
     """Create a test client for the FastAPI application."""
     # Override dependencies with test instances
     app.dependency_overrides = {}
-    
+
     # Use test client
     with TestClient(app) as client:
         yield client
@@ -153,10 +161,10 @@ def sample_query():
             session_id="test-session",
             max_tokens=100,
             confidence_threshold=0.8,
-            metadata={"test": True}
+            metadata={"test": True},
         ),
         query_type=QueryType.BASIC,
-        status=QueryStatus.PENDING
+        status=QueryStatus.PENDING,
     )
 
 
@@ -171,7 +179,7 @@ def sample_user():
         role=UserRole.USER,
         status=UserStatus.ACTIVE,
         display_name="Test User",
-        metadata={"test": True}
+        metadata={"test": True},
     )
 
 
@@ -183,14 +191,10 @@ def sample_agent():
         name="test-agent",
         agent_type=AgentType.RETRIEVAL,
         status=AgentStatus.ACTIVE,
-        config={
-            "model": "test-model",
-            "max_tokens": 100,
-            "temperature": 0.7
-        },
+        config={"model": "test-model", "max_tokens": 100, "temperature": 0.7},
         description="Test agent for unit tests",
         version="1.0.0",
-        metadata={"test": True}
+        metadata={"test": True},
     )
 
 
@@ -202,7 +206,7 @@ def sample_query_request():
         "session_id": "test-session",
         "max_tokens": 100,
         "confidence_threshold": 0.8,
-        "cache_enabled": True
+        "cache_enabled": True,
     }
 
 
@@ -211,9 +215,9 @@ def sample_user_request():
     """Create a sample user request for testing."""
     return {
         "username": "testuser",
-        "email": "test@example.com", 
+        "email": "test@example.com",
         "password": "test_password",
-        "display_name": "Test User"
+        "display_name": "Test User",
     }
 
 
@@ -223,19 +227,15 @@ def sample_agent_request():
     return {
         "name": "test-agent",
         "agent_type": "retrieval",
-        "config": {
-            "model": "test-model",
-            "max_tokens": 100,
-            "temperature": 0.7
-        },
-        "description": "Test agent for API testing"
+        "config": {"model": "test-model", "max_tokens": 100, "temperature": 0.7},
+        "description": "Test agent for API testing",
     }
 
 
 @pytest.fixture
 def mock_dependencies():
     """Mock all application dependencies for isolated testing."""
-    
+
     # Create mock instances
     mock_cache = AsyncMock(spec=CacheService)
     mock_metrics = AsyncMock(spec=MetricsService)
@@ -243,17 +243,17 @@ def mock_dependencies():
     mock_user_repo = AsyncMock(spec=UserRepositoryImpl)
     mock_agent_repo = AsyncMock(spec=AgentRepositoryImpl)
     mock_orchestrator = AsyncMock(spec=QueryOrchestrator)
-    
+
     # Setup mock responses
     mock_cache.get.return_value = None
     mock_cache.set.return_value = True
     mock_cache.clear.return_value = True
     mock_cache.get_stats.return_value = {"hits": 0, "misses": 0}
-    
+
     mock_metrics.track_query_processing.return_value = None
     mock_metrics.track_query_error.return_value = None
     mock_metrics.get_metrics_summary.return_value = {"total_queries": 0}
-    
+
     # Override dependencies
     app.dependency_overrides[get_cache_service] = lambda: mock_cache
     app.dependency_overrides[get_metrics_service] = lambda: mock_metrics
@@ -261,16 +261,16 @@ def mock_dependencies():
     app.dependency_overrides[get_user_repository] = lambda: mock_user_repo
     app.dependency_overrides[get_agent_repository] = lambda: mock_agent_repo
     app.dependency_overrides[get_query_orchestrator] = lambda: mock_orchestrator
-    
+
     yield {
         "cache": mock_cache,
         "metrics": mock_metrics,
         "query_repo": mock_query_repo,
         "user_repo": mock_user_repo,
         "agent_repo": mock_agent_repo,
-        "orchestrator": mock_orchestrator
+        "orchestrator": mock_orchestrator,
     }
-    
+
     # Clean up overrides
     app.dependency_overrides.clear()
 
@@ -286,53 +286,39 @@ def test_database_config():
         "password": "test_password",
         "ssl": False,
         "pool_size": 5,
-        "max_overflow": 10
+        "max_overflow": 10,
     }
 
 
 @pytest.fixture
 async def clean_repositories(
-    test_query_repository,
-    test_user_repository, 
-    test_agent_repository
+    test_query_repository, test_user_repository, test_agent_repository
 ):
     """Ensure all repositories are clean before and after tests."""
-    
+
     # Clean before test
     repositories = [test_query_repository, test_user_repository, test_agent_repository]
     for repo in repositories:
-        if hasattr(repo, '_memory_store') and hasattr(repo._memory_store, 'clear'):
+        if hasattr(repo, "_memory_store") and hasattr(repo._memory_store, "clear"):
             repo._memory_store.clear()
-    
+
     yield repositories
-    
+
     # Clean after test
     for repo in repositories:
-        if hasattr(repo, '_memory_store') and hasattr(repo._memory_store, 'clear'):
+        if hasattr(repo, "_memory_store") and hasattr(repo._memory_store, "clear"):
             repo._memory_store.clear()
 
 
 # Pytest configuration
 def pytest_configure(config):
     """Configure pytest with custom markers."""
-    config.addinivalue_line(
-        "markers", "unit: mark test as a unit test"
-    )
-    config.addinivalue_line(
-        "markers", "integration: mark test as an integration test"
-    )
-    config.addinivalue_line(
-        "markers", "api: mark test as an API test"
-    )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow running"
-    )
-    config.addinivalue_line(
-        "markers", "repository: mark test as a repository test"
-    )
-    config.addinivalue_line(
-        "markers", "service: mark test as a service test"
-    )
+    config.addinivalue_line("markers", "unit: mark test as a unit test")
+    config.addinivalue_line("markers", "integration: mark test as an integration test")
+    config.addinivalue_line("markers", "api: mark test as an API test")
+    config.addinivalue_line("markers", "slow: mark test as slow running")
+    config.addinivalue_line("markers", "repository: mark test as a repository test")
+    config.addinivalue_line("markers", "service: mark test as a service test")
 
 
 # Custom pytest markers for test categorization

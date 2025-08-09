@@ -9,8 +9,4 @@ from .query_responses import *
 from .agent_responses import *
 from .auth_responses import *
 
-__all__ = [
-    "query_responses",
-    "agent_responses",
-    "auth_responses"
-] 
+__all__ = ["query_responses", "agent_responses", "auth_responses"]

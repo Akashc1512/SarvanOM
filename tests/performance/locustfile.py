@@ -1,4 +1,5 @@
 from shared.core.api.config import get_settings
+
 #!/usr/bin/env python3
 settings = get_settings()
 """
@@ -55,7 +56,10 @@ class UniversalKnowledgeHubUser(HttpUser):
             # For now, we'll use a mock API key
             self.api_key = "test-api-key-12345"
             self.client.headers.update(
-                {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+                {
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                }
             )
         except Exception as e:
             print(f"Authentication failed: {e}")
@@ -105,13 +109,17 @@ class UniversalKnowledgeHubUser(HttpUser):
             "user_context": {"domain": "technology"},
         }
 
-        with self.client.post("/query", json=query_data, catch_response=True) as response:
+        with self.client.post(
+            "/query", json=query_data, catch_response=True
+        ) as response:
             if response.status_code == 200:
                 data = response.json()
                 if "answer" in data and "confidence" in data:
                     response.success()
                     # Store response time for analysis
-                    self.session_data["last_query_time"] = response.elapsed.total_seconds()
+                    self.session_data["last_query_time"] = (
+                        response.elapsed.total_seconds()
+                    )
                 else:
                     response.failure("Invalid response format")
             else:
@@ -139,7 +147,9 @@ class UniversalKnowledgeHubUser(HttpUser):
             },
         }
 
-        with self.client.post("/query", json=query_data, catch_response=True) as response:
+        with self.client.post(
+            "/query", json=query_data, catch_response=True
+        ) as response:
             if response.status_code == 200:
                 data = response.json()
                 if "answer" in data and len(data["answer"]) > 100:
@@ -152,12 +162,24 @@ class UniversalKnowledgeHubUser(HttpUser):
     @task(1)
     def bulk_queries(self):
         """Test bulk query processing."""
-        bulk_queries = ["What is AI?", "What is ML?", "What is DL?", "What is NLP?", "What is CV?"]
+        bulk_queries = [
+            "What is AI?",
+            "What is ML?",
+            "What is DL?",
+            "What is NLP?",
+            "What is CV?",
+        ]
 
         for query in bulk_queries:
-            query_data = {"query": query, "max_tokens": 200, "confidence_threshold": 0.6}
+            query_data = {
+                "query": query,
+                "max_tokens": 200,
+                "confidence_threshold": 0.6,
+            }
 
-            with self.client.post("/query", json=query_data, catch_response=True) as response:
+            with self.client.post(
+                "/query", json=query_data, catch_response=True
+            ) as response:
                 if response.status_code == 200:
                     response.success()
                 else:
@@ -186,12 +208,16 @@ class UniversalKnowledgeHubUser(HttpUser):
             "confidence_threshold": 0.5,
         }
 
-        with self.client.post("/query", json=query_data, catch_response=True) as response:
+        with self.client.post(
+            "/query", json=query_data, catch_response=True
+        ) as response:
             # Edge cases should be handled gracefully
             if response.status_code in [200, 400, 422]:
                 response.success()
             else:
-                response.failure(f"Edge case not handled properly: {response.status_code}")
+                response.failure(
+                    f"Edge case not handled properly: {response.status_code}"
+                )
 
 
 class AdminUser(UniversalKnowledgeHubUser):
@@ -243,7 +269,9 @@ class ContentManagerUser(UniversalKnowledgeHubUser):
             "tags": ["performance", "test", "document"],
         }
 
-        with self.client.post("/content/upload", json=upload_data, catch_response=True) as response:
+        with self.client.post(
+            "/content/upload", json=upload_data, catch_response=True
+        ) as response:
             if response.status_code in [200, 201]:
                 response.success()
             else:
@@ -259,7 +287,9 @@ class ContentManagerUser(UniversalKnowledgeHubUser):
             "filters": {"category": "test", "date_range": "last_7_days"},
         }
 
-        with self.client.post("/content/search", json=search_data, catch_response=True) as response:
+        with self.client.post(
+            "/content/search", json=search_data, catch_response=True
+        ) as response:
             if response.status_code == 200:
                 response.success()
             else:
@@ -324,7 +354,9 @@ class CustomMetrics:
 
     def record_response_size(self, endpoint: str, size: int):
         """Record response size."""
-        self.response_sizes.append({"endpoint": endpoint, "size": size, "timestamp": time.time()})
+        self.response_sizes.append(
+            {"endpoint": endpoint, "size": size, "timestamp": time.time()}
+        )
 
 
 # Global metrics instance
@@ -397,4 +429,6 @@ if __name__ == "__main__":
     # Example usage
     print("Universal Knowledge Platform Performance Test")
     print("Available scenarios: light, normal, heavy, stress, spike")
-    print("Run with: locust -f locustfile.py --host=https://api.universal-knowledge-hub.com")
+    print(
+        "Run with: locust -f locustfile.py --host=https://api.universal-knowledge-hub.com"
+    )

@@ -7,4 +7,4 @@ This module contains shared functionality across all services.
 # Core modules
 from . import core
 
-__all__ = ['core']
+__all__ = ["core"]

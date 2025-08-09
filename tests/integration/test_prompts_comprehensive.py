@@ -289,9 +289,14 @@ class TestFactCheckPrompts(unittest.TestCase):
 
     def test_claim_verification_prompt(self):
         """Test claim verification prompt"""
-        claim = "Quantum computers can solve all problems faster than classical computers"
+        claim = (
+            "Quantum computers can solve all problems faster than classical computers"
+        )
         sources = [
-            {"content": "Quantum computers excel at specific problems", "source": "research_paper"},
+            {
+                "content": "Quantum computers excel at specific problems",
+                "source": "research_paper",
+            },
             {
                 "content": "Classical computers are still faster for most tasks",
                 "source": "textbook",
@@ -381,7 +386,10 @@ class TestCitationPrompts(unittest.TestCase):
         """Test relevance scoring prompt"""
         query = "What is quantum computing?"
         sources = [
-            {"content": "Quantum computing uses quantum mechanics", "title": "QC Basics"},
+            {
+                "content": "Quantum computing uses quantum mechanics",
+                "title": "QC Basics",
+            },
             {"content": "Machine learning algorithms", "title": "ML Guide"},
             {"content": "Quantum algorithms for cryptography", "title": "QC Crypto"},
         ]
@@ -519,7 +527,9 @@ class TestPromptSecurity(unittest.TestCase):
 
         for malicious_input in malicious_inputs:
             # Should sanitize or reject malicious input
-            sanitized = malicious_input.replace("<script>", "").replace("javascript:", "")
+            sanitized = malicious_input.replace("<script>", "").replace(
+                "javascript:", ""
+            )
             self.assertNotIn("<script>", sanitized)
             self.assertNotIn("javascript:", sanitized)
 

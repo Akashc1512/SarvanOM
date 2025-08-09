@@ -8,8 +8,4 @@ from .query_orchestrator import QueryOrchestrator
 from .query_processor import QueryProcessor
 from .query_validator import QueryValidator
 
-__all__ = [
-    "QueryOrchestrator",
-    "QueryProcessor", 
-    "QueryValidator"
-] 
+__all__ = ["QueryOrchestrator", "QueryProcessor", "QueryValidator"]

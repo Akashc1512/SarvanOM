@@ -52,7 +52,7 @@ from shared.core.api.config import get_settings
 from shared.core.api.monitoring import get_monitoring_manager
 from shared.core.performance import get_performance_monitor
 from services.analytics_service.analytics_v2 import get_analytics_processor
-from services.api-gateway.realtime import start_realtime_services, stop_realtime_services
+from services.api_gateway.realtime import start_realtime_services, stop_realtime_services
 
 # Configure logging
 structlog.configure(

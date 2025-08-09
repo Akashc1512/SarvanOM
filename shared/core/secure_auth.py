@@ -253,11 +253,12 @@ class RateLimiter:
     def __init__(self, database_service=None):
         try:
             from shared.core.database import get_database_service
+
             self.db_service = database_service or get_database_service()
         except Exception as e:
             logger.warning(f"Database service not available: {e}")
             self.db_service = None
-        
+
         self._rate_limits: Dict[str, List[int]] = {}
 
     async def check_rate_limit(
@@ -270,9 +271,11 @@ class RateLimiter:
         # Get requests in current window
         if key not in self._rate_limits:
             self._rate_limits[key] = []
-        
+
         # Remove old requests
-        self._rate_limits[key] = [t for t in self._rate_limits[key] if t >= window_start]
+        self._rate_limits[key] = [
+            t for t in self._rate_limits[key] if t >= window_start
+        ]
 
         if len(self._rate_limits[key]) >= max_requests:
             return False
@@ -296,11 +299,12 @@ class SessionManager:
     def __init__(self, database_service=None, config: AuthConfig = None):
         try:
             from shared.core.database import get_database_service
+
             self.db_service = database_service or get_database_service()
         except Exception as e:
             logger.warning(f"Database service not available: {e}")
             self.db_service = None
-        
+
         self.config = config
 
     async def create_session(self, session: UserSession) -> None:

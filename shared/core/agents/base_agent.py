@@ -188,30 +188,30 @@ class BaseAgent(ABC):
         """
         Standardized execute method for all agents.
         This is the main entry point for agent execution in the pipeline.
-        
+
         Args:
             context: Query context containing all necessary information
-            
+
         Returns:
             AgentResult with execution results
         """
         start_time = time.time()
-        
+
         try:
             # Create a standard task from the context
             task = {
                 "type": self.agent_type.value,
                 "query": context.query,
                 "user_context": context.user_context,
-                "metadata": context.metadata
+                "metadata": context.metadata,
             }
-            
+
             # Process the task using the agent's specific implementation
             result = await self.process_task(task, context)
-            
+
             # Calculate execution time
             execution_time_ms = int((time.time() - start_time) * 1000)
-            
+
             # Create standardized AgentResult
             if result and result.get("success", False):
                 return AgentResult(
@@ -220,25 +220,25 @@ class BaseAgent(ABC):
                     confidence=result.get("confidence", 0.0),
                     token_usage=result.get("token_usage", {}),
                     execution_time_ms=execution_time_ms,
-                    metadata=result.get("metadata", {})
+                    metadata=result.get("metadata", {}),
                 )
             else:
                 return AgentResult(
                     success=False,
                     error=result.get("error", "Unknown error"),
                     execution_time_ms=execution_time_ms,
-                    metadata=result.get("metadata", {})
+                    metadata=result.get("metadata", {}),
                 )
-                
+
         except Exception as e:
             execution_time_ms = int((time.time() - start_time) * 1000)
             logger.error(f"Error in {self.agent_id} execute method: {e}")
-            
+
             return AgentResult(
                 success=False,
                 error=str(e),
                 execution_time_ms=execution_time_ms,
-                metadata={"error_type": type(e).__name__}
+                metadata={"error_type": type(e).__name__},
             )
 
     async def handle_message(self, message: AgentMessage) -> Optional[AgentMessage]:
@@ -324,7 +324,9 @@ class BaseAgent(ABC):
             payload={
                 "result": result,
                 "metadata": result.get("metadata", {}),
-                "token_usage": result.get("token_usage", {"prompt": 0, "completion": 0}),
+                "token_usage": result.get(
+                    "token_usage", {"prompt": 0, "completion": 0}
+                ),
             },
         )
 

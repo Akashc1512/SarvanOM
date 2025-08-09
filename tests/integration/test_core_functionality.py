@@ -8,7 +8,7 @@ import asyncio
 from unittest.mock import AsyncMock, Mock
 from fastapi.testclient import TestClient
 
-from services.api-gateway.main import app
+from services.api_gateway.main import app
 from shared.core.agents.base_agent import QueryContext, AgentResult, AgentMessage, MessageType
 from shared.core.cache import get_cache_stats
 from shared.core.analytics import get_analytics_summary
@@ -220,7 +220,7 @@ class TestDataValidation:
 
     def test_query_validation(self):
         """Test query validation."""
-        from services.api-gateway.main import QueryRequest
+        from services.api_gateway.main import QueryRequest
 
         # Valid query
         valid_request = QueryRequest(query="valid query")

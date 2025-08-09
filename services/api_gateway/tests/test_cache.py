@@ -38,5 +38,3 @@ async def test_cache_ttl_expiry():
     pruned = await cache.prune()
     assert pruned >= 1
     assert await cache.get_cached_response("expire me") is None
-
-

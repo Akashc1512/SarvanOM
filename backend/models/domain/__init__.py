@@ -11,11 +11,11 @@ from .user import User, UserContext
 
 __all__ = [
     "Query",
-    "QueryContext", 
+    "QueryContext",
     "QueryResult",
     "Agent",
     "AgentType",
     "AgentStatus",
     "User",
-    "UserContext"
-] 
+    "UserContext",
+]

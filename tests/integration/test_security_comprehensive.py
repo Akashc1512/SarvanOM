@@ -37,7 +37,7 @@ from shared.core.agents.factcheck_agent import FactCheckAgent
 from shared.core.agents.synthesis_agent import SynthesisAgent
 from shared.core.agents.citation_agent import CitationAgent
 
-from services.api-gateway.main import app
+from services.api_gateway.main import app
 
 # Security test configuration with environment variables
 SECURITY_CONFIG = {

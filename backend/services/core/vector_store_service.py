@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class VectorDocument:
     """Represents a document stored in the vector index."""
+
     id: str
     text: str
     embedding: List[float]
@@ -34,7 +35,9 @@ class VectorStoreService:
     async def delete(self, doc_ids: List[str]) -> int:
         raise NotImplementedError
 
-    async def search(self, query_embedding: List[float], top_k: int = 5) -> List[Tuple[VectorDocument, float]]:
+    async def search(
+        self, query_embedding: List[float], top_k: int = 5
+    ) -> List[Tuple[VectorDocument, float]]:
         raise NotImplementedError
 
     async def count(self) -> int:
@@ -62,7 +65,9 @@ class InMemoryVectorStore(VectorStoreService):
         logger.info(f"Deleted {deleted} documents from vector store")
         return deleted
 
-    async def search(self, query_embedding: List[float], top_k: int = 5) -> List[Tuple[VectorDocument, float]]:
+    async def search(
+        self, query_embedding: List[float], top_k: int = 5
+    ) -> List[Tuple[VectorDocument, float]]:
         # Cosine similarity search
         def cosine(a: List[float], b: List[float]) -> float:
             if not a or not b or len(a) != len(b):
@@ -90,6 +95,7 @@ class ChromaVectorStore(VectorStoreService):
 
     def __init__(self, collection_name: str = "knowledge") -> None:
         import chromadb
+
         self._client = chromadb.Client()
         try:
             self._collection = self._client.get_collection(collection_name)
@@ -123,11 +129,15 @@ class ChromaVectorStore(VectorStoreService):
         await anyio.to_thread.run_sync(_del)
         return len(doc_ids)
 
-    async def search(self, query_embedding: List[float], top_k: int = 5) -> List[Tuple[VectorDocument, float]]:
+    async def search(
+        self, query_embedding: List[float], top_k: int = 5
+    ) -> List[Tuple[VectorDocument, float]]:
         import anyio
 
         def _query():
-            return self._collection.query(query_embeddings=[query_embedding], n_results=top_k)
+            return self._collection.query(
+                query_embeddings=[query_embedding], n_results=top_k
+            )
 
         res = await anyio.to_thread.run_sync(_query)
         out: List[Tuple[VectorDocument, float]] = []
@@ -137,7 +147,12 @@ class ChromaVectorStore(VectorStoreService):
         for i, meta in zip(ids, metas):
             out.append(
                 (
-                    VectorDocument(id=str(i), text=str(meta.get("text", "")), embedding=[], metadata=meta),
+                    VectorDocument(
+                        id=str(i),
+                        text=str(meta.get("text", "")),
+                        embedding=[],
+                        metadata=meta,
+                    ),
                     1.0 - float(dists[len(out)]) if dists else 0.0,
                 )
             )
@@ -158,7 +173,9 @@ except Exception:  # pragma: no cover
 class QdrantVectorStore(VectorStoreService):
     """Qdrant-backed vector store adapter."""
 
-    def __init__(self, url: str, api_key: Optional[str], collection: str, vector_size: int = 1536):
+    def __init__(
+        self, url: str, api_key: Optional[str], collection: str, vector_size: int = 1536
+    ):
         if QdrantClient is None:
             raise RuntimeError("qdrant-client not available")
         self.client = QdrantClient(url=url, api_key=api_key)
@@ -170,12 +187,16 @@ class QdrantVectorStore(VectorStoreService):
         except Exception:
             self.client.recreate_collection(
                 collection_name=self.collection,
-                vectors_config=VectorParams(size=self.vector_size, distance=Distance.COSINE),
+                vectors_config=VectorParams(
+                    size=self.vector_size, distance=Distance.COSINE
+                ),
             )
 
     async def upsert(self, docs: List[VectorDocument]) -> int:
         points = [
-            PointStruct(id=d.id, vector=d.embedding, payload={"text": d.text, **d.metadata})
+            PointStruct(
+                id=d.id, vector=d.embedding, payload={"text": d.text, **d.metadata}
+            )
             for d in docs
         ]
         # qdrant client is sync; run in threadpool
@@ -200,7 +221,9 @@ class QdrantVectorStore(VectorStoreService):
         await anyio.to_thread.run_sync(_delete)
         return len(doc_ids)
 
-    async def search(self, query_embedding: List[float], top_k: int = 5) -> List[Tuple[VectorDocument, float]]:
+    async def search(
+        self, query_embedding: List[float], top_k: int = 5
+    ) -> List[Tuple[VectorDocument, float]]:
         import anyio
 
         def _search():
@@ -236,5 +259,3 @@ class QdrantVectorStore(VectorStoreService):
             return info.vectors_count
 
         return await anyio.to_thread.run_sync(_count)
-
-

@@ -38,10 +38,10 @@ def test_imports():
         return False
     
     try:
-    from shared.core.database import get_database_service
-    print("✅ Database service imported")
-except ImportError as e:
-    print(f"❌ Database service import failed: {e}")
+        from shared.core.database import get_database_service
+        print("✅ Database service imported")
+    except ImportError as e:
+        print(f"❌ Database service import failed: {e}")
         return False
     
     try:
@@ -66,8 +66,8 @@ except ImportError as e:
         return False
     
     try:
-        from shared.core.llm_client_v3 import EnhancedLLMClientV3
-        print("✅ LLM Client v3 imported")
+        from shared.core.llm_client_enhanced import EnhancedLLMClient
+        print("✅ Enhanced LLM Client imported")
     except ImportError as e:
         print(f"❌ LLM Client v3 import failed: {e}")
         return False

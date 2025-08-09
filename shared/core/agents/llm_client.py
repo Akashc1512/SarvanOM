@@ -1,4 +1,3 @@
-
 """
 LLMClient: Legacy wrapper for backward compatibility.
 This module provides backward compatibility with the old LLM client interface.
@@ -40,7 +39,7 @@ class LLMClient:
     def __init__(self):
         """Initialize the legacy LLM client."""
         logger.info("🔍 DEEP DEBUG: Initializing LLM Client")
-        
+
         try:
             self._client = get_llm_client_v3()
             logger.info("✅ LLM Client v3 initialized successfully")
@@ -48,9 +47,10 @@ class LLMClient:
             logger.error(f"❌ Failed to initialize LLM Client v3: {e}")
             logger.error(f"Error type: {type(e).__name__}")
             import traceback
+
             logger.error(f"Traceback: {traceback.format_exc()}")
             raise Exception(f"LLM Client v3 initialization failed: {str(e)}")
-        
+
         self._provider = os.getenv("LLM_PROVIDER", "openai").lower()
         self._model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 
@@ -58,8 +58,10 @@ class LLMClient:
         if self._provider == "anthropic":
             self._model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022")
 
-        logger.info(f"✅ LLM Client configured - Provider: {self._provider}, Model: {self._model}")
-        
+        logger.info(
+            f"✅ LLM Client configured - Provider: {self._provider}, Model: {self._model}"
+        )
+
         # SANITY CHECK: Validate API keys with detailed error surface
         logger.info("🔍 DEEP DEBUG: Validating API keys")
         if self._provider == "openai":
@@ -80,7 +82,7 @@ class LLMClient:
                 logger.error("❌ ANTHROPIC_API_KEY appears to be invalid (too short)")
                 raise Exception("ANTHROPIC_API_KEY appears to be invalid")
             logger.info("✅ ANTHROPIC_API_KEY found and validated")
-        
+
         logger.info("✅ LLM Client initialization completed successfully")
 
     def get_provider(self):
@@ -109,32 +111,59 @@ class LLMClient:
         logger.info(f"🔍 DEEP DEBUG: Generating text with {self._provider}")
         logger.info(f"Prompt length: {len(prompt)} characters")
         logger.info(f"Max tokens: {max_tokens}, Temperature: {temperature}")
-        
+
         try:
             result = await self.synthesize(prompt, max_tokens, temperature)
-            logger.info(f"✅ Text generation successful, response length: {len(result)}")
+            logger.info(
+                f"✅ Text generation successful, response length: {len(result)}"
+            )
             return result
         except Exception as e:
             logger.error(f"❌ Text generation failed: {e}")
             logger.error(f"Error type: {type(e).__name__}")
             logger.error(f"Provider: {self._provider}, Model: {self._model}")
-            
+
             # Surface specific API errors with actionable messages
             error_str = str(e).lower()
-            if any(keyword in error_str for keyword in ["authentication", "unauthorized", "invalid api key"]):
-                raise Exception(f"LLM API authentication failed. Please check your {self._provider.upper()}_API_KEY: {str(e)}")
-            elif any(keyword in error_str for keyword in ["quota", "rate limit", "too many requests"]):
-                raise Exception(f"LLM API quota exceeded or rate limited. Please try again later: {str(e)}")
-            elif any(keyword in error_str for keyword in ["model", "not found", "invalid model"]):
-                raise Exception(f"LLM model '{self._model}' not found or invalid. Please check your model configuration: {str(e)}")
-            elif any(keyword in error_str for keyword in ["timeout", "connection", "network"]):
-                raise Exception(f"LLM API network error. Please check your internet connection: {str(e)}")
-            elif any(keyword in error_str for keyword in ["billing", "payment", "account"]):
-                raise Exception(f"LLM API billing issue. Please check your account status: {str(e)}")
+            if any(
+                keyword in error_str
+                for keyword in ["authentication", "unauthorized", "invalid api key"]
+            ):
+                raise Exception(
+                    f"LLM API authentication failed. Please check your {self._provider.upper()}_API_KEY: {str(e)}"
+                )
+            elif any(
+                keyword in error_str
+                for keyword in ["quota", "rate limit", "too many requests"]
+            ):
+                raise Exception(
+                    f"LLM API quota exceeded or rate limited. Please try again later: {str(e)}"
+                )
+            elif any(
+                keyword in error_str
+                for keyword in ["model", "not found", "invalid model"]
+            ):
+                raise Exception(
+                    f"LLM model '{self._model}' not found or invalid. Please check your model configuration: {str(e)}"
+                )
+            elif any(
+                keyword in error_str for keyword in ["timeout", "connection", "network"]
+            ):
+                raise Exception(
+                    f"LLM API network error. Please check your internet connection: {str(e)}"
+                )
+            elif any(
+                keyword in error_str for keyword in ["billing", "payment", "account"]
+            ):
+                raise Exception(
+                    f"LLM API billing issue. Please check your account status: {str(e)}"
+                )
             else:
                 raise Exception(f"LLM API call failed: {str(e)}")
 
-    async def synthesize(self, prompt: str, max_tokens: int = 500, temperature: float = 0.2) -> str:
+    async def synthesize(
+        self, prompt: str, max_tokens: int = 500, temperature: float = 0.2
+    ) -> str:
         """Synthesize text using the LLM client."""
         try:
             return await self._client.generate_text(prompt, max_tokens, temperature)

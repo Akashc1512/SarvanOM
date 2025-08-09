@@ -25,61 +25,58 @@ import argparse
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+
 def fix_import_paths():
     """Fix inconsistent import paths throughout the codebase."""
     print("🔧 Fixing import paths...")
-    
+
     # Define import mappings
     import_mappings = {
-        r'from shared\.core\.config\.central_config import get_central_config': 
-            'from shared.core.config import get_central_config',
-        r'from shared\.core\.logging\.structured_logger import get_logger': 
-            'from shared.core.logging import get_logger',
-        r'from shared\.core\.metrics\.metrics_service import get_metrics_service': 
-            'from shared.core.metrics import get_metrics_service',
-        r'from shared\.core\.cache\.cache_manager import get_cache_manager': 
-            'from shared.core.cache import get_cache_manager',
-        r'from shared\.core\.llm_client\.llm_client import get_llm_client': 
-            'from shared.core.llm_client import get_llm_client',
+        r"from shared\.core\.config\.central_config import get_central_config": "from shared.core.config import get_central_config",
+        r"from shared\.core\.logging\.structured_logger import get_logger": "from shared.core.logging import get_logger",
+        r"from shared\.core\.metrics\.metrics_service import get_metrics_service": "from shared.core.metrics import get_metrics_service",
+        r"from shared\.core\.cache\.cache_manager import get_cache_manager": "from shared.core.cache import get_cache_manager",
+        r"from shared\.core\.llm_client\.llm_client import get_llm_client": "from shared.core.llm_client import get_llm_client",
     }
-    
+
     # Find all Python files
     python_files = []
-    for root, dirs, files in os.walk('.'):
-        if 'venv' in root or '__pycache__' in root or '.git' in root:
+    for root, dirs, files in os.walk("."):
+        if "venv" in root or "__pycache__" in root or ".git" in root:
             continue
         for file in files:
-            if file.endswith('.py'):
+            if file.endswith(".py"):
                 python_files.append(os.path.join(root, file))
-    
+
     fixed_files = 0
     for file_path in python_files:
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
-            
+
             original_content = content
-            
+
             # Apply import mappings
             for old_pattern, new_pattern in import_mappings.items():
                 content = re.sub(old_pattern, new_pattern, content)
-            
+
             # Write back if changed
             if content != original_content:
-                with open(file_path, 'w', encoding='utf-8') as f:
+                with open(file_path, "w", encoding="utf-8") as f:
                     f.write(content)
                 print(f"✅ Fixed imports in {file_path}")
                 fixed_files += 1
-                
+
         except Exception as e:
             print(f"❌ Error fixing {file_path}: {e}")
-    
+
     print(f"🎉 Fixed imports in {fixed_files} files")
+
 
 def create_shared_core_init():
     """Create proper __init__.py files for shared modules."""
     print("📁 Creating shared module structure...")
-    
+
     # Create shared/core/__init__.py
     shared_core_init = '''"""
 Shared Core Modules - SarvanOM
@@ -102,7 +99,7 @@ __all__ = [
     'get_llm_client',
 ]
 '''
-    
+
     # Create shared/__init__.py
     shared_init = '''"""
 Shared Modules - SarvanOM
@@ -115,29 +112,30 @@ from . import core
 
 __all__ = ['core']
 '''
-    
+
     # Write files
-    shared_core_path = Path('shared/core/__init__.py')
+    shared_core_path = Path("shared/core/__init__.py")
     shared_core_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    with open(shared_core_path, 'w', encoding='utf-8') as f:
+
+    with open(shared_core_path, "w", encoding="utf-8") as f:
         f.write(shared_core_init)
-    
-    shared_path = Path('shared/__init__.py')
-    with open(shared_path, 'w', encoding='utf-8') as f:
+
+    shared_path = Path("shared/__init__.py")
+    with open(shared_path, "w", encoding="utf-8") as f:
         f.write(shared_init)
-    
+
     print("✅ Created shared module structure")
+
 
 def remove_conflicting_entry_points():
     """Remove conflicting service entry points."""
     print("🗑️ Removing conflicting entry points...")
-    
+
     # List of files to remove or rename
     conflicting_files = [
-        'backend/main.py',  # Remove this conflicting entry point
+        "backend/main.py",  # Remove this conflicting entry point
     ]
-    
+
     for file_path in conflicting_files:
         if os.path.exists(file_path):
             # Backup before removing
@@ -148,53 +146,55 @@ def remove_conflicting_entry_points():
         else:
             print(f"⏭️ {file_path} doesn't exist, skipping")
 
+
 def fix_hardcoded_values():
     """Remove hardcoded values from configuration files."""
     print("🔐 Fixing hardcoded values...")
-    
+
     # Files to check for hardcoded values
     config_files = [
-        'docker-compose.yml',
-        'services/deployment/docker/docker-compose.yml',
-        'docker-compose.meilisearch.yml',
+        "docker-compose.yml",
+        "services/deployment/docker/docker-compose.yml",
+        "docker-compose.meilisearch.yml",
     ]
-    
+
     # Patterns to replace
     hardcoded_patterns = {
-        r'MEILI_MASTER_KEY=sarvanom-master-key-2024': 'MEILI_MASTER_KEY=${MEILI_MASTER_KEY}',
-        r'MEILI_MASTER_KEY=your-master-key-here': 'MEILI_MASTER_KEY=${MEILI_MASTER_KEY}',
-        r'JWT_SECRET_KEY=your-secret-key': 'JWT_SECRET_KEY=${JWT_SECRET_KEY}',
-        r'DATABASE_PASSWORD=password': 'DATABASE_PASSWORD=${DATABASE_PASSWORD}',
+        r"MEILI_MASTER_KEY=sarvanom-master-key-2024": "MEILI_MASTER_KEY=${MEILI_MASTER_KEY}",
+        r"MEILI_MASTER_KEY=your-master-key-here": "MEILI_MASTER_KEY=${MEILI_MASTER_KEY}",
+        r"JWT_SECRET_KEY=your-secret-key": "JWT_SECRET_KEY=${JWT_SECRET_KEY}",
+        r"DATABASE_PASSWORD=password": "DATABASE_PASSWORD=${DATABASE_PASSWORD}",
     }
-    
+
     for file_path in config_files:
         if os.path.exists(file_path):
             try:
-                with open(file_path, 'r', encoding='utf-8') as f:
+                with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
-                
+
                 original_content = content
-                
+
                 # Apply replacements
                 for old_pattern, new_pattern in hardcoded_patterns.items():
                     content = re.sub(old_pattern, new_pattern, content)
-                
+
                 # Write back if changed
                 if content != original_content:
-                    with open(file_path, 'w', encoding='utf-8') as f:
+                    with open(file_path, "w", encoding="utf-8") as f:
                         f.write(content)
                     print(f"✅ Fixed hardcoded values in {file_path}")
                 else:
                     print(f"⏭️ No hardcoded values found in {file_path}")
-                    
+
             except Exception as e:
                 print(f"❌ Error fixing {file_path}: {e}")
+
 
 def create_env_example():
     """Create .env.example with all required environment variables."""
     print("📝 Creating .env.example...")
-    
-    env_example_content = '''# SarvanOM Environment Variables
+
+    env_example_content = """# SarvanOM Environment Variables
 # Copy this file to .env and fill in your values
 
 # Application
@@ -263,17 +263,18 @@ RATE_LIMIT_BURST=10
 CACHE_TTL_DEFAULT=300
 CACHE_TTL_USER=600
 CACHE_TTL_QUERY=3600
-'''
-    
-    with open('.env.example', 'w', encoding='utf-8') as f:
+"""
+
+    with open(".env.example", "w", encoding="utf-8") as f:
         f.write(env_example_content)
-    
+
     print("✅ Created .env.example")
+
 
 def update_synthesis_service():
     """Update synthesis service with real LLM integration."""
     print("🤖 Updating synthesis service...")
-    
+
     synthesis_main = '''from __future__ import annotations
 
 import time
@@ -452,20 +453,21 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run("services.synthesis.main:app", host="0.0.0.0", port=8002, reload=True)
 '''
-    
-    synthesis_path = Path('services/synthesis/main.py')
+
+    synthesis_path = Path("services/synthesis/main.py")
     synthesis_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    with open(synthesis_path, 'w', encoding='utf-8') as f:
+
+    with open(synthesis_path, "w", encoding="utf-8") as f:
         f.write(synthesis_main)
-    
+
     print("✅ Updated synthesis service with real LLM integration")
+
 
 def update_retrieval_service():
     """Update retrieval service with real vector search."""
     print("🔍 Updating retrieval service...")
-    
-    retrieval_main = '''from __future__ import annotations
+
+    retrieval_main = """from __future__ import annotations
 
 import time
 from datetime import datetime
@@ -667,39 +669,42 @@ async def index(payload: RetrievalIndexRequest) -> RetrievalIndexResponse:
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("services.retrieval.main:app", host="0.0.0.0", port=8001, reload=True)
-'''
-    
-    retrieval_path = Path('services/retrieval/main.py')
+"""
+
+    retrieval_path = Path("services/retrieval/main.py")
     retrieval_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    with open(retrieval_path, 'w', encoding='utf-8') as f:
+
+    with open(retrieval_path, "w", encoding="utf-8") as f:
         f.write(retrieval_main)
-    
+
     print("✅ Updated retrieval service with real vector search")
+
 
 def main():
     """Main function to run all fixes."""
-    parser = argparse.ArgumentParser(description='Fix critical issues in SarvanOM')
-    parser.add_argument('--fix-all', action='store_true', help='Apply all fixes')
-    parser.add_argument('--fix-imports', action='store_true', help='Fix import paths')
-    parser.add_argument('--fix-config', action='store_true', help='Fix configuration')
-    parser.add_argument('--fix-services', action='store_true', help='Fix service implementations')
-    
+    parser = argparse.ArgumentParser(description="Fix critical issues in SarvanOM")
+    parser.add_argument("--fix-all", action="store_true", help="Apply all fixes")
+    parser.add_argument("--fix-imports", action="store_true", help="Fix import paths")
+    parser.add_argument("--fix-config", action="store_true", help="Fix configuration")
+    parser.add_argument(
+        "--fix-services", action="store_true", help="Fix service implementations"
+    )
+
     args = parser.parse_args()
-    
+
     if args.fix_all or args.fix_imports:
         create_shared_core_init()
         fix_import_paths()
-    
+
     if args.fix_all or args.fix_config:
         remove_conflicting_entry_points()
         fix_hardcoded_values()
         create_env_example()
-    
+
     if args.fix_all or args.fix_services:
         update_synthesis_service()
         update_retrieval_service()
-    
+
     if not any([args.fix_all, args.fix_imports, args.fix_config, args.fix_services]):
         print("🔧 Running all fixes...")
         create_shared_core_init()
@@ -709,13 +714,14 @@ def main():
         create_env_example()
         update_synthesis_service()
         update_retrieval_service()
-    
+
     print("\n🎉 Critical issues fixed!")
     print("\nNext steps:")
     print("1. Review the changes made")
     print("2. Test the services")
     print("3. Update your .env file with proper values")
     print("4. Run the services to verify they work")
+
 
 if __name__ == "__main__":
     main()

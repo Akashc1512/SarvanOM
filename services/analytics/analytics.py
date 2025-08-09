@@ -17,6 +17,7 @@ import os
 # Try to import settings, but handle gracefully if not available
 try:
     from shared.core.api.config import get_settings
+
     settings = get_settings()
     DATA_RETENTION_DAYS = int(settings.data_retention_days or "30")
 except ImportError:

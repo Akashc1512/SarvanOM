@@ -20,7 +20,7 @@ from .requests import (
     DatabaseQueryRequest,
     WebCrawlerRequest,
     QueryUpdateRequest,
-    GenericRequest
+    GenericRequest,
 )
 
 from .responses import (
@@ -42,7 +42,7 @@ from .responses import (
     AgentResponse,
     WebSocketMessage,
     ErrorResponse,
-    GenericResponse
+    GenericResponse,
 )
 
 from .websocket import (
@@ -59,13 +59,13 @@ from .websocket import (
     WebSocketEvent,
     WebSocketSubscription,
     WebSocketMetrics,
-    WebSocketConfig
+    WebSocketConfig,
 )
 
 __all__ = [
     # Request models
     "LoginRequest",
-    "RegisterRequest", 
+    "RegisterRequest",
     "QueryRequest",
     "ComprehensiveQueryRequest",
     "FeedbackRequest",
@@ -80,7 +80,6 @@ __all__ = [
     "WebCrawlerRequest",
     "QueryUpdateRequest",
     "GenericRequest",
-    
     # Response models
     "AuthResponse",
     "APIKeyResponse",
@@ -101,7 +100,6 @@ __all__ = [
     "WebSocketMessage",
     "ErrorResponse",
     "GenericResponse",
-    
     # WebSocket models
     "MessageType",
     "ConnectionStatus",
@@ -116,5 +114,5 @@ __all__ = [
     "WebSocketEvent",
     "WebSocketSubscription",
     "WebSocketMetrics",
-    "WebSocketConfig"
-] 
+    "WebSocketConfig",
+]

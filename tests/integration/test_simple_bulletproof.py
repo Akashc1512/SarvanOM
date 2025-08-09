@@ -12,7 +12,12 @@ from typing import Dict, Any, List
 from unittest.mock import Mock, patch
 
 # Import the modules we want to test
-from shared.core.agents.base_agent import BaseAgent, AgentType, AgentResult, QueryContext
+from shared.core.agents.base_agent import (
+    BaseAgent,
+    AgentType,
+    AgentResult,
+    QueryContext,
+)
 from shared.core.agents.data_models import AgentDataModel
 
 # Test configuration
@@ -29,7 +34,9 @@ class TestAgent(BaseAgent):
         super().__init__(agent_id, agent_type)
         self.test_data = {"processed": False}
 
-    async def process_task(self, task: Dict[str, Any], context: QueryContext) -> AgentResult:
+    async def process_task(
+        self, task: Dict[str, Any], context: QueryContext
+    ) -> AgentResult:
         """Process a test task."""
         try:
             # Simulate processing
@@ -38,7 +45,10 @@ class TestAgent(BaseAgent):
 
             return AgentResult(
                 success=True,
-                data={"message": "Test task processed successfully", "input": str(task)},
+                data={
+                    "message": "Test task processed successfully",
+                    "input": str(task),
+                },
                 confidence=0.9,
                 token_usage={"prompt": 10, "completion": 20},
             )
@@ -144,7 +154,9 @@ class TestAPIEndpoints(unittest.TestCase):
         """Test health endpoint"""
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"{self.base_url}/health", timeout=TEST_TIMEOUT)
+                response = await client.get(
+                    f"{self.base_url}/health", timeout=TEST_TIMEOUT
+                )
 
                 self.assertEqual(response.status_code, 200)
                 data = response.json()
@@ -169,7 +181,9 @@ class TestAPIEndpoints(unittest.TestCase):
         """Test agents endpoint"""
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(f"{self.base_url}/agents", timeout=TEST_TIMEOUT)
+                response = await client.get(
+                    f"{self.base_url}/agents", timeout=TEST_TIMEOUT
+                )
 
                 self.assertEqual(response.status_code, 200)
                 data = response.json()
@@ -196,7 +210,9 @@ class TestAPIEndpoints(unittest.TestCase):
                     data = response.json()
                     self.assertIn("detail", data)
                     # Security blocks are expected in test environment
-                    print(f"   Note: Query blocked by security: {data.get('detail', 'Unknown')}")
+                    print(
+                        f"   Note: Query blocked by security: {data.get('detail', 'Unknown')}"
+                    )
 
         except Exception:
             self.skipTest("API not available")
@@ -214,10 +230,14 @@ class TestPerformanceSimple(unittest.TestCase):
         try:
             async with httpx.AsyncClient() as client:
                 start_time = time.time()
-                response = await client.get(f"{self.base_url}/health", timeout=TEST_TIMEOUT)
+                response = await client.get(
+                    f"{self.base_url}/health", timeout=TEST_TIMEOUT
+                )
                 end_time = time.time()
 
-                response_time = (end_time - start_time) * 1000  # Convert to milliseconds
+                response_time = (
+                    end_time - start_time
+                ) * 1000  # Convert to milliseconds
 
                 self.assertEqual(response.status_code, 200)
                 self.assertLess(
@@ -240,8 +260,12 @@ class TestPerformanceSimple(unittest.TestCase):
                 responses = await asyncio.gather(*tasks, return_exceptions=True)
 
                 # Check that all requests succeeded
-                successful_responses = [r for r in responses if not isinstance(r, Exception)]
-                self.assertGreaterEqual(len(successful_responses), 3)  # At least 3 should succeed
+                successful_responses = [
+                    r for r in responses if not isinstance(r, Exception)
+                ]
+                self.assertGreaterEqual(
+                    len(successful_responses), 3
+                )  # At least 3 should succeed
 
                 # Check response times
                 for response in successful_responses:
@@ -280,7 +304,9 @@ class TestSecuritySimple(unittest.TestCase):
 
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    f"{self.base_url}/query", json={"query": malicious_query}, timeout=TEST_TIMEOUT
+                    f"{self.base_url}/query",
+                    json={"query": malicious_query},
+                    timeout=TEST_TIMEOUT,
                 )
 
                 # Should not return 500 (internal server error)
@@ -331,10 +357,12 @@ async def run_simple_tests():
         print("\n❌ Some tests failed.")
         return False
 
+
 async def main():
     """Main test function."""
     success = await run_simple_tests()
     return success
+
 
 if __name__ == "__main__":
     asyncio.run(main())

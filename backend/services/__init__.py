@@ -10,9 +10,4 @@ from .health import *
 from .agents import *
 from .core import *
 
-__all__ = [
-    "query",
-    "health", 
-    "agents",
-    "core"
-] 
+__all__ = ["query", "health", "agents", "core"]

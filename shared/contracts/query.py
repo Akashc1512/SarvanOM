@@ -46,11 +46,14 @@ class RetrievalIndexRequest(BaseModel):
     metadatas: List[Dict[str, Any]] = Field(default_factory=list)
 
     def validate_lengths(self) -> None:
-        if not (len(self.ids) == len(self.texts) and (not self.metadatas or len(self.metadatas) == len(self.texts))):
-            raise ValueError("ids, texts, and metadatas (if provided) must have equal length")
+        if not (
+            len(self.ids) == len(self.texts)
+            and (not self.metadatas or len(self.metadatas) == len(self.texts))
+        ):
+            raise ValueError(
+                "ids, texts, and metadatas (if provided) must have equal length"
+            )
 
 
 class RetrievalIndexResponse(BaseModel):
     upserted: int
-
-

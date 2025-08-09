@@ -40,10 +40,10 @@ from shared.core.agents.factcheck_agent import FactCheckAgent
 from shared.core.agents.synthesis_agent import SynthesisAgent
 from shared.core.agents.citation_agent import CitationAgent
 
-from services.api-gateway.main import app
-from shared.core.analytics import AnalyticsCollector
-from shared.core.cache import CacheManager
-from shared.core.security import SecurityMonitor
+from services.api_gateway.main import app
+from shared.core.production_logging import ProductionLogCollector as AnalyticsCollector
+from shared.core.cache.cache_manager import UnifiedCacheManager as CacheManager
+from shared.core.security_middleware import SecurityValidator as SecurityMonitor
 from shared.core.recommendation_service import RecommendationService
 
 # Import test utilities

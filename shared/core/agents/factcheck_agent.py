@@ -21,7 +21,7 @@ from shared.core.agents.agent_utilities import (
     CommonValidators,
     ResponseFormatter,
     format_standard_response,
-    time_agent_function
+    time_agent_function,
 )
 from shared.core.unified_logging import get_logger
 
@@ -68,14 +68,14 @@ class FactCheckAgent(BaseAgent):
     def __init__(self):
         """Initialize the fact-check agent with shared utilities."""
         super().__init__(agent_id="factcheck_agent", agent_type=AgentType.FACT_CHECK)
-        
+
         # Initialize shared utilities
         self.task_processor = AgentTaskProcessor(self.agent_id)
         self.logger = get_logger(f"{__name__}.{self.agent_id}")
-        
+
         # Manual review callback
         self.manual_review_callback: Optional[Callable] = None
-        
+
         logger.info("✅ FactCheckAgent initialized successfully")
 
     def set_manual_review_callback(self, callback: Callable):
@@ -83,12 +83,10 @@ class FactCheckAgent(BaseAgent):
         self.manual_review_callback = callback
 
     @time_agent_function("factcheck_agent")
-    async def process_task(
-        self, task: Dict[str, Any], context: Any
-    ) -> Dict[str, Any]:
+    async def process_task(self, task: Dict[str, Any], context: Any) -> Dict[str, Any]:
         """
         Process fact-checking task using shared utilities.
-        
+
         This method now uses the standardized workflow from AgentTaskProcessor
         to eliminate duplicate logic and ensure consistent behavior.
         """
@@ -98,9 +96,9 @@ class FactCheckAgent(BaseAgent):
             context=context,
             processing_func=self._process_fact_checking,
             validation_func=CommonValidators.validate_documents_input,
-            timeout_seconds=60
+            timeout_seconds=60,
         )
-        
+
         # Convert TaskResult to standard response format
         return ResponseFormatter.format_agent_response(
             success=result.success,
@@ -108,7 +106,7 @@ class FactCheckAgent(BaseAgent):
             error=result.error,
             confidence=result.confidence,
             execution_time_ms=result.execution_time_ms,
-            metadata=result.metadata
+            metadata=result.metadata,
         )
 
     async def _process_fact_checking(
@@ -116,7 +114,7 @@ class FactCheckAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """
         Core fact-checking processing logic.
-        
+
         This method contains the actual fact-checking logic, separated from
         the workflow management for better testability and maintainability.
         """
@@ -124,7 +122,7 @@ class FactCheckAgent(BaseAgent):
         task_data = await CommonProcessors.extract_task_data(
             task, ["documents", "query"]
         )
-        
+
         documents = task_data.get("documents", [])
         query = task_data.get("query", "")
 
@@ -148,7 +146,7 @@ class FactCheckAgent(BaseAgent):
         # Calculate confidence using shared utilities
         confidence = CommonProcessors.calculate_confidence(
             {"verifications": verifications, "verified_facts": verified_facts},
-            ["verifications", "verified_facts"]
+            ["verifications", "verified_facts"],
         )
 
         return {
@@ -156,7 +154,7 @@ class FactCheckAgent(BaseAgent):
             "contested_claims": contested_claims,
             "verification_method": "rule_based",
             "total_claims": len(verifications),
-            "confidence": confidence
+            "confidence": confidence,
         }
 
     async def _extract_claims(self, query: str, documents: List[Dict]) -> List[Claim]:
@@ -211,7 +209,7 @@ class FactCheckAgent(BaseAgent):
                     text=sentence,
                     confidence=confidence,
                     source="extracted",
-                    metadata={"extraction_method": "rule_based"}
+                    metadata={"extraction_method": "rule_based"},
                 )
                 claims.append(claim)
 
@@ -235,20 +233,51 @@ class FactCheckAgent(BaseAgent):
 
         # Skip opinions and subjective statements
         opinion_indicators = [
-            "i think", "i believe", "in my opinion", "it seems", "appears",
-            "might", "could", "possibly", "probably", "maybe"
+            "i think",
+            "i believe",
+            "in my opinion",
+            "it seems",
+            "appears",
+            "might",
+            "could",
+            "possibly",
+            "probably",
+            "maybe",
         ]
         if any(indicator in sentence_lower for indicator in opinion_indicators):
             return False
 
         # Look for factual indicators
         factual_indicators = [
-            "is", "are", "was", "were", "has", "have", "had",
-            "contains", "includes", "consists of", "comprises",
-            "located", "situated", "found", "discovered",
-            "established", "founded", "created", "built",
-            "population", "area", "size", "length", "width",
-            "temperature", "pressure", "speed", "time", "date"
+            "is",
+            "are",
+            "was",
+            "were",
+            "has",
+            "have",
+            "had",
+            "contains",
+            "includes",
+            "consists of",
+            "comprises",
+            "located",
+            "situated",
+            "found",
+            "discovered",
+            "established",
+            "founded",
+            "created",
+            "built",
+            "population",
+            "area",
+            "size",
+            "length",
+            "width",
+            "temperature",
+            "pressure",
+            "speed",
+            "time",
+            "date",
         ]
 
         return any(indicator in sentence_lower for indicator in factual_indicators)
@@ -356,24 +385,26 @@ class FactCheckAgent(BaseAgent):
             # Analyze evidence with LLM if available
             try:
                 analysis = await self._analyze_evidence_with_llm(claim.text, content)
-                
+
                 if analysis.get("supports", False):
                     supporting_evidence.append(content[:200] + "...")
                     source_documents.append(doc.get("source", "unknown"))
-                
+
                 if analysis.get("contradicts", False):
                     contradicting_evidence.append(content[:200] + "...")
                     source_documents.append(doc.get("source", "unknown"))
-                    
+
             except Exception as e:
                 # Fallback to rule-based analysis
                 self.logger.warning(f"LLM analysis failed, using fallback: {e}")
-                fallback_analysis = self._fallback_evidence_analysis(claim.text, content)
-                
+                fallback_analysis = self._fallback_evidence_analysis(
+                    claim.text, content
+                )
+
                 if fallback_analysis.get("supports", False):
                     supporting_evidence.append(content[:200] + "...")
                     source_documents.append(doc.get("source", "unknown"))
-                
+
                 if fallback_analysis.get("contradicts", False):
                     contradicting_evidence.append(content[:200] + "...")
                     source_documents.append(doc.get("source", "unknown"))
@@ -391,7 +422,7 @@ class FactCheckAgent(BaseAgent):
             evidence=supporting_evidence,
             contradicting_evidence=contradicting_evidence,
             source_documents=list(set(source_documents)),
-            verification_method="llm_enhanced"
+            verification_method="llm_enhanced",
         )
 
     async def _analyze_evidence_with_llm(
@@ -427,25 +458,29 @@ class FactCheckAgent(BaseAgent):
             """
 
             llm_request = LLMRequest(
-                prompt=analysis_prompt,
-                max_tokens=200,
-                temperature=0.1
+                prompt=analysis_prompt, max_tokens=200, temperature=0.1
             )
 
             response = await llm_client.generate_text(llm_request)
-            
+
             # Parse response (simplified parsing)
             response_text = response.content.lower()
-            
+
             return {
-                "supports": "supports: true" in response_text or "supports: yes" in response_text,
-                "contradicts": "contradicts: true" in response_text or "contradicts: yes" in response_text,
-                "reasoning": response_text
+                "supports": "supports: true" in response_text
+                or "supports: yes" in response_text,
+                "contradicts": "contradicts: true" in response_text
+                or "contradicts: yes" in response_text,
+                "reasoning": response_text,
             }
 
         except Exception as e:
             self.logger.error(f"LLM analysis failed: {e}")
-            return {"supports": False, "contradicts": False, "reasoning": "Analysis failed"}
+            return {
+                "supports": False,
+                "contradicts": False,
+                "reasoning": "Analysis failed",
+            }
 
     def _fallback_evidence_analysis(
         self, claim: str, document_content: str
@@ -473,12 +508,14 @@ class FactCheckAgent(BaseAgent):
 
         # Simple rule-based analysis
         supports = overlap_ratio > 0.3  # At least 30% word overlap
-        contradicts = False  # Would need more sophisticated logic for contradiction detection
+        contradicts = (
+            False  # Would need more sophisticated logic for contradiction detection
+        )
 
         return {
             "supports": supports,
             "contradicts": contradicts,
-            "reasoning": f"Word overlap ratio: {overlap_ratio:.2f}"
+            "reasoning": f"Word overlap ratio: {overlap_ratio:.2f}",
         }
 
     def _filter_verified_facts(
@@ -504,8 +541,8 @@ class FactCheckAgent(BaseAgent):
                     evidence=verification.evidence,
                     metadata={
                         "verification_method": verification.verification_method,
-                        "source_documents": verification.source_documents
-                    }
+                        "source_documents": verification.source_documents,
+                    },
                 )
                 verified_facts.append(fact)
 
@@ -534,7 +571,7 @@ class FactCheckAgent(BaseAgent):
                     "contradicting_evidence": verification.contradicting_evidence,
                     "confidence": verification.confidence,
                     "source_documents": verification.source_documents,
-                    "status": "needs_review"
+                    "status": "needs_review",
                 }
                 contested_claims.append(contested_claim)
 
@@ -547,7 +584,9 @@ class FactCheckAgent(BaseAgent):
 
         try:
             await self.manual_review_callback(contested_claims)
-            self.logger.info(f"Requested manual review for {len(contested_claims)} claims")
+            self.logger.info(
+                f"Requested manual review for {len(contested_claims)} claims"
+            )
         except Exception as e:
             self.logger.error(f"Failed to request manual review: {e}")
 
@@ -558,12 +597,12 @@ class FactCheckAgent(BaseAgent):
             review_request = {
                 "timestamp": time.time(),
                 "claims": contested_claims,
-                "status": "pending"
+                "status": "pending",
             }
-            
+
             await self._save_review_request(review_request)
             self.logger.info(f"Stored {len(contested_claims)} contested claims")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to store contested claims: {e}")
 
@@ -621,20 +660,21 @@ class FactCheckAgent(BaseAgent):
 async def main():
     """Test the fact-check agent."""
     agent = FactCheckAgent()
-    
+
     # Test task
     task = {
         "documents": [
             {"content": "Paris is the capital of France.", "source": "test"},
-            {"content": "The population of Paris is 2.1 million.", "source": "test"}
+            {"content": "The population of Paris is 2.1 million.", "source": "test"},
         ],
-        "query": "What is the capital of France?"
+        "query": "What is the capital of France?",
     }
-    
+
     result = await agent.process_task(task, {})
     print(f"Fact-check result: {result}")
 
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())

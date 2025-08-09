@@ -49,5 +49,3 @@ def test_gateway_index_forward(monkeypatch):
     r = client.post("/query/index", json=payload)
     assert r.status_code == 200, r.text
     assert r.json()["upserted"] == 2
-
-

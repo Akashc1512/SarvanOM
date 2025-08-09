@@ -17,7 +17,13 @@ import asyncio
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import only core components
-from shared.core.agents.base_agent import BaseAgent, AgentType, AgentMessage, AgentResult, QueryContext
+from shared.core.agents.base_agent import (
+    BaseAgent,
+    AgentType,
+    AgentMessage,
+    AgentResult,
+    QueryContext,
+)
 
 
 class TestAgent(BaseAgent):

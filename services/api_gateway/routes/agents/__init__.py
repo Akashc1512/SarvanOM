@@ -27,11 +27,11 @@ router.include_router(crawler_router, prefix="/crawler", tags=["crawler-agent"])
 __all__ = [
     "router",
     "browser_router",
-    "pdf_router", 
+    "pdf_router",
     "knowledge_router",
     "code_router",
     "database_router",
-    "crawler_router"
+    "crawler_router",
 ]
 
 # Dictionary for easy registration
@@ -41,5 +41,5 @@ AGENT_ROUTERS = {
     "knowledge": knowledge_router,
     "code": code_router,
     "database": database_router,
-    "crawler": crawler_router
-} 
+    "crawler": crawler_router,
+}

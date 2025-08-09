@@ -1,4 +1,5 @@
 from shared.core.api.config import get_settings
+
 settings = get_settings()
 """
 Connection Pooling Module for Universal Knowledge Platform
@@ -34,7 +35,11 @@ POOL_TIMEOUT = float(os.getenv("CONNECTION_POOL_TIMEOUT", "30.0"))
 MAX_KEEPALIVE_TIME = int(os.getenv("MAX_KEEPALIVE_TIME", "300"))  # 5 minutes
 
 # Service URLs - All configurable via environment variables
-from shared.core.config.central_config import get_vector_db_url, get_redis_url, get_arangodb_url
+from shared.core.config.central_config import (
+    get_vector_db_url,
+    get_redis_url,
+    get_arangodb_url,
+)
 
 VECTOR_DB_URL = os.getenv("VECTOR_DB_URL", get_vector_db_url())
 ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
@@ -44,52 +49,56 @@ SPARQL_ENDPOINT = os.getenv(
 )
 
 # Circuit breaker configuration
-CIRCUIT_BREAKER_FAILURE_THRESHOLD = int(os.getenv("CIRCUIT_BREAKER_FAILURE_THRESHOLD", "5"))
+CIRCUIT_BREAKER_FAILURE_THRESHOLD = int(
+    os.getenv("CIRCUIT_BREAKER_FAILURE_THRESHOLD", "5")
+)
 CIRCUIT_BREAKER_TIMEOUT = int(os.getenv("CIRCUIT_BREAKER_TIMEOUT", "60"))  # seconds
+
 
 @dataclass
 class PoolMetrics:
     """Metrics for connection pool performance."""
+
     service_name: str
     total_requests: int = 0
     successful_requests: int = 0
     failed_requests: int = 0
     total_response_time: float = 0.0
     response_times: List[float] = None
-    
+
     def __post_init__(self):
         if self.response_times is None:
             self.response_times = []
-    
+
     def record_request(self, success: bool, response_time: float):
         """Record a request metric."""
         self.total_requests += 1
         self.total_response_time += response_time
         self.response_times.append(response_time)
-        
+
         if success:
             self.successful_requests += 1
         else:
             self.failed_requests += 1
-        
+
         # Keep only last 1000 response times for memory efficiency
         if len(self.response_times) > 1000:
             self.response_times = self.response_times[-1000:]
-    
+
     @property
     def success_rate(self) -> float:
         """Get success rate as percentage."""
         if self.total_requests == 0:
             return 100.0
         return (self.successful_requests / self.total_requests) * 100
-    
+
     @property
     def average_response_time(self) -> float:
         """Get average response time."""
         if not self.response_times:
             return 0.0
         return statistics.mean(self.response_times)
-    
+
     @property
     def p95_response_time(self) -> float:
         """Get 95th percentile response time."""
@@ -97,9 +106,10 @@ class PoolMetrics:
             return self.average_response_time
         return statistics.quantiles(self.response_times, n=20)[18]  # 95th percentile
 
+
 class CircuitBreaker:
     """Circuit breaker for external service calls."""
-    
+
     def __init__(self, service_name: str):
         self.service_name = service_name
         self.failures = 0
@@ -107,37 +117,44 @@ class CircuitBreaker:
         self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
         self.failure_threshold = CIRCUIT_BREAKER_FAILURE_THRESHOLD
         self.timeout = CIRCUIT_BREAKER_TIMEOUT
-    
+
     def can_execute(self) -> bool:
         """Check if circuit breaker allows execution."""
         if self.state == "CLOSED":
             return True
-        
+
         if self.state == "OPEN":
-            if self.last_failure_time and time.time() - self.last_failure_time > self.timeout:
+            if (
+                self.last_failure_time
+                and time.time() - self.last_failure_time > self.timeout
+            ):
                 self.state = "HALF_OPEN"
-                logger.info(f"Circuit breaker for {self.service_name} moved to HALF_OPEN")
+                logger.info(
+                    f"Circuit breaker for {self.service_name} moved to HALF_OPEN"
+                )
                 return True
             return False
-        
+
         return True  # HALF_OPEN
-    
+
     def record_success(self):
         """Record successful call."""
         self.failures = 0
         if self.state != "CLOSED":
             self.state = "CLOSED"
             logger.info(f"Circuit breaker for {self.service_name} moved to CLOSED")
-    
+
     def record_failure(self):
         """Record failed call."""
         self.failures += 1
         self.last_failure_time = time.time()
-        
+
         if self.failures >= self.failure_threshold:
             self.state = "OPEN"
-            logger.warning(f"Circuit breaker for {self.service_name} moved to OPEN after {self.failures} failures")
-    
+            logger.warning(
+                f"Circuit breaker for {self.service_name} moved to OPEN after {self.failures} failures"
+            )
+
     def get_state(self) -> str:
         """Get current circuit breaker state."""
         return self.state
@@ -152,7 +169,7 @@ class ConnectionPoolManager:
         self._elasticsearch_client: Optional[AsyncElasticsearch] = None
         self._initialized = False
         self._lock = asyncio.Lock()
-        
+
         # Circuit breakers for each service
         self._circuit_breakers = {
             "elasticsearch": CircuitBreaker("elasticsearch"),
@@ -160,7 +177,7 @@ class ConnectionPoolManager:
             "sparql": CircuitBreaker("sparql"),
             "http": CircuitBreaker("http"),
         }
-        
+
         # Metrics for each service
         self._metrics = {
             "elasticsearch": PoolMetrics("elasticsearch"),
@@ -196,12 +213,12 @@ class ConnectionPoolManager:
                 headers={"User-Agent": "UniversalKnowledgePlatform/1.0"},
             )
 
-
-
             # Initialize Elasticsearch client with connection pooling
             try:
                 if not self._circuit_breakers["elasticsearch"].can_execute():
-                    logger.warning("Elasticsearch circuit breaker is OPEN, skipping initialization")
+                    logger.warning(
+                        "Elasticsearch circuit breaker is OPEN, skipping initialization"
+                    )
                     self._elasticsearch_client = None
                 else:
                     start_time = time.time()
@@ -212,12 +229,16 @@ class ConnectionPoolManager:
                     )
                     await self._elasticsearch_client.ping()
                     response_time = time.time() - start_time
-                    
+
                     self._circuit_breakers["elasticsearch"].record_success()
                     self._metrics["elasticsearch"].record_request(True, response_time)
-                    logger.info(f"Elasticsearch connection pool initialized (response time: {response_time:.3f}s)")
+                    logger.info(
+                        f"Elasticsearch connection pool initialized (response time: {response_time:.3f}s)"
+                    )
             except Exception as e:
-                response_time = time.time() - start_time if 'start_time' in locals() else 0.0
+                response_time = (
+                    time.time() - start_time if "start_time" in locals() else 0.0
+                )
                 self._circuit_breakers["elasticsearch"].record_failure()
                 self._metrics["elasticsearch"].record_request(False, response_time)
                 logger.warning(f"Failed to initialize Elasticsearch pool: {e}")
@@ -266,8 +287,6 @@ class ConnectionPoolManager:
             raise RuntimeError("HTTP session not initialized")
 
         yield self._http_session
-
-
 
     @asynccontextmanager
     async def get_elasticsearch_client(self):
@@ -371,9 +390,9 @@ class ConnectionPoolManager:
                 "pool_size": POOL_SIZE,
                 "pool_timeout": POOL_TIMEOUT,
                 "max_keepalive_time": MAX_KEEPALIVE_TIME,
-            }
+            },
         }
-        
+
         # Add detailed pool information
         if self._http_session and self._http_session.connector:
             connector = self._http_session.connector
@@ -440,9 +459,6 @@ async def make_pooled_request(
     """Make HTTP request using pooled connection."""
     manager = await get_pool_manager()
     return await manager.make_http_request(method, url, **kwargs)
-
-
-
 
 
 async def get_elasticsearch_client():

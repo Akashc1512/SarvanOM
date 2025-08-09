@@ -1,5 +1,9 @@
 import pytest
-from shared.core.agents.retrieval_agent import RetrievalAgent, SemanticCache, SearchResult
+from shared.core.agents.retrieval_agent import (
+    RetrievalAgent,
+    SemanticCache,
+    SearchResult,
+)
 from core.types import Document
 
 

@@ -1,4 +1,5 @@
 from shared.core.api.config import get_settings
+
 settings = get_settings()
 """
 Health Checks Module for Universal Knowledge Platform

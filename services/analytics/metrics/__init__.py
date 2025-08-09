@@ -12,7 +12,7 @@ from .knowledge_platform_metrics import (
     record_business_metrics,
     get_metrics_prometheus,
     get_metrics_json,
-    health_check_metrics
+    health_check_metrics,
 )
 
 __all__ = [
@@ -25,5 +25,5 @@ __all__ = [
     "record_business_metrics",
     "get_metrics_prometheus",
     "get_metrics_json",
-    "health_check_metrics"
-] 
+    "health_check_metrics",
+]

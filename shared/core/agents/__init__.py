@@ -23,12 +23,17 @@ from .llm_client import LLMClient
 
 # Graph database components
 from .graph_db_client import GraphDBClient, GraphNode, GraphEdge
-from .knowledge_graph_service import KnowledgeGraphService, KnowledgeGraphResult, EntityNode, Relationship
+from .knowledge_graph_service import (
+    KnowledgeGraphService,
+    KnowledgeGraphResult,
+    EntityNode,
+    Relationship,
+)
 from .arangodb_knowledge_graph_agent import ArangoDBKnowledgeGraphAgent
 
 __all__ = [
     "BaseAgent",
-    "AgentType", 
+    "AgentType",
     "AgentMessage",
     "AgentResult",
     "QueryContext",
@@ -46,4 +51,4 @@ __all__ = [
     "EntityNode",
     "Relationship",
     "ArangoDBKnowledgeGraphAgent",
-] 
+]

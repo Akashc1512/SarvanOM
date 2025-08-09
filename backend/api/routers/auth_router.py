@@ -17,14 +17,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.get("/me")
-async def get_current_user_info(
-    current_user=Depends(get_current_user)
-):
+async def get_current_user_info(current_user=Depends(get_current_user)):
     """Get current user information."""
-    return {
-        "user": current_user,
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"user": current_user, "timestamp": datetime.now().isoformat()}
 
 
 @router.post("/login")
@@ -33,7 +28,7 @@ async def login():
     # TODO: Implement proper authentication
     return {
         "message": "Login endpoint - not implemented yet",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
     }
 
 
@@ -43,7 +38,7 @@ async def logout():
     # TODO: Implement proper authentication
     return {
         "message": "Logout endpoint - not implemented yet",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
     }
 
 
@@ -53,5 +48,5 @@ async def refresh_token():
     # TODO: Implement proper authentication
     return {
         "message": "Refresh token endpoint - not implemented yet",
-        "timestamp": datetime.now().isoformat()
-    } 
+        "timestamp": datetime.now().isoformat(),
+    }

@@ -7,7 +7,7 @@ import pytest
 import json
 import base64
 from fastapi.testclient import TestClient
-from services.api-gateway.main import app
+from services.api_gateway.main import app
 
 
 class TestSecurityVulnerabilities:

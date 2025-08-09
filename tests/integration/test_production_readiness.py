@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 import json
 import os
 
-from services.api-gateway.main import app
+from services.api_gateway.main import app
 from shared.core.integration_monitor import IntegrationMonitor, IntegrationStatus
 from shared.core.cache import LRUCache
 from shared.core.metrics import MetricsCollector

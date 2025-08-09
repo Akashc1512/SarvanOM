@@ -35,7 +35,11 @@ app.add_middleware(
 
 @app.get("/health")
 async def health() -> dict:
-    return {"service": "search", "status": "healthy", "timestamp": datetime.now().isoformat()}
+    return {
+        "service": "search",
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 _t0 = time.time()
@@ -55,5 +59,3 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run("services.search.main:app", host="0.0.0.0", port=8015, reload=True)
-
-

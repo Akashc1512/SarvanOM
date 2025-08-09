@@ -28,12 +28,13 @@ logger = logging.getLogger(__name__)
 IS_WINDOWS = platform.system().lower() == "windows"
 
 # Set multiprocess mode to disabled to avoid file creation issues on Windows
-os.environ.setdefault('PROMETHEUS_MULTIPROC_DIR', '')
+os.environ.setdefault("PROMETHEUS_MULTIPROC_DIR", "")
 
 # Conditional Prometheus import with fallback
 PROMETHEUS_AVAILABLE = False
 try:
     from prometheus_client import Counter, Histogram, Gauge
+
     PROMETHEUS_AVAILABLE = True
     logger.info("Prometheus client successfully imported")
 except ImportError as e:
@@ -41,48 +42,56 @@ except ImportError as e:
 except Exception as e:
     logger.warning(f"Prometheus client initialization failed: {e}")
 
+
 # Fallback metrics implementation for Windows or when Prometheus is unavailable
 class FallbackMetrics:
     """Fallback metrics implementation when Prometheus is unavailable."""
-    
+
     def __init__(self):
         self.metrics = {}
-    
+
     def _get_metric(self, name: str, metric_type: str = "counter"):
         if name not in self.metrics:
             self.metrics[name] = {"value": 0, "type": metric_type, "labels": {}}
         return self.metrics[name]
-    
+
     def inc(self, amount: float = 1.0):
         """Increment counter."""
         self.metrics["value"] += amount
-    
+
     def observe(self, value: float):
         """Record histogram observation."""
         if "observations" not in self.metrics:
             self.metrics["observations"] = []
         self.metrics["observations"].append(value)
-    
+
     def set(self, value: float):
         """Set gauge value."""
         self.metrics["value"] = value
-    
+
     def labels(self, **kwargs):
         """Set labels (no-op for fallback)."""
         self.metrics["labels"] = kwargs
         return self
 
+
 class FallbackCounter(FallbackMetrics):
     """Fallback counter implementation."""
+
     pass
+
 
 class FallbackHistogram(FallbackMetrics):
     """Fallback histogram implementation."""
+
     pass
+
 
 class FallbackGauge(FallbackMetrics):
     """Fallback gauge implementation."""
+
     pass
+
 
 # Initialize metrics with fallback support
 def create_metric(metric_class, name: str, description: str, labelnames: list = None):
@@ -92,14 +101,14 @@ def create_metric(metric_class, name: str, description: str, labelnames: list = 
             return metric_class(name, description, labelnames or [])
         except Exception as e:
             logger.warning(f"Failed to create Prometheus metric {name}: {e}")
-    
+
     # Use fallback implementation
     fallback_class = {
         Counter: FallbackCounter,
         Histogram: FallbackHistogram,
-        Gauge: FallbackGauge
+        Gauge: FallbackGauge,
     }.get(metric_class, FallbackCounter)
-    
+
     metric = fallback_class()
     metric.metrics["name"] = name
     metric.metrics["description"] = description
@@ -107,17 +116,27 @@ def create_metric(metric_class, name: str, description: str, labelnames: list = 
     logger.info(f"Using fallback metric for {name}")
     return metric
 
+
 # Create metrics with fallback support
 request_counter = create_metric(
-    Counter, "http_requests_total", "Total HTTP requests", ["method", "endpoint", "status"]
+    Counter,
+    "http_requests_total",
+    "Total HTTP requests",
+    ["method", "endpoint", "status"],
 )
 
 request_duration = create_metric(
-    Histogram, "http_request_duration_seconds", "HTTP request duration", ["method", "endpoint"]
+    Histogram,
+    "http_request_duration_seconds",
+    "HTTP request duration",
+    ["method", "endpoint"],
 )
 
 error_counter = create_metric(
-    Counter, "http_errors_total", "Total HTTP errors", ["method", "endpoint", "error_type"]
+    Counter,
+    "http_errors_total",
+    "Total HTTP errors",
+    ["method", "endpoint", "error_type"],
 )
 
 active_connections = create_metric(
@@ -136,9 +155,8 @@ memory_usage = create_metric(
     Gauge, "memory_usage_bytes", "Memory usage in bytes", ["type"]
 )
 
-cpu_usage = create_metric(
-    Gauge, "cpu_usage_percent", "CPU usage percentage", ["core"]
-)
+cpu_usage = create_metric(Gauge, "cpu_usage_percent", "CPU usage percentage", ["core"])
+
 
 def record_request(method: str, endpoint: str, status: int, duration: float):
     """Record HTTP request metrics."""
@@ -148,12 +166,16 @@ def record_request(method: str, endpoint: str, status: int, duration: float):
     except Exception as e:
         logger.warning(f"Failed to record request metrics: {e}")
 
+
 def record_error(method: str, endpoint: str, error_type: str):
     """Record error metrics."""
     try:
-        error_counter.labels(method=method, endpoint=endpoint, error_type=error_type).inc()
+        error_counter.labels(
+            method=method, endpoint=endpoint, error_type=error_type
+        ).inc()
     except Exception as e:
         logger.warning(f"Failed to record error metrics: {e}")
+
 
 def record_cache_hit(cache_name: str):
     """Record cache hit."""
@@ -162,12 +184,14 @@ def record_cache_hit(cache_name: str):
     except Exception as e:
         logger.warning(f"Failed to record cache hit: {e}")
 
+
 def record_cache_miss(cache_name: str):
     """Record cache miss."""
     try:
         cache_misses.labels(cache_name=cache_name).inc()
     except Exception as e:
         logger.warning(f"Failed to record cache miss: {e}")
+
 
 def update_system_metrics():
     """Update system resource metrics."""
@@ -177,13 +201,14 @@ def update_system_metrics():
         memory_usage.labels(type="used").set(memory.used)
         memory_usage.labels(type="available").set(memory.available)
         memory_usage.labels(type="total").set(memory.total)
-        
+
         # CPU metrics
         cpu_percent = psutil.cpu_percent(interval=1, percpu=True)
         for i, percent in enumerate(cpu_percent):
             cpu_usage.labels(core=f"cpu_{i}").set(percent)
     except Exception as e:
         logger.warning(f"Failed to update system metrics: {e}")
+
 
 def get_metrics_summary() -> Dict[str, Any]:
     """Get metrics summary for health checks."""
@@ -196,51 +221,54 @@ def get_metrics_summary() -> Dict[str, Any]:
             "system_info": {
                 "cpu_count": psutil.cpu_count(),
                 "memory_total": psutil.virtual_memory().total,
-                "memory_available": psutil.virtual_memory().available
-            }
+                "memory_available": psutil.virtual_memory().available,
+            },
         }
-        
+
         # Add fallback metrics if Prometheus is not available
         if not PROMETHEUS_AVAILABLE or IS_WINDOWS:
             summary["fallback_metrics"] = {
-                "request_counter": getattr(request_counter, 'metrics', {}),
-                "error_counter": getattr(error_counter, 'metrics', {}),
-                "memory_usage": getattr(memory_usage, 'metrics', {})
+                "request_counter": getattr(request_counter, "metrics", {}),
+                "error_counter": getattr(error_counter, "metrics", {}),
+                "memory_usage": getattr(memory_usage, "metrics", {}),
             }
-        
+
         return summary
     except Exception as e:
         logger.error(f"Failed to get metrics summary: {e}")
         return {
             "error": str(e),
             "prometheus_available": PROMETHEUS_AVAILABLE,
-            "platform": platform.system()
+            "platform": platform.system(),
         }
+
 
 def get_prometheus_metrics() -> str:
     """Get metrics in Prometheus format."""
     if PROMETHEUS_AVAILABLE and not IS_WINDOWS:
         try:
             from prometheus_client import generate_latest
-            return generate_latest().decode('utf-8')
+
+            return generate_latest().decode("utf-8")
         except Exception as e:
             logger.warning(f"Failed to generate Prometheus metrics: {e}")
-    
+
     # Return fallback metrics format
     fallback_metrics = []
     for metric_name, metric in [
         ("http_requests_total", request_counter),
         ("http_errors_total", error_counter),
         ("memory_usage_bytes", memory_usage),
-        ("cpu_usage_percent", cpu_usage)
+        ("cpu_usage_percent", cpu_usage),
     ]:
-        if hasattr(metric, 'metrics'):
-            value = metric.metrics.get('value', 0)
+        if hasattr(metric, "metrics"):
+            value = metric.metrics.get("value", 0)
             fallback_metrics.append(f"# HELP {metric_name} Fallback metric")
             fallback_metrics.append(f"# TYPE {metric_name} counter")
             fallback_metrics.append(f"{metric_name} {value}")
-    
+
     return "\n".join(fallback_metrics)
+
 
 # Health check function
 def check_monitoring_health() -> Dict[str, Any]:
@@ -250,5 +278,9 @@ def check_monitoring_health() -> Dict[str, Any]:
         "prometheus_available": PROMETHEUS_AVAILABLE,
         "windows_compatibility_mode": IS_WINDOWS,
         "fallback_active": not PROMETHEUS_AVAILABLE or IS_WINDOWS,
-        "message": "Monitoring system operational with fallback support" if IS_WINDOWS else "Monitoring system operational"
-    } 
+        "message": (
+            "Monitoring system operational with fallback support"
+            if IS_WINDOWS
+            else "Monitoring system operational"
+        ),
+    }

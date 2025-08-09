@@ -29,12 +29,12 @@ def test_index_and_search_roundtrip():
     assert r.json().get("upserted") == 2
 
     # Search for related text
-    s = client.post("/search", json={"query": "What is the capital of France?", "max_results": 5})
+    s = client.post(
+        "/search", json={"query": "What is the capital of France?", "max_results": 5}
+    )
     assert s.status_code == 200, s.text
     data = s.json()
     assert data["total_results"] >= 1
     # Expect that one of the sources references "Paris"
     texts = " ".join([src.get("text", "") for src in data["sources"]]).lower()
     assert "paris" in texts
-
-

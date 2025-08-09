@@ -18,9 +18,9 @@ from .agent_repository import AgentRepository, AgentRepositoryImpl
 __all__ = [
     "BaseRepository",
     "QueryRepository",
-    "QueryRepositoryImpl", 
+    "QueryRepositoryImpl",
     "UserRepository",
     "UserRepositoryImpl",
     "AgentRepository",
-    "AgentRepositoryImpl"
+    "AgentRepositoryImpl",
 ]

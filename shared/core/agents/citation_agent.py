@@ -27,7 +27,7 @@ from shared.core.agents.data_models import CitationResult, CitationModel
 from shared.core.agents.agent_utilities import (
     AgentTaskProcessor,
     ResponseFormatter,
-    time_agent_function
+    time_agent_function,
 )
 from shared.core.agents.validation_utilities import CommonValidators
 
@@ -97,7 +97,7 @@ class CitationAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """
         Process citation task using shared utilities.
-        
+
         This method now uses the standardized workflow from AgentTaskProcessor
         to eliminate duplicate logic and ensure consistent behavior.
         """
@@ -107,9 +107,9 @@ class CitationAgent(BaseAgent):
             context=context,
             processing_func=self._process_citation_task,
             validation_func=CommonValidators.validate_sources_input,
-            timeout_seconds=60
+            timeout_seconds=60,
         )
-        
+
         # Convert TaskResult to standard response format
         return ResponseFormatter.format_agent_response(
             success=result.success,
@@ -117,7 +117,7 @@ class CitationAgent(BaseAgent):
             error=result.error,
             confidence=result.confidence,
             execution_time_ms=result.execution_time_ms,
-            metadata=result.metadata
+            metadata=result.metadata,
         )
 
     async def _process_citation_task(
@@ -125,11 +125,11 @@ class CitationAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """
         Process citation task by generating proper citations for content and sources.
-        
+
         Args:
             task: Task data containing content and sources
             context: Query context
-            
+
         Returns:
             Dictionary with cited content
         """
@@ -144,12 +144,12 @@ class CitationAgent(BaseAgent):
 
         # Import prompt template manager
         from shared.core.prompt_templates import get_template_manager
-        
+
         template_manager = get_template_manager()
-        
+
         # Use enhanced citation generation template
         citation_template = template_manager.get_template("citation_generation")
-        
+
         # Format sources for the template
         sources_text = ""
         for i, source in enumerate(sources, 1):
@@ -171,9 +171,7 @@ class CitationAgent(BaseAgent):
 
         # Format the citation prompt using the template
         citation_prompt = citation_template.format(
-            answer=answer,
-            sources=sources_text,
-            citation_format=citation_format
+            answer=answer, sources=sources_text, citation_format=citation_format
         )
 
         # Use LLM for citation processing with dynamic model selection
@@ -212,13 +210,13 @@ Processing guidelines:
         # Use dynamic model selection for citation processing
         # For citation processing, we'll use a simpler query since it's about formatting
         citation_query = f"Format citations in {citation_format} style"
-        
+
         response = await llm_client._client.generate_text(
             prompt=citation_prompt,
             max_tokens=1500,
             temperature=0.1,
             query=citation_query,  # Pass citation-specific query for model selection
-            use_dynamic_selection=True
+            use_dynamic_selection=True,
         )
 
         if response and response.strip():
@@ -238,26 +236,28 @@ Processing guidelines:
             }
         else:
             # Fallback to basic citation formatting
-            return await self._fallback_citation_processing(answer, sources, citation_format)
+            return await self._fallback_citation_processing(
+                answer, sources, citation_format
+            )
 
     async def _fallback_citation_processing(
         self, answer: str, sources: List[Dict], citation_format: str
     ) -> Dict[str, Any]:
         """
         Fallback citation processing when LLM is unavailable.
-        
+
         Args:
             answer: Original answer with citation placeholders
             sources: List of sources
             citation_format: Citation format to use
-            
+
         Returns:
             Dictionary with basic citation processing
         """
         try:
             # Simple placeholder replacement
             processed_answer = answer
-            
+
             # Replace citation placeholders with basic citations
             for i, source in enumerate(sources, 1):
                 if isinstance(source, dict):
@@ -268,7 +268,7 @@ Processing guidelines:
                         citation_text = f"({title}, {url})"
                 else:
                     citation_text = f"(Source {i})"
-                
+
                 # Replace [i] placeholders with citations
                 processed_answer = processed_answer.replace(f"[{i}]", citation_text)
 
@@ -287,7 +287,7 @@ Processing guidelines:
                 "sources": sources,
                 "citation_format": citation_format,
                 "confidence": 0.0,
-                "error": f"Fallback citation processing failed: {str(e)}"
+                "error": f"Fallback citation processing failed: {str(e)}",
             }
 
     async def _generate_citations(
@@ -529,7 +529,7 @@ Processing guidelines:
                                 "citation_id": citation.id,
                                 "source": citation.source,
                                 "sentence_preview": sentence[:100],
-                            }
+                            },
                         )
                 else:
                     cited_sentence = f"{sentence.strip()}."

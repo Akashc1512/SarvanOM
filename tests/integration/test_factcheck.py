@@ -28,7 +28,9 @@ async def test_cross_source_verdicts():
     for _ in range(10):
         result = await agent.verify_claim(claim, sources)
         verdicts.add(result["verdict"])
-    assert "supported" in verdicts or "contested" in verdicts or "contradicted" in verdicts
+    assert (
+        "supported" in verdicts or "contested" in verdicts or "contradicted" in verdicts
+    )
 
 
 @pytest.mark.asyncio

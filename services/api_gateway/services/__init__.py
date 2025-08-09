@@ -17,14 +17,17 @@ from .service_factory import ServiceFactory
 from .health_service import HealthService
 from .sso_service import SSOService, sso_service
 from .multi_tenant_service import MultiTenantService, multi_tenant_service
-from .advanced_analytics_service import AdvancedAnalyticsService, advanced_analytics_service
+from .advanced_analytics_service import (
+    AdvancedAnalyticsService,
+    advanced_analytics_service,
+)
 
 # Create service instances
 health_service = HealthService()
 
 __all__ = [
     "BaseAgentService",
-    "BrowserService", 
+    "BrowserService",
     "PDFService",
     "KnowledgeService",
     "CodeService",
@@ -34,5 +37,5 @@ __all__ = [
     "health_service",
     "sso_service",
     "multi_tenant_service",
-    "advanced_analytics_service"
-] 
+    "advanced_analytics_service",
+]

@@ -224,11 +224,12 @@ class PresenceManager:
     def __init__(self, database_service=None):
         try:
             from shared.core.database import get_database_service
+
             self.db_service = database_service or get_database_service()
         except Exception as e:
             logger.warning(f"Database service not available: {e}")
             self.db_service = None
-        
+
         self.presence_data: Dict[str, UserPresence] = {}
         self.typing_users: Dict[str, Dict[str, datetime]] = defaultdict(dict)
         self._cleanup_task: Optional[asyncio.Task] = None
@@ -315,7 +316,9 @@ class PresenceManager:
                                 # Delete presence data from database
                                 pass
                         except Exception as e:
-                            logger.warning(f"Failed to clean up presence from database: {e}")
+                            logger.warning(
+                                f"Failed to clean up presence from database: {e}"
+                            )
 
                 # Clean up stale typing indicators
                 for room_id in list(self.typing_users.keys()):

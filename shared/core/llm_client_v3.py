@@ -1,4 +1,5 @@
 from shared.core.api.config import get_settings
+
 settings = get_settings()
 """
 Enhanced LLM Client v3 - MAANG Standards
@@ -431,15 +432,19 @@ class OpenAIProvider(LLMProviderInterface):
                 error_message=str(e),
                 model=self.config.model,
                 prompt_length=len(request.prompt),
-                exc_info=True
+                exc_info=True,
             )
-            
+
             # Return fallback response instead of crashing
             return LLMResponse(
                 content="I apologize, but I'm experiencing technical difficulties. Please try again later.",
                 provider=LLMProvider.MOCK,
                 model="fallback",
-                token_usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                token_usage={
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                },
                 finish_reason="error",
                 response_time_ms=(time.time() - start_time) * 1000,
                 metadata={"error": str(e), "fallback": True},
@@ -748,6 +753,7 @@ class OllamaProvider(LLMProviderInterface):
         self.config = config
         # Use central configuration for Ollama URL
         from shared.core.config.central_config import get_ollama_url
+
         self.base_url = config.base_url or get_ollama_url()
         self.timeout = config.timeout
         self.session = aiohttp.ClientSession(
@@ -758,7 +764,7 @@ class OllamaProvider(LLMProviderInterface):
     async def generate_text(self, request: LLMRequest) -> LLMResponse:
         """Generate text using Ollama."""
         start_time = time.time()
-        
+
         try:
             # Prepare the request payload
             payload = {
@@ -771,8 +777,8 @@ class OllamaProvider(LLMProviderInterface):
                     "top_p": request.top_p or 0.9,
                     "top_k": 40,
                     "repeat_penalty": 1.1,
-                    "stop": request.stop_sequences or []
-                }
+                    "stop": request.stop_sequences or [],
+                },
             }
 
             # Add system message if provided
@@ -783,7 +789,7 @@ class OllamaProvider(LLMProviderInterface):
             async with self.session.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             ) as response:
                 if response.status != 200:
                     error_text = await response.text()
@@ -792,11 +798,11 @@ class OllamaProvider(LLMProviderInterface):
                         message=f"Ollama API error: {response.status} - {error_text}",
                         provider=LLMProvider.OLLAMA,
                         model=self.config.model,
-                        status_code=response.status
+                        status_code=response.status,
                     )
 
                 result = await response.json()
-                
+
                 # Extract response content
                 content = result.get("response", "")
                 if not content:
@@ -805,7 +811,7 @@ class OllamaProvider(LLMProviderInterface):
                         message="Ollama returned empty response",
                         provider=LLMProvider.OLLAMA,
                         model=self.config.model,
-                        retryable=False
+                        retryable=False,
                     )
 
                 # Calculate response time
@@ -821,14 +827,12 @@ class OllamaProvider(LLMProviderInterface):
                     token_usage={
                         "prompt_tokens": len(request.prompt.split()) * 1.3,
                         "completion_tokens": estimated_tokens,
-                        "total_tokens": len(request.prompt.split()) * 1.3 + estimated_tokens
+                        "total_tokens": len(request.prompt.split()) * 1.3
+                        + estimated_tokens,
                     },
                     finish_reason="stop",
                     response_time_ms=response_time,
-                    metadata={
-                        "ollama_response": result,
-                        "estimated_tokens": True
-                    }
+                    metadata={"ollama_response": result, "estimated_tokens": True},
                 )
 
         except aiohttp.ClientError as e:
@@ -837,7 +841,7 @@ class OllamaProvider(LLMProviderInterface):
                 message=f"Network error with Ollama: {str(e)}",
                 provider=LLMProvider.OLLAMA,
                 model=self.config.model,
-                retryable=True
+                retryable=True,
             )
         except Exception as e:
             raise LLMError(
@@ -845,7 +849,7 @@ class OllamaProvider(LLMProviderInterface):
                 message=f"Unexpected error with Ollama: {str(e)}",
                 provider=LLMProvider.OLLAMA,
                 model=self.config.model,
-                retryable=True
+                retryable=True,
             )
 
     async def generate_stream(self, request: LLMRequest) -> AsyncGenerator[str, None]:
@@ -861,8 +865,8 @@ class OllamaProvider(LLMProviderInterface):
                     "top_p": request.top_p or 0.9,
                     "top_k": 40,
                     "repeat_penalty": 1.1,
-                    "stop": request.stop_sequences or []
-                }
+                    "stop": request.stop_sequences or [],
+                },
             }
 
             if request.system_message:
@@ -871,7 +875,7 @@ class OllamaProvider(LLMProviderInterface):
             async with self.session.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             ) as response:
                 if response.status != 200:
                     error_text = await response.text()
@@ -880,7 +884,7 @@ class OllamaProvider(LLMProviderInterface):
                         message=f"Ollama streaming API error: {response.status} - {error_text}",
                         provider=LLMProvider.OLLAMA,
                         model=self.config.model,
-                        status_code=response.status
+                        status_code=response.status,
                     )
 
                 async for line in response.content:
@@ -900,21 +904,18 @@ class OllamaProvider(LLMProviderInterface):
                 message=f"Ollama streaming error: {str(e)}",
                 provider=LLMProvider.OLLAMA,
                 model=self.config.model,
-                retryable=True
+                retryable=True,
             )
 
     async def create_embedding(self, text: str) -> List[float]:
         """Create embeddings using Ollama (if supported)."""
         try:
-            payload = {
-                "model": self.config.model,
-                "prompt": text
-            }
+            payload = {"model": self.config.model, "prompt": text}
 
             async with self.session.post(
                 f"{self.base_url}/api/embeddings",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             ) as response:
                 if response.status != 200:
                     # Fallback to sentence transformers if embeddings not supported
@@ -932,7 +933,8 @@ class OllamaProvider(LLMProviderInterface):
         """Fallback embedding using sentence transformers."""
         try:
             from sentence_transformers import SentenceTransformer
-            model = SentenceTransformer('all-MiniLM-L6-v2')
+
+            model = SentenceTransformer("all-MiniLM-L6-v2")
             embedding = model.encode(text)
             return embedding.tolist()
         except ImportError:
@@ -949,14 +951,16 @@ class OllamaProvider(LLMProviderInterface):
             "cost_per_1k_tokens": 0.0,  # Free local inference
             "rate_limits": {
                 "requests_per_minute": 1000,  # Local, no real limits
-                "tokens_per_minute": 100000
-            }
+                "tokens_per_minute": 100000,
+            },
         }
 
     async def health_check(self) -> bool:
         """Check Ollama service health."""
         try:
-            async with self.session.get(f"{self.base_url}/api/tags", timeout=5) as response:
+            async with self.session.get(
+                f"{self.base_url}/api/tags", timeout=5
+            ) as response:
                 return response.status == 200
         except Exception:
             return False
@@ -982,9 +986,9 @@ class HuggingFaceProvider(LLMProviderInterface):
         self.timeout = config.timeout
         self.session = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=self.timeout),
-            headers={"Authorization": f"Bearer {self.api_key}"}
+            headers={"Authorization": f"Bearer {self.api_key}"},
         )
-        
+
         # Enhanced model selection
         self.model_cache = {}
         self.task_model_mapping = {
@@ -992,32 +996,31 @@ class HuggingFaceProvider(LLMProviderInterface):
                 "microsoft/DialoGPT-medium",
                 "gpt2",
                 "EleutherAI/gpt-neo-125M",
-                "distilgpt2"
+                "distilgpt2",
             ],
             "translation": [
                 "Helsinki-NLP/opus-mt-en-es",
                 "Helsinki-NLP/opus-mt-en-fr",
-                "Helsinki-NLP/opus-mt-en-de"
+                "Helsinki-NLP/opus-mt-en-de",
             ],
-            "summarization": [
-                "facebook/bart-large-cnn",
-                "google/pegasus-large"
-            ],
+            "summarization": ["facebook/bart-large-cnn", "google/pegasus-large"],
             "question-answering": [
                 "deepset/roberta-base-squad2",
-                "distilbert-base-cased-distilled-squad"
+                "distilbert-base-cased-distilled-squad",
             ],
             "text-classification": [
                 "cardiffnlp/twitter-roberta-base-sentiment",
-                "distilbert-base-uncased-finetuned-sst-2-english"
+                "distilbert-base-uncased-finetuned-sst-2-english",
             ],
             "code-generation": [
                 "Salesforce/codegen-350M-mono",
-                "Salesforce/codegen-2B-mono"
-            ]
+                "Salesforce/codegen-2B-mono",
+            ],
         }
-        
-        logger.info(f"Enhanced Hugging Face provider initialized for model: {self.config.model}")
+
+        logger.info(
+            f"Enhanced Hugging Face provider initialized for model: {self.config.model}"
+        )
 
     def _select_best_model(self, task: str, prompt: str) -> str:
         """Intelligently select the best model for the given task and prompt."""
@@ -1037,20 +1040,19 @@ class HuggingFaceProvider(LLMProviderInterface):
                 return "cardiffnlp/twitter-roberta-base-sentiment"
             else:
                 return models[0]  # Use first available model
-        
+
         # Fallback to default model
         return self.config.model
 
     async def generate_text(self, request: LLMRequest) -> LLMResponse:
         """Generate text using Hugging Face API with intelligent model selection."""
         start_time = time.time()
-        
+
         # Select the best model for the task
         selected_model = self._select_best_model(
-            request.metadata.get("task", "text-generation"),
-            request.prompt
+            request.metadata.get("task", "text-generation"), request.prompt
         )
-        
+
         try:
             payload = {
                 "inputs": request.prompt,
@@ -1059,13 +1061,12 @@ class HuggingFaceProvider(LLMProviderInterface):
                     "temperature": request.temperature or self.config.temperature,
                     "top_p": request.top_p or 0.9,
                     "do_sample": True,
-                    "return_full_text": False
-                }
+                    "return_full_text": False,
+                },
             }
 
             async with self.session.post(
-                f"{self.base_url}/models/{selected_model}",
-                json=payload
+                f"{self.base_url}/models/{selected_model}", json=payload
             ) as response:
                 if response.status == 503:
                     # Model is loading
@@ -1074,7 +1075,7 @@ class HuggingFaceProvider(LLMProviderInterface):
                         message="Hugging Face model is loading, please retry",
                         provider=LLMProvider.HUGGINGFACE,
                         model=self.config.model,
-                        retryable=True
+                        retryable=True,
                     )
                 elif response.status != 200:
                     error_text = await response.text()
@@ -1083,11 +1084,11 @@ class HuggingFaceProvider(LLMProviderInterface):
                         message=f"Hugging Face API error: {response.status} - {error_text}",
                         provider=LLMProvider.HUGGINGFACE,
                         model=self.config.model,
-                        status_code=response.status
+                        status_code=response.status,
                     )
 
                 result = await response.json()
-                
+
                 # Extract response content
                 if isinstance(result, list) and len(result) > 0:
                     content = result[0].get("generated_text", "")
@@ -1102,7 +1103,7 @@ class HuggingFaceProvider(LLMProviderInterface):
                         message="Hugging Face returned empty response",
                         provider=LLMProvider.HUGGINGFACE,
                         model=self.config.model,
-                        retryable=False
+                        retryable=False,
                     )
 
                 response_time = (time.time() - start_time) * 1000
@@ -1115,7 +1116,8 @@ class HuggingFaceProvider(LLMProviderInterface):
                     token_usage={
                         "prompt_tokens": len(request.prompt.split()) * 1.3,
                         "completion_tokens": estimated_tokens,
-                        "total_tokens": len(request.prompt.split()) * 1.3 + estimated_tokens
+                        "total_tokens": len(request.prompt.split()) * 1.3
+                        + estimated_tokens,
                     },
                     finish_reason="stop",
                     response_time_ms=response_time,
@@ -1123,8 +1125,8 @@ class HuggingFaceProvider(LLMProviderInterface):
                         "huggingface_response": result,
                         "estimated_tokens": True,
                         "selected_model": selected_model,
-                        "model_selection_method": "intelligent"
-                    }
+                        "model_selection_method": "intelligent",
+                    },
                 )
 
         except aiohttp.ClientError as e:
@@ -1133,7 +1135,7 @@ class HuggingFaceProvider(LLMProviderInterface):
                 message=f"Network error with Hugging Face: {str(e)}",
                 provider=LLMProvider.HUGGINGFACE,
                 model=self.config.model,
-                retryable=True
+                retryable=True,
             )
         except Exception as e:
             raise LLMError(
@@ -1141,7 +1143,7 @@ class HuggingFaceProvider(LLMProviderInterface):
                 message=f"Unexpected error with Hugging Face: {str(e)}",
                 provider=LLMProvider.HUGGINGFACE,
                 model=self.config.model,
-                retryable=True
+                retryable=True,
             )
 
     async def generate_stream(self, request: LLMRequest) -> AsyncGenerator[str, None]:
@@ -1160,19 +1162,17 @@ class HuggingFaceProvider(LLMProviderInterface):
                 message=f"Hugging Face streaming error: {str(e)}",
                 provider=LLMProvider.HUGGINGFACE,
                 model=self.config.model,
-                retryable=True
+                retryable=True,
             )
 
     async def create_embedding(self, text: str) -> List[float]:
         """Create embeddings using Hugging Face."""
         try:
-            payload = {
-                "inputs": text
-            }
+            payload = {"inputs": text}
 
             async with self.session.post(
                 f"{self.base_url}/models/sentence-transformers/all-MiniLM-L6-v2",
-                json=payload
+                json=payload,
             ) as response:
                 if response.status != 200:
                     raise LLMError(
@@ -1180,7 +1180,7 @@ class HuggingFaceProvider(LLMProviderInterface):
                         message=f"Hugging Face embedding error: {response.status}",
                         provider=LLMProvider.HUGGINGFACE,
                         model=self.config.model,
-                        status_code=response.status
+                        status_code=response.status,
                     )
 
                 result = await response.json()
@@ -1195,7 +1195,7 @@ class HuggingFaceProvider(LLMProviderInterface):
                 message=f"Hugging Face embedding error: {str(e)}",
                 provider=LLMProvider.HUGGINGFACE,
                 model=self.config.model,
-                retryable=True
+                retryable=True,
             )
 
     def get_provider_info(self) -> Dict[str, Any]:
@@ -1216,27 +1216,27 @@ class HuggingFaceProvider(LLMProviderInterface):
                 "sentiment_analysis",
                 "model_discovery",
                 "dataset_search",
-                "space_discovery"
+                "space_discovery",
             ],
             "available_models": len(self.task_model_mapping),
             "model_categories": list(self.task_model_mapping.keys()),
             "cost_per_1k_tokens": 0.0,  # Free tier
             "rate_limits": {
                 "requests_per_month": 30000,  # Free tier limit
-                "requests_per_minute": 10
+                "requests_per_minute": 10,
             },
             "token_permissions": {
                 "write": token_type == "write",
                 "read": token_type in ["read", "write"],
-                "legacy": token_type == "legacy"
+                "legacy": token_type == "legacy",
             },
             "enhanced_features": {
                 "intelligent_model_selection": True,
                 "task_specific_models": True,
                 "model_discovery": True,
                 "dataset_integration": True,
-                "space_integration": True
-            }
+                "space_integration": True,
+            },
         }
 
     async def health_check(self) -> bool:
@@ -1246,7 +1246,7 @@ class HuggingFaceProvider(LLMProviderInterface):
                 return response.status == 200
         except Exception:
             return False
-    
+
     def _get_token_type(self) -> str:
         """Determine the type of token being used."""
         if settings.huggingface_write_token == self.config.api_key:
@@ -1414,11 +1414,13 @@ class EnhancedLLMClientV3:
         # Hugging Face provider (free API)
         hf_write_token = os.getenv("HUGGINGFACE_WRITE_TOKEN")
         hf_read_token = os.getenv("HUGGINGFACE_READ_TOKEN")
-        hf_api_key = os.getenv("HUGGINGFACE_API_KEY")  # Fallback for backward compatibility
-        
+        hf_api_key = os.getenv(
+            "HUGGINGFACE_API_KEY"
+        )  # Fallback for backward compatibility
+
         # Use write token if available, otherwise fall back to read token or legacy API key
         hf_token = hf_write_token or hf_read_token or hf_api_key
-        
+
         if hf_token:
             providers.append(
                 LLMConfig(
@@ -1461,33 +1463,33 @@ class EnhancedLLMClientV3:
             logger.warning(f"Unsupported provider: {config.provider}")
 
     async def generate_text(
-        self, 
-        prompt: str, 
-        max_tokens: int = 512, 
+        self,
+        prompt: str,
+        max_tokens: int = 512,
         temperature: float = 0.1,
         query: Optional[str] = None,
-        use_dynamic_selection: bool = True
+        use_dynamic_selection: bool = True,
     ) -> str:
         """
         Generate text using the configured LLM provider with optional dynamic model selection.
-        
+
         Args:
             prompt: The prompt to send to the LLM
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             query: Original user query for dynamic model selection
             use_dynamic_selection: Whether to use dynamic model selection
-            
+
         Returns:
             Generated text response
         """
         if use_dynamic_selection and query:
             # Use dynamic model selection
             from shared.core.model_selector import get_model_selector
-            
+
             model_selector = get_model_selector()
             selection_result = await model_selector.select_model(query, max_tokens)
-            
+
             # Create request with selected model
             request = LLMRequest(
                 prompt=prompt,
@@ -1497,54 +1499,66 @@ class EnhancedLLMClientV3:
                     "selected_model": selection_result.selected_model,
                     "model_tier": selection_result.model_tier.value,
                     "selection_reasoning": selection_result.reasoning,
-                    "estimated_cost": selection_result.estimated_cost
-                }
+                    "estimated_cost": selection_result.estimated_cost,
+                },
             )
-            
-            logger.info(f"Using dynamically selected model: {selection_result.selected_model} "
-                       f"({selection_result.model_tier.value}) for query: {query[:50]}...")
-            
+
+            logger.info(
+                f"Using dynamically selected model: {selection_result.selected_model} "
+                f"({selection_result.model_tier.value}) for query: {query[:50]}..."
+            )
+
             # Try the selected model first, then fallbacks
-            models_to_try = [selection_result.selected_model] + selection_result.fallback_models
-            
+            models_to_try = [
+                selection_result.selected_model
+            ] + selection_result.fallback_models
+
             for model_name in models_to_try:
                 try:
                     # Update request with specific model
                     request.metadata["attempted_model"] = model_name
-                    
+
                     # Find the provider for this model
                     for config in self.configs:
                         if config.model == model_name:
                             # Temporarily switch to this model
                             original_model = config.model
                             config.model = model_name
-                            
+
                             try:
-                                response = await self._generate_text_with_provider(config, request)
-                                logger.info(f"Successfully used model {model_name} for query")
+                                response = await self._generate_text_with_provider(
+                                    config, request
+                                )
+                                logger.info(
+                                    f"Successfully used model {model_name} for query"
+                                )
                                 return response.content
                             finally:
                                 # Restore original model
                                 config.model = original_model
-                    
+
                 except Exception as e:
-                    logger.warning(f"Model {model_name} failed: {e}, trying next model...")
+                    logger.warning(
+                        f"Model {model_name} failed: {e}, trying next model..."
+                    )
                     continue
-            
+
             # If all models fail, fall back to default behavior
-            logger.warning("All dynamically selected models failed, falling back to default")
-        
+            logger.warning(
+                "All dynamically selected models failed, falling back to default"
+            )
+
         # Default behavior without dynamic selection
         request = LLMRequest(
-            prompt=prompt,
-            max_tokens=max_tokens,
-            temperature=temperature
+            prompt=prompt, max_tokens=max_tokens, temperature=temperature
         )
-        
+
         response = await self._generate_text(request)
         return response.content
 
-    async def _generate_text_with_provider(self, config: LLMConfig, request: LLMRequest) -> LLMResponse:
+    async def _generate_text_with_provider(
+        self, config: LLMConfig, request: LLMRequest
+    ) -> LLMResponse:
         """Generate text with a specific provider configuration."""
         # Find the provider instance
         provider = None
@@ -1552,20 +1566,20 @@ class EnhancedLLMClientV3:
             if p.config.provider == config.provider:
                 provider = p
                 break
-        
+
         if not provider:
             raise LLMError(
                 error_type="provider_not_found",
                 message=f"Provider {config.provider} not found",
                 provider=config.provider,
                 model=config.model,
-                retryable=False
+                retryable=False,
             )
-        
+
         # Temporarily update the provider's model
         original_model = provider.config.model
         provider.config.model = config.model
-        
+
         try:
             return await provider.generate_text(request)
         finally:
@@ -1679,17 +1693,21 @@ class EnhancedLLMClientV3:
         # Prefer free/local embeddings when configured
         try:
             from shared.core.config import get_central_config
+
             cfg = get_central_config()
             if getattr(cfg, "prioritize_free_models", True):
                 import anyio
 
                 def _local_embed() -> List[float]:
                     from shared.embeddings.local_embedder import embed_texts
+
                     return embed_texts([text])[0]
 
                 return await anyio.to_thread.run_sync(_local_embed)
         except Exception as e:
-            logger.warning(f"Local embedding attempt failed, falling back to providers: {e}")
+            logger.warning(
+                f"Local embedding attempt failed, falling back to providers: {e}"
+            )
 
         if not self.providers:
             raise LLMError(

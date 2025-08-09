@@ -21,9 +21,7 @@ router = APIRouter(prefix="/health", tags=["health"])
 
 
 @router.get("/")
-async def health_check(
-    health_service: HealthService = Depends(get_health_service)
-):
+async def health_check(health_service: HealthService = Depends(get_health_service)):
     """Comprehensive health check endpoint."""
     try:
         health_data = await health_service.get_system_health()
@@ -35,7 +33,7 @@ async def health_check(
 
 @router.get("/basic")
 async def basic_health_check(
-    health_service: HealthService = Depends(get_health_service)
+    health_service: HealthService = Depends(get_health_service),
 ):
     """Basic health check for load balancers."""
     try:
@@ -47,13 +45,13 @@ async def basic_health_check(
             "status": "unhealthy",
             "error": str(e),
             "timestamp": datetime.now().isoformat(),
-            "service": "sarvanom-backend"
+            "service": "sarvanom-backend",
         }
 
 
 @router.get("/detailed")
 async def detailed_health_check(
-    health_service: HealthService = Depends(get_health_service)
+    health_service: HealthService = Depends(get_health_service),
 ):
     """Detailed health check with comprehensive metrics."""
     try:
@@ -66,7 +64,7 @@ async def detailed_health_check(
 
 @router.get("/diagnostics")
 async def system_diagnostics(
-    health_service: HealthService = Depends(get_health_service)
+    health_service: HealthService = Depends(get_health_service),
 ):
     """Get comprehensive system diagnostics."""
     try:
@@ -78,18 +76,16 @@ async def system_diagnostics(
 
 
 @router.get("/cache")
-async def cache_health_check(
-    cache_service: CacheService = Depends(get_cache_service)
-):
+async def cache_health_check(cache_service: CacheService = Depends(get_cache_service)):
     """Cache-specific health check."""
     try:
         stats = await cache_service.get_stats()
         return {
             "status": "healthy",
             "timestamp": datetime.now().isoformat(),
-            "cache_stats": stats
+            "cache_stats": stats,
         }
-        
+
     except Exception as e:
         logger.error(f"Cache health check failed: {e}", exc_info=True)
         raise HTTPException(status_code=503, detail="Cache service unhealthy")
@@ -97,7 +93,7 @@ async def cache_health_check(
 
 @router.get("/metrics")
 async def metrics_health_check(
-    metrics_service: MetricsService = Depends(get_metrics_service)
+    metrics_service: MetricsService = Depends(get_metrics_service),
 ):
     """Metrics-specific health check."""
     try:
@@ -105,9 +101,9 @@ async def metrics_health_check(
         return {
             "status": "healthy",
             "timestamp": datetime.now().isoformat(),
-            "metrics_summary": summary
+            "metrics_summary": summary,
         }
-        
+
     except Exception as e:
         logger.error(f"Metrics health check failed: {e}", exc_info=True)
-        raise HTTPException(status_code=503, detail="Metrics service unhealthy") 
+        raise HTTPException(status_code=503, detail="Metrics service unhealthy")

@@ -18,15 +18,15 @@ routers = [
     agents_router,
     sso_router,
     multi_tenant_router,
-    analytics_router
+    analytics_router,
 ]
 
 __all__ = [
     "queries_router",
-    "health_router", 
+    "health_router",
     "agents_router",
     "sso_router",
     "multi_tenant_router",
     "analytics_router",
-    "routers"
-] 
+    "routers",
+]

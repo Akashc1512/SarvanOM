@@ -14,7 +14,7 @@ from .auth import (
     get_current_user_optional,
     require_admin,
     require_read,
-    require_write
+    require_write,
 )
 
 from .logging import (
@@ -26,7 +26,7 @@ from .logging import (
     add_request_id,
     log_requests,
     get_request_stats,
-    get_performance_metrics
+    get_performance_metrics,
 )
 
 from .cors import (
@@ -34,7 +34,7 @@ from .cors import (
     setup_cors,
     create_cors_config,
     get_development_cors_config,
-    get_production_cors_config
+    get_production_cors_config,
 )
 
 from .rate_limiting import (
@@ -42,13 +42,13 @@ from .rate_limiting import (
     RateLimitConfig,
     RateLimitingMiddleware,
     rate_limiting_middleware,
-    rate_limit_check
+    rate_limit_check,
 )
 
 __all__ = [
     # Authentication middleware
     "SecurityMiddleware",
-    "AuthenticationMiddleware", 
+    "AuthenticationMiddleware",
     "security_middleware",
     "auth_middleware",
     "security_check",
@@ -57,7 +57,6 @@ __all__ = [
     "require_admin",
     "require_read",
     "require_write",
-    
     # Logging middleware
     "SafeJSONFormatter",
     "RequestLogger",
@@ -68,18 +67,16 @@ __all__ = [
     "log_requests",
     "get_request_stats",
     "get_performance_metrics",
-    
     # CORS middleware
     "CORSConfig",
     "setup_cors",
     "create_cors_config",
     "get_development_cors_config",
     "get_production_cors_config",
-    
     # Rate limiting middleware
     "RateLimiter",
     "RateLimitConfig",
     "RateLimitingMiddleware",
     "rate_limiting_middleware",
-    "rate_limit_check"
-] 
+    "rate_limit_check",
+]

@@ -12,7 +12,7 @@ from typing import List, Dict, Any
 import requests
 from fastapi.testclient import TestClient
 
-from services.api-gateway.main import app
+from services.api_gateway.main import app
 
 
 class TestLoadTesting:

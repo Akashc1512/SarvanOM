@@ -73,11 +73,16 @@ const navItems: NavItem[] = [
     href: "/team",
     Icon: Users,
   },
-  {
-    title: "Collaboration",
-    href: "/collaboration-demo",
-    Icon: MessageSquare,
-  },
+               {
+               title: "Collaboration",
+               href: "/collaboration-demo",
+               Icon: MessageSquare,
+             },
+             {
+               title: "Testing",
+               href: "/testing-demo",
+               Icon: Sparkles,
+             },
   {
     title: "Memory",
     href: "/memory",

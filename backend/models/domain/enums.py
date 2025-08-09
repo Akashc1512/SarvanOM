@@ -9,6 +9,7 @@ from enum import Enum
 
 class ServiceStatus(Enum):
     """Service status enumeration."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -18,6 +19,7 @@ class ServiceStatus(Enum):
 
 class DatabaseType(Enum):
     """Database types."""
+
     POSTGRESQL = "postgresql"
     MYSQL = "mysql"
     SQLITE = "sqlite"
@@ -28,6 +30,7 @@ class DatabaseType(Enum):
 
 class QueryType(Enum):
     """Query types."""
+
     SELECT = "select"
     INSERT = "insert"
     UPDATE = "update"
@@ -40,6 +43,7 @@ class QueryType(Enum):
 
 class ConnectionStatus(Enum):
     """Database connection status."""
+
     CONNECTED = "connected"
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
@@ -49,10 +53,11 @@ class ConnectionStatus(Enum):
 
 class DataType(Enum):
     """Data types for analysis."""
+
     NUMERIC = "numeric"
     TEXT = "text"
     BOOLEAN = "boolean"
     DATE = "date"
     DATETIME = "datetime"
     BLOB = "blob"
-    JSON = "json" 
+    JSON = "json"

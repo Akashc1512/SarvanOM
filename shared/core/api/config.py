@@ -489,13 +489,11 @@ class KnowledgeGraphSettings(SecureSettings):
     # GraphDB/Neo4j
     sparql_endpoint: HttpUrl = Field(
         default="http://localhost:7200/repositories/knowledge",
-        description="SPARQL endpoint URL"
+        description="SPARQL endpoint URL",
     )
 
     # Graph settings
-    graph_update_enabled: bool = Field(
-        default=True, description="Enable graph updates"
-    )
+    graph_update_enabled: bool = Field(default=True, description="Enable graph updates")
     graph_auto_extract_entities: bool = Field(
         default=True, description="Auto-extract entities"
     )
@@ -507,14 +505,12 @@ class KnowledgeGraphSettings(SecureSettings):
     )
     graph_relationship_types: str = Field(
         default="is_related_to,is_part_of,is_similar_to,enables,requires",
-        description="Graph relationship types"
+        description="Graph relationship types",
     )
 
     # Knowledge Graph Agent
     kg_agent_enabled: bool = Field(default=True, description="Enable KG agent")
-    kg_agent_timeout: conint(ge=1) = Field(
-        default=30, description="KG agent timeout"
-    )
+    kg_agent_timeout: conint(ge=1) = Field(default=30, description="KG agent timeout")
     kg_max_relationship_depth: conint(ge=1) = Field(
         default=3, description="Max relationship depth"
     )
@@ -570,7 +566,7 @@ class MicroservicesSettings(SecureSettings):
     )
     auth_service_secret: SecretStr = Field(
         default_factory=lambda: SecretStr(secrets.token_urlsafe(32)),
-        description="Auth service secret"
+        description="Auth service secret",
     )
 
     search_service_url: HttpUrl = Field(
@@ -578,7 +574,7 @@ class MicroservicesSettings(SecureSettings):
     )
     search_service_secret: SecretStr = Field(
         default_factory=lambda: SecretStr(secrets.token_urlsafe(32)),
-        description="Search service secret"
+        description="Search service secret",
     )
 
     synthesis_service_url: HttpUrl = Field(
@@ -586,7 +582,7 @@ class MicroservicesSettings(SecureSettings):
     )
     synthesis_service_secret: SecretStr = Field(
         default_factory=lambda: SecretStr(secrets.token_urlsafe(32)),
-        description="Synthesis service secret"
+        description="Synthesis service secret",
     )
 
     factcheck_service_url: HttpUrl = Field(
@@ -594,7 +590,7 @@ class MicroservicesSettings(SecureSettings):
     )
     factcheck_service_secret: SecretStr = Field(
         default_factory=lambda: SecretStr(secrets.token_urlsafe(32)),
-        description="Fact-check service secret"
+        description="Fact-check service secret",
     )
 
     analytics_service_url: HttpUrl = Field(
@@ -602,7 +598,7 @@ class MicroservicesSettings(SecureSettings):
     )
     analytics_service_secret: SecretStr = Field(
         default_factory=lambda: SecretStr(secrets.token_urlsafe(32)),
-        description="Analytics service secret"
+        description="Analytics service secret",
     )
 
 
@@ -613,9 +609,7 @@ class AgentSettings(SecureSettings):
     agent_timeout_seconds: conint(ge=1) = Field(
         default=30, description="Agent timeout in seconds"
     )
-    agent_max_retries: conint(ge=0) = Field(
-        default=3, description="Agent max retries"
-    )
+    agent_max_retries: conint(ge=0) = Field(default=3, description="Agent max retries")
     agent_backoff_factor: confloat(ge=1.0) = Field(
         default=2.0, description="Agent backoff factor"
     )
@@ -624,9 +618,7 @@ class AgentSettings(SecureSettings):
     query_cache_ttl_seconds: conint(ge=0) = Field(
         default=3600, description="Query cache TTL"
     )
-    query_max_length: conint(ge=1) = Field(
-        default=2000, description="Query max length"
-    )
+    query_max_length: conint(ge=1) = Field(default=2000, description="Query max length")
     query_min_confidence: confloat(ge=0.0, le=1.0) = Field(
         default=0.7, description="Query min confidence"
     )
@@ -704,7 +696,9 @@ class Settings(
 
     # Docker configuration
     docker_enabled: bool = Field(default=True, description="Docker mode enabled")
-    docker_network: str = Field(default="sarvanom-network", description="Docker network")
+    docker_network: str = Field(
+        default="sarvanom-network", description="Docker network"
+    )
 
     # Service URLs for Docker
     backend_url: HttpUrl = Field(
@@ -712,34 +706,32 @@ class Settings(
     )
     postgres_url: PostgresDsn = Field(
         default="postgresql://postgres:password@postgres:5432/sarvanom_db",
-        description="PostgreSQL URL"
+        description="PostgreSQL URL",
     )
-    redis_url: RedisDsn = Field(
-        default="redis://redis:6379/0", description="Redis URL"
-    )
+    redis_url: RedisDsn = Field(default="redis://redis:6379/0", description="Redis URL")
     meilisearch_url: HttpUrl = Field(
         default="http://meilisearch:7700", description="MeiliSearch URL"
     )
     arangodb_url: HttpUrl = Field(
         default="http://arangodb:8529", description="ArangoDB URL"
     )
-    qdrant_url: HttpUrl = Field(
-        default="http://qdrant:6333", description="Qdrant URL"
-    )
-    ollama_url: HttpUrl = Field(
-        default="http://ollama:11434", description="Ollama URL"
-    )
+    qdrant_url: HttpUrl = Field(default="http://qdrant:6333", description="Qdrant URL")
+    ollama_url: HttpUrl = Field(default="http://ollama:11434", description="Ollama URL")
 
     # External integrations
     smtp_host: str = Field(default="smtp.gmail.com", description="SMTP host")
     smtp_port: Port = Field(default=587, description="SMTP port")
     smtp_username: Optional[str] = Field(default=None, description="SMTP username")
-    smtp_password: Optional[SecretStr] = Field(default=None, description="SMTP password")
+    smtp_password: Optional[SecretStr] = Field(
+        default=None, description="SMTP password"
+    )
     smtp_use_tls: bool = Field(default=True, description="SMTP use TLS")
 
     # File storage
     storage_type: str = Field(default="local", description="Storage type")
-    storage_bucket: str = Field(default="sarvanom-uploads", description="Storage bucket")
+    storage_bucket: str = Field(
+        default="sarvanom-uploads", description="Storage bucket"
+    )
     storage_region: str = Field(default="us-west-1", description="Storage region")
 
     # AWS S3
@@ -755,9 +747,7 @@ class Settings(
     slack_webhook_url: Optional[HttpUrl] = Field(
         default=None, description="Slack webhook URL"
     )
-    slack_channel: str = Field(
-        default="#sarvanom-alerts", description="Slack channel"
-    )
+    slack_channel: str = Field(default="#sarvanom-alerts", description="Slack channel")
     discord_webhook_url: Optional[HttpUrl] = Field(
         default=None, description="Discord webhook URL"
     )
@@ -766,12 +756,10 @@ class Settings(
     cache_ttl_seconds: conint(ge=0) = Field(
         default=3600, description="Cache TTL in seconds"
     )
-    cache_max_size: conint(ge=1) = Field(
-        default=1000, description="Cache max size"
-    )
+    cache_max_size: conint(ge=1) = Field(default=1000, description="Cache max size")
     session_secret: SecretStr = Field(
         default_factory=lambda: SecretStr(secrets.token_urlsafe(32)),
-        description="Session secret"
+        description="Session secret",
     )
     session_ttl_seconds: conint(ge=1) = Field(
         default=86400, description="Session TTL in seconds"
@@ -820,9 +808,7 @@ class Settings(
     data_retention_days: conint(ge=1) = Field(
         default=2555, description="Data retention in days"
     )
-    anonymize_old_data: bool = Field(
-        default=True, description="Anonymize old data"
-    )
+    anonymize_old_data: bool = Field(default=True, description="Anonymize old data")
 
     # Security headers
     security_headers_enabled: bool = Field(
@@ -836,9 +822,7 @@ class Settings(
     max_request_size_mb: conint(ge=1) = Field(
         default=10, description="Max request size in MB"
     )
-    max_query_length: conint(ge=1) = Field(
-        default=2000, description="Max query length"
-    )
+    max_query_length: conint(ge=1) = Field(default=2000, description="Max query length")
 
     # Rate limiting per user
     user_rate_limit_requests_per_minute: conint(ge=1) = Field(
@@ -849,12 +833,8 @@ class Settings(
     )
 
     # Development & Testing
-    mock_ai_responses: bool = Field(
-        default=False, description="Mock AI responses"
-    )
-    skip_authentication: bool = Field(
-        default=False, description="Skip authentication"
-    )
+    mock_ai_responses: bool = Field(default=False, description="Mock AI responses")
+    skip_authentication: bool = Field(default=False, description="Skip authentication")
     enable_debug_endpoints: bool = Field(
         default=False, description="Enable debug endpoints"
     )
@@ -955,7 +935,11 @@ class Settings(
         warnings = []
 
         # Check AI configuration
-        if not self.openai_api_key and not self.anthropic_api_key and not self.ollama_enabled:
+        if (
+            not self.openai_api_key
+            and not self.anthropic_api_key
+            and not self.ollama_enabled
+        ):
             warnings.append("No AI provider configured")
 
         # Check database configuration

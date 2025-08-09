@@ -15,7 +15,12 @@ from datetime import datetime, timedelta
 import sys
 
 sys.path.append("..")
-from core.config_manager import ConfigurationManager, ConfigurationItem, get_config, set_config
+from core.config_manager import (
+    ConfigurationManager,
+    ConfigurationItem,
+    get_config,
+    set_config,
+)
 
 
 class TestConfigurationItem(unittest.TestCase):
@@ -144,9 +149,15 @@ class TestConfigurationManager(unittest.TestCase):
         """Test getting all configuration values"""
         # Add test configurations
         test_items = [
-            ConfigurationItem("test.key1", "value1", "env", "test", "1.0.0", datetime.now()),
-            ConfigurationItem("test.key2", "value2", "env", "test", "1.0.0", datetime.now()),
-            ConfigurationItem("other.key", "value3", "env", "test", "1.0.0", datetime.now()),
+            ConfigurationItem(
+                "test.key1", "value1", "env", "test", "1.0.0", datetime.now()
+            ),
+            ConfigurationItem(
+                "test.key2", "value2", "env", "test", "1.0.0", datetime.now()
+            ),
+            ConfigurationItem(
+                "other.key", "value3", "env", "test", "1.0.0", datetime.now()
+            ),
         ]
 
         for item in test_items:
@@ -246,7 +257,9 @@ class TestGlobalConfigurationFunctions(unittest.TestCase):
         self.mock_config_manager.get.return_value = "test_value"
 
         value = get_config("test.key", "default_value")
-        self.mock_config_manager.get.assert_called_once_with("test.key", "default_value")
+        self.mock_config_manager.get.assert_called_once_with(
+            "test.key", "default_value"
+        )
         self.assertEqual(value, "test_value")
 
     def test_get_all_config_function(self):
@@ -307,7 +320,6 @@ class TestConfigurationSources(unittest.TestCase):
             "DATABASE_HOST": "test-db",
             "DATABASE_PORT": "5432",
             "DATABASE_NAME": "test_db",
-
             "MEILISEARCH_HOST": "test-meili",
             "DEBUG": "true",
             "LOG_LEVEL": "DEBUG",
@@ -322,7 +334,12 @@ class TestConfigurationSources(unittest.TestCase):
         """Test loading configuration from Vault"""
         mock_client = Mock()
         mock_client.secrets.kv.v2.read_secret_version.return_value = {
-            "data": {"data": {"database_password": "secret_password", "api_key": "secret_api_key"}}
+            "data": {
+                "data": {
+                    "database_password": "secret_password",
+                    "api_key": "secret_api_key",
+                }
+            }
         }
         mock_hvac.return_value = mock_client
 
@@ -374,7 +391,9 @@ class TestConfigurationErrorHandling(unittest.TestCase):
         try:
             self.config_manager._merge_configurations(invalid_results)
         except Exception as e:
-            self.fail(f"Configuration merging should handle invalid results gracefully: {e}")
+            self.fail(
+                f"Configuration merging should handle invalid results gracefully: {e}"
+            )
 
     def test_vault_connection_errors(self):
         """Test handling of Vault connection errors"""

@@ -22,13 +22,19 @@ logger = logging.getLogger(__name__)
 class RedisCacheService:
     def __init__(self, redis_url: Optional[str] = None, default_ttl: int = 3600):
         cfg = get_central_config()
-        self.redis_url = redis_url or str(cfg.redis_url) if cfg.redis_url else "redis://localhost:6379/0"
+        self.redis_url = (
+            redis_url or str(cfg.redis_url)
+            if cfg.redis_url
+            else "redis://localhost:6379/0"
+        )
         self._default_ttl = default_ttl
         self._client: Optional[Redis] = None
 
     async def _get_client(self) -> Redis:
         if self._client is None:
-            self._client = Redis.from_url(self.redis_url, encoding="utf-8", decode_responses=True)
+            self._client = Redis.from_url(
+                self.redis_url, encoding="utf-8", decode_responses=True
+            )
         return self._client
 
     async def get(self, key: str) -> Optional[Any]:
@@ -84,5 +90,3 @@ class RedisCacheService:
         except Exception as e:
             logger.error(f"RedisCacheService.get_stats error: {e}", exc_info=True)
             return {}
-
-

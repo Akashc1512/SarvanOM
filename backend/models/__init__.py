@@ -11,8 +11,4 @@ from .requests import *
 from .responses import *
 from .domain import *
 
-__all__ = [
-    "requests",
-    "responses",
-    "domain"
-] 
+__all__ = ["requests", "responses", "domain"]

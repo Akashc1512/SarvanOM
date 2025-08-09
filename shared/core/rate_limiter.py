@@ -51,10 +51,13 @@ import structlog
 
 from fastapi import Request, Response, HTTPException, status
 
+
 # Mock exceptions and monitoring for now
 class RateLimitError(Exception):
     """Rate limit exceeded error."""
+
     pass
+
 
 class Gauge:
     def __init__(self, name, description, labels=None):
@@ -62,14 +65,17 @@ class Gauge:
         self.description = description
         self.labels = labels or []
 
+
 class Counter:
     def __init__(self, name, description, labels=None):
         self.name = name
         self.description = description
         self.labels = labels or []
 
+
 def get_settings():
     return {}
+
 
 logger = structlog.get_logger(__name__)
 
@@ -153,9 +159,6 @@ class RateLimiterBackend(Protocol):
     async def get_usage(self, identifier: str) -> Dict[str, Any]:
         """Get current usage for identifier."""
         ...
-
-
-
 
     def __init__(
         self, redis_url: str, prefix: str = "rate_limit:", pool_size: int = 10

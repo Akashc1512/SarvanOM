@@ -45,12 +45,12 @@ logger = structlog.get_logger(__name__)
 
 class Environment(str, Enum):
     """Application environment types."""
-    
+
     DEVELOPMENT = "development"
     TESTING = "testing"
     STAGING = "staging"
     PRODUCTION = "production"
-    
+
     @classmethod
     def from_string(cls, env: str) -> "Environment":
         """Create Environment from string."""
@@ -64,7 +64,7 @@ class Environment(str, Enum):
 @dataclass
 class EnvironmentConfig:
     """Configuration for a specific environment."""
-    
+
     name: str
     debug: bool = False
     testing: bool = False
@@ -96,21 +96,21 @@ class EnvironmentConfig:
     auto_reload: bool = False
     test_mode: bool = False
     mock_providers: bool = False
-    
+
     # Service URLs (configurable via environment variables)
     auth_service_url: str = "http://localhost:8001"  # AUTH_SERVICE_URL
     search_service_url: str = "http://localhost:8002"  # SEARCH_SERVICE_URL
     synthesis_service_url: str = "http://localhost:8003"  # SYNTHESIS_SERVICE_URL
     factcheck_service_url: str = "http://localhost:8004"  # FACTCHECK_SERVICE_URL
     analytics_service_url: str = "http://localhost:8005"  # ANALYTICS_SERVICE_URL
-    
+
     # Service secrets
     auth_service_secret: Optional[str] = None
     search_service_secret: Optional[str] = None
     synthesis_service_secret: Optional[str] = None
     factcheck_service_secret: Optional[str] = None
     analytics_service_secret: Optional[str] = None
-    
+
     # Agent settings
     agent_timeout_seconds: int = 30
     agent_max_retries: int = 3
@@ -118,7 +118,7 @@ class EnvironmentConfig:
     query_cache_ttl_seconds: int = 3600
     query_max_length: int = 2000
     query_min_confidence: float = 0.7
-    
+
     # Performance settings
     db_pool_size: int = 5
     db_max_overflow: int = 10
@@ -127,7 +127,7 @@ class EnvironmentConfig:
     worker_threads: int = 2
     max_memory_usage_mb: int = 1024
     garbage_collection_interval: int = 300
-    
+
     # Monitoring settings
     metrics_enabled: bool = True
     metrics_port: int = 9090
@@ -139,82 +139,94 @@ class EnvironmentConfig:
     sentry_profiles_sample_rate: float = 0.1
     health_check_interval: int = 30
     health_check_timeout: int = 10
-    
+
     # Feature flags
-    features: Dict[str, bool] = field(default_factory=lambda: {
-        "streaming": True,
-        "batch_processing": True,
-        "websockets": True,
-        "graphql": False,
-        "admin_panel": True,
-        "expert_review": True,
-        "real_time_collaboration": True,
-        "advanced_analytics": True,
-        "multi_tenant": True,
-        "sso": True,
-    })
-    
+    features: Dict[str, bool] = field(
+        default_factory=lambda: {
+            "streaming": True,
+            "batch_processing": True,
+            "websockets": True,
+            "graphql": False,
+            "admin_panel": True,
+            "expert_review": True,
+            "real_time_collaboration": True,
+            "advanced_analytics": True,
+            "multi_tenant": True,
+            "sso": True,
+        }
+    )
+
     def __post_init__(self):
         """Validate configuration after initialization."""
         self._validate_config()
-    
+
     def _validate_config(self) -> None:
         """Validate configuration values."""
         if self.rate_limit_per_minute < 1:
             raise ValueError("rate_limit_per_minute must be at least 1")
-        
+
         if self.max_request_size_mb < 1:
             raise ValueError("max_request_size_mb must be at least 1")
-        
+
         if self.cache_ttl_seconds < 0:
             raise ValueError("cache_ttl_seconds must be non-negative")
-        
+
         if self.session_ttl_seconds < 1:
             raise ValueError("session_ttl_seconds must be at least 1")
-        
+
         if self.agent_timeout_seconds < 1:
             raise ValueError("agent_timeout_seconds must be at least 1")
-        
+
         if self.agent_max_retries < 0:
             raise ValueError("agent_max_retries must be non-negative")
-        
+
         if self.agent_backoff_factor < 1.0:
             raise ValueError("agent_backoff_factor must be at least 1.0")
-        
+
         if self.query_min_confidence < 0.0 or self.query_min_confidence > 1.0:
             raise ValueError("query_min_confidence must be between 0.0 and 1.0")
-    
+
     def to_dict(self, include_secrets: bool = False) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
         config_dict = {}
-        
+
         for field_name, field_value in self.__dict__.items():
-            if field_name in ["openai_api_key", "anthropic_api_key", "vector_db_api_key", 
-                            "meilisearch_master_key", "arangodb_password", "jwt_secret_key",
-                            "auth_service_secret", "search_service_secret", "synthesis_service_secret",
-                            "factcheck_service_secret", "analytics_service_secret", "sentry_dsn"]:
+            if field_name in [
+                "openai_api_key",
+                "anthropic_api_key",
+                "vector_db_api_key",
+                "meilisearch_master_key",
+                "arangodb_password",
+                "jwt_secret_key",
+                "auth_service_secret",
+                "search_service_secret",
+                "synthesis_service_secret",
+                "factcheck_service_secret",
+                "analytics_service_secret",
+                "sentry_dsn",
+            ]:
                 if include_secrets:
                     config_dict[field_name] = field_value
                 else:
                     config_dict[field_name] = "***REDACTED***" if field_value else None
             else:
                 config_dict[field_name] = field_value
-        
+
         return config_dict
 
 
 class EnvironmentManager:
     """
     Environment-based configuration manager.
-    
+
     This class handles loading, validating, and managing configuration
     for different environments (development, testing, staging, production).
     """
-    
+
     def __init__(self, app_env: Optional[str] = None):
         """
         Initialize the environment manager.
-        
+
         Args:
             app_env: Environment name (defaults to APP_ENV environment variable)
         """
@@ -222,38 +234,40 @@ class EnvironmentManager:
         self.app_env = app_env or os.getenv("APP_ENV", "development")
         self.environment = Environment.from_string(self.app_env)
         self.config = self._load_environment_config()
-        
+
         # Log configuration loading
-        logger.info(f"🚀 Environment manager initialized for {self.environment.value.upper()} environment")
+        logger.info(
+            f"🚀 Environment manager initialized for {self.environment.value.upper()} environment"
+        )
         logger.info(f"📋 Configuration loaded successfully from APP_ENV={self.app_env}")
-        
+
         # Print startup configuration summary
         self._print_startup_config()
-        
+
         # Validate configuration for the current environment
         self._validate_environment_config(self.config)
-    
+
     def _load_environment_config(self) -> EnvironmentConfig:
         """Load configuration for the current environment."""
         # Start with environment-specific defaults
         config = self._get_environment_defaults()
-        
+
         # Load from environment-specific config file
         config_file = self._get_config_file_path()
         if config_file and config_file.exists():
             file_config = self._load_from_file(config_file)
             config = self._merge_configs(config, file_config)
             logger.info(f"📄 Loaded configuration from file: {config_file}")
-        
+
         # Load from environment variables (highest precedence)
         env_config = self._load_from_environment()
         config = self._merge_configs(config, env_config)
-        
+
         # Validate final configuration
         self._validate_environment_config(config)
-        
+
         return config
-    
+
     def _get_environment_defaults(self) -> EnvironmentConfig:
         """Get default configuration for the current environment."""
         if self.environment == Environment.DEVELOPMENT:
@@ -321,9 +335,9 @@ class EnvironmentManager:
                     "advanced_analytics": True,
                     "multi_tenant": False,
                     "sso": False,
-                }
+                },
             )
-        
+
         elif self.environment == Environment.TESTING:
             return EnvironmentConfig(
                 name="testing",
@@ -389,9 +403,9 @@ class EnvironmentManager:
                     "advanced_analytics": False,
                     "multi_tenant": False,
                     "sso": False,
-                }
+                },
             )
-        
+
         elif self.environment == Environment.STAGING:
             return EnvironmentConfig(
                 name="staging",
@@ -457,9 +471,9 @@ class EnvironmentManager:
                     "advanced_analytics": True,
                     "multi_tenant": False,
                     "sso": False,
-                }
+                },
             )
-        
+
         elif self.environment == Environment.PRODUCTION:
             return EnvironmentConfig(
                 name="production",
@@ -525,48 +539,50 @@ class EnvironmentManager:
                     "advanced_analytics": True,
                     "multi_tenant": False,
                     "sso": False,
-                }
+                },
             )
-        
+
         else:
             raise ValueError(f"Unknown environment: {self.environment}")
-    
+
     def _get_config_file_path(self) -> Optional[Path]:
         """Get the path to the environment-specific configuration file."""
         config_dir = Path("config")
-        
+
         # Try environment-specific config files
         config_files = [
             config_dir / f"{self.environment.value}.yaml",
             config_dir / f"{self.environment.value}.yml",
             config_dir / f"{self.environment.value}.json",
         ]
-        
+
         for config_file in config_files:
             if config_file.exists():
                 return config_file
-        
+
         return None
-    
+
     def _load_from_file(self, config_file: Path) -> Dict[str, Any]:
         """Load configuration from file."""
         try:
-            with open(config_file, 'r', encoding='utf-8') as f:
-                if config_file.suffix in ['.yaml', '.yml']:
+            with open(config_file, "r", encoding="utf-8") as f:
+                if config_file.suffix in [".yaml", ".yml"]:
                     return yaml.safe_load(f) or {}
-                elif config_file.suffix == '.json':
+                elif config_file.suffix == ".json":
                     return json.load(f)
                 else:
-                    logger.warning(f"Unsupported config file format: {config_file.suffix}")
+                    logger.warning(
+                        f"Unsupported config file format: {config_file.suffix}"
+                    )
                     return {}
         except Exception as e:
             logger.error(f"Failed to load config file {config_file}: {e}")
             return {}
-    
+
     def _load_from_environment(self) -> Dict[str, Any]:
         """Load configuration from environment variables."""
         config = {}
-        
+
         # Environment variable mapping
         env_mapping = {
             "APP_ENV": "name",
@@ -581,6 +597,8 @@ class EnvironmentManager:
             "VECTOR_DB_API_KEY": "vector_db_api_key",
             "MEILISEARCH_URL": "meilisearch_url",
             "MEILISEARCH_MASTER_KEY": "meilisearch_master_key",
+            # Compatibility: some setups use MEILI_MASTER_KEY only
+            "MEILI_MASTER_KEY": "meilisearch_master_key",
             "ARANGO_URL": "arangodb_url",
             "ARANGO_USERNAME": "arangodb_username",
             "ARANGO_PASSWORD": "arangodb_password",
@@ -630,51 +648,89 @@ class EnvironmentManager:
             "FACTCHECK_SERVICE_URL": "factcheck_service_url",
             "ANALYTICS_SERVICE_URL": "analytics_service_url",
         }
-        
+
         for env_var, config_key in env_mapping.items():
             env_value = os.getenv(env_var)
             if env_value is not None:
                 # Convert string values to appropriate types
-                if config_key in ["debug", "testing", "backup_enabled", "audit_log_enabled", 
-                                "security_headers_enabled", "mock_ai_responses", "skip_authentication",
-                                "enable_debug_endpoints", "auto_reload", "test_mode", "mock_providers",
-                                "metrics_enabled", "enable_tracing"]:
+                if config_key in [
+                    "debug",
+                    "testing",
+                    "backup_enabled",
+                    "audit_log_enabled",
+                    "security_headers_enabled",
+                    "mock_ai_responses",
+                    "skip_authentication",
+                    "enable_debug_endpoints",
+                    "auto_reload",
+                    "test_mode",
+                    "mock_providers",
+                    "metrics_enabled",
+                    "enable_tracing",
+                ]:
                     config[config_key] = env_value.lower() in ["true", "1", "yes", "on"]
-                elif config_key in ["rate_limit_per_minute", "max_request_size_mb", "cache_ttl_seconds",
-                                  "session_ttl_seconds", "agent_timeout_seconds", "agent_max_retries",
-                                  "query_cache_ttl_seconds", "query_max_length", "db_pool_size",
-                                  "db_max_overflow", "db_pool_timeout", "worker_processes", "worker_threads",
-                                  "max_memory_usage_mb", "garbage_collection_interval", "metrics_port",
-                                  "jaeger_agent_port", "health_check_interval", "health_check_timeout"]:
+                elif config_key in [
+                    "rate_limit_per_minute",
+                    "max_request_size_mb",
+                    "cache_ttl_seconds",
+                    "session_ttl_seconds",
+                    "agent_timeout_seconds",
+                    "agent_max_retries",
+                    "query_cache_ttl_seconds",
+                    "query_max_length",
+                    "db_pool_size",
+                    "db_max_overflow",
+                    "db_pool_timeout",
+                    "worker_processes",
+                    "worker_threads",
+                    "max_memory_usage_mb",
+                    "garbage_collection_interval",
+                    "metrics_port",
+                    "jaeger_agent_port",
+                    "health_check_interval",
+                    "health_check_timeout",
+                ]:
                     try:
                         config[config_key] = int(env_value)
                     except ValueError:
-                        logger.warning(f"Invalid integer value for {env_var}: {env_value}")
-                elif config_key in ["agent_backoff_factor", "query_min_confidence", "sentry_traces_sample_rate",
-                                  "sentry_profiles_sample_rate"]:
+                        logger.warning(
+                            f"Invalid integer value for {env_var}: {env_value}"
+                        )
+                elif config_key in [
+                    "agent_backoff_factor",
+                    "query_min_confidence",
+                    "sentry_traces_sample_rate",
+                    "sentry_profiles_sample_rate",
+                ]:
                     try:
                         config[config_key] = float(env_value)
                     except ValueError:
-                        logger.warning(f"Invalid float value for {env_var}: {env_value}")
+                        logger.warning(
+                            f"Invalid float value for {env_var}: {env_value}"
+                        )
                 elif config_key == "cors_origins":
-                    config[config_key] = [origin.strip() for origin in env_value.split(",")]
+                    config[config_key] = [
+                        origin.strip() for origin in env_value.split(",")
+                    ]
                 else:
                     config[config_key] = env_value
-        
+
         return config
-    
-    def _merge_configs(self, base_config: EnvironmentConfig, override_config: Dict[str, Any]) -> EnvironmentConfig:
+
+    def _merge_configs(
+        self, base_config: EnvironmentConfig, override_config: Dict[str, Any]
+    ) -> EnvironmentConfig:
         """Merge configuration overrides into base configuration."""
         for key, value in override_config.items():
             if hasattr(base_config, key):
                 setattr(base_config, key, value)
-        
+
         return base_config
-    
+
     def _validate_environment_config(self, config: EnvironmentConfig) -> None:
         """Validate environment-specific configuration requirements."""
         errors = []
-        
+
         # Production and staging require certain configurations
         if self.environment == Environment.PRODUCTION:
             if not config.database_url:
@@ -684,7 +740,9 @@ class EnvironmentManager:
             if not config.jwt_secret_key:
                 errors.append("JWT_SECRET_KEY is required for production")
             if not config.openai_api_key and not config.anthropic_api_key:
-                errors.append("At least one AI provider API key is required for production")
+                errors.append(
+                    "At least one AI provider API key is required for production"
+                )
             if not config.vector_db_url:
                 errors.append("VECTOR_DB_URL is required for production")
             if not config.meilisearch_url:
@@ -699,7 +757,7 @@ class EnvironmentManager:
                 errors.append("SKIP_AUTHENTICATION should be False in production")
             if config.enable_debug_endpoints:
                 errors.append("ENABLE_DEBUG_ENDPOINTS should be False in production")
-        
+
         elif self.environment == Environment.STAGING:
             if not config.database_url:
                 errors.append("DATABASE_URL is required for staging")
@@ -708,7 +766,9 @@ class EnvironmentManager:
             if not config.jwt_secret_key:
                 errors.append("JWT_SECRET_KEY is required for staging")
             if not config.openai_api_key and not config.anthropic_api_key:
-                errors.append("At least one AI provider API key is required for staging")
+                errors.append(
+                    "At least one AI provider API key is required for staging"
+                )
             if not config.vector_db_url:
                 errors.append("VECTOR_DB_URL is required for staging")
             if not config.meilisearch_url:
@@ -723,7 +783,7 @@ class EnvironmentManager:
                 errors.append("SKIP_AUTHENTICATION should be False in staging")
             if config.enable_debug_endpoints:
                 errors.append("ENABLE_DEBUG_ENDPOINTS should be False in staging")
-        
+
         elif self.environment == Environment.TESTING:
             if config.mock_ai_responses is False:
                 errors.append("MOCK_AI_RESPONSES should be True in testing")
@@ -731,42 +791,45 @@ class EnvironmentManager:
                 errors.append("SKIP_AUTHENTICATION should be True in testing")
             if config.test_mode is False:
                 errors.append("TEST_MODE should be True in testing")
-        
+
         if errors:
-            error_msg = f"Configuration validation failed for {self.environment.value} environment:\n" + "\n".join(errors)
+            error_msg = (
+                f"Configuration validation failed for {self.environment.value} environment:\n"
+                + "\n".join(errors)
+            )
             logger.error(error_msg)
             raise ValueError(error_msg)
-    
+
     def get_config(self) -> EnvironmentConfig:
         """Get the current environment configuration."""
         return self.config
-    
+
     def get_feature(self, feature_name: str) -> bool:
         """Get a feature flag value."""
         return self.config.features.get(feature_name, False)
-    
+
     def is_production(self) -> bool:
         """Check if current environment is production."""
         return self.environment == Environment.PRODUCTION
-    
+
     def is_development(self) -> bool:
         """Check if current environment is development."""
         return self.environment == Environment.DEVELOPMENT
-    
+
     def is_testing(self) -> bool:
         """Check if current environment is testing."""
         return self.environment == Environment.TESTING
-    
+
     def is_staging(self) -> bool:
         """Check if current environment is staging."""
         return self.environment == Environment.STAGING
-    
+
     def reload_config(self) -> None:
         """Reload configuration from sources."""
         logger.info("🔄 Reloading configuration...")
         self.config = self._load_environment_config()
         logger.info("✅ Configuration reloaded successfully")
-    
+
     def get_config_summary(self, include_secrets: bool = False) -> Dict[str, Any]:
         """Get a summary of the current configuration."""
         return {
@@ -780,13 +843,13 @@ class EnvironmentManager:
             "is_development": self.is_development(),
             "is_testing": self.is_testing(),
             "is_staging": self.is_staging(),
-            "config": self.config.to_dict(include_secrets=include_secrets)
+            "config": self.config.to_dict(include_secrets=include_secrets),
         }
-    
+
     def _print_startup_config(self) -> None:
         """Print startup configuration summary."""
         config_summary = self.get_config_summary(include_secrets=False)
-        
+
         print(f"\n{'='*70}")
         print(f"🚀 SARVANOM PLATFORM CONFIGURATION STARTUP")
         print(f"{'='*70}")
@@ -796,7 +859,7 @@ class EnvironmentManager:
         print(f"🔧 Debug Mode: {config_summary['debug']}")
         print(f"🧪 Testing Mode: {config_summary['testing']}")
         print(f"📊 Log Level: {config_summary['log_level']}")
-        
+
         # Configuration Sources
         print(f"\n📚 Configuration Sources (in order of precedence):")
         print(f"  1. Environment Variables (highest priority)")
@@ -806,23 +869,33 @@ class EnvironmentManager:
         else:
             print(f"  2. Config File: None (using environment defaults)")
         print(f"  3. Environment Defaults (lowest priority)")
-        
+
         # Critical Settings
         print(f"\n🔐 Critical Security Settings:")
-        print(f"  🔒 Security Headers: {config_summary['config']['security_headers_enabled']}")
-        print(f"  🔐 Skip Authentication: {config_summary['config']['skip_authentication']}")
-        print(f"  🤖 Mock AI Responses: {config_summary['config']['mock_ai_responses']}")
-        print(f"  🐛 Debug Endpoints: {config_summary['config']['enable_debug_endpoints']}")
+        print(
+            f"  🔒 Security Headers: {config_summary['config']['security_headers_enabled']}"
+        )
+        print(
+            f"  🔐 Skip Authentication: {config_summary['config']['skip_authentication']}"
+        )
+        print(
+            f"  🤖 Mock AI Responses: {config_summary['config']['mock_ai_responses']}"
+        )
+        print(
+            f"  🐛 Debug Endpoints: {config_summary['config']['enable_debug_endpoints']}"
+        )
         print(f"  🧪 Test Mode: {config_summary['config']['test_mode']}")
-        
+
         # Feature Flags
-        enabled_features = [f for f, enabled in config_summary['features'].items() if enabled]
+        enabled_features = [
+            f for f, enabled in config_summary["features"].items() if enabled
+        ]
         print(f"\n⚙️  Feature Flags ({len(enabled_features)} enabled):")
         for feature in enabled_features[:5]:  # Show first 5 enabled features
             print(f"  ✅ {feature}")
         if len(enabled_features) > 5:
             print(f"  ... and {len(enabled_features) - 5} more")
-        
+
         # Configuration Validation Status
         missing_critical = self._check_missing_critical_config()
         if missing_critical:
@@ -831,13 +904,13 @@ class EnvironmentManager:
                 print(f"  ❌ {item}")
         else:
             print(f"\n✅ All critical configuration is present")
-            
+
         print(f"{'='*70}\n")
-    
+
     def _check_missing_critical_config(self) -> List[str]:
         """Check for missing critical configuration values."""
         missing = []
-        
+
         # Environment-specific critical checks
         if self.environment in [Environment.PRODUCTION, Environment.STAGING]:
             if not self.config.database_url:
@@ -858,7 +931,7 @@ class EnvironmentManager:
         elif self.environment == Environment.TESTING:
             if not self.config.test_mode:
                 missing.append("TEST_MODE should be True")
-                
+
         return missing
 
 
@@ -877,4 +950,4 @@ def set_environment_manager(manager: EnvironmentManager) -> None:
 def reload_environment_config() -> None:
     """Reload the environment configuration."""
     manager = get_environment_manager()
-    manager.reload_config() 
+    manager.reload_config()

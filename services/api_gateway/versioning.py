@@ -195,8 +195,8 @@ def create_versioned_app(app):
         app: FastAPI application instance
     """
     # Import endpoint modules
-    from services.api-gateway.endpoints_v1 import router as v1_router
-from services.api-gateway.endpoints_v2 import router as v2_router
+    from services.api_gateway.endpoints_v1 import router as v1_router
+    from services.api_gateway.endpoints_v2 import router as v2_router
 
     # Add version routers
     app.include_router(v1_router, prefix="/api/v1", tags=["v1"])

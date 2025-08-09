@@ -95,8 +95,14 @@ class TestReviewerAgent:
                 "question": "What is the capital of France?",
                 "draft_answer": "The capital of France is Paris.",
                 "sources": [
-                    {"title": "Geography Book", "content": "Paris is the capital of France."},
-                    {"title": "Wikipedia", "content": "France's capital city is Paris."},
+                    {
+                        "title": "Geography Book",
+                        "content": "Paris is the capital of France.",
+                    },
+                    {
+                        "title": "Wikipedia",
+                        "content": "France's capital city is Paris.",
+                    },
                 ],
             }
 

@@ -11,6 +11,7 @@ from datetime import datetime
 
 class LoginResponse(BaseModel):
     """Login response model."""
+
     access_token: str = Field(..., description="Access token")
     refresh_token: str = Field(..., description="Refresh token")
     token_type: str = Field("bearer", description="Token type")
@@ -20,6 +21,7 @@ class LoginResponse(BaseModel):
 
 class RegisterResponse(BaseModel):
     """Registration response model."""
+
     user_id: str = Field(..., description="User identifier")
     username: str = Field(..., description="Username")
     email: str = Field(..., description="Email address")
@@ -29,6 +31,7 @@ class RegisterResponse(BaseModel):
 
 class UserResponse(BaseModel):
     """User response model."""
+
     user_id: str = Field(..., description="User identifier")
     username: str = Field(..., description="Username")
     email: str = Field(..., description="Email address")
@@ -41,6 +44,7 @@ class UserResponse(BaseModel):
 
 class TokenResponse(BaseModel):
     """Token response model."""
+
     access_token: str = Field(..., description="Access token")
     refresh_token: str = Field(..., description="Refresh token")
     token_type: str = Field("bearer", description="Token type")
@@ -49,6 +53,7 @@ class TokenResponse(BaseModel):
 
 class PasswordResetResponse(BaseModel):
     """Password reset response model."""
+
     message: str = Field(..., description="Reset message")
     email: str = Field(..., description="Email address")
     reset_sent: bool = Field(..., description="Whether reset email was sent")
@@ -57,6 +62,7 @@ class PasswordResetResponse(BaseModel):
 
 class PasswordChangeResponse(BaseModel):
     """Password change response model."""
+
     message: str = Field(..., description="Change message")
     changed_at: datetime = Field(..., description="Password change timestamp")
     success: bool = Field(..., description="Whether password was changed successfully")
@@ -64,6 +70,7 @@ class PasswordChangeResponse(BaseModel):
 
 class LogoutResponse(BaseModel):
     """Logout response model."""
+
     message: str = Field(..., description="Logout message")
     logged_out_at: datetime = Field(..., description="Logout timestamp")
     success: bool = Field(..., description="Whether logout was successful")
@@ -71,7 +78,8 @@ class LogoutResponse(BaseModel):
 
 class AuthErrorResponse(BaseModel):
     """Authentication error response model."""
+
     error: str = Field(..., description="Error message")
     error_type: str = Field(..., description="Error type")
     timestamp: datetime = Field(..., description="Error timestamp")
-    details: Optional[Dict[str, Any]] = Field(None, description="Error details") 
+    details: Optional[Dict[str, Any]] = Field(None, description="Error details")

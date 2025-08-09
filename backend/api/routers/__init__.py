@@ -12,19 +12,13 @@ from .admin_router import router as admin_router
 from .auth_router import router as auth_router
 
 # List of all routers for easy registration
-routers = [
-    query_router,
-    health_router,
-    agent_router,
-    admin_router,
-    auth_router
-]
+routers = [query_router, health_router, agent_router, admin_router, auth_router]
 
 __all__ = [
     "query_router",
     "health_router",
-    "agent_router", 
+    "agent_router",
     "admin_router",
     "auth_router",
-    "routers"
-] 
+    "routers",
+]

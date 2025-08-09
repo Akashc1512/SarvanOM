@@ -1,4 +1,5 @@
 from shared.core.api.config import get_settings
+
 settings = get_settings()
 """
 Enhanced LLM Client - MAANG Standards
@@ -379,6 +380,7 @@ class OllamaProvider(LLMProviderInterface):
         """Get or create aiohttp session."""
         if self.session is None or self.session.closed:
             import aiohttp
+
             self.session = aiohttp.ClientSession(
                 timeout=aiohttp.ClientTimeout(total=self.config.timeout)
             )
@@ -401,15 +403,15 @@ class OllamaProvider(LLMProviderInterface):
             "stream": False,
             "options": {
                 "temperature": request.temperature or self.config.temperature,
-                "num_predict": request.max_tokens or self.config.max_tokens
-            }
+                "num_predict": request.max_tokens or self.config.max_tokens,
+            },
         }
 
         try:
             async with session.post(
                 f"{self.config.base_url}/api/generate",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             ) as response:
                 if response.status != 200:
                     raise Exception(f"Ollama API error: {response.status}")
@@ -460,15 +462,15 @@ class OllamaProvider(LLMProviderInterface):
             "stream": True,
             "options": {
                 "temperature": request.temperature or self.config.temperature,
-                "num_predict": request.max_tokens or self.config.max_tokens
-            }
+                "num_predict": request.max_tokens or self.config.max_tokens,
+            },
         }
 
         try:
             async with session.post(
                 f"{self.config.base_url}/api/generate",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             ) as response:
                 if response.status != 200:
                     raise Exception(f"Ollama API error: {response.status}")
@@ -498,15 +500,12 @@ class OllamaProvider(LLMProviderInterface):
         session = await self._get_session()
 
         try:
-            payload = {
-                "model": "llama3.2:3b",
-                "prompt": text
-            }
+            payload = {"model": "llama3.2:3b", "prompt": text}
 
             async with session.post(
                 f"{self.config.base_url}/api/embeddings",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             ) as response:
                 if response.status != 200:
                     raise Exception(f"Ollama embeddings API error: {response.status}")
@@ -776,17 +775,21 @@ class EnhancedLLMClient:
         # Prefer free/local embeddings when configured
         try:
             from shared.core.config import get_central_config
+
             cfg = get_central_config()
             if getattr(cfg, "prioritize_free_models", True):
                 import anyio
 
                 def _local_embed() -> List[float]:
                     from shared.embeddings.local_embedder import embed_texts
+
                     return embed_texts([text])[0]
 
                 return await anyio.to_thread.run_sync(_local_embed)
         except Exception as e:
-            logger.warning(f"Local embedding attempt failed, falling back to providers: {e}")
+            logger.warning(
+                f"Local embedding attempt failed, falling back to providers: {e}"
+            )
 
         if not self.providers:
             raise LLMError(

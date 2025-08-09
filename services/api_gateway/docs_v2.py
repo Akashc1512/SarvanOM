@@ -21,14 +21,14 @@ logger = get_logger(__name__)
 
 class APIVersion(str, Enum):
     """API versions."""
-    
+
     V1 = "v1"
     V2 = "v2"
 
 
 class DocumentationConfig:
     """Configuration for API documentation."""
-    
+
     def __init__(self):
         # API metadata
         self.title = "Universal Knowledge Platform API"
@@ -515,7 +515,7 @@ const result = await response.json();
 
     def _generate_curl_example(self, method: Dict[str, Any]) -> str:
         """Generate cURL example for a method."""
-        body = json.dumps(method.get('body', {})) if method.get('body') else ""
+        body = json.dumps(method.get("body", {})) if method.get("body") else ""
         return f"""
 curl -X {method['method'].upper()} "{method['url']}" \\
      -H "Authorization: Bearer YOUR_API_KEY" \\

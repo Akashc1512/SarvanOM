@@ -37,10 +37,6 @@ from fastapi import HTTPException, status
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'services', 'api_gateway'))
 from services.api_gateway.main import app
 from shared.models.models import User, Role, APIKey, Query, AuditLog
 

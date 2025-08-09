@@ -30,7 +30,9 @@ export default function CollaborationDemoPage() {
     isVideoEnabled
   } = useCollaboration();
   
-  const { isOpen: isChatOpen, toggleChat } = useCollaborationChat();
+               const { isOpen: isChatOpen, toggleChat } = useCollaborationChat();
+             const { isOpen: isTestRunnerOpen, toggleTestRunner } = useTestRunner();
+             const { isOpen: isPerformanceMonitorOpen, togglePerformanceMonitor } = usePerformanceMonitor();
 
   useEffect(() => {
     // Auto-join demo session
@@ -355,9 +357,11 @@ export default function CollaborationDemoPage() {
         </div>
       </div>
 
-      {/* Collaboration Components */}
-      <CollaborationPanel />
-      <CollaborationChat isOpen={isChatOpen} onToggle={toggleChat} />
+                       {/* Collaboration Components */}
+                 <CollaborationPanel />
+                 <CollaborationChat isOpen={isChatOpen} onToggle={toggleChat} />
+                 <TestRunner isOpen={isTestRunnerOpen} onToggle={toggleTestRunner} />
+                 <PerformanceMonitor isOpen={isPerformanceMonitorOpen} onToggle={togglePerformanceMonitor} />
     </div>
   );
 } 

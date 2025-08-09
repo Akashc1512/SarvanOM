@@ -7,7 +7,14 @@ for the Universal Knowledge Platform.
 
 import time
 from typing import Dict, Optional, Any
-from prometheus_client import Counter, Histogram, Gauge, CollectorRegistry, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import (
+    Counter,
+    Histogram,
+    Gauge,
+    CollectorRegistry,
+    generate_latest,
+    CONTENT_TYPE_LATEST,
+)
 import threading
 
 from shared.core.logging import get_logger
@@ -19,172 +26,173 @@ logger = get_logger(__name__)
 _metrics_service_instance = None
 _metrics_service_lock = threading.Lock()
 
+
 class MetricsService:
     """Service for collecting and exposing application metrics."""
-    
+
     def __init__(self):
         # Use a custom registry to avoid conflicts
         self.registry = CollectorRegistry()
-        
+
         # HTTP request metrics
         try:
             self.http_requests_total = Counter(
-                'http_requests_total',
-                'Total number of HTTP requests',
-                ['method', 'path', 'status'],
-                registry=self.registry
+                "http_requests_total",
+                "Total number of HTTP requests",
+                ["method", "path", "status"],
+                registry=self.registry,
             )
         except ValueError:
             # Handle duplicate registration
             self.http_requests_total = None
-        
+
         try:
             self.http_request_duration_seconds = Histogram(
-                'http_request_duration_seconds',
-                'HTTP request duration in seconds',
-                ['method', 'path'],
-                registry=self.registry
+                "http_request_duration_seconds",
+                "HTTP request duration in seconds",
+                ["method", "path"],
+                registry=self.registry,
             )
         except ValueError:
             self.http_request_duration_seconds = None
-        
+
         try:
             self.http_errors_total = Counter(
-                'http_errors_total',
-                'Total number of HTTP errors',
-                ['method', 'path', 'error_type'],
-                registry=self.registry
+                "http_errors_total",
+                "Total number of HTTP errors",
+                ["method", "path", "error_type"],
+                registry=self.registry,
             )
         except ValueError:
             self.http_errors_total = None
-        
+
         # LLM metrics
         try:
             self.llm_requests_total = Counter(
-                'llm_requests_total',
-                'Total number of LLM requests',
-                ['provider', 'model', 'status'],
-                registry=self.registry
+                "llm_requests_total",
+                "Total number of LLM requests",
+                ["provider", "model", "status"],
+                registry=self.registry,
             )
         except ValueError:
             self.llm_requests_total = None
-        
+
         try:
             self.llm_request_duration_seconds = Histogram(
-                'llm_request_duration_seconds',
-                'LLM request duration in seconds',
-                ['provider', 'model'],
-                registry=self.registry
+                "llm_request_duration_seconds",
+                "LLM request duration in seconds",
+                ["provider", "model"],
+                registry=self.registry,
             )
         except ValueError:
             self.llm_request_duration_seconds = None
-        
+
         try:
             self.llm_tokens_total = Counter(
-                'llm_tokens_total',
-                'Total number of LLM tokens used',
-                ['provider', 'model', 'token_type'],
-                registry=self.registry
+                "llm_tokens_total",
+                "Total number of LLM tokens used",
+                ["provider", "model", "token_type"],
+                registry=self.registry,
             )
         except ValueError:
             self.llm_tokens_total = None
-        
+
         # Vector store metrics
         try:
             self.vector_store_queries_total = Counter(
-                'vector_store_queries_total',
-                'Total number of vector store queries',
-                ['store_type', 'operation', 'status'],
-                registry=self.registry
+                "vector_store_queries_total",
+                "Total number of vector store queries",
+                ["store_type", "operation", "status"],
+                registry=self.registry,
             )
         except ValueError:
             self.vector_store_queries_total = None
-        
+
         try:
             self.vector_store_query_duration_seconds = Histogram(
-                'vector_store_query_duration_seconds',
-                'Vector store query duration in seconds',
-                ['store_type', 'operation'],
-                registry=self.registry
+                "vector_store_query_duration_seconds",
+                "Vector store query duration in seconds",
+                ["store_type", "operation"],
+                registry=self.registry,
             )
         except ValueError:
             self.vector_store_query_duration_seconds = None
-        
+
         # Cache metrics
         try:
             self.cache_hits_total = Counter(
-                'cache_hits_total',
-                'Total number of cache hits',
-                ['cache_type'],
-                registry=self.registry
+                "cache_hits_total",
+                "Total number of cache hits",
+                ["cache_type"],
+                registry=self.registry,
             )
         except ValueError:
             self.cache_hits_total = None
-        
+
         try:
             self.cache_misses_total = Counter(
-                'cache_misses_total',
-                'Total number of cache misses',
-                ['cache_type'],
-                registry=self.registry
+                "cache_misses_total",
+                "Total number of cache misses",
+                ["cache_type"],
+                registry=self.registry,
             )
         except ValueError:
             self.cache_misses_total = None
-        
+
         try:
             self.cache_size = Gauge(
-                'cache_size',
-                'Current cache size',
-                ['cache_type'],
-                registry=self.registry
+                "cache_size",
+                "Current cache size",
+                ["cache_type"],
+                registry=self.registry,
             )
         except ValueError:
             self.cache_size = None
-        
+
         # Agent metrics
         try:
             self.agent_executions_total = Counter(
-                'agent_executions_total',
-                'Total number of agent executions',
-                ['agent_type', 'status'],
-                registry=self.registry
+                "agent_executions_total",
+                "Total number of agent executions",
+                ["agent_type", "status"],
+                registry=self.registry,
             )
         except ValueError:
             self.agent_executions_total = None
-        
+
         try:
             self.agent_execution_duration_seconds = Histogram(
-                'agent_execution_duration_seconds',
-                'Agent execution duration in seconds',
-                ['agent_type'],
-                registry=self.registry
+                "agent_execution_duration_seconds",
+                "Agent execution duration in seconds",
+                ["agent_type"],
+                registry=self.registry,
             )
         except ValueError:
             self.agent_execution_duration_seconds = None
-        
+
         # System metrics
         try:
             self.active_queries = Gauge(
-                'active_queries',
-                'Number of currently active queries',
-                registry=self.registry
+                "active_queries",
+                "Number of currently active queries",
+                registry=self.registry,
             )
         except ValueError:
             self.active_queries = None
-        
+
         try:
             self.memory_usage_bytes = Gauge(
-                'memory_usage_bytes',
-                'Current memory usage in bytes',
-                registry=self.registry
+                "memory_usage_bytes",
+                "Current memory usage in bytes",
+                registry=self.registry,
             )
         except ValueError:
             self.memory_usage_bytes = None
-        
+
         # Custom metrics storage
         self._custom_counters = {}
         self._custom_histograms = {}
-    
+
     def increment_counter(self, name: str, labels: Optional[Dict[str, str]] = None):
         """Increment a counter metric."""
         if name == "http_requests_total":
@@ -216,13 +224,15 @@ class MetricsService:
             if name not in self._custom_counters:
                 self._custom_counters[name] = Counter(
                     name,
-                    f'Custom counter: {name}',
+                    f"Custom counter: {name}",
                     list(labels.keys()) if labels else [],
-                    registry=self.registry
+                    registry=self.registry,
                 )
             self._custom_counters[name].labels(**labels).inc()
-    
-    def record_histogram(self, name: str, value: float, labels: Optional[Dict[str, str]] = None):
+
+    def record_histogram(
+        self, name: str, value: float, labels: Optional[Dict[str, str]] = None
+    ):
         """Record a histogram metric."""
         if name == "http_request_duration_seconds":
             if self.http_request_duration_seconds:
@@ -241,13 +251,15 @@ class MetricsService:
             if name not in self._custom_histograms:
                 self._custom_histograms[name] = Histogram(
                     name,
-                    f'Custom histogram: {name}',
+                    f"Custom histogram: {name}",
                     list(labels.keys()) if labels else [],
-                    registry=self.registry
+                    registry=self.registry,
                 )
             self._custom_histograms[name].labels(**labels).observe(value)
-    
-    def set_gauge(self, name: str, value: float, labels: Optional[Dict[str, str]] = None):
+
+    def set_gauge(
+        self, name: str, value: float, labels: Optional[Dict[str, str]] = None
+    ):
         """Set a gauge metric."""
         if name == "cache_size":
             if self.cache_size:
@@ -263,51 +275,57 @@ class MetricsService:
             if name not in self._custom_gauges:
                 self._custom_gauges[name] = Gauge(
                     name,
-                    f'Custom gauge: {name}',
+                    f"Custom gauge: {name}",
                     list(labels.keys()) if labels else [],
-                    registry=self.registry
+                    registry=self.registry,
                 )
             self._custom_gauges[name].labels(**labels).set(value)
-    
-    def record_llm_request(self, provider: str, model: str, duration: float, 
-                          tokens_used: int, status: str = "success"):
+
+    def record_llm_request(
+        self,
+        provider: str,
+        model: str,
+        duration: float,
+        tokens_used: int,
+        status: str = "success",
+    ):
         """Record LLM request metrics."""
         if self.llm_requests_total:
-            self.increment_counter("llm_requests_total", {
-                "provider": provider,
-                "model": model,
-                "status": status
-            })
-        
+            self.increment_counter(
+                "llm_requests_total",
+                {"provider": provider, "model": model, "status": status},
+            )
+
         if self.llm_request_duration_seconds:
-            self.record_histogram("llm_request_duration_seconds", duration, {
-                "provider": provider,
-                "model": model
-            })
-        
+            self.record_histogram(
+                "llm_request_duration_seconds",
+                duration,
+                {"provider": provider, "model": model},
+            )
+
         if tokens_used > 0 and self.llm_tokens_total:
-            self.increment_counter("llm_tokens_total", {
-                "provider": provider,
-                "model": model,
-                "token_type": "total"
-            })
-    
-    def record_vector_store_query(self, store_type: str, operation: str, 
-                                duration: float, status: str = "success"):
+            self.increment_counter(
+                "llm_tokens_total",
+                {"provider": provider, "model": model, "token_type": "total"},
+            )
+
+    def record_vector_store_query(
+        self, store_type: str, operation: str, duration: float, status: str = "success"
+    ):
         """Record vector store query metrics."""
         if self.vector_store_queries_total:
-            self.increment_counter("vector_store_queries_total", {
-                "store_type": store_type,
-                "operation": operation,
-                "status": status
-            })
-        
+            self.increment_counter(
+                "vector_store_queries_total",
+                {"store_type": store_type, "operation": operation, "status": status},
+            )
+
         if self.vector_store_query_duration_seconds:
-            self.record_histogram("vector_store_query_duration_seconds", duration, {
-                "store_type": store_type,
-                "operation": operation
-            })
-    
+            self.record_histogram(
+                "vector_store_query_duration_seconds",
+                duration,
+                {"store_type": store_type, "operation": operation},
+            )
+
     def record_cache_operation(self, cache_type: str, hit: bool):
         """Record cache operation metrics."""
         if hit:
@@ -316,24 +334,25 @@ class MetricsService:
         else:
             if self.cache_misses_total:
                 self.increment_counter("cache_misses_total", {"cache_type": cache_type})
-    
-    def record_agent_execution(self, agent_type: str, duration: float, status: str = "success"):
+
+    def record_agent_execution(
+        self, agent_type: str, duration: float, status: str = "success"
+    ):
         """Record agent execution metrics."""
         if self.agent_executions_total:
-            self.increment_counter("agent_executions_total", {
-                "agent_type": agent_type,
-                "status": status
-            })
-        
+            self.increment_counter(
+                "agent_executions_total", {"agent_type": agent_type, "status": status}
+            )
+
         if self.agent_execution_duration_seconds:
-            self.record_histogram("agent_execution_duration_seconds", duration, {
-                "agent_type": agent_type
-            })
-    
+            self.record_histogram(
+                "agent_execution_duration_seconds", duration, {"agent_type": agent_type}
+            )
+
     def get_metrics(self) -> str:
         """Get Prometheus metrics as string."""
         return generate_latest(self.registry)
-    
+
     def get_metrics_content_type(self) -> str:
         """Get content type for metrics endpoint."""
         return CONTENT_TYPE_LATEST

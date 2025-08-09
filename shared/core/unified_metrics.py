@@ -33,8 +33,9 @@ try:
         get_metrics_summary as prometheus_get_metrics_summary,
         get_prometheus_metrics as prometheus_get_prometheus_metrics,
         check_monitoring_health as prometheus_check_monitoring_health,
-        PROMETHEUS_AVAILABLE
+        PROMETHEUS_AVAILABLE,
     )
+
     PROMETHEUS_IMPORT_SUCCESS = True
 except Exception as e:
     logger.warning(f"Failed to import Prometheus monitoring: {e}")
@@ -50,12 +51,14 @@ try:
         update_system_metrics as windows_update_system_metrics,
         get_metrics_summary as windows_get_metrics_summary,
         get_prometheus_metrics as windows_get_prometheus_metrics,
-        check_monitoring_health as windows_check_monitoring_health
+        check_monitoring_health as windows_check_monitoring_health,
     )
+
     WINDOWS_METRICS_IMPORT_SUCCESS = True
 except Exception as e:
     logger.warning(f"Failed to import Windows metrics: {e}")
     WINDOWS_METRICS_IMPORT_SUCCESS = False
+
 
 def _get_metrics_implementation():
     """Determine which metrics implementation to use."""
@@ -77,37 +80,41 @@ def _get_metrics_implementation():
             logger.warning("No metrics implementation available, using fallback")
             return "fallback"
 
+
 # Determine implementation at module load time
 CURRENT_IMPLEMENTATION = _get_metrics_implementation()
 
+
 class FallbackMetrics:
     """Fallback metrics implementation when no other implementation is available."""
-    
+
     @staticmethod
     def record_request(method: str, endpoint: str, status: int, duration: float):
         """Record HTTP request metrics (no-op fallback)."""
-        logger.debug(f"Fallback: Record request {method} {endpoint} {status} {duration}s")
-    
+        logger.debug(
+            f"Fallback: Record request {method} {endpoint} {status} {duration}s"
+        )
+
     @staticmethod
     def record_error(method: str, endpoint: str, error_type: str):
         """Record error metrics (no-op fallback)."""
         logger.debug(f"Fallback: Record error {method} {endpoint} {error_type}")
-    
+
     @staticmethod
     def record_cache_hit(cache_name: str):
         """Record cache hit (no-op fallback)."""
         logger.debug(f"Fallback: Record cache hit {cache_name}")
-    
+
     @staticmethod
     def record_cache_miss(cache_name: str):
         """Record cache miss (no-op fallback)."""
         logger.debug(f"Fallback: Record cache miss {cache_name}")
-    
+
     @staticmethod
     def update_system_metrics():
         """Update system metrics (no-op fallback)."""
         logger.debug("Fallback: Update system metrics")
-    
+
     @staticmethod
     def get_metrics_summary() -> Dict[str, Any]:
         """Get metrics summary (fallback)."""
@@ -116,14 +123,14 @@ class FallbackMetrics:
             "status": "degraded",
             "message": "No metrics implementation available",
             "platform": platform.system(),
-            "windows_detected": IS_WINDOWS
+            "windows_detected": IS_WINDOWS,
         }
-    
+
     @staticmethod
     def get_prometheus_metrics() -> str:
         """Get Prometheus metrics (fallback)."""
         return "# No metrics available\n"
-    
+
     @staticmethod
     def check_monitoring_health() -> Dict[str, Any]:
         """Check monitoring health (fallback)."""
@@ -131,8 +138,9 @@ class FallbackMetrics:
             "status": "degraded",
             "implementation": "fallback",
             "platform": platform.system(),
-            "message": "No metrics implementation available"
+            "message": "No metrics implementation available",
         }
+
 
 def _get_implementation_functions():
     """Get the appropriate implementation functions."""
@@ -145,7 +153,7 @@ def _get_implementation_functions():
             "update_system_metrics": prometheus_update_system_metrics,
             "get_metrics_summary": prometheus_get_metrics_summary,
             "get_prometheus_metrics": prometheus_get_prometheus_metrics,
-            "check_monitoring_health": prometheus_check_monitoring_health
+            "check_monitoring_health": prometheus_check_monitoring_health,
         }
     elif CURRENT_IMPLEMENTATION == "windows":
         return {
@@ -156,7 +164,7 @@ def _get_implementation_functions():
             "update_system_metrics": windows_update_system_metrics,
             "get_metrics_summary": windows_get_metrics_summary,
             "get_prometheus_metrics": windows_get_prometheus_metrics,
-            "check_monitoring_health": windows_check_monitoring_health
+            "check_monitoring_health": windows_check_monitoring_health,
         }
     else:
         return {
@@ -167,11 +175,13 @@ def _get_implementation_functions():
             "update_system_metrics": FallbackMetrics.update_system_metrics,
             "get_metrics_summary": FallbackMetrics.get_metrics_summary,
             "get_prometheus_metrics": FallbackMetrics.get_prometheus_metrics,
-            "check_monitoring_health": FallbackMetrics.check_monitoring_health
+            "check_monitoring_health": FallbackMetrics.check_monitoring_health,
         }
+
 
 # Get the implementation functions
 _impl = _get_implementation_functions()
+
 
 # Export unified API
 def record_request(method: str, endpoint: str, status: int, duration: float):
@@ -181,12 +191,14 @@ def record_request(method: str, endpoint: str, status: int, duration: float):
     except Exception as e:
         logger.warning(f"Failed to record request metrics: {e}")
 
+
 def record_error(method: str, endpoint: str, error_type: str):
     """Record error metrics."""
     try:
         _impl["record_error"](method, endpoint, error_type)
     except Exception as e:
         logger.warning(f"Failed to record error metrics: {e}")
+
 
 def record_cache_hit(cache_name: str):
     """Record cache hit."""
@@ -195,6 +207,7 @@ def record_cache_hit(cache_name: str):
     except Exception as e:
         logger.warning(f"Failed to record cache hit: {e}")
 
+
 def record_cache_miss(cache_name: str):
     """Record cache miss."""
     try:
@@ -202,12 +215,14 @@ def record_cache_miss(cache_name: str):
     except Exception as e:
         logger.warning(f"Failed to record cache miss: {e}")
 
+
 def update_system_metrics():
     """Update system resource metrics."""
     try:
         _impl["update_system_metrics"]()
     except Exception as e:
         logger.warning(f"Failed to update system metrics: {e}")
+
 
 def get_metrics_summary() -> Dict[str, Any]:
     """Get metrics summary."""
@@ -223,8 +238,9 @@ def get_metrics_summary() -> Dict[str, Any]:
             "error": str(e),
             "implementation": CURRENT_IMPLEMENTATION,
             "platform": platform.system(),
-            "windows_detected": IS_WINDOWS
+            "windows_detected": IS_WINDOWS,
         }
+
 
 def get_prometheus_metrics() -> str:
     """Get metrics in Prometheus format."""
@@ -233,6 +249,7 @@ def get_prometheus_metrics() -> str:
     except Exception as e:
         logger.error(f"Failed to get Prometheus metrics: {e}")
         return f"# Error generating metrics: {e}\n"
+
 
 def check_monitoring_health() -> Dict[str, Any]:
     """Check monitoring system health."""
@@ -249,8 +266,9 @@ def check_monitoring_health() -> Dict[str, Any]:
             "error": str(e),
             "implementation": CURRENT_IMPLEMENTATION,
             "platform": platform.system(),
-            "windows_detected": IS_WINDOWS
+            "windows_detected": IS_WINDOWS,
         }
+
 
 def get_implementation_info() -> Dict[str, Any]:
     """Get information about the current metrics implementation."""
@@ -260,9 +278,14 @@ def get_implementation_info() -> Dict[str, Any]:
         "windows_detected": IS_WINDOWS,
         "prometheus_import_success": PROMETHEUS_IMPORT_SUCCESS,
         "windows_metrics_import_success": WINDOWS_METRICS_IMPORT_SUCCESS,
-        "prometheus_available": PROMETHEUS_AVAILABLE if 'PROMETHEUS_AVAILABLE' in globals() else False
+        "prometheus_available": (
+            PROMETHEUS_AVAILABLE if "PROMETHEUS_AVAILABLE" in globals() else False
+        ),
     }
 
+
 # Log the implementation choice at module load
-logger.info(f"Unified metrics initialized with implementation: {CURRENT_IMPLEMENTATION}")
-logger.info(f"Platform: {platform.system()}, Windows detected: {IS_WINDOWS}") 
+logger.info(
+    f"Unified metrics initialized with implementation: {CURRENT_IMPLEMENTATION}"
+)
+logger.info(f"Platform: {platform.system()}, Windows detected: {IS_WINDOWS}")

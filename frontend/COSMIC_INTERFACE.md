@@ -104,6 +104,26 @@ This document describes the new cosmic-themed interface for SarvanOM, implementi
   - Permission management
   - Toast notifications for collaboration events
 
+### 12. Test Runner (`/src/ui/TestRunner.tsx`)
+- **Purpose**: Comprehensive testing interface with real-time execution tracking
+- **Features**:
+  - Real-time test execution with progress tracking
+  - Multiple test categories (unit, integration, E2E, visual)
+  - Detailed test results with timing and error information
+  - Test suite management with start/stop/reset controls
+  - Performance metrics for test execution
+  - Floating UI with cosmic styling
+
+### 13. Performance Monitor (`/src/ui/PerformanceMonitor.tsx`)
+- **Purpose**: Real-time system and application performance monitoring
+- **Features**:
+  - System resource monitoring (CPU, memory, network)
+  - Core Web Vitals tracking (FCP, LCP, FID, CLS, TTFB)
+  - Network request monitoring with response times
+  - Real-time metrics with trend indicators
+  - Error rate tracking and alerting
+  - Detailed performance analytics
+
 ## Design System
 
 ### Color Palette
@@ -242,6 +262,38 @@ function MyComponent() {
       <p>Connected: {isConnected ? 'Yes' : 'No'}</p>
       <p>Online users: {collaborators.filter(c => c.isOnline).length}</p>
       <button onClick={() => joinSession('my-session')}>Join Session</button>
+    </div>
+  );
+}
+```
+
+### Using Test Runner
+```tsx
+import { TestRunner, useTestRunner } from "@/ui/TestRunner";
+
+function MyComponent() {
+  const { isOpen, toggleTestRunner } = useTestRunner();
+  
+  return (
+    <div>
+      <button onClick={toggleTestRunner}>Toggle Test Runner</button>
+      <TestRunner isOpen={isOpen} onToggle={toggleTestRunner} />
+    </div>
+  );
+}
+```
+
+### Using Performance Monitor
+```tsx
+import { PerformanceMonitor, usePerformanceMonitor } from "@/ui/PerformanceMonitor";
+
+function MyComponent() {
+  const { isOpen, togglePerformanceMonitor } = usePerformanceMonitor();
+  
+  return (
+    <div>
+      <button onClick={togglePerformanceMonitor}>Toggle Performance Monitor</button>
+      <PerformanceMonitor isOpen={isOpen} onToggle={togglePerformanceMonitor} />
     </div>
   );
 }

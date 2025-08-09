@@ -53,14 +53,14 @@ class LoadTestBase(unittest.TestCase):
     async def make_request(self, endpoint: str, data: Dict = None) -> Dict:
         """Make an async HTTP request."""
         url = f"{self.base_url}{endpoint}"
-        
+
         try:
             async with httpx.AsyncClient() as client:
                 if data:
                     response = await client.post(url, json=data, timeout=self.timeout)
                 else:
                     response = await client.get(url, timeout=self.timeout)
-                
+
                 return {
                     "status_code": response.status_code,
                     "response_time": response.elapsed.total_seconds() * 1000,
@@ -84,20 +84,20 @@ class TestConcurrentLoad(LoadTestBase):
         async def worker(worker_id: int):
             """Worker function for concurrent requests."""
             results = []
-            
+
             for i in range(LOAD_TEST_CONFIG["requests_per_user"]):
                 query = TEST_QUERIES[i % len(TEST_QUERIES)]
                 result = await self.make_request("/query", {"query": query})
                 results.append(result)
-                
+
                 # Small delay between requests
                 await asyncio.sleep(0.1)
-            
+
             return results
 
         # Create concurrent workers
         workers = [worker(i) for i in range(LOAD_TEST_CONFIG["concurrent_users"])]
-        
+
         # Execute all workers concurrently
         start_time = time.time()
         all_results = await asyncio.gather(*workers, return_exceptions=True)
@@ -112,7 +112,7 @@ class TestConcurrentLoad(LoadTestBase):
             if isinstance(worker_results, Exception):
                 print(f"   Worker failed: {worker_results}")
                 continue
-                
+
             for result in worker_results:
                 total_requests += 1
                 if result["status_code"] in [200, 401, 403]:  # Acceptable responses
@@ -120,8 +120,12 @@ class TestConcurrentLoad(LoadTestBase):
                 total_response_time += result["response_time"]
 
         # Calculate metrics
-        success_rate = (successful_requests / total_requests * 100) if total_requests > 0 else 0
-        avg_response_time = total_response_time / total_requests if total_requests > 0 else 0
+        success_rate = (
+            (successful_requests / total_requests * 100) if total_requests > 0 else 0
+        )
+        avg_response_time = (
+            total_response_time / total_requests if total_requests > 0 else 0
+        )
         total_time = end_time - start_time
         requests_per_second = total_requests / total_time if total_time > 0 else 0
 
@@ -159,16 +163,22 @@ class TestStressTesting(LoadTestBase):
                 tasks.append(task)
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            
+
             for result in results:
                 request_count += 1
-                if isinstance(result, dict) and result["status_code"] in [200, 401, 403]:
+                if isinstance(result, dict) and result["status_code"] in [
+                    200,
+                    401,
+                    403,
+                ]:
                     successful_count += 1
 
             # Small delay to prevent overwhelming
             await asyncio.sleep(0.1)
 
-        success_rate = (successful_count / request_count * 100) if request_count > 0 else 0
+        success_rate = (
+            (successful_count / request_count * 100) if request_count > 0 else 0
+        )
         requests_per_second = request_count / LOAD_TEST_CONFIG["sustained_duration"]
 
         print(f"✅ Sustained Load Test Results:")
@@ -177,7 +187,9 @@ class TestStressTesting(LoadTestBase):
         print(f"   Success Rate: {success_rate:.2f}%")
         print(f"   Requests per Second: {requests_per_second:.2f}")
 
-        self.assertGreater(success_rate, 70, "Success rate too low under sustained load")
+        self.assertGreater(
+            success_rate, 70, "Success rate too low under sustained load"
+        )
 
     async def test_burst_traffic(self):
         """Test burst traffic handling."""
@@ -204,8 +216,10 @@ class TestStressTesting(LoadTestBase):
                 total_response_time += result["response_time"]
 
         burst_duration = end_time - start_time
-        success_rate = (successful_count / len(results) * 100)
-        avg_response_time = total_response_time / successful_count if successful_count > 0 else 0
+        success_rate = successful_count / len(results) * 100
+        avg_response_time = (
+            total_response_time / successful_count if successful_count > 0 else 0
+        )
 
         print(f"✅ Burst Traffic Test Results:")
         print(f"   Burst Size: {len(results)}")
@@ -237,7 +251,9 @@ class TestMemoryLeakDetection(unittest.TestCase):
             # Make API request
             try:
                 response = requests.post(
-                    f"{LOAD_TEST_CONFIG['base_url']}/query", json={"query": query}, timeout=10
+                    f"{LOAD_TEST_CONFIG['base_url']}/query",
+                    json={"query": query},
+                    timeout=10,
                 )
             except:
                 pass
@@ -252,7 +268,9 @@ class TestMemoryLeakDetection(unittest.TestCase):
 
         # Check for memory leaks
         memory_increase = final_memory - initial_memory
-        memory_growth_rate = memory_increase / len(memory_samples) if memory_samples else 0
+        memory_growth_rate = (
+            memory_increase / len(memory_samples) if memory_samples else 0
+        )
 
         self.assertLess(
             memory_increase,
@@ -299,9 +317,9 @@ class TestErrorHandlingUnderLoad(unittest.TestCase):
                 for i in range(20):
                     try:
                         response = await client.post(
-                            f"{LOAD_TEST_CONFIG['base_url']}/query", 
-                            json=scenario, 
-                            timeout=10
+                            f"{LOAD_TEST_CONFIG['base_url']}/query",
+                            json=scenario,
+                            timeout=10,
                         )
 
                         if response.status_code == scenario["expected_status"]:
@@ -431,7 +449,9 @@ class TestNetworkResilience(unittest.TestCase):
 
             start_time = time.time()
             try:
-                response = requests.get(f"{LOAD_TEST_CONFIG['base_url']}/health", timeout=timeout)
+                response = requests.get(
+                    f"{LOAD_TEST_CONFIG['base_url']}/health", timeout=timeout
+                )
                 response_time = time.time() - start_time
 
                 self.assertLess(
@@ -454,7 +474,9 @@ class TestNetworkResilience(unittest.TestCase):
         # Test with connection drops and recovery
         for i in range(10):
             try:
-                response = requests.get(f"{LOAD_TEST_CONFIG['base_url']}/health", timeout=10)
+                response = requests.get(
+                    f"{LOAD_TEST_CONFIG['base_url']}/health", timeout=10
+                )
                 self.assertEqual(response.status_code, 200)
             except Exception as e:
                 # Should handle connection errors gracefully
@@ -505,10 +527,12 @@ async def run_load_tests():
         print("\n❌ Some load tests failed.")
         return False
 
+
 async def main():
     """Main test function."""
     success = await run_load_tests()
     return success
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -23,16 +23,21 @@ from sqlalchemy import select, update, delete
 from sqlalchemy.sql import Select
 
 # Retry mechanism
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class DatabaseConfig:
     """Database configuration class."""
-    
+
     def __init__(
         self,
         url: str,
@@ -58,7 +63,7 @@ class DatabaseConfig:
 
 class DatabaseManager:
     """Async database manager with connection pooling."""
-    
+
     def __init__(self, config: DatabaseConfig):
         self.config = config
         self._engine: Optional[AsyncEngine] = None
@@ -90,17 +95,11 @@ class DatabaseManager:
 
         # Create async session factories
         self._session_factory = async_sessionmaker(
-            bind=self._engine, 
-            expire_on_commit=False, 
-            autoflush=False, 
-            autocommit=False
+            bind=self._engine, expire_on_commit=False, autoflush=False, autocommit=False
         )
 
         self._scoped_session_factory = async_sessionmaker(
-            bind=self._engine,
-            expire_on_commit=False,
-            autoflush=False,
-            autocommit=False
+            bind=self._engine, expire_on_commit=False, autoflush=False, autocommit=False
         )
 
         logger.info(
@@ -185,7 +184,7 @@ class DatabaseSession:
 
 class QueryBuilder:
     """Async query builder for database operations."""
-    
+
     def __init__(self, session: AsyncSession):
         self.session = session
 
@@ -215,21 +214,21 @@ class QueryBuilder:
     ) -> tuple[Select, Select]:
         """Create paginated select queries."""
         query = select(model)
-        
+
         if order_by:
             order_column = getattr(model, order_by)
             if order_desc:
                 query = query.order_by(order_column.desc())
             else:
                 query = query.order_by(order_column.asc())
-        
+
         # Count query
         count_query = select(func.count()).select_from(model)
-        
+
         # Paginated query
         offset = (page - 1) * page_size
         paginated_query = query.offset(offset).limit(page_size)
-        
+
         return paginated_query, count_query
 
     def select_with_filters(
@@ -237,7 +236,7 @@ class QueryBuilder:
     ) -> Select:
         """Create a select query with filters."""
         query = select(model)
-        
+
         for field, value in filters.items():
             if hasattr(model, field):
                 column = getattr(model, field)
@@ -245,13 +244,13 @@ class QueryBuilder:
                     query = query.where(column == value)
                 else:
                     query = query.where(column.ilike(f"%{value}%"))
-        
+
         return query
 
 
 class Repository:
     """Async repository pattern for database operations."""
-    
+
     def __init__(self, session: AsyncSession, model: Type[T]):
         self.session = session
         self.model = model
@@ -278,7 +277,7 @@ class Repository:
         query = self.query_builder.select(self.model)
         if limit:
             query = query.limit(limit)
-        
+
         result = await self.session.execute(query)
         return result.scalars().all()
 
@@ -298,14 +297,14 @@ class Repository:
         query, count_query = self.query_builder.select_paginated(
             self.model, page, page_size, order_by, order_desc
         )
-        
+
         # Execute both queries
         result = await self.session.execute(query)
         count_result = await self.session.execute(count_query)
-        
+
         entities = result.scalars().all()
         total_count = count_result.scalar()
-        
+
         return entities, total_count
 
     @retry(
@@ -323,7 +322,7 @@ class Repository:
         query = self.query_builder.select_with_filters(self.model, filters, exact_match)
         if limit:
             query = query.limit(limit)
-        
+
         result = await self.session.execute(query)
         return result.scalars().all()
 
@@ -345,16 +344,18 @@ class Repository:
         wait=wait_exponential(multiplier=1, min=4, max=10),
         retry=retry_if_exception_type((OperationalError, DisconnectionError)),
     )
-    async def update(self, id: Union[str, uuid.UUID], data: Dict[str, Any]) -> Optional[T]:
+    async def update(
+        self, id: Union[str, uuid.UUID], data: Dict[str, Any]
+    ) -> Optional[T]:
         """Update entity asynchronously."""
         entity = await self.get_by_id(id)
         if not entity:
             return None
-        
+
         for field, value in data.items():
             if hasattr(entity, field):
                 setattr(entity, field, value)
-        
+
         entity.updated_at = datetime.utcnow()
         await self.session.flush()
         await self.session.refresh(entity)
@@ -370,15 +371,15 @@ class Repository:
         entity = await self.get_by_id(id)
         if not entity:
             return False
-        
-        if soft_delete and hasattr(entity, 'is_active'):
+
+        if soft_delete and hasattr(entity, "is_active"):
             entity.is_active = False
             entity.updated_at = datetime.utcnow()
             await self.session.flush()
         else:
             await self.session.delete(entity)
             await self.session.flush()
-        
+
         return True
 
     @retry(
@@ -391,11 +392,11 @@ class Repository:
         entities = [self.model(**data) for data in data_list]
         self.session.add_all(entities)
         await self.session.flush()
-        
+
         # Refresh all entities
         for entity in entities:
             await self.session.refresh(entity)
-        
+
         return entities
 
     @retry(
@@ -408,18 +409,18 @@ class Repository:
     ) -> int:
         """Bulk update entities asynchronously."""
         updated_count = 0
-        
+
         for id, data in updates:
             entity = await self.update(id, data)
             if entity:
                 updated_count += 1
-        
+
         return updated_count
 
 
 class DatabaseService:
     """Async database service with session management."""
-    
+
     def __init__(self, db_manager: DatabaseManager):
         self.db_manager = db_manager
 
@@ -454,7 +455,7 @@ class DatabaseService:
                 # Test connection with simple query
                 result = await session.session.execute(text("SELECT 1"))
                 await result.fetchone()
-                
+
                 return {
                     "healthy": True,
                     "status": "connected",
@@ -462,7 +463,7 @@ class DatabaseService:
                     "pool_size": self.db_manager.config.pool_size,
                     "max_overflow": self.db_manager.config.max_overflow,
                 }
-                
+
         except Exception as e:
             logger.error(f"Database health check failed: {e}")
             return {
@@ -478,7 +479,7 @@ class DatabaseService:
             # Get connection pool info
             engine = await self.db_manager.engine
             pool = engine.pool
-            
+
             return {
                 "pool_size": pool.size(),
                 "checked_in": pool.checkedin(),
@@ -486,7 +487,7 @@ class DatabaseService:
                 "overflow": pool.overflow(),
                 "invalid": pool.invalid(),
             }
-            
+
         except Exception as e:
             logger.error(f"Failed to get database metrics: {e}")
             return {"error": str(e)}
@@ -520,16 +521,19 @@ async def get_database_service() -> DatabaseService:
 
 def with_transaction(func):
     """Decorator for database transactions."""
+
     @wraps(func)
     async def wrapper(*args, **kwargs):
         db_service = await get_database_service()
         async with db_service.get_session() as session:
             return await func(*args, **kwargs, session=session)
+
     return wrapper
 
 
 def with_retry(max_attempts: int = 3):
     """Decorator for retrying database operations."""
+
     def decorator(func):
         @wraps(func)
         @retry(
@@ -539,5 +543,7 @@ def with_retry(max_attempts: int = 3):
         )
         async def wrapper(*args, **kwargs):
             return await func(*args, **kwargs)
+
         return wrapper
+
     return decorator

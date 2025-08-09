@@ -1,4 +1,5 @@
 from shared.core.api.config import get_settings
+
 settings = get_settings()
 """
 LLMClient: Legacy wrapper for backward compatibility.
@@ -40,7 +41,7 @@ class LLMClient:
     def __init__(self):
         """Initialize the legacy LLM client."""
         logger.info("🔍 DEEP DEBUG: Initializing LLM Client")
-        
+
         try:
             self._client = get_llm_client_v3()
             logger.info("✅ LLM Client v3 initialized successfully")
@@ -48,9 +49,10 @@ class LLMClient:
             logger.error(f"❌ Failed to initialize LLM Client v3: {e}")
             logger.error(f"Error type: {type(e).__name__}")
             import traceback
+
             logger.error(f"Traceback: {traceback.format_exc()}")
             raise Exception(f"LLM Client v3 initialization failed: {str(e)}")
-        
+
         self._provider = os.getenv("LLM_PROVIDER", "openai").lower()
         self._model = settings.openai_model or "gpt-3.5-turbo"
 
@@ -58,8 +60,10 @@ class LLMClient:
         if self._provider == "anthropic":
             self._model = settings.anthropic_model or "claude-3-5-sonnet-20241022"
 
-        logger.info(f"✅ LLM Client configured - Provider: {self._provider}, Model: {self._model}")
-        
+        logger.info(
+            f"✅ LLM Client configured - Provider: {self._provider}, Model: {self._model}"
+        )
+
         # SANITY CHECK: Validate API keys with detailed error surface
         logger.info("🔍 DEEP DEBUG: Validating API keys")
         if self._provider == "openai":
@@ -80,7 +84,7 @@ class LLMClient:
                 logger.error("❌ ANTHROPIC_API_KEY appears to be invalid (too short)")
                 raise Exception("ANTHROPIC_API_KEY appears to be invalid")
             logger.info("✅ ANTHROPIC_API_KEY found and validated")
-        
+
         logger.info("✅ LLM Client initialization completed successfully")
 
     def get_provider(self):
@@ -117,9 +121,7 @@ class LLMClient:
         try:
             # Create LLMRequest object for the v3 client
             request = LLMRequest(
-                prompt=prompt,
-                max_tokens=max_tokens,
-                temperature=temperature
+                prompt=prompt, max_tokens=max_tokens, temperature=temperature
             )
             response = await self._client.generate_text(request)
             return response.content
@@ -153,9 +155,13 @@ class LLMClient:
         try:
             loop = asyncio.get_running_loop()
             # We're in an async context, use asyncio.create_task
-            task = asyncio.create_task(self.generate_text(prompt, max_tokens, temperature))
+            task = asyncio.create_task(
+                self.generate_text(prompt, max_tokens, temperature)
+            )
             # This won't work in async context, so we need a different approach
-            raise RuntimeError("Cannot use sync method in async context. Use generate_text() instead.")
+            raise RuntimeError(
+                "Cannot use sync method in async context. Use generate_text() instead."
+            )
         except RuntimeError:
             # No running loop, we can create one
             return asyncio.run(self.generate_text(prompt, max_tokens, temperature))
@@ -168,7 +174,9 @@ class LLMClient:
         """
         try:
             loop = asyncio.get_running_loop()
-            raise RuntimeError("Cannot use sync method in async context. Use synthesize() instead.")
+            raise RuntimeError(
+                "Cannot use sync method in async context. Use synthesize() instead."
+            )
         except RuntimeError:
             # No running loop, we can create one
             return asyncio.run(self.synthesize(prompt, max_tokens, temperature))
@@ -179,7 +187,9 @@ class LLMClient:
         """
         try:
             loop = asyncio.get_running_loop()
-            raise RuntimeError("Cannot use sync method in async context. Use create_embedding() instead.")
+            raise RuntimeError(
+                "Cannot use sync method in async context. Use create_embedding() instead."
+            )
         except RuntimeError:
             # No running loop, we can create one
             return asyncio.run(self.create_embedding(text))

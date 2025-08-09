@@ -12,11 +12,11 @@ from .routes import auth_router, crawler_router, vector_router, graph_router
 __all__ = [
     "GatewayApp",
     "health_router",
-    "search_router", 
+    "search_router",
     "fact_check_router",
     "synthesis_router",
     "auth_router",
     "crawler_router",
     "vector_router",
     "graph_router",
-] 
+]

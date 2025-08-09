@@ -124,20 +124,6 @@ const nextConfig = {
     return config;
   },
 
-  // API rewrites
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/:path*`,
-      },
-      {
-        source: '/backend/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'}/:path*`,
-      },
-    ];
-  },
-
   // Security and performance headers
   async headers() {
     return [
@@ -190,7 +176,7 @@ const nextConfig = {
 
   // Environment variables
   env: {
-    NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
+    NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
     NEXT_PUBLIC_APP_VERSION: process.env.npm_package_version || '1.0.0',
   },

@@ -18,7 +18,7 @@ async def test_orchestrator_pipeline():
     """Test the orchestrator pipeline to find the AgentResult issue."""
     try:
         from shared.core.agents.lead_orchestrator import LeadOrchestrator
-from shared.core.agents.base_agent import QueryContext
+        from shared.core.agents.base_agent import QueryContext
         
         print("🔄 Testing orchestrator pipeline...")
         

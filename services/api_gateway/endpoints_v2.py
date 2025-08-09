@@ -115,7 +115,7 @@ async def batch_query_v2(
             status_code=400, detail="Maximum 10 queries allowed in a batch"
         )
 
-    from services.api-gateway.main import orchestrator
+    from services.api_gateway.main import orchestrator
 
     if not orchestrator:
         raise HTTPException(status_code=503, detail="Service temporarily unavailable")
@@ -199,7 +199,7 @@ async def submit_feedback_v2(
     Enhanced with background processing and analytics.
     """
     # Import main feedback handler
-    from services.api-gateway.main import submit_feedback as main_submit_feedback
+    from services.api_gateway.main import submit_feedback as main_submit_feedback
 
     result = await main_submit_feedback(request, current_user)
 
@@ -239,7 +239,7 @@ async def websocket_query_v2(websocket, current_user=Depends(get_current_user)):
                 continue
 
             # Process query with streaming
-            from services.api-gateway.main import orchestrator
+            from services.api_gateway.main import orchestrator
 
             # Send acknowledgment
             await websocket.send_json(
@@ -265,7 +265,7 @@ async def websocket_query_v2(websocket, current_user=Depends(get_current_user)):
 
 async def stream_query_response(request: QueryRequestValidator, user):
     """Generate streaming response for a query."""
-    from services.api-gateway.main import orchestrator
+    from services.api_gateway.main import orchestrator
 
     # Send initial acknowledgment
     yield json.dumps(

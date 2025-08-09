@@ -40,7 +40,12 @@ from services.api_gateway.orchestrator_workflow_fixes import (
 # Data models imported as needed
 
 # Import unified logging
-from shared.core.unified_logging import get_logger, log_agent_lifecycle, log_execution_time, log_query_event
+from shared.core.unified_logging import (
+    get_logger,
+    log_agent_lifecycle,
+    log_execution_time,
+    log_query_event,
+)
 from shared.core.logging import get_logger, log_execution_time
 from shared.core.metrics import get_metrics_service
 
@@ -78,12 +83,14 @@ class LeadOrchestrator:
         self.token_budget = TokenBudgetController()
         try:
             from shared.core.api.config import get_settings
+
             ttl_seconds = int(get_settings().query_cache_ttl_seconds)
         except Exception:
             ttl_seconds = 3600
         # Create namespace from core model settings to avoid cross-model contamination
         try:
             from shared.core.config import get_central_config
+
             cfg = get_central_config()
             namespace = "|".join(
                 [
@@ -97,15 +104,19 @@ class LeadOrchestrator:
         except Exception:
             namespace = "default"
 
-        self.semantic_cache = SemanticCacheManager(ttl_seconds=ttl_seconds, namespace=namespace)
+        self.semantic_cache = SemanticCacheManager(
+            ttl_seconds=ttl_seconds, namespace=namespace
+        )
         # Expose global reference for observability
         global GLOBAL_SEMANTIC_CACHE
         GLOBAL_SEMANTIC_CACHE = self.semantic_cache
         self.response_aggregator = ResponseAggregator()
 
-        logger.info("LeadOrchestrator initialized",
-                   agent_count=len(self.agents),
-                   cache_enabled=GLOBAL_SEMANTIC_CACHE is not None)
+        logger.info(
+            "LeadOrchestrator initialized",
+            agent_count=len(self.agents),
+            cache_enabled=GLOBAL_SEMANTIC_CACHE is not None,
+        )
 
     async def process_query(
         self, query: str, user_context: Dict[str, Any] = None
@@ -127,12 +138,16 @@ class LeadOrchestrator:
             context = QueryContext(
                 query=query, user_context=user_context or {}, trace_id=str(uuid.uuid4())
             )
-            
+
             # Log query received
-            log_query_event(logger, query, "received", 
-                          query_id=context.trace_id, 
-                          user_context=user_context)
-            
+            log_query_event(
+                logger,
+                query,
+                "received",
+                query_id=context.trace_id,
+                user_context=user_context,
+            )
+
             # Check cache first
             cached_response = await self.semantic_cache.get_cached_response(query)
             if cached_response:
@@ -145,9 +160,9 @@ class LeadOrchestrator:
                     "metadata": {
                         **cached_response.get("metadata", {}),
                         "cache_status": "Hit",
-                        "llm_provider": "cached"
+                        "llm_provider": "cached",
                     },
-                    "execution_time_ms": int((time.time() - start_time) * 1000)
+                    "execution_time_ms": int((time.time() - start_time) * 1000),
                 }
 
             # Continue with full processing if not cached
@@ -156,22 +171,32 @@ class LeadOrchestrator:
             # Allocate token budget with error handling
             try:
                 query_budget = await self.token_budget.allocate_budget_for_query(query)
-                logger.info(f"Allocated {query_budget} tokens for query", query_id=context.trace_id)
+                logger.info(
+                    f"Allocated {query_budget} tokens for query",
+                    query_id=context.trace_id,
+                )
             except Exception as budget_error:
-                logger.error(f"Token budget allocation failed: {budget_error}", exc_info=True)
+                logger.error(
+                    f"Token budget allocation failed: {budget_error}", exc_info=True
+                )
                 query_budget = 1000  # Fallback budget
-                logger.warning(f"Using fallback budget of {query_budget} tokens", query_id=context.trace_id)
+                logger.warning(
+                    f"Using fallback budget of {query_budget} tokens",
+                    query_id=context.trace_id,
+                )
 
             # Analyze and plan execution with error handling
             try:
                 plan = await self.analyze_and_plan(context)
             except Exception as plan_error:
-                logger.error(f"Query analysis and planning failed: {plan_error}", exc_info=True)
+                logger.error(
+                    f"Query analysis and planning failed: {plan_error}", exc_info=True
+                )
                 # Use default pipeline plan
                 plan = {
                     "execution_pattern": "pipeline",
                     "agent_sequence": [AgentType.RETRIEVAL, AgentType.SYNTHESIS],
-                    "timeout": 30.0
+                    "timeout": 30.0,
                 }
                 logger.warning("Using default pipeline plan", query_id=context.trace_id)
 
@@ -182,13 +207,17 @@ class LeadOrchestrator:
                 elif plan["execution_pattern"] == "fork_join":
                     result = await self.execute_fork_join(context, plan, query_budget)
                 elif plan["execution_pattern"] == "scatter_gather":
-                    result = await self.execute_scatter_gather(context, plan, query_budget)
+                    result = await self.execute_scatter_gather(
+                        context, plan, query_budget
+                    )
                 else:
                     result = await self.execute_pipeline(
                         context, plan, query_budget
                     )  # Default to pipeline
             except asyncio.TimeoutError as timeout_error:
-                logger.error(f"Query execution timed out: {timeout_error}", exc_info=True)
+                logger.error(
+                    f"Query execution timed out: {timeout_error}", exc_info=True
+                )
                 return {
                     "success": False,
                     "error": "Query processing timed out. Please try again with a simpler query.",
@@ -198,11 +227,14 @@ class LeadOrchestrator:
                     "metadata": {
                         "trace_id": context.trace_id,
                         "execution_time_ms": int((time.time() - start_time) * 1000),
-                        "error_type": "timeout_error"
-                    }
+                        "error_type": "timeout_error",
+                    },
                 }
             except ConnectionError as conn_error:
-                logger.error(f"Connection error during query execution: {conn_error}", exc_info=True)
+                logger.error(
+                    f"Connection error during query execution: {conn_error}",
+                    exc_info=True,
+                )
                 return {
                     "success": False,
                     "error": "External service connection failed. Please try again later.",
@@ -212,8 +244,8 @@ class LeadOrchestrator:
                     "metadata": {
                         "trace_id": context.trace_id,
                         "execution_time_ms": int((time.time() - start_time) * 1000),
-                        "error_type": "connection_error"
-                    }
+                        "error_type": "connection_error",
+                    },
                 }
             except Exception as exec_error:
                 logger.error(f"Query execution failed: {exec_error}", exc_info=True)
@@ -226,8 +258,8 @@ class LeadOrchestrator:
                     "metadata": {
                         "trace_id": context.trace_id,
                         "execution_time_ms": int((time.time() - start_time) * 1000),
-                        "error_type": "execution_error"
-                    }
+                        "error_type": "execution_error",
+                    },
                 }
 
             # Aggregate results with enhanced aggregator
@@ -246,8 +278,8 @@ class LeadOrchestrator:
                     "metadata": {
                         "trace_id": context.trace_id,
                         "execution_time_ms": int((time.time() - start_time) * 1000),
-                        "error_type": "aggregation_error"
-                    }
+                        "error_type": "aggregation_error",
+                    },
                 }
 
             # Track token usage with error handling
@@ -257,16 +289,24 @@ class LeadOrchestrator:
                     .get("token_usage", {})
                     .get("total", 0)
                 )
-                await self.token_budget.track_usage(AgentType.ORCHESTRATOR, total_tokens)
+                await self.token_budget.track_usage(
+                    AgentType.ORCHESTRATOR, total_tokens
+                )
             except Exception as track_error:
-                logger.warning(f"Token usage tracking failed: {track_error}", query_id=context.trace_id)
+                logger.warning(
+                    f"Token usage tracking failed: {track_error}",
+                    query_id=context.trace_id,
+                )
 
             # Cache successful response with error handling
             if final_response.get("success", False):
                 try:
                     await self.semantic_cache.cache_response(query, final_response)
                 except Exception as cache_error:
-                    logger.warning(f"Response caching failed: {cache_error}", query_id=context.trace_id)
+                    logger.warning(
+                        f"Response caching failed: {cache_error}",
+                        query_id=context.trace_id,
+                    )
 
             return final_response
 
@@ -328,35 +368,43 @@ class LeadOrchestrator:
         self, context: QueryContext, plan: Dict[str, Any], query_budget: int
     ) -> Dict[AgentType, AgentResult]:
         """Execute the complete multi-agent pipeline with comprehensive logging."""
-        logger.info("Starting pipeline execution", 
-                   query=context.query,
-                   user_id=context.user_id,
-                   pipeline_id=str(uuid.uuid4()))
-        
+        logger.info(
+            "Starting pipeline execution",
+            query=context.query,
+            user_id=context.user_id,
+            pipeline_id=str(uuid.uuid4()),
+        )
+
         try:
             # Track active queries
             metrics_service.set_gauge("active_queries", len(self.active_queries) + 1)
-            
+
             # Execute pipeline phases
             results = await self._execute_retrieval_phase_parallel(context, results)
             results = await self._execute_synthesis_phase(context, results)
             results = await self._execute_citation_phase(context, results)
             results = await self._execute_reviewer_phase(context, results)
-            
+
             # Log pipeline completion
-            total_duration = sum(r.execution_time_ms for r in results.values() if r.success)
-            logger.info("Pipeline completed successfully",
-                       total_duration_ms=total_duration,
-                       agent_results=len(results),
-                       successful_agents=sum(1 for r in results.values() if r.success))
-            
+            total_duration = sum(
+                r.execution_time_ms for r in results.values() if r.success
+            )
+            logger.info(
+                "Pipeline completed successfully",
+                total_duration_ms=total_duration,
+                agent_results=len(results),
+                successful_agents=sum(1 for r in results.values() if r.success),
+            )
+
             return results
-            
+
         except Exception as e:
-            logger.error("Pipeline execution failed",
-                        error=str(e),
-                        error_type=type(e).__name__,
-                        query=context.query)
+            logger.error(
+                "Pipeline execution failed",
+                error=str(e),
+                error_type=type(e).__name__,
+                query=context.query,
+            )
             raise
         finally:
             # Update active queries gauge
@@ -372,29 +420,28 @@ class LeadOrchestrator:
             # Execute entity extraction and retrieval in parallel
             entity_task = asyncio.create_task(
                 asyncio.wait_for(
-                    self._extract_entities_parallel(context.query), 
-                    timeout=10
+                    self._extract_entities_parallel(context.query), timeout=10
                 )
             )
-            
+
             # Prepare retrieval task
             retrieval_task_data = {
                 "query": context.query,
                 "max_tokens": context.user_context.get("max_tokens", 4000),
             }
-            
+
             retrieval_task = asyncio.create_task(
                 asyncio.wait_for(
-                    self.agents[AgentType.RETRIEVAL].process_task(retrieval_task_data, context),
+                    self.agents[AgentType.RETRIEVAL].process_task(
+                        retrieval_task_data, context
+                    ),
                     timeout=15,
                 )
             )
 
             # Execute both tasks in parallel
             entities, retrieval_result = await asyncio.gather(
-                entity_task, 
-                retrieval_task,
-                return_exceptions=True
+                entity_task, retrieval_task, return_exceptions=True
             )
 
             # Handle entity extraction result
@@ -412,10 +459,10 @@ class LeadOrchestrator:
                 )
             else:
                 results[AgentType.RETRIEVAL] = retrieval_result
-                
+
                 # Update retrieval result with entities if successful
-                if retrieval_result.success and hasattr(retrieval_result, 'data'):
-                    retrieval_result.data['entities'] = entities
+                if retrieval_result.success and hasattr(retrieval_result, "data"):
+                    retrieval_result.data["entities"] = entities
 
         except asyncio.TimeoutError:
             logger.error("Retrieval phase timed out")
@@ -439,6 +486,7 @@ class LeadOrchestrator:
         # Check if reviewer is enabled
         try:
             from shared.core.config import get_central_config
+
             config = get_central_config()
             if not config.enable_reviewer_agent:
                 logger.info("Reviewer agent disabled in config")
@@ -455,10 +503,9 @@ class LeadOrchestrator:
             return results
 
         try:
-            draft_answer = (
-                results[AgentType.SYNTHESIS].data.get("answer")
-                or results[AgentType.SYNTHESIS].data.get("response", "")
-            )
+            draft_answer = results[AgentType.SYNTHESIS].data.get("answer") or results[
+                AgentType.SYNTHESIS
+            ].data.get("response", "")
             sources = []
             if AgentType.RETRIEVAL in results and results[AgentType.RETRIEVAL].success:
                 sources = results[AgentType.RETRIEVAL].data.get("documents", [])
@@ -485,7 +532,9 @@ class LeadOrchestrator:
                 synth = results[AgentType.SYNTHESIS]
                 synth.data["answer"] = final_answer
                 synth.data["review_feedback"] = feedback
-                synth.confidence = max(synth.confidence, float(improved.get("confidence", 0.6)))
+                synth.confidence = max(
+                    synth.confidence, float(improved.get("confidence", 0.6))
+                )
                 results[AgentType.SYNTHESIS] = synth
 
         except asyncio.TimeoutError:
@@ -520,7 +569,9 @@ class LeadOrchestrator:
 
             # Execute fact checking with timeout
             fact_check_result = await asyncio.wait_for(
-                self.agents[AgentType.FACT_CHECK].process_task(fact_check_task, context),
+                self.agents[AgentType.FACT_CHECK].process_task(
+                    fact_check_task, context
+                ),
                 timeout=20,
             )
             results[AgentType.FACT_CHECK] = fact_check_result
@@ -569,7 +620,9 @@ class LeadOrchestrator:
                 AgentType.FACT_CHECK in results
                 and results[AgentType.FACT_CHECK].success
             ):
-                synthesis_task["fact_check_results"] = results[AgentType.FACT_CHECK].data
+                synthesis_task["fact_check_results"] = results[
+                    AgentType.FACT_CHECK
+                ].data
 
             # Execute synthesis with timeout
             synthesis_result = await asyncio.wait_for(
@@ -618,10 +671,7 @@ class LeadOrchestrator:
             )
 
             # Add retrieval results for source information
-            if (
-                AgentType.RETRIEVAL in results
-                and results[AgentType.RETRIEVAL].success
-            ):
+            if AgentType.RETRIEVAL in results and results[AgentType.RETRIEVAL].success:
                 citation_task["retrieval_results"] = results[AgentType.RETRIEVAL].data
 
             # Execute citation with timeout
@@ -740,18 +790,18 @@ class LeadOrchestrator:
     ) -> Dict[AgentType, AgentResult]:
         """
         Execute agents in fork-join pattern for independent operations.
-        
+
         This pattern is useful when agents can work independently and their
         results can be combined later.
         """
         logger.info("Executing fork-join pattern")
-        
+
         # Define independent agent groups
         independent_groups = [
             [AgentType.RETRIEVAL],  # Retrieval can work independently
             [AgentType.FACT_CHECK],  # Fact checking can work independently
         ]
-        
+
         # Execute independent groups in parallel
         group_tasks = []
         for group in independent_groups:
@@ -759,10 +809,10 @@ class LeadOrchestrator:
                 self._execute_agent_group_parallel(group, context, plan, query_budget)
             )
             group_tasks.append(group_task)
-        
+
         # Wait for all groups to complete
         group_results = await asyncio.gather(*group_tasks, return_exceptions=True)
-        
+
         # Combine results
         results = {}
         for i, group_result in enumerate(group_results):
@@ -775,30 +825,30 @@ class LeadOrchestrator:
                     )
             else:
                 results.update(group_result)
-        
+
         # Execute dependent phases
         if AgentType.RETRIEVAL in results and results[AgentType.RETRIEVAL].success:
             # Synthesis depends on retrieval
             synthesis_result = await self._execute_synthesis_phase(context, results)
             results.update(synthesis_result)
-            
+
             # Citation depends on synthesis
             if AgentType.SYNTHESIS in results and results[AgentType.SYNTHESIS].success:
                 citation_result = await self._execute_citation_phase(context, results)
                 results.update(citation_result)
-        
+
         return results
 
     async def _execute_agent_group_parallel(
-        self, 
-        agent_types: List[AgentType], 
-        context: QueryContext, 
-        plan: Dict[str, Any], 
-        query_budget: int
+        self,
+        agent_types: List[AgentType],
+        context: QueryContext,
+        plan: Dict[str, Any],
+        query_budget: int,
     ) -> Dict[AgentType, AgentResult]:
         """Execute a group of agents in parallel."""
         results = {}
-        
+
         # Create tasks for each agent in the group
         agent_tasks = []
         for agent_type in agent_types:
@@ -806,7 +856,7 @@ class LeadOrchestrator:
                 self._execute_single_agent(agent_type, context, plan, query_budget)
             )
             agent_tasks.append((agent_type, task))
-        
+
         # Execute all agents in parallel
         for agent_type, task in agent_tasks:
             try:
@@ -822,25 +872,25 @@ class LeadOrchestrator:
                 results[agent_type] = self._create_error_result(
                     f"{agent_type} failed: {str(e)}"
                 )
-        
+
         return results
 
     async def _execute_single_agent(
-        self, 
-        agent_type: AgentType, 
-        context: QueryContext, 
-        plan: Dict[str, Any], 
-        query_budget: int
+        self,
+        agent_type: AgentType,
+        context: QueryContext,
+        plan: Dict[str, Any],
+        query_budget: int,
     ) -> AgentResult:
         """Execute a single agent with proper error handling."""
         try:
             # Prepare task for the agent
             task = self._prepare_task_for_agent(agent_type, None, context)
-            
+
             # Execute agent
             result = await self.agents[agent_type].process_task(task, context)
             return result
-            
+
         except Exception as e:
             logger.error(f"Agent {agent_type} execution failed: {e}")
             return self._create_error_result(f"Agent {agent_type} failed: {str(e)}")
@@ -850,22 +900,22 @@ class LeadOrchestrator:
     ) -> Dict[AgentType, AgentResult]:
         """
         Execute scatter-gather pattern for distributed processing.
-        
+
         This pattern is useful when the same operation needs to be performed
         on multiple data sources or with different parameters.
         """
         logger.info("Executing scatter-gather pattern")
-        
+
         # Detect query domains for parallel processing
         domains = await self._detect_query_domains(context.query)
-        
+
         if not domains:
             # Fall back to standard pipeline
             return await self.execute_pipeline(context, plan, query_budget)
-        
+
         # Generate domain-specific queries
         domain_queries = await self._generate_domain_queries(context.query, domains)
-        
+
         # Execute queries for each domain in parallel
         domain_tasks = []
         for domain, query in domain_queries.items():
@@ -873,15 +923,15 @@ class LeadOrchestrator:
             domain_context = QueryContext(
                 query=query,
                 user_context=context.user_context,
-                trace_id=f"{context.trace_id}-{domain}"
+                trace_id=f"{context.trace_id}-{domain}",
             )
-            
+
             # Create task for this domain
             task = asyncio.create_task(
                 self._execute_domain_query(domain, domain_context, plan, query_budget)
             )
             domain_tasks.append((domain, task))
-        
+
         # Wait for all domain queries to complete
         domain_results = {}
         for domain, task in domain_tasks:
@@ -898,16 +948,16 @@ class LeadOrchestrator:
                 domain_results[domain] = self._create_error_result(
                     f"Domain {domain} failed: {str(e)}"
                 )
-        
+
         # Gather and synthesize results
         return await self._synthesize_domain_results(domain_results, context)
 
     async def _execute_domain_query(
-        self, 
-        domain: str, 
-        context: QueryContext, 
-        plan: Dict[str, Any], 
-        query_budget: int
+        self,
+        domain: str,
+        context: QueryContext,
+        plan: Dict[str, Any],
+        query_budget: int,
     ) -> AgentResult:
         """Execute a query for a specific domain."""
         try:
@@ -917,50 +967,49 @@ class LeadOrchestrator:
                 "domain": domain,
                 "max_tokens": context.user_context.get("max_tokens", 2000),
             }
-            
+
             retrieval_result = await asyncio.wait_for(
                 self.agents[AgentType.RETRIEVAL].process_task(retrieval_task, context),
                 timeout=15,
             )
-            
+
             if not retrieval_result.success:
                 return retrieval_result
-            
+
             # Execute synthesis for this domain
             synthesis_task = self._prepare_task_for_agent(
                 AgentType.SYNTHESIS, retrieval_result, context
             )
             synthesis_task["domain"] = domain
-            
+
             synthesis_result = await asyncio.wait_for(
                 self.agents[AgentType.SYNTHESIS].process_task(synthesis_task, context),
                 timeout=20,
             )
-            
+
             return synthesis_result
-            
+
         except Exception as e:
             logger.error(f"Domain {domain} query execution failed: {e}")
             return self._create_error_result(f"Domain {domain} failed: {str(e)}")
 
     async def _synthesize_domain_results(
-        self, 
-        domain_results: Dict[str, AgentResult], 
-        context: QueryContext
+        self, domain_results: Dict[str, AgentResult], context: QueryContext
     ) -> Dict[AgentType, AgentResult]:
         """Synthesize results from multiple domains."""
         # Filter successful results
         successful_results = {
-            domain: result for domain, result in domain_results.items()
+            domain: result
+            for domain, result in domain_results.items()
             if result.success
         }
-        
+
         if not successful_results:
             return {
                 AgentType.RETRIEVAL: self._create_error_result("All domains failed"),
                 AgentType.SYNTHESIS: self._create_error_result("All domains failed"),
             }
-        
+
         # Combine domain results
         combined_data = {
             "domains": list(successful_results.keys()),
@@ -968,16 +1017,19 @@ class LeadOrchestrator:
             "total_domains": len(domain_results),
             "successful_domains": len(successful_results),
         }
-        
+
         # Create combined result
         combined_result = AgentResult(
             success=True,
             data=combined_data,
-            confidence=sum(r.confidence for r in successful_results.values()) / len(successful_results),
-            execution_time_ms=sum(r.execution_time_ms for r in successful_results.values()),
+            confidence=sum(r.confidence for r in successful_results.values())
+            / len(successful_results),
+            execution_time_ms=sum(
+                r.execution_time_ms for r in successful_results.values()
+            ),
             tokens_used=sum(r.tokens_used for r in successful_results.values()),
         )
-        
+
         return {
             AgentType.RETRIEVAL: combined_result,
             AgentType.SYNTHESIS: combined_result,
@@ -1273,7 +1325,11 @@ class SemanticCacheManager:
         async with self._lock:
             # Prune expired entries
             now = time.time()
-            expired = [q for q, rec in self.cache.items() if now - rec.get("created_at", now) > self.ttl_seconds]
+            expired = [
+                q
+                for q, rec in self.cache.items()
+                if now - rec.get("created_at", now) > self.ttl_seconds
+            ]
             for q in expired:
                 self.cache.pop(q, None)
                 self.access_times.pop(q, None)
@@ -1305,11 +1361,17 @@ class SemanticCacheManager:
                         # Compute once and store
                         rec_query = record.get("query") or cached_key
                         # strip namespace if included in key
-                        if isinstance(rec_query, str) and "::" in rec_query and not record.get("query"):
+                        if (
+                            isinstance(rec_query, str)
+                            and "::" in rec_query
+                            and not record.get("query")
+                        ):
                             rec_query = rec_query.split("::", 1)[1]
                         cached_embedding = await llm_client.create_embedding(rec_query)
                         record["embedding"] = cached_embedding
-                    similarity = self._calculate_cosine_similarity(query_embedding, cached_embedding)
+                    similarity = self._calculate_cosine_similarity(
+                        query_embedding, cached_embedding
+                    )
 
                     if (
                         similarity > self.similarity_threshold
@@ -1451,7 +1513,11 @@ class SemanticCacheManager:
         """Prune expired entries. Returns number of removed entries."""
         async with self._lock:
             now = time.time()
-            to_remove = [k for k, rec in self.cache.items() if now - rec.get("created_at", now) > self.ttl_seconds]
+            to_remove = [
+                k
+                for k, rec in self.cache.items()
+                if now - rec.get("created_at", now) > self.ttl_seconds
+            ]
             for k in to_remove:
                 self.cache.pop(k, None)
                 self.access_times.pop(k, None)
@@ -1465,7 +1531,14 @@ async def get_global_cache_stats() -> Dict[str, Any]:
             return await GLOBAL_SEMANTIC_CACHE.get_cache_stats()
     except Exception:
         pass
-    return {"namespace": "none", "size": 0, "max_size": 0, "hit_rate": 0.0, "total_hits": 0, "total_requests": 0}
+    return {
+        "namespace": "none",
+        "size": 0,
+        "max_size": 0,
+        "hit_rate": 0.0,
+        "total_hits": 0,
+        "total_requests": 0,
+    }
 
 
 class ResponseAggregator:

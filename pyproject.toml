@@ -197,7 +197,8 @@ markers = [
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
     "e2e: marks tests as end-to-end tests",
-    "performance: marks tests as performance tests"
+    "performance: marks tests as performance tests",
+    "security: marks tests as security tests"
 ]
 filterwarnings = [
     "ignore::DeprecationWarning:fastapi.*",

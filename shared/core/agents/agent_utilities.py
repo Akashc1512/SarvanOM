@@ -28,6 +28,7 @@ logger = get_logger(__name__)
 
 class TaskStatus(Enum):
     """Task execution status."""
+
     SUCCESS = "success"
     FAILED = "failed"
     TIMEOUT = "timeout"
@@ -37,7 +38,7 @@ class TaskStatus(Enum):
 @dataclass
 class TaskResult:
     """Standardized task result format."""
-    
+
     success: bool
     data: Dict[str, Any] = field(default_factory=dict)
     error: Optional[str] = None
@@ -50,7 +51,7 @@ class TaskResult:
 @dataclass
 class ValidationResult:
     """Input validation result."""
-    
+
     is_valid: bool
     errors: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
@@ -60,16 +61,16 @@ class ValidationResult:
 class AgentTaskProcessor:
     """
     Standardized task processor for agents.
-    
+
     This class provides a consistent workflow for processing agent tasks,
     including input validation, execution, error handling, and result formatting.
     """
-    
+
     def __init__(self, agent_id: str):
         """Initialize the task processor."""
         self.agent_id = agent_id
         self.logger = get_logger(f"{__name__}.{agent_id}")
-    
+
     async def process_task_with_workflow(
         self,
         task: Dict[str, Any],
@@ -77,11 +78,11 @@ class AgentTaskProcessor:
         processing_func: Callable,
         validation_func: Optional[Callable] = None,
         timeout_seconds: int = 30,
-        **kwargs
+        **kwargs,
     ) -> TaskResult:
         """
         Process a task using the standardized workflow.
-        
+
         Args:
             task: Task data to process
             context: Query context
@@ -89,68 +90,74 @@ class AgentTaskProcessor:
             validation_func: Optional function to validate input
             timeout_seconds: Maximum execution time
             **kwargs: Additional arguments for processing function
-            
+
         Returns:
             Standardized TaskResult
         """
         start_time = time.time()
-        
+
         try:
             # Step 1: Validate input
             if validation_func:
-                validation_result = await self._validate_input(task, context, validation_func)
+                validation_result = await self._validate_input(
+                    task, context, validation_func, **kwargs
+                )
                 if not validation_result.is_valid:
                     return self._create_error_result(
                         validation_result.errors,
                         start_time,
-                        TaskStatus.VALIDATION_ERROR
+                        TaskStatus.VALIDATION_ERROR,
                     )
                 task = validation_result.sanitized_data
-            
+
             # Step 2: Execute processing with timeout
+            # Execute processing (do not leak validator-specific kwargs)
             result_data = await asyncio.wait_for(
-                processing_func(task, context, **kwargs),
-                timeout=timeout_seconds
+                processing_func(task, context), timeout=timeout_seconds
             )
-            
+
             # Step 3: Format successful result
             processing_time = time.time() - start_time
             return self._create_success_result(result_data, start_time)
-            
+
         except asyncio.TimeoutError:
             self.logger.error(f"Task processing timed out after {timeout_seconds}s")
             return self._create_error_result(
                 [f"Task processing timed out after {timeout_seconds} seconds"],
                 start_time,
-                TaskStatus.TIMEOUT
+                TaskStatus.TIMEOUT,
             )
         except Exception as e:
             self.logger.error(f"Task processing failed: {str(e)}")
             return self._create_error_result(
-                [f"Task processing failed: {str(e)}"],
-                start_time,
-                TaskStatus.FAILED
+                [f"Task processing failed: {str(e)}"], start_time, TaskStatus.FAILED
             )
-    
+
     async def _validate_input(
         self,
         task: Dict[str, Any],
         context: Any,
-        validation_func: Callable
+        validation_func: Callable,
+        **kwargs,
     ) -> ValidationResult:
         """Validate input using the provided validation function."""
         try:
+            # Pass through required fields when expected by the validator
+            if "required_fields" in kwargs:
+                return await validation_func(task, kwargs["required_fields"], context)
+            # Default: validators that accept (task, context)
             return await validation_func(task, context)
         except Exception as e:
             return ValidationResult(
-                is_valid=False,
-                errors=[f"Validation failed: {str(e)}"]
+                is_valid=False, errors=[f"Validation failed: {str(e)}"]
             )
-    
-    def _create_success_result(self, data: Dict[str, Any], start_time: float) -> TaskResult:
+
+    def _create_success_result(
+        self, data: Dict[str, Any], start_time: float
+    ) -> TaskResult:
         """Create a successful task result."""
         processing_time = int((time.time() - start_time) * 1000)
-        
+
         return TaskResult(
             success=True,
             data=data,
@@ -159,19 +166,16 @@ class AgentTaskProcessor:
             metadata={
                 "agent_id": self.agent_id,
                 "processing_time_ms": processing_time,
-                "status": TaskStatus.SUCCESS.value
-            }
+                "status": TaskStatus.SUCCESS.value,
+            },
         )
-    
+
     def _create_error_result(
-        self,
-        errors: List[str],
-        start_time: float,
-        status: TaskStatus
+        self, errors: List[str], start_time: float, status: TaskStatus
     ) -> TaskResult:
         """Create an error task result."""
         processing_time = int((time.time() - start_time) * 1000)
-        
+
         return TaskResult(
             success=False,
             error="; ".join(errors),
@@ -181,91 +185,82 @@ class AgentTaskProcessor:
                 "agent_id": self.agent_id,
                 "processing_time_ms": processing_time,
                 "status": status.value,
-                "errors": errors
+                "errors": errors,
             },
-            status=status
+            status=status,
         )
 
 
 class CommonValidators:
     """Common validation functions for agent inputs."""
-    
+
     @staticmethod
     async def validate_required_fields(
-        task: Dict[str, Any],
-        required_fields: List[str],
-        context: Any = None
+        task: Dict[str, Any], required_fields: List[str], context: Any = None
     ) -> ValidationResult:
         """Validate that required fields are present in the task."""
         missing_fields = []
         for field in required_fields:
             if field not in task or not task[field]:
                 missing_fields.append(field)
-        
+
         if missing_fields:
             return ValidationResult(
                 is_valid=False,
-                errors=[f"Missing required fields: {', '.join(missing_fields)}"]
+                errors=[f"Missing required fields: {', '.join(missing_fields)}"],
             )
-        
+
         return ValidationResult(is_valid=True, sanitized_data=task)
-    
+
     @staticmethod
     async def validate_documents_input(
-        task: Dict[str, Any],
-        context: Any = None
+        task: Dict[str, Any], context: Any = None
     ) -> ValidationResult:
         """Validate documents input for agents that process documents."""
         documents = task.get("documents", [])
-        
+
         if not documents:
             return ValidationResult(
-                is_valid=False,
-                errors=["No documents provided for processing"]
+                is_valid=False, errors=["No documents provided for processing"]
             )
-        
+
         return ValidationResult(is_valid=True, sanitized_data=task)
-    
+
     @staticmethod
     async def validate_query_input(
-        task: Dict[str, Any],
-        context: Any = None
+        task: Dict[str, Any], context: Any = None
     ) -> ValidationResult:
         """Validate query input for agents that process queries."""
         query = task.get("query", "")
-        
+
         if not query or not query.strip():
             return ValidationResult(
-                is_valid=False,
-                errors=["No query provided for processing"]
+                is_valid=False, errors=["No query provided for processing"]
             )
-        
+
         return ValidationResult(is_valid=True, sanitized_data=task)
-    
+
     @staticmethod
     async def validate_sources_input(
-        task: Dict[str, Any],
-        context: Any = None
+        task: Dict[str, Any], context: Any = None
     ) -> ValidationResult:
         """Validate sources input for citation agents."""
         sources = task.get("sources", [])
-        
+
         if not sources:
             return ValidationResult(
-                is_valid=False,
-                errors=["No sources provided for citation processing"]
+                is_valid=False, errors=["No sources provided for citation processing"]
             )
-        
+
         return ValidationResult(is_valid=True, sanitized_data=task)
 
 
 class CommonProcessors:
     """Common processing functions for agents."""
-    
+
     @staticmethod
     async def extract_task_data(
-        task: Dict[str, Any],
-        expected_fields: List[str]
+        task: Dict[str, Any], expected_fields: List[str]
     ) -> Dict[str, Any]:
         """Extract and validate task data."""
         extracted_data = {}
@@ -274,21 +269,20 @@ class CommonProcessors:
                 extracted_data[field] = task[field]
             else:
                 extracted_data[field] = None
-        
+
         return extracted_data
-    
+
     @staticmethod
     def calculate_confidence(
-        data: Dict[str, Any],
-        confidence_factors: List[str]
+        data: Dict[str, Any], confidence_factors: List[str]
     ) -> float:
         """Calculate confidence based on multiple factors."""
         if not confidence_factors:
             return 0.0
-        
+
         total_confidence = 0.0
         valid_factors = 0
-        
+
         for factor in confidence_factors:
             if factor in data:
                 factor_value = data[factor]
@@ -299,20 +293,21 @@ class CommonProcessors:
                     # For lists, use length as confidence indicator
                     total_confidence += min(len(factor_value) / 10.0, 1.0)
                     valid_factors += 1
-        
+
         return total_confidence / valid_factors if valid_factors > 0 else 0.0
 
 
 class PerformanceMonitor:
     """Performance monitoring utilities for agents."""
-    
+
     def __init__(self, agent_id: str):
         """Initialize performance monitor."""
         self.agent_id = agent_id
         self.logger = get_logger(f"{__name__}.performance.{agent_id}")
-    
+
     def time_execution(self, func_name: str):
         """Decorator to time function execution."""
+
         def decorator(func):
             @wraps(func)
             async def wrapper(*args, **kwargs):
@@ -323,7 +318,7 @@ class PerformanceMonitor:
                     self.logger.info(
                         f"Function {func_name} completed in {execution_time:.2f}ms",
                         execution_time_ms=execution_time,
-                        function=func_name
+                        function=func_name,
                     )
                     return result
                 except Exception as e:
@@ -332,21 +327,23 @@ class PerformanceMonitor:
                         f"Function {func_name} failed after {execution_time:.2f}ms: {str(e)}",
                         execution_time_ms=execution_time,
                         function=func_name,
-                        error=str(e)
+                        error=str(e),
                     )
                     raise
+
             return wrapper
+
         return decorator
-    
+
     def log_processing_start(self, task_type: str, **kwargs):
         """Log the start of task processing."""
         self.logger.info(
             f"Starting {task_type} processing",
             task_type=task_type,
             agent_id=self.agent_id,
-            **kwargs
+            **kwargs,
         )
-    
+
     def log_processing_complete(self, task_type: str, execution_time_ms: int, **kwargs):
         """Log the completion of task processing."""
         self.logger.info(
@@ -354,23 +351,20 @@ class PerformanceMonitor:
             task_type=task_type,
             execution_time_ms=execution_time_ms,
             agent_id=self.agent_id,
-            **kwargs
+            **kwargs,
         )
 
 
 class ErrorHandler:
     """Standardized error handling for agents."""
-    
+
     def __init__(self, agent_id: str):
         """Initialize error handler."""
         self.agent_id = agent_id
         self.logger = get_logger(f"{__name__}.error.{agent_id}")
-    
+
     def handle_agent_error(
-        self,
-        error: Exception,
-        operation: str,
-        context: Dict[str, Any] = None
+        self, error: Exception, operation: str, context: Dict[str, Any] = None
     ) -> TaskResult:
         """Handle agent errors and return standardized error result."""
         error_message = f"{operation} failed: {str(error)}"
@@ -379,9 +373,9 @@ class ErrorHandler:
             operation=operation,
             agent_id=self.agent_id,
             error_type=type(error).__name__,
-            context=context or {}
+            context=context or {},
         )
-        
+
         return TaskResult(
             success=False,
             error=error_message,
@@ -390,25 +384,18 @@ class ErrorHandler:
                 "agent_id": self.agent_id,
                 "operation": operation,
                 "error_type": type(error).__name__,
-                "status": TaskStatus.FAILED.value
+                "status": TaskStatus.FAILED.value,
             },
-            status=TaskStatus.FAILED
+            status=TaskStatus.FAILED,
         )
-    
-    def handle_validation_error(
-        self,
-        errors: List[str],
-        operation: str
-    ) -> TaskResult:
+
+    def handle_validation_error(self, errors: List[str], operation: str) -> TaskResult:
         """Handle validation errors."""
         error_message = f"{operation} validation failed: {'; '.join(errors)}"
         self.logger.warning(
-            error_message,
-            operation=operation,
-            agent_id=self.agent_id,
-            errors=errors
+            error_message, operation=operation, agent_id=self.agent_id, errors=errors
         )
-        
+
         return TaskResult(
             success=False,
             error=error_message,
@@ -417,15 +404,15 @@ class ErrorHandler:
                 "agent_id": self.agent_id,
                 "operation": operation,
                 "errors": errors,
-                "status": TaskStatus.VALIDATION_ERROR.value
+                "status": TaskStatus.VALIDATION_ERROR.value,
             },
-            status=TaskStatus.VALIDATION_ERROR
+            status=TaskStatus.VALIDATION_ERROR,
         )
 
 
 class ResponseFormatter:
     """Standardized response formatting for agents."""
-    
+
     @staticmethod
     def format_agent_response(
         success: bool,
@@ -433,7 +420,7 @@ class ResponseFormatter:
         error: Optional[str] = None,
         confidence: float = 0.0,
         execution_time_ms: int = 0,
-        metadata: Dict[str, Any] = None
+        metadata: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """Format a standardized agent response."""
         response = {
@@ -441,21 +428,21 @@ class ResponseFormatter:
             "data": data,
             "confidence": confidence,
             "execution_time_ms": execution_time_ms,
-            "metadata": metadata or {}
+            "metadata": metadata or {},
         }
-        
+
         if error:
             response["error"] = error
-        
+
         return response
-    
+
     @staticmethod
     def format_retrieval_response(
         documents: List[Dict[str, Any]],
         search_type: str,
         total_hits: int,
         query_time_ms: int,
-        metadata: Dict[str, Any] = None
+        metadata: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """Format a standardized retrieval response."""
         return {
@@ -464,20 +451,20 @@ class ResponseFormatter:
                 "documents": documents,
                 "search_type": search_type,
                 "total_hits": total_hits,
-                "query_time_ms": query_time_ms
+                "query_time_ms": query_time_ms,
             },
             "confidence": min(len(documents) / 10.0, 1.0),
             "execution_time_ms": query_time_ms,
-            "metadata": metadata or {}
+            "metadata": metadata or {},
         }
-    
+
     @staticmethod
     def format_synthesis_response(
         answer: str,
         synthesis_method: str,
         fact_count: int,
         processing_time_ms: int,
-        metadata: Dict[str, Any] = None
+        metadata: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """Format a standardized synthesis response."""
         return {
@@ -486,20 +473,20 @@ class ResponseFormatter:
                 "answer": answer,
                 "synthesis_method": synthesis_method,
                 "fact_count": fact_count,
-                "processing_time_ms": processing_time_ms
+                "processing_time_ms": processing_time_ms,
             },
             "confidence": min(fact_count / 5.0, 1.0),
             "execution_time_ms": processing_time_ms,
-            "metadata": metadata or {}
+            "metadata": metadata or {},
         }
-    
+
     @staticmethod
     def format_citation_response(
         cited_content: str,
         citations: List[Dict[str, Any]],
         citation_format: str,
         processing_time_ms: int,
-        metadata: Dict[str, Any] = None
+        metadata: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         """Format a standardized citation response."""
         return {
@@ -508,11 +495,11 @@ class ResponseFormatter:
                 "cited_content": cited_content,
                 "citations": citations,
                 "citation_format": citation_format,
-                "processing_time_ms": processing_time_ms
+                "processing_time_ms": processing_time_ms,
             },
             "confidence": min(len(citations) / 5.0, 1.0),
             "execution_time_ms": processing_time_ms,
-            "metadata": metadata or {}
+            "metadata": metadata or {},
         }
 
 
@@ -538,7 +525,7 @@ def format_standard_response(
     error: Optional[str] = None,
     confidence: float = 0.0,
     execution_time_ms: int = 0,
-    metadata: Dict[str, Any] = None
+    metadata: Dict[str, Any] = None,
 ) -> Dict[str, Any]:
     """Format a standardized response."""
     return ResponseFormatter.format_agent_response(
@@ -547,7 +534,7 @@ def format_standard_response(
         error=error,
         confidence=confidence,
         execution_time_ms=execution_time_ms,
-        metadata=metadata
+        metadata=metadata,
     )
 
 
@@ -555,10 +542,12 @@ def format_standard_response(
 def time_agent_function(agent_id: str):
     """Decorator to time agent function execution."""
     monitor = PerformanceMonitor(agent_id)
-    
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             return await monitor.time_execution(func.__name__)(func)(*args, **kwargs)
+
         return wrapper
-    return decorator 
+
+    return decorator

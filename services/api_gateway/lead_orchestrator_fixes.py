@@ -294,12 +294,20 @@ def create_pipeline_error_response(
         if isinstance(retrieval_result, dict):
             docs = retrieval_result.get("data", {}).get("documents", [])
             if docs:
-                salvaged_info.append(f"Found {len(docs)} potentially relevant documents")
+                salvaged_info.append(
+                    f"Found {len(docs)} potentially relevant documents"
+                )
         else:
             # Handle AgentResult objects for backward compatibility
-            docs = retrieval_result.data.get("documents", []) if hasattr(retrieval_result, 'data') else []
+            docs = (
+                retrieval_result.data.get("documents", [])
+                if hasattr(retrieval_result, "data")
+                else []
+            )
             if docs:
-                salvaged_info.append(f"Found {len(docs)} potentially relevant documents")
+                salvaged_info.append(
+                    f"Found {len(docs)} potentially relevant documents"
+                )
 
     if AgentType.FACT_CHECK in partial_results:
         fact_result = partial_results[AgentType.FACT_CHECK]
@@ -309,7 +317,11 @@ def create_pipeline_error_response(
                 salvaged_info.append(f"Verified {len(facts)} facts")
         else:
             # Handle AgentResult objects for backward compatibility
-            facts = fact_result.data.get("verified_facts", []) if hasattr(fact_result, 'data') else []
+            facts = (
+                fact_result.data.get("verified_facts", [])
+                if hasattr(fact_result, "data")
+                else []
+            )
             if facts:
                 salvaged_info.append(f"Verified {len(facts)} facts")
 
@@ -332,7 +344,11 @@ def create_pipeline_error_response(
                 response["partial_answer"] = partial_answer
         else:
             # Handle AgentResult objects for backward compatibility
-            partial_answer = synthesis_result.data.get("answer", "") if hasattr(synthesis_result, 'data') else ""
+            partial_answer = (
+                synthesis_result.data.get("answer", "")
+                if hasattr(synthesis_result, "data")
+                else ""
+            )
             if partial_answer:
                 response["partial_answer"] = partial_answer
 

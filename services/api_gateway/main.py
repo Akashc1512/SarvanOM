@@ -1,5 +1,3 @@
-
-
 """
 Universal Knowledge Hub - API Gateway Service
 Main entry point for the knowledge platform with modular architecture.
@@ -71,6 +69,7 @@ load_dotenv()
 
 # Import shared components
 from shared.core.api.config import get_settings
+
 settings = get_settings()
 
 # Import the enhanced environment manager
@@ -89,7 +88,7 @@ from .middleware import (
     security_check,
     rate_limit_check,
     get_current_user,
-    get_performance_metrics
+    get_performance_metrics,
 )
 from .middleware.error_handling import create_error_handling_middleware
 from .routes import routers
@@ -98,32 +97,58 @@ from .services import query_service, health_service
 # Import analytics functions
 try:
     import importlib
+
     analytics_module = importlib.import_module("services.analytics_service.analytics")
     track_query = analytics_module.track_query
 except ImportError:
     # Fallback if analytics service is not available
     async def track_query(*args, **kwargs):
-        """Implement actual query tracking with comprehensive monitoring and analytics."""
+        """Implement actual query tracking with comprehensive monitoring and analytics.
+
+        Note: Uses EnvironmentManager/DATABASE_URL if available. Gracefully degrades if
+        no database is configured to avoid startup failures in development.
+        """
         try:
             import asyncpg
             import os
+            from urllib.parse import urlparse
             from datetime import datetime
-            
+
             # Extract query information from arguments
             request = args[0] if args else None
             query_data = kwargs.get("query_data", {})
             user_id = kwargs.get("user_id", "anonymous")
-            
+
             if not request or not query_data:
                 return
-            
-            # Get database configuration
-            db_host = os.getenv('DB_HOST', 'localhost')
-            db_port = int(os.getenv('DB_PORT', '5432'))
-            db_name = os.getenv('DB_NAME', 'sarvanom')
-            db_user = os.getenv('DB_USER', 'postgres')
-            db_password = os.getenv('DB_PASSWORD', '')
-            
+
+            # Prefer central environment manager config
+            try:
+                from shared.core.config.environment_manager import get_environment_manager
+                _em = get_environment_manager()
+                _cfg = _em.get_config()
+                database_url = os.getenv("DATABASE_URL") or (_cfg.database_url or "")
+            except Exception:
+                database_url = os.getenv("DATABASE_URL", "")
+
+            # If no database configured, skip tracking silently in dev
+            if not database_url:
+                return
+
+            # Support postgres/mysql/sqlite URLs; only connect for postgres/mysql
+            parsed = urlparse(database_url)
+            scheme = (parsed.scheme or "").lower()
+            if scheme.startswith("sqlite"):
+                # No-op tracking for sqlite in this lightweight fallback
+                return
+
+            # Extract connection params from URL
+            db_host = parsed.hostname or os.getenv("DB_HOST", "localhost")
+            db_port = int(parsed.port or os.getenv("DB_PORT", 5432))
+            db_name = (parsed.path or "/").lstrip("/") or os.getenv("DB_NAME", "sarvanom")
+            db_user = parsed.username or os.getenv("DB_USER", "postgres")
+            db_password = parsed.password or os.getenv("DB_PASSWORD", "")
+
             # Extract query information
             query_text = query_data.get("query", "")
             query_type = query_data.get("type", "basic")
@@ -132,37 +157,49 @@ except ImportError:
             error_message = query_data.get("error", None)
             sources_count = len(query_data.get("sources", []))
             verification_score = query_data.get("verification", {}).get("confidence", 0)
-            
+
             # Get request metadata
             client_ip = request.client.host if request.client else "unknown"
             user_agent = request.headers.get("user-agent", "unknown")
             request_id = getattr(request.state, "request_id", "unknown")
-            
+
             try:
-                # Connect to database
+                # Connect to database using parsed URL details
                 conn = await asyncpg.connect(
                     host=db_host,
                     port=db_port,
                     database=db_name,
                     user=db_user,
-                    password=db_password
+                    password=db_password,
                 )
-                
+
                 # Insert query tracking record
-                await conn.execute("""
+                await conn.execute(
+                    """
                     INSERT INTO query_tracking (
                         query_id, user_id, query_text, query_type, processing_time,
                         success, error_message, sources_count, verification_score,
                         client_ip, user_agent, request_id, created_at
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-                """, 
-                    request_id, user_id, query_text, query_type, processing_time,
-                    success, error_message, sources_count, verification_score,
-                    client_ip, user_agent, request_id, datetime.now()
+                """,
+                    request_id,
+                    user_id,
+                    query_text,
+                    query_type,
+                    processing_time,
+                    success,
+                    error_message,
+                    sources_count,
+                    verification_score,
+                    client_ip,
+                    user_agent,
+                    request_id,
+                    datetime.now(),
                 )
-                
+
                 # Update user query statistics
-                await conn.execute("""
+                await conn.execute(
+                    """
                     INSERT INTO user_query_stats (user_id, total_queries, successful_queries, avg_processing_time, last_query_at)
                     VALUES ($1, 1, $2, $3, $4)
                     ON CONFLICT (user_id) DO UPDATE SET
@@ -170,26 +207,34 @@ except ImportError:
                         successful_queries = user_query_stats.successful_queries + $2,
                         avg_processing_time = (user_query_stats.avg_processing_time * user_query_stats.total_queries + $3) / (user_query_stats.total_queries + 1),
                         last_query_at = $4
-                """, user_id, 1 if success else 0, processing_time, datetime.now())
-                
+                """,
+                    user_id,
+                    1 if success else 0,
+                    processing_time,
+                    datetime.now(),
+                )
+
                 await conn.close()
-                
-                logger.info(f"Query tracked successfully: {request_id} for user {user_id}")
-                
+
+                logger.info(
+                    f"Query tracked successfully: {request_id} for user {user_id}"
+                )
+
             except asyncpg.InvalidPasswordError:
                 logger.error("Database authentication failed for query tracking")
             except asyncpg.ConnectionDoesNotExistError:
                 logger.error("Database connection failed for query tracking")
             except Exception as e:
                 logger.error(f"Database query tracking failed: {e}")
-                
+
         except ImportError:
             logger.warning("asyncpg not available, using in-memory query tracking")
             # Fallback to in-memory tracking
             track_query_in_memory(request_id, query_data, user_id)
-            
+
         except Exception as e:
             logger.error(f"Query tracking failed: {e}")
+
 
 def track_query_in_memory(request_id: str, query_data: Dict[str, Any], user_id: str):
     """Fallback in-memory query tracking."""
@@ -200,18 +245,21 @@ def track_query_in_memory(request_id: str, query_data: Dict[str, Any], user_id: 
         "query_type": query_data.get("type", "basic"),
         "processing_time": query_data.get("processing_time", 0),
         "success": query_data.get("success", False),
-        "timestamp": datetime.now()
+        "timestamp": datetime.now(),
     }
-    
+
     # Store in memory (limited to last 1000 queries)
     if not hasattr(track_query_in_memory, "query_history"):
         track_query_in_memory.query_history = []
-    
+
     track_query_in_memory.query_history.append(query_record)
-    
+
     # Keep only last 1000 queries
     if len(track_query_in_memory.query_history) > 1000:
-        track_query_in_memory.query_history = track_query_in_memory.query_history[-1000:]
+        track_query_in_memory.query_history = track_query_in_memory.query_history[
+            -1000:
+        ]
+
 
 # Import agent handlers
 try:
@@ -223,20 +271,22 @@ except ImportError:
 # Initialize query cache
 try:
     from shared.core.cache import CacheManager
+
     _query_cache = CacheManager()
 except ImportError:
     # Fallback cache implementation
     class SimpleCache:
         def __init__(self):
             self._cache = {}
-        
+
         async def get(self, key):
             return self._cache.get(key)
-        
+
         async def set(self, key, value):
             self._cache[key] = value
-    
+
     _query_cache = SimpleCache()
+
 
 # Critical environment variables validation
 def validate_critical_env_vars():
@@ -245,11 +295,11 @@ def validate_critical_env_vars():
         # Use the environment manager to validate configuration
         env_manager = get_environment_manager()
         config = env_manager.get_config()
-        
+
         # Environment-specific validation
         environment = env_manager.environment.value
         missing_vars = []
-        
+
         if environment in ["production", "staging"]:
             # Production and staging require all critical variables
             if not config.database_url:
@@ -266,7 +316,7 @@ def validate_critical_env_vars():
                 missing_vars.append("MEILISEARCH_URL")
             if not config.arangodb_url:
                 missing_vars.append("ARANGO_URL")
-        
+
         elif environment == "testing":
             # Testing environment has minimal requirements
             if not config.test_mode:
@@ -275,26 +325,30 @@ def validate_critical_env_vars():
                 missing_vars.append("MOCK_AI_RESPONSES should be True")
             if not config.skip_authentication:
                 missing_vars.append("SKIP_AUTHENTICATION should be True")
-        
+
         # Development environment has no strict requirements
-        
+
         if missing_vars:
             # Missing environment variables - will be logged after logging setup
             return False
-        
+
         # Environment validation passed - will be logged after logging setup
         return True
-        
+
     except Exception as e:
         # Will be logged properly after logging setup
         return False
+
 
 # Validate critical environment variables at startup
 validate_critical_env_vars()
 
 # Import unified logging configuration
 from shared.core.unified_logging import setup_logging, get_logger, setup_fastapi_logging
-from shared.core.production_logging import setup_production_logging, get_production_log_collector
+from shared.core.production_logging import (
+    setup_production_logging,
+    get_production_log_collector,
+)
 
 # Initialize environment manager first
 env_manager = get_environment_manager()
@@ -305,10 +359,7 @@ if env_manager.is_production():
     setup_production_logging("sarvanom-api-gateway", enable_collection=True)
     log_collector = get_production_log_collector()
 else:
-    logging_config = setup_logging(
-        service_name="sarvanom-api-gateway",
-        version="1.0.0"
-    )
+    logging_config = setup_logging(service_name="sarvanom-api-gateway", version="1.0.0")
 
 logger = get_logger(__name__)
 
@@ -358,56 +409,85 @@ from .refactored_integration_layer import (
     RefactoredIntegrationLayer,
     IntegrationRequest,
     IntegrationResponse,
-    get_refactored_integration_layer
+    get_refactored_integration_layer,
 )
 
+
 # Update the route_query function to use the refactored integration layer
-async def route_query(query: str, user_context: Dict[str, Any] = None) -> Dict[str, Any]:
+async def route_query(
+    query: str, user_context: Dict[str, Any] = None
+) -> Dict[str, Any]:
     """
     Route a query through the refactored integration layer.
-    
+
     This function uses the refactored integration layer which breaks down
     the orchestration logic into smaller, focused functions with single responsibilities.
     """
     try:
         # Get the refactored integration layer
         integration_layer = await get_refactored_integration_layer()
-        
+
         # Create integration request
         request = IntegrationRequest(
             query=query,
-            user_id=user_context.get("user_id", "anonymous") if user_context else "anonymous",
-            session_id=user_context.get("session_id", "default") if user_context else "default",
+            user_id=(
+                user_context.get("user_id", "anonymous")
+                if user_context
+                else "anonymous"
+            ),
+            session_id=(
+                user_context.get("session_id", "default") if user_context else "default"
+            ),
             context=user_context or {},
             preferences=user_context.get("preferences", {}) if user_context else {},
-            priority=user_context.get("priority", "normal") if user_context else "normal",
-            timeout_seconds=user_context.get("timeout_seconds", 30) if user_context else 30,
-            model=user_context.get("model", "auto") if user_context else "auto"
+            priority=(
+                user_context.get("priority", "normal") if user_context else "normal"
+            ),
+            timeout_seconds=(
+                user_context.get("timeout_seconds", 30) if user_context else 30
+            ),
+            model=user_context.get("model", "auto") if user_context else "auto",
         )
-        
+
         # Process the query through the refactored integration layer
         response = await integration_layer.process_query(request)
-        
+
         # Convert response to the expected format
         result = {
             "success": response.success,
-            "answer": response.orchestration_result.final_answer if response.orchestration_result else None,
-            "confidence": response.orchestration_result.confidence if response.orchestration_result else 0.0,
-            "sources": response.orchestration_result.sources if response.orchestration_result else [],
-            "citations": response.orchestration_result.citations if response.orchestration_result else [],
+            "answer": (
+                response.orchestration_result.final_answer
+                if response.orchestration_result
+                else None
+            ),
+            "confidence": (
+                response.orchestration_result.confidence
+                if response.orchestration_result
+                else 0.0
+            ),
+            "sources": (
+                response.orchestration_result.sources
+                if response.orchestration_result
+                else []
+            ),
+            "citations": (
+                response.orchestration_result.citations
+                if response.orchestration_result
+                else []
+            ),
             "processing_time_ms": response.processing_time_ms,
             "metadata": response.metadata,
             "query_analysis": response.query_analysis,
             "retrieval_result": response.retrieval_result,
             "validation_result": response.validation_result,
-            "memory_operations": response.memory_operations
+            "memory_operations": response.memory_operations,
         }
-        
+
         if not response.success:
             result["error"] = response.error_message
-        
+
         return result
-        
+
     except Exception as e:
         logger.error(f"Query routing failed: {e}")
         return {
@@ -418,24 +498,35 @@ async def route_query(query: str, user_context: Dict[str, Any] = None) -> Dict[s
             "sources": [],
             "citations": [],
             "processing_time_ms": 0,
-            "metadata": {"error_type": "routing_failure"}
+            "metadata": {"error_type": "routing_failure"},
         }
+
 
 async def get_integration_layer():
     """Mock integration layer function."""
+
     class MockIntegration:
         async def process_query(self, request):
             return {
                 "success": True,
-                "orchestration_result": {"response": "Mock response", "model_used": "mock_model"},
-                "query_analysis": {"intent": "mock_intent", "complexity": "simple", "domain": "general", "entities": []},
+                "orchestration_result": {
+                    "response": "Mock response",
+                    "model_used": "mock_model",
+                },
+                "query_analysis": {
+                    "intent": "mock_intent",
+                    "complexity": "simple",
+                    "domain": "general",
+                    "entities": [],
+                },
                 "verification": {},
                 "sources": [],
                 "confidence": 0.8,
-                "processing_time_ms": 1000
+                "processing_time_ms": 1000,
             }
-    
+
     return MockIntegration()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -444,181 +535,206 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting SarvanOM API Gateway")
     logger.info(f"📊 Environment: {os.getenv('ENVIRONMENT', 'development')}")
     logger.info(f"🔧 Debug mode: {os.getenv('DEBUG', 'false')}")
-    
+
     # Health check
     try:
         # Basic system checks
         memory = psutil.virtual_memory()
         cpu_percent = psutil.cpu_percent(interval=1)
-        
+
         logger.info(f"💾 Memory usage: {memory.percent}%")
         logger.info(f"🖥️ CPU usage: {cpu_percent}%")
         logger.info("✅ System health check passed")
-        
+
     except Exception as e:
         logger.error(f"❌ System health check failed: {e}")
         sys.exit(1)
-    
+
     # Service startup
     logger.info("🔗 Initializing service connections...")
-    
+
     # Initialize actual service connections
     try:
         import asyncpg
         import redis.asyncio as redis
         import aiohttp
-        
-        # Database connection pool
-        db_host = os.getenv('DB_HOST', 'localhost')
-        db_port = int(os.getenv('DB_PORT', '5432'))
-        db_name = os.getenv('DB_NAME', 'sarvanom')
-        db_user = os.getenv('DB_USER', 'postgres')
-        db_password = os.getenv('DB_PASSWORD', '')
-        
-        app.state.db_pool = await asyncpg.create_pool(
-            host=db_host,
-            port=db_port,
-            database=db_name,
-            user=db_user,
-            password=db_password,
-            min_size=5,
-            max_size=20
-        )
-        logger.info("✅ Database connection pool initialized")
-        
+
+        # Database connection pool (respect DATABASE_URL / EnvironmentManager)
+        from urllib.parse import urlparse
+        try:
+            from shared.core.config.environment_manager import get_environment_manager
+            _em = get_environment_manager()
+            _cfg = _em.get_config()
+            database_url = os.getenv("DATABASE_URL") or (_cfg.database_url or "")
+        except Exception:
+            database_url = os.getenv("DATABASE_URL", "")
+
+        if database_url:
+            parsed = urlparse(database_url)
+            scheme = (parsed.scheme or "").lower()
+            if scheme.startswith("postgres"):
+                db_host = parsed.hostname or "localhost"
+                db_port = int(parsed.port or 5432)
+                db_name = (parsed.path or "/").lstrip("/") or "sarvanom"
+                db_user = parsed.username or "postgres"
+                db_password = parsed.password or ""
+
+                app.state.db_pool = await asyncpg.create_pool(
+                    host=db_host,
+                    port=db_port,
+                    database=db_name,
+                    user=db_user,
+                    password=db_password,
+                    min_size=1,
+                    max_size=10,
+                )
+                logger.info("✅ Database connection pool initialized")
+            elif scheme.startswith("sqlite"):
+                logger.info("ℹ️ DATABASE_URL points to SQLite; skipping asyncpg pool initialization")
+            else:
+                logger.warning(f"⚠️ Unsupported DATABASE_URL scheme '{scheme}', skipping DB pool")
+        else:
+            logger.warning("⚠️ DATABASE_URL not set - required for production")
+
         # Redis connection
-        redis_host = os.getenv('REDIS_HOST', 'localhost')
-        redis_port = int(os.getenv('REDIS_PORT', '6379'))
-        redis_db = int(os.getenv('REDIS_DB', '0'))
-        
+        redis_host = os.getenv("REDIS_HOST", "localhost")
+        redis_port = int(os.getenv("REDIS_PORT", "6379"))
+        redis_db = int(os.getenv("REDIS_DB", "0"))
+
         app.state.redis_client = redis.Redis(
-            host=redis_host,
-            port=redis_port,
-            db=redis_db,
-            decode_responses=True
+            host=redis_host, port=redis_port, db=redis_db, decode_responses=True
         )
         await app.state.redis_client.ping()
         logger.info("✅ Redis connection initialized")
-        
+
         # HTTP session for external API calls
         app.state.http_session = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=30),
-            headers={'User-Agent': 'Sarvanom-API/1.0.0'}
+            headers={"User-Agent": "Sarvanom-API/1.0.0"},
         )
         logger.info("✅ HTTP session initialized")
-        
+
         # Meilisearch connection
         from shared.core.config.central_config import get_meilisearch_url
-        meili_url = os.getenv('MEILISEARCH_URL', get_meilisearch_url())
-        meili_key = os.getenv('MEILI_MASTER_KEY', '')
-        
-        async with app.state.http_session.get(f'{meili_url}/health', timeout=5) as response:
+
+        meili_url = os.getenv("MEILISEARCH_URL", get_meilisearch_url())
+        meili_key = os.getenv("MEILI_MASTER_KEY", "")
+
+        async with app.state.http_session.get(
+            f"{meili_url}/health", timeout=5
+        ) as response:
             if response.status == 200:
                 logger.info("✅ Meilisearch connection verified")
             else:
                 logger.warning("⚠️ Meilisearch connection failed")
-        
+
         # ArangoDB connection
         from shared.core.config.central_config import get_arangodb_url
-        arango_url = os.getenv('ARANGO_URL', get_arangodb_url())
-        arango_user = os.getenv('ARANGO_USERNAME', 'root')
-        arango_pass = os.getenv('ARANGO_PASSWORD', '')
-        
+
+        arango_url = os.getenv("ARANGO_URL", get_arangodb_url())
+        arango_user = os.getenv("ARANGO_USERNAME", "root")
+        arango_pass = os.getenv("ARANGO_PASSWORD", "")
+
         auth = aiohttp.BasicAuth(arango_user, arango_pass)
-        async with app.state.http_session.get(f'{arango_url}/_api/version', auth=auth, timeout=5) as response:
+        async with app.state.http_session.get(
+            f"{arango_url}/_api/version", auth=auth, timeout=5
+        ) as response:
             if response.status == 200:
                 logger.info("✅ ArangoDB connection verified")
             else:
                 logger.warning("⚠️ ArangoDB connection failed")
-        
+
         # LLM service connections
-        openai_key = os.getenv('OPENAI_API_KEY', '')
+        openai_key = os.getenv("OPENAI_API_KEY", "")
         if openai_key:
             async with app.state.http_session.get(
-                'https://api.openai.com/v1/models',
-                headers={'Authorization': f'Bearer {openai_key}'},
-                timeout=5
+                "https://api.openai.com/v1/models",
+                headers={"Authorization": f"Bearer {openai_key}"},
+                timeout=5,
             ) as response:
                 if response.status == 200:
                     logger.info("✅ OpenAI connection verified")
                 else:
                     logger.warning("⚠️ OpenAI connection failed")
-        
-        anthropic_key = os.getenv('ANTHROPIC_API_KEY', '')
+
+        anthropic_key = os.getenv("ANTHROPIC_API_KEY", "")
         if anthropic_key:
             async with app.state.http_session.get(
-                'https://api.anthropic.com/v1/messages',
-                headers={'x-api-key': anthropic_key, 'anthropic-version': '2023-06-01'},
-                timeout=5
+                "https://api.anthropic.com/v1/messages",
+                headers={"x-api-key": anthropic_key, "anthropic-version": "2023-06-01"},
+                timeout=5,
             ) as response:
                 if response.status in [200, 401]:  # 401 means auth works but no message
                     logger.info("✅ Anthropic connection verified")
                 else:
                     logger.warning("⚠️ Anthropic connection failed")
-        
+
         logger.info("🚀 All service connections initialized successfully")
-        
+
     except ImportError as e:
-        logger.warning(f"⚠️ Service connection initialization failed (missing dependency): {e}")
+        logger.warning(
+            f"⚠️ Service connection initialization failed (missing dependency): {e}"
+        )
     except Exception as e:
         logger.error(f"❌ Service connection initialization failed: {e}")
         # Continue startup even if some connections fail
-    
+
     logger.info("✅ All service connections initialized")
     logger.info("🎉 SarvanOM API Gateway is ready!")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("🛑 Shutting down SarvanOM API Gateway...")
-    
+
     # Cleanup connections
     try:
         # Close database connection pool
-        if hasattr(app.state, 'db_pool'):
+        if hasattr(app.state, "db_pool"):
             await app.state.db_pool.close()
             logger.info("✅ Database connection pool closed")
-        
+
         # Close Redis connection
-        if hasattr(app.state, 'redis_client'):
+        if hasattr(app.state, "redis_client"):
             await app.state.redis_client.close()
             logger.info("✅ Redis connection closed")
-        
+
         # Close HTTP session
-        if hasattr(app.state, 'http_session'):
+        if hasattr(app.state, "http_session"):
             await app.state.http_session.close()
             logger.info("✅ HTTP session closed")
-        
+
         # Close any other service connections
-        if hasattr(app.state, 'query_cache'):
-            if hasattr(app.state.query_cache, 'close'):
+        if hasattr(app.state, "query_cache"):
+            if hasattr(app.state.query_cache, "close"):
                 await app.state.query_cache.close()
             logger.info("✅ Query cache closed")
-        
+
         # Clear any remaining state
         for attr in list(app.state.__dict__.keys()):
-            if attr.startswith('_'):
+            if attr.startswith("_"):
                 continue
             try:
-                if hasattr(getattr(app.state, attr), 'close'):
+                if hasattr(getattr(app.state, attr), "close"):
                     await getattr(app.state, attr).close()
             except:
                 pass
-        
+
         logger.info("✅ All service connections cleaned up successfully")
-        
+
     except Exception as e:
         logger.error(f"❌ Service connection cleanup failed: {e}")
         # Continue shutdown even if cleanup fails
-    
+
     logger.info("👋 SarvanOM API Gateway shutdown complete")
+
 
 # Create FastAPI application
 app = FastAPI(
     title="SarvanOM API Gateway",
     description="Universal Knowledge Hub - API Gateway Service",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Setup FastAPI logging integration
@@ -640,6 +756,7 @@ app.add_middleware(error_middleware)
 for router in routers:
     app.include_router(router)
 
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -653,9 +770,10 @@ async def root():
             "queries": "/query",
             "health": "/health",
             "agents": "/agents",
-            "docs": "/docs"
-        }
+            "docs": "/docs",
+        },
     }
+
 
 # Test endpoint
 @app.get("/test")
@@ -664,15 +782,16 @@ async def test_endpoint():
     return {
         "message": "SarvanOM API Gateway is running!",
         "timestamp": datetime.now().isoformat(),
-        "status": "ok"
+        "status": "ok",
     }
+
 
 # Error handlers
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     """Handle HTTP exceptions with standardized response format."""
     logger.warning(f"HTTP {exc.status_code}: {exc.detail} - Path: {request.url}")
-    
+
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -681,18 +800,19 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             "timestamp": datetime.now().isoformat(),
             "path": str(request.url),
             "request_id": getattr(request.state, "request_id", "unknown"),
-            "error_type": "http_exception"
-        }
+            "error_type": "http_exception",
+        },
     )
+
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
     """Handle general exceptions with comprehensive logging and standardized response."""
     import traceback
-    
+
     # Generate request ID if not present
     request_id = getattr(request.state, "request_id", f"req_{int(time.time() * 1000)}")
-    
+
     # Log the full exception with context
     logger.error(
         f"Unhandled exception in {request.url}: {str(exc)}",
@@ -702,16 +822,16 @@ async def general_exception_handler(request: Request, exc: Exception):
             "method": request.method,
             "client_ip": request.client.host if request.client else "unknown",
             "user_agent": request.headers.get("user-agent", "unknown"),
-            "traceback": traceback.format_exc()
+            "traceback": traceback.format_exc(),
         },
-        exc_info=True
+        exc_info=True,
     )
-    
+
     # Determine if this is a known error type that should be handled differently
     error_type = "internal_server_error"
     status_code = 500
     error_message = "Internal server error. Please try again later."
-    
+
     if isinstance(exc, (ValueError, TypeError)):
         error_type = "validation_error"
         status_code = 400
@@ -728,14 +848,14 @@ async def general_exception_handler(request: Request, exc: Exception):
         error_type = "timeout_error"
         status_code = 408
         error_message = "Request timed out. Please try again with a simpler query."
-    
+
     # Add fallback data for graceful degradation
     fallback_data = {
         "message": "Service temporarily unavailable",
         "suggestion": "Please try again later",
-        "status": "degraded"
+        "status": "degraded",
     }
-    
+
     return JSONResponse(
         status_code=status_code,
         content={
@@ -745,15 +865,16 @@ async def general_exception_handler(request: Request, exc: Exception):
             "path": str(request.url),
             "request_id": request_id,
             "error_type": error_type,
-            "fallback_data": fallback_data
-        }
+            "fallback_data": fallback_data,
+        },
     )
+
 
 @app.exception_handler(ValidationError)
 async def validation_exception_handler(request: Request, exc: ValidationError):
     """Handle Pydantic validation errors."""
     logger.warning(f"Validation error: {exc.errors()} - Path: {request.url}")
-    
+
     return JSONResponse(
         status_code=422,
         content={
@@ -763,15 +884,16 @@ async def validation_exception_handler(request: Request, exc: ValidationError):
             "path": str(request.url),
             "request_id": getattr(request.state, "request_id", "unknown"),
             "error_type": "validation_error",
-            "details": exc.errors()
-        }
+            "details": exc.errors(),
+        },
     )
+
 
 @app.exception_handler(TimeoutError)
 async def timeout_exception_handler(request: Request, exc: TimeoutError):
     """Handle timeout errors."""
     logger.error(f"Timeout error: {str(exc)} - Path: {request.url}")
-    
+
     return JSONResponse(
         status_code=408,
         content={
@@ -780,15 +902,16 @@ async def timeout_exception_handler(request: Request, exc: TimeoutError):
             "timestamp": datetime.now().isoformat(),
             "path": str(request.url),
             "request_id": getattr(request.state, "request_id", "unknown"),
-            "error_type": "timeout_error"
-        }
+            "error_type": "timeout_error",
+        },
     )
+
 
 @app.exception_handler(ConnectionError)
 async def connection_exception_handler(request: Request, exc: ConnectionError):
     """Handle connection errors."""
     logger.error(f"Connection error: {str(exc)} - Path: {request.url}")
-    
+
     return JSONResponse(
         status_code=503,
         content={
@@ -797,16 +920,17 @@ async def connection_exception_handler(request: Request, exc: ConnectionError):
             "timestamp": datetime.now().isoformat(),
             "path": str(request.url),
             "request_id": getattr(request.state, "request_id", "unknown"),
-            "error_type": "service_unavailable"
-        }
+            "error_type": "service_unavailable",
+        },
     )
+
 
 # Server configuration
 def get_server_config() -> dict:
     """Get server configuration."""
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
-    
+
     # Find available port if default is in use
     def is_port_available(host: str, port: int, timeout: float = 1.0) -> bool:
         try:
@@ -816,44 +940,47 @@ def get_server_config() -> dict:
                 return result != 0
         except Exception:
             return False
-    
-    def find_available_port(host: str, preferred_ports: list, max_attempts: int = 10) -> int:
+
+    def find_available_port(
+        host: str, preferred_ports: list, max_attempts: int = 10
+    ) -> int:
         for port in preferred_ports:
             if is_port_available(host, port):
                 return port
-        
+
         # If no preferred port is available, find any available port
         for attempt in range(max_attempts):
             port = 8000 + attempt
             if is_port_available(host, port):
                 return port
-        
+
         raise RuntimeError("No available ports found")
-    
+
     # Check if default port is available
     if not is_port_available(host, port):
         logger.warning(f"Port {port} is not available, finding alternative...")
         port = find_available_port(host, [8000, 8001, 8002, 8003, 8004])
         logger.info(f"Using port {port}")
-    
+
     return {
         "host": host,
         "port": port,
         "reload": os.getenv("DEBUG", "false").lower() == "true",
-        "log_level": os.getenv("LOG_LEVEL", "info").lower()
+        "log_level": os.getenv("LOG_LEVEL", "info").lower(),
     }
+
 
 if __name__ == "__main__":
     config = get_server_config()
-    
+
     logger.info(f"🚀 Starting server on {config['host']}:{config['port']}")
     logger.info(f"🔧 Debug mode: {config['reload']}")
     logger.info(f"📝 Log level: {config['log_level']}")
-    
+
     uvicorn.run(
         "main:app",
         host=config["host"],
         port=config["port"],
         reload=config["reload"],
-        log_level=config["log_level"]
+        log_level=config["log_level"],
     )

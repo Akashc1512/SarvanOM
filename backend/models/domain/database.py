@@ -12,6 +12,7 @@ from enum import Enum
 
 class DatabaseType(Enum):
     """Database types."""
+
     POSTGRESQL = "postgresql"
     MYSQL = "mysql"
     SQLITE = "sqlite"
@@ -23,6 +24,7 @@ class DatabaseType(Enum):
 @dataclass
 class DatabaseConfig:
     """Database configuration."""
+
     name: str
     type: DatabaseType
     host: str
@@ -42,6 +44,7 @@ class DatabaseConfig:
 @dataclass
 class QueryResult:
     """Database query result."""
+
     success: bool
     data: List[Dict[str, Any]] = field(default_factory=list)
     row_count: int = 0
@@ -51,7 +54,7 @@ class QueryResult:
     processing_time: float = 0.0
     error: Optional[str] = None
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
     def __post_init__(self):
         """Validate query result after initialization."""
         if not self.success and not self.error:
@@ -61,6 +64,7 @@ class QueryResult:
 @dataclass
 class SchemaInfo:
     """Database schema information."""
+
     database_name: str
     tables: List[Dict[str, Any]] = field(default_factory=list)
     views: List[Dict[str, Any]] = field(default_factory=list)
@@ -73,6 +77,7 @@ class SchemaInfo:
 @dataclass
 class DataAnalysis:
     """Data analysis result."""
+
     database_name: str
     table_name: str
     row_count: int = 0
@@ -87,6 +92,7 @@ class DataAnalysis:
 @dataclass
 class DatabaseConnection:
     """Database connection information."""
+
     name: str
     type: DatabaseType
     host: str
@@ -102,6 +108,7 @@ class DatabaseConnection:
 @dataclass
 class QueryOptimization:
     """Query optimization result."""
+
     original_query: str
     optimized_query: str
     suggestions: List[str] = field(default_factory=list)
@@ -113,6 +120,7 @@ class QueryOptimization:
 @dataclass
 class DatabaseMetrics:
     """Database service metrics."""
+
     active_connections: int = 0
     max_connections: int = 10
     query_count: int = 0
@@ -120,4 +128,4 @@ class DatabaseMetrics:
     avg_response_time: float = 0.0
     total_databases: int = 0
     connected_databases: int = 0
-    timestamp: datetime = field(default_factory=datetime.now) 
+    timestamp: datetime = field(default_factory=datetime.now)

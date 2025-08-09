@@ -26,6 +26,7 @@ from enum import Enum
 
 class HealthStatus(str, Enum):
     """Health status enumeration."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -33,6 +34,7 @@ class HealthStatus(str, Enum):
 
 class HealthResponse(BaseModel):
     """Health check response model."""
+
     status: HealthStatus
     timestamp: str
     version: str
@@ -43,6 +45,7 @@ class HealthResponse(BaseModel):
 
 class QueryRequest(BaseModel):
     """Query request model."""
+
     query: str = Field(..., min_length=1, max_length=10000, description="Query text")
     context: Optional[str] = Field(None, max_length=5000, description="Query context")
     user_id: Optional[str] = Field(None, description="User ID")
@@ -53,6 +56,7 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     """Query response model."""
+
     query_id: str
     status: str
     answer: str
@@ -67,6 +71,7 @@ class QueryResponse(BaseModel):
 
 class QueryUpdateRequest(BaseModel):
     """Query update request model."""
+
     answer: Optional[str] = None
     confidence: Optional[float] = Field(None, ge=0.0, le=1.0)
     sources: Optional[List[str]] = None
@@ -75,6 +80,7 @@ class QueryUpdateRequest(BaseModel):
 
 class QueryListResponse(BaseModel):
     """Query list response model."""
+
     queries: List[Dict[str, Any]]
     total: int
     page: int
@@ -85,6 +91,7 @@ class QueryListResponse(BaseModel):
 
 class QueryDetailResponse(BaseModel):
     """Query detail response model."""
+
     query_id: str
     query_text: str
     response_text: str
@@ -101,6 +108,7 @@ class QueryDetailResponse(BaseModel):
 
 class QueryStatusResponse(BaseModel):
     """Query status response model."""
+
     query_id: str
     status: str
     progress: float = Field(..., ge=0.0, le=1.0)
@@ -111,6 +119,7 @@ class QueryStatusResponse(BaseModel):
 
 class MetricsResponse(BaseModel):
     """Metrics response model."""
+
     total_queries: int
     average_response_time: float
     success_rate: float
@@ -122,6 +131,7 @@ class MetricsResponse(BaseModel):
 
 class AnalyticsResponse(BaseModel):
     """Analytics response model."""
+
     user_activity: Dict[str, Any]
     query_trends: Dict[str, Any]
     performance_metrics: Dict[str, Any]
@@ -131,15 +141,19 @@ class AnalyticsResponse(BaseModel):
 
 class FeedbackRequest(BaseModel):
     """Feedback request model."""
+
     query_id: str
     rating: int = Field(..., ge=1, le=5, description="Rating from 1 to 5")
-    comment: Optional[str] = Field(None, max_length=1000, description="Feedback comment")
+    comment: Optional[str] = Field(
+        None, max_length=1000, description="Feedback comment"
+    )
     category: Optional[str] = Field(None, description="Feedback category")
     metadata: Optional[Dict[str, Any]] = None
 
 
 class FeedbackResponse(BaseModel):
     """Feedback response model."""
+
     feedback_id: str
     query_id: str
     rating: int
@@ -151,6 +165,7 @@ class FeedbackResponse(BaseModel):
 
 class LoginRequest(BaseModel):
     """Login request model."""
+
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=6, max_length=128)
     remember_me: Optional[bool] = False
@@ -159,6 +174,7 @@ class LoginRequest(BaseModel):
 
 class RegisterRequest(BaseModel):
     """Registration request model."""
+
     username: str = Field(..., min_length=3, max_length=50)
     email: str = Field(..., description="Valid email address")
     password: str = Field(..., min_length=8, max_length=128)
@@ -168,6 +184,7 @@ class RegisterRequest(BaseModel):
 
 class AuthResponse(BaseModel):
     """Authentication response model."""
+
     access_token: str
     token_type: str = "bearer"
     user_id: str
@@ -180,6 +197,7 @@ class AuthResponse(BaseModel):
 
 class APIKeyResponse(BaseModel):
     """API key response model."""
+
     api_key: str
     user_id: str
     role: str
@@ -192,6 +210,7 @@ class APIKeyResponse(BaseModel):
 
 class ExpertReviewRequest(BaseModel):
     """Expert review request model."""
+
     review_id: str
     expert_id: str
     verdict: str = Field(..., description="Review verdict")
@@ -201,6 +220,7 @@ class ExpertReviewRequest(BaseModel):
 
 class ExpertReviewResponse(BaseModel):
     """Expert review response model."""
+
     review_id: str
     status: str
     expert_id: str
@@ -213,6 +233,7 @@ class ExpertReviewResponse(BaseModel):
 
 class TaskRequest(BaseModel):
     """Task generation request model."""
+
     task_type: str = Field(..., description="Type of task to generate")
     description: str = Field(..., max_length=1000, description="Task description")
     priority: Optional[str] = Field("medium", description="Task priority")
@@ -223,6 +244,7 @@ class TaskRequest(BaseModel):
 
 class TaskResponse(BaseModel):
     """Task generation response model."""
+
     task_id: str
     status: str
     tasks: List[Dict[str, Any]]
@@ -232,6 +254,7 @@ class TaskResponse(BaseModel):
 
 class IntegrationStatus(BaseModel):
     """Integration status model."""
+
     name: str
     status: str
     version: str
@@ -242,6 +265,7 @@ class IntegrationStatus(BaseModel):
 
 class IntegrationsResponse(BaseModel):
     """Integrations response model."""
+
     status: str
     integrations: Dict[str, IntegrationStatus]
     timestamp: str
@@ -251,6 +275,7 @@ class IntegrationsResponse(BaseModel):
 # Validator models
 class QueryRequestValidator(BaseModel):
     """Query request validator with enhanced validation."""
+
     query: str = Field(..., min_length=1, max_length=10000)
     context: Optional[str] = Field(None, max_length=5000)
     user_id: Optional[str] = None
@@ -258,40 +283,43 @@ class QueryRequestValidator(BaseModel):
     source: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
-    @validator('query')
+    @validator("query")
     def validate_query(cls, v):
         if not v.strip():
-            raise ValueError('Query cannot be empty')
+            raise ValueError("Query cannot be empty")
         return v.strip()
 
 
 class FeedbackRequestValidator(BaseModel):
     """Feedback request validator."""
+
     query_id: str
     rating: int = Field(..., ge=1, le=5)
     comment: Optional[str] = Field(None, max_length=1000)
     category: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
-    @validator('rating')
+    @validator("rating")
     def validate_rating(cls, v):
         if v < 1 or v > 5:
-            raise ValueError('Rating must be between 1 and 5')
+            raise ValueError("Rating must be between 1 and 5")
         return v
 
 
 class SearchRequestValidator(BaseModel):
     """Search request validator."""
+
     query: str = Field(..., min_length=1, max_length=1000)
     filters: Optional[Dict[str, Any]] = None
     page: int = Field(1, ge=1)
     page_size: int = Field(20, ge=1, le=100)
     sort_by: Optional[str] = None
-    sort_order: Optional[str] = Field(None, pattern='^(asc|desc)$')
+    sort_order: Optional[str] = Field(None, pattern="^(asc|desc)$")
 
 
 class AnalyticsRequestValidator(BaseModel):
     """Analytics request validator."""
+
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     metrics: List[str] = Field(default_factory=list)
@@ -301,7 +329,8 @@ class AnalyticsRequestValidator(BaseModel):
 
 class ConfigUpdateValidator(BaseModel):
     """Configuration update validator."""
+
     key: str = Field(..., min_length=1)
     value: Any
     description: Optional[str] = None
-    category: Optional[str] = None 
+    category: Optional[str] = None

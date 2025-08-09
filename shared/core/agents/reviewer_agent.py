@@ -59,7 +59,9 @@ class ReviewerAgent(BaseAgent):
             metadata=result.metadata,
         )
 
-    async def _process_review(self, task: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    async def _process_review(
+        self, task: Dict[str, Any], context: Any
+    ) -> Dict[str, Any]:
         question: str = task.get("question", "").strip()
         draft_answer: str = task.get("draft_answer", "").strip()
         sources: Optional[List[Dict[str, Any]]] = task.get("sources")
@@ -67,6 +69,7 @@ class ReviewerAgent(BaseAgent):
         # Get configuration
         try:
             from shared.core.config import get_central_config
+
             config = get_central_config()
             temperature = config.reviewer_temperature
             max_tokens = config.reviewer_max_tokens
@@ -107,9 +110,14 @@ class ReviewerAgent(BaseAgent):
             from shared.core.agents.llm_client import LLMClient
 
             llm = LLMClient()
-            response_text: str = await llm.generate_text(review_prompt, max_tokens=max_tokens, temperature=temperature)
+            response_text: str = await llm.generate_text(
+                review_prompt, max_tokens=max_tokens, temperature=temperature
+            )
 
-            approved = ("approved: true" in response_text.lower()) or ("approved" in response_text.lower() and "false" not in response_text.lower())
+            approved = ("approved: true" in response_text.lower()) or (
+                "approved" in response_text.lower()
+                and "false" not in response_text.lower()
+            )
 
             # Heuristic parsing of final answer and feedback
             final_answer = draft_answer
@@ -140,5 +148,3 @@ class ReviewerAgent(BaseAgent):
                 "feedback": "Reviewer unavailable; returning draft answer.",
                 "confidence": 0.5,
             }
-
-

@@ -13,126 +13,149 @@ from pathlib import Path
 
 class ProductionSettings(BaseSettings):
     """Production configuration settings with validation."""
-    
+
     # Application Settings
-    APP_NAME: str = Field(default="Universal Knowledge Platform", description="Application name")
+    APP_NAME: str = Field(
+        default="Universal Knowledge Platform", description="Application name"
+    )
     APP_VERSION: str = Field(default="2.4.0", description="Application version")
-    DEBUG: bool = Field(default=False, description="Debug mode (disabled in production)")
+    DEBUG: bool = Field(
+        default=False, description="Debug mode (disabled in production)"
+    )
     ENVIRONMENT: str = Field(default="production", description="Environment name")
-    
+
     # Server Settings
     HOST: str = Field(default="0.0.0.0", description="Server host")
     PORT: int = Field(default=8000, description="Server port")
     WORKERS: int = Field(default=4, description="Number of worker processes")
-    WORKER_CLASS: str = Field(default="uvicorn.workers.UvicornWorker", description="Worker class")
-    
+    WORKER_CLASS: str = Field(
+        default="uvicorn.workers.UvicornWorker", description="Worker class"
+    )
+
     # Database Settings
     DATABASE_URL: str = Field(..., description="Database connection URL")
-    DATABASE_POOL_SIZE: int = Field(default=20, description="Database connection pool size")
+    DATABASE_POOL_SIZE: int = Field(
+        default=20, description="Database connection pool size"
+    )
     DATABASE_MAX_OVERFLOW: int = Field(default=30, description="Database max overflow")
     DATABASE_POOL_TIMEOUT: int = Field(default=30, description="Database pool timeout")
-    
+
     # Redis Settings
-    REDIS_URL: str = Field(default="redis://localhost:6379/0", description="Redis connection URL")
+    REDIS_URL: str = Field(
+        default="redis://localhost:6379/0", description="Redis connection URL"
+    )
     REDIS_POOL_SIZE: int = Field(default=10, description="Redis connection pool size")
     REDIS_PASSWORD: Optional[str] = Field(default=None, description="Redis password")
-    
+
     # Security Settings
     SECRET_KEY: str = Field(..., description="Application secret key")
     ALGORITHM: str = Field(default="HS256", description="JWT algorithm")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(default=30, description="Access token expiry")
-    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(default=7, description="Refresh token expiry")
-    
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
+        default=30, description="Access token expiry"
+    )
+    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(
+        default=7, description="Refresh token expiry"
+    )
+
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = Field(default=60, description="Rate limit per minute")
     RATE_LIMIT_PER_HOUR: int = Field(default=1000, description="Rate limit per hour")
     RATE_LIMIT_PER_DAY: int = Field(default=10000, description="Rate limit per day")
-    
+
     # CORS Settings
     CORS_ORIGINS: list = Field(default=["*"], description="CORS allowed origins")
-    CORS_ALLOW_CREDENTIALS: bool = Field(default=True, description="CORS allow credentials")
+    CORS_ALLOW_CREDENTIALS: bool = Field(
+        default=True, description="CORS allow credentials"
+    )
     CORS_ALLOW_METHODS: list = Field(default=["*"], description="CORS allowed methods")
     CORS_ALLOW_HEADERS: list = Field(default=["*"], description="CORS allowed headers")
-    
+
     # Logging Settings
     LOG_LEVEL: str = Field(default="INFO", description="Logging level")
     LOG_FORMAT: str = Field(default="json", description="Log format (json or text)")
     LOG_FILE: Optional[str] = Field(default=None, description="Log file path")
     LOG_MAX_SIZE: int = Field(default=100, description="Log max size in MB")
     LOG_BACKUP_COUNT: int = Field(default=5, description="Log backup count")
-    
+
     # Monitoring Settings
     METRICS_ENABLED: bool = Field(default=True, description="Enable metrics collection")
     METRICS_PORT: int = Field(default=9090, description="Metrics server port")
-    HEALTH_CHECK_INTERVAL: int = Field(default=30, description="Health check interval in seconds")
-    
+    HEALTH_CHECK_INTERVAL: int = Field(
+        default=30, description="Health check interval in seconds"
+    )
+
     # AI Service Settings
     OPENAI_API_KEY: str = Field(..., description="OpenAI API key")
     OPENAI_MODEL: str = Field(default="gpt-4", description="OpenAI model name")
     OPENAI_MAX_TOKENS: int = Field(default=4000, description="OpenAI max tokens")
     OPENAI_TEMPERATURE: float = Field(default=0.7, description="OpenAI temperature")
-    
+
     # Vector Database Settings
     PINECONE_API_KEY: str = Field(..., description="Pinecone API key")
     PINECONE_ENVIRONMENT: str = Field(..., description="Pinecone environment")
     PINECONE_INDEX_NAME: str = Field(..., description="Pinecone index name")
-    
+
     # File Storage Settings
     UPLOAD_DIR: str = Field(default="/app/uploads", description="Upload directory")
     MAX_FILE_SIZE: int = Field(default=100, description="Max file size in MB")
-    ALLOWED_EXTENSIONS: list = Field(default=[".pdf", ".txt", ".doc", ".docx"], description="Allowed file extensions")
-    
+    ALLOWED_EXTENSIONS: list = Field(
+        default=[".pdf", ".txt", ".doc", ".docx"], description="Allowed file extensions"
+    )
+
     # Cache Settings
     CACHE_TTL: int = Field(default=3600, description="Cache TTL in seconds")
     CACHE_MAX_SIZE: int = Field(default=1000, description="Cache max size")
-    
+
     # Service Timeouts
     SERVICE_TIMEOUT: int = Field(default=30, description="Service timeout in seconds")
     REQUEST_TIMEOUT: int = Field(default=60, description="Request timeout in seconds")
-    
+
     # Backup Settings
     BACKUP_ENABLED: bool = Field(default=True, description="Enable automated backups")
     BACKUP_INTERVAL: int = Field(default=24, description="Backup interval in hours")
-    BACKUP_RETENTION_DAYS: int = Field(default=30, description="Backup retention in days")
-    
-    @validator('SECRET_KEY')
+    BACKUP_RETENTION_DAYS: int = Field(
+        default=30, description="Backup retention in days"
+    )
+
+    @validator("SECRET_KEY")
     def validate_secret_key(cls, v):
         """Validate secret key length."""
         if len(v) < 32:
-            raise ValueError('SECRET_KEY must be at least 32 characters long')
+            raise ValueError("SECRET_KEY must be at least 32 characters long")
         return v
-    
-    @validator('DATABASE_URL')
+
+    @validator("DATABASE_URL")
     def validate_database_url(cls, v):
         """Validate database URL format."""
-        if not v.startswith(('postgresql://', 'mysql://', 'sqlite://')):
-            raise ValueError('DATABASE_URL must be a valid database URL')
+        if not v.startswith(("postgresql://", "mysql://", "sqlite://")):
+            raise ValueError("DATABASE_URL must be a valid database URL")
         return v
-    
-    @validator('REDIS_URL')
+
+    @validator("REDIS_URL")
     def validate_redis_url(cls, v):
         """Validate Redis URL format."""
-        if not v.startswith('redis://'):
-            raise ValueError('REDIS_URL must be a valid Redis URL')
+        if not v.startswith("redis://"):
+            raise ValueError("REDIS_URL must be a valid Redis URL")
         return v
-    
-    @validator('LOG_LEVEL')
+
+    @validator("LOG_LEVEL")
     def validate_log_level(cls, v):
         """Validate log level."""
-        valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v.upper() not in valid_levels:
-            raise ValueError(f'LOG_LEVEL must be one of {valid_levels}')
+            raise ValueError(f"LOG_LEVEL must be one of {valid_levels}")
         return v.upper()
-    
-    @validator('CORS_ORIGINS')
+
+    @validator("CORS_ORIGINS")
     def validate_cors_origins(cls, v):
         """Validate CORS origins."""
         if not isinstance(v, list):
-            raise ValueError('CORS_ORIGINS must be a list')
+            raise ValueError("CORS_ORIGINS must be a list")
         return v
-    
+
     class Config:
         """Pydantic configuration."""
+
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = True
@@ -278,4 +301,4 @@ def get_backup_config() -> Dict[str, Any]:
 
 
 # Global settings instance
-settings = get_settings() 
+settings = get_settings()

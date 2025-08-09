@@ -9,9 +9,10 @@ environment variables, their descriptions, and default values.
 import os
 from pathlib import Path
 
+
 def create_env_example():
     """Create comprehensive .env.example file."""
-    
+
     env_content = """# =============================================================================
 # SarvanOM Environment Configuration Template
 # =============================================================================
@@ -352,14 +353,15 @@ CACHE_TTL_SECONDS=3600  # 1 hour
 #    - Tune rate limits based on expected load
 #    - Configure appropriate timeouts for your network
 """
-    
+
     # Write to .env.example
-    with open('.env.example', 'w', encoding='utf-8') as f:
+    with open(".env.example", "w", encoding="utf-8") as f:
         f.write(env_content)
-    
+
     print("✅ Created comprehensive .env.example file")
     print("📝 Copy this file to .env and fill in your actual values")
     print("🔒 Remember: NEVER commit .env files to version control!")
 
+
 if __name__ == "__main__":
-    create_env_example() 
+    create_env_example()

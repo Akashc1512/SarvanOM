@@ -6,9 +6,9 @@ from shared.core.agents.base_agent import QueryContext
 def test_initialization():
     orchestrator = LeadOrchestrator()
     assert orchestrator is not None
-    assert hasattr(orchestrator, 'agents')
-    assert hasattr(orchestrator, 'token_budget')
-    assert hasattr(orchestrator, 'semantic_cache')
+    assert hasattr(orchestrator, "agents")
+    assert hasattr(orchestrator, "token_budget")
+    assert hasattr(orchestrator, "semantic_cache")
 
 
 @pytest.mark.asyncio
@@ -35,8 +35,15 @@ async def test_per_agent_budget_calculation():
     orchestrator = LeadOrchestrator()
     query_budget = 1000
     # Test that budgets are calculated correctly for each agent
-    for agent_type in [AgentType.RETRIEVAL, AgentType.FACT_CHECK, AgentType.SYNTHESIS, AgentType.CITATION]:
-        agent_budget = await orchestrator.token_budget.allocate_for_agent(agent_type, query_budget)
+    for agent_type in [
+        AgentType.RETRIEVAL,
+        AgentType.FACT_CHECK,
+        AgentType.SYNTHESIS,
+        AgentType.CITATION,
+    ]:
+        agent_budget = await orchestrator.token_budget.allocate_for_agent(
+            agent_type, query_budget
+        )
         assert agent_budget > 0
         assert isinstance(agent_budget, int)
 
@@ -55,11 +62,11 @@ async def test_token_usage_tracking():
 async def test_cache_functionality():
     orchestrator = LeadOrchestrator()
     query = "Test query for caching"
-    
+
     # Test cache miss
     cached_result = await orchestrator.semantic_cache.get_cached_response(query)
     assert cached_result is None
-    
+
     # Test cache stats
     stats = await orchestrator.semantic_cache.get_cache_stats()
     assert stats is not None

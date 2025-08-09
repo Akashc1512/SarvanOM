@@ -138,7 +138,9 @@ class KnowledgeGraphResult(AgentDataModel):
         default_factory=dict, description="Graph visualization data"
     )
     entity_count: int = Field(..., ge=0, description="Number of entities extracted")
-    relationship_count: int = Field(..., ge=0, description="Number of relationships found")
+    relationship_count: int = Field(
+        ..., ge=0, description="Number of relationships found"
+    )
     processing_time_ms: int = Field(
         ..., ge=0, description="Processing time in milliseconds"
     )

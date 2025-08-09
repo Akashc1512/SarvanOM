@@ -23,9 +23,12 @@ import re
 from shared.core.agents.base_agent import BaseAgent
 from shared.core.agents.retrieval_agent import RetrievalAgent
 from shared.core.agents.knowledge_graph_agent import KnowledgeGraphAgent
-from shared.core.agents.arangodb_knowledge_graph_agent import ArangoDBKnowledgeGraphAgent
+from shared.core.agents.arangodb_knowledge_graph_agent import (
+    ArangoDBKnowledgeGraphAgent,
+)
 
 logger = get_logger(__name__)
+
 
 # Pydantic models for agent requests/responses
 class BrowserSearchRequest(BaseModel):
@@ -33,11 +36,13 @@ class BrowserSearchRequest(BaseModel):
     max_results: int = Field(10, description="Maximum number of results")
     include_snippets: bool = Field(True, description="Include result snippets")
 
+
 class BrowserSearchResponse(BaseModel):
     results: List[Dict[str, Any]]
     query: str
     total_results: int
     search_time: float
+
 
 class PDFProcessRequest(BaseModel):
     file_data: str = Field(..., description="Base64 encoded PDF file")
@@ -47,6 +52,7 @@ class PDFProcessRequest(BaseModel):
     extract_metadata: bool = Field(True, description="Extract metadata")
     generate_summary: bool = Field(True, description="Generate content summary")
 
+
 class PDFProcessResponse(BaseModel):
     text_content: str
     metadata: Dict[str, Any]
@@ -54,6 +60,7 @@ class PDFProcessResponse(BaseModel):
     page_count: int
     filename: str
     processing_time: float
+
 
 class CodeExecutionRequest(BaseModel):
     code: str = Field(..., description="Code to execute")
@@ -63,6 +70,7 @@ class CodeExecutionRequest(BaseModel):
     capture_output: bool = Field(True, description="Capture stdout")
     capture_errors: bool = Field(True, description="Capture stderr")
 
+
 class CodeExecutionResponse(BaseModel):
     output: str
     error: Optional[str]
@@ -71,6 +79,7 @@ class CodeExecutionResponse(BaseModel):
     language: str
     success: bool
 
+
 class KnowledgeGraphQueryRequest(BaseModel):
     query: str = Field(..., description="Knowledge graph query")
     query_type: str = Field("entity_search", description="Type of query")
@@ -78,6 +87,7 @@ class KnowledgeGraphQueryRequest(BaseModel):
     max_relationships: int = Field(5, description="Maximum relationships to return")
     include_metadata: bool = Field(True, description="Include entity metadata")
     include_confidence: bool = Field(True, description="Include confidence scores")
+
 
 class KnowledgeGraphQueryResponse(BaseModel):
     entities: List[Dict[str, Any]]
@@ -88,6 +98,7 @@ class KnowledgeGraphQueryResponse(BaseModel):
     total_relationships: int
     execution_time: float
 
+
 class DatabaseQueryRequest(BaseModel):
     query: str = Field(..., description="Database query")
     database_type: str = Field("postgres", description="Database type")
@@ -96,6 +107,7 @@ class DatabaseQueryRequest(BaseModel):
     timeout_seconds: int = Field(30, description="Query timeout")
     read_only: bool = Field(True, description="Read-only query")
 
+
 class DatabaseQueryResponse(BaseModel):
     results: List[Dict[str, Any]]
     schema: Optional[Dict[str, Any]]
@@ -103,6 +115,7 @@ class DatabaseQueryResponse(BaseModel):
     execution_time: float
     database_type: str
     query: str
+
 
 class WebCrawlerRequest(BaseModel):
     url: str = Field(..., description="URL to crawl")
@@ -113,6 +126,7 @@ class WebCrawlerRequest(BaseModel):
     respect_robots_txt: bool = Field(True, description="Respect robots.txt")
     user_agent: str = Field("SarvanomBot/1.0", description="User agent string")
 
+
 class WebCrawlerResponse(BaseModel):
     pages: List[Dict[str, Any]]
     pages_crawled: int
@@ -120,70 +134,76 @@ class WebCrawlerResponse(BaseModel):
     url: str
     crawl_time: float
 
+
 class AgentHandler:
     """Base class for agent handlers"""
-    
+
     def __init__(self):
         self.retrieval_agent = RetrievalAgent()
         self.knowledge_graph_agent = ArangoDBKnowledgeGraphAgent()
-    
-    async def handle_browser_search(self, request: BrowserSearchRequest) -> BrowserSearchResponse:
+
+    async def handle_browser_search(
+        self, request: BrowserSearchRequest
+    ) -> BrowserSearchResponse:
         """Handle web search requests"""
         start_time = datetime.now()
-        
+
         try:
             # Use retrieval agent for web search
             search_results = await self.retrieval_agent.search_web(
-                query=request.query,
-                max_results=request.max_results
+                query=request.query, max_results=request.max_results
             )
-            
+
             # Format results
             formatted_results = []
             for result in search_results:
                 formatted_result = {
                     "title": result.get("title", ""),
                     "url": result.get("url", ""),
-                    "snippet": result.get("snippet", "") if request.include_snippets else "",
-                    "relevance_score": result.get("relevance_score", 0.0)
+                    "snippet": (
+                        result.get("snippet", "") if request.include_snippets else ""
+                    ),
+                    "relevance_score": result.get("relevance_score", 0.0),
                 }
                 formatted_results.append(formatted_result)
-            
+
             execution_time = (datetime.now() - start_time).total_seconds()
-            
+
             return BrowserSearchResponse(
                 results=formatted_results,
                 query=request.query,
                 total_results=len(formatted_results),
-                search_time=execution_time
+                search_time=execution_time,
             )
-            
+
         except Exception as e:
             logger.error(f"Browser search error: {e}")
             raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
-    
-    async def handle_pdf_processing(self, request: PDFProcessRequest) -> PDFProcessResponse:
+
+    async def handle_pdf_processing(
+        self, request: PDFProcessRequest
+    ) -> PDFProcessResponse:
         """Handle PDF processing requests"""
         start_time = datetime.now()
-        
+
         try:
             # Decode base64 file data
             file_data = base64.b64decode(request.file_data)
             file_stream = io.BytesIO(file_data)
-            
+
             # Extract text and metadata
             text_content = ""
             metadata = {}
             page_count = 0
-            
+
             try:
                 pdf_reader = PyPDF2.PdfReader(file_stream)
                 page_count = len(pdf_reader.pages)
-                
+
                 # Extract text from all pages
                 for page in pdf_reader.pages:
                     text_content += page.extract_text() + "\n"
-                
+
                 # Extract metadata
                 if pdf_reader.metadata:
                     metadata = {
@@ -193,54 +213,68 @@ class AgentHandler:
                         "creator": pdf_reader.metadata.get("/Creator", ""),
                         "producer": pdf_reader.metadata.get("/Producer", ""),
                         "creation_date": pdf_reader.metadata.get("/CreationDate", ""),
-                        "modification_date": pdf_reader.metadata.get("/ModDate", "")
+                        "modification_date": pdf_reader.metadata.get("/ModDate", ""),
                     }
-                
+
             except Exception as e:
                 logger.error(f"PDF processing error: {e}")
-                raise HTTPException(status_code=400, detail=f"Invalid PDF file: {str(e)}")
-            
+                raise HTTPException(
+                    status_code=400, detail=f"Invalid PDF file: {str(e)}"
+                )
+
             # Generate summary using LLM
             summary = ""
             if request.generate_summary and text_content:
                 try:
                     # Use a simple extractive summarization for now
-                    sentences = text_content.split('.')
-                    summary = '. '.join(sentences[:3]) + '.' if len(sentences) > 3 else text_content
+                    sentences = text_content.split(".")
+                    summary = (
+                        ". ".join(sentences[:3]) + "."
+                        if len(sentences) > 3
+                        else text_content
+                    )
                 except Exception as e:
                     logger.warning(f"Summary generation failed: {e}")
                     summary = "Summary generation failed"
-            
+
             execution_time = (datetime.now() - start_time).total_seconds()
-            
+
             return PDFProcessResponse(
                 text_content=text_content,
                 metadata=metadata,
                 summary=summary,
                 page_count=page_count,
                 filename=request.filename,
-                processing_time=execution_time
+                processing_time=execution_time,
             )
-            
+
         except Exception as e:
             logger.error(f"PDF processing error: {e}")
-            raise HTTPException(status_code=500, detail=f"PDF processing failed: {str(e)}")
-    
-    async def handle_code_execution(self, request: CodeExecutionRequest) -> CodeExecutionResponse:
+            raise HTTPException(
+                status_code=500, detail=f"PDF processing failed: {str(e)}"
+            )
+
+    async def handle_code_execution(
+        self, request: CodeExecutionRequest
+    ) -> CodeExecutionResponse:
         """Handle code execution requests"""
         start_time = datetime.now()
-        
+
         try:
             # Validate language
             supported_languages = ["python", "javascript", "bash"]
             if request.language not in supported_languages:
-                raise HTTPException(status_code=400, detail=f"Unsupported language: {request.language}")
-            
+                raise HTTPException(
+                    status_code=400, detail=f"Unsupported language: {request.language}"
+                )
+
             # Create temporary file for code
-            with tempfile.NamedTemporaryFile(mode='w', suffix=f'.{request.language}', delete=False) as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=f".{request.language}", delete=False
+            ) as f:
                 f.write(request.code)
                 temp_file = f.name
-            
+
             try:
                 # Execute code based on language
                 if request.language == "python":
@@ -249,7 +283,7 @@ class AgentHandler:
                         capture_output=True,
                         text=True,
                         timeout=request.timeout_seconds,
-                        cwd=tempfile.gettempdir()
+                        cwd=tempfile.gettempdir(),
                     )
                 elif request.language == "javascript":
                     result = subprocess.run(
@@ -257,7 +291,7 @@ class AgentHandler:
                         capture_output=True,
                         text=True,
                         timeout=request.timeout_seconds,
-                        cwd=tempfile.gettempdir()
+                        cwd=tempfile.gettempdir(),
                     )
                 elif request.language == "bash":
                     result = subprocess.run(
@@ -265,44 +299,47 @@ class AgentHandler:
                         capture_output=True,
                         text=True,
                         timeout=request.timeout_seconds,
-                        cwd=tempfile.gettempdir()
+                        cwd=tempfile.gettempdir(),
                     )
-                
+
                 execution_time = (datetime.now() - start_time).total_seconds()
-                
+
                 return CodeExecutionResponse(
                     output=result.stdout if request.capture_output else "",
                     error=result.stderr if request.capture_errors else "",
                     exit_code=result.returncode,
                     execution_time=execution_time,
                     language=request.language,
-                    success=result.returncode == 0
+                    success=result.returncode == 0,
                 )
-                
+
             finally:
                 # Clean up temporary file
                 try:
                     os.unlink(temp_file)
                 except:
                     pass
-                    
+
         except subprocess.TimeoutExpired:
             raise HTTPException(status_code=408, detail="Code execution timed out")
         except Exception as e:
             logger.error(f"Code execution error: {e}")
-            raise HTTPException(status_code=500, detail=f"Code execution failed: {str(e)}")
-    
-    async def handle_knowledge_graph_query(self, request: KnowledgeGraphQueryRequest) -> KnowledgeGraphQueryResponse:
+            raise HTTPException(
+                status_code=500, detail=f"Code execution failed: {str(e)}"
+            )
+
+    async def handle_knowledge_graph_query(
+        self, request: KnowledgeGraphQueryRequest
+    ) -> KnowledgeGraphQueryResponse:
         """Handle knowledge graph queries"""
         start_time = datetime.now()
-        
+
         try:
             # Use the refactored ArangoDB Knowledge Graph Agent
             result = await self.knowledge_graph_agent.query(
-                query=request.query,
-                query_type=request.query_type
+                query=request.query, query_type=request.query_type
             )
-            
+
             # Convert entities to dictionary format
             entities = []
             for entity in result.entities:
@@ -311,14 +348,14 @@ class AgentHandler:
                     "name": entity.name,
                     "type": entity.type,
                     "confidence": entity.confidence,
-                    "properties": entity.properties
+                    "properties": entity.properties,
                 }
                 if not request.include_metadata:
                     entity_dict.pop("properties", None)
                 if not request.include_confidence:
                     entity_dict.pop("confidence", None)
                 entities.append(entity_dict)
-            
+
             # Convert relationships to dictionary format
             relationships = []
             for rel in result.relationships:
@@ -327,20 +364,20 @@ class AgentHandler:
                     "target_id": rel.target_id,
                     "relationship_type": rel.relationship_type,
                     "confidence": rel.confidence,
-                    "properties": rel.properties
+                    "properties": rel.properties,
                 }
                 if not request.include_metadata:
                     rel_dict.pop("properties", None)
                 if not request.include_confidence:
                     rel_dict.pop("confidence", None)
                 relationships.append(rel_dict)
-            
+
             # Limit results based on request parameters
-            entities = entities[:request.max_entities]
-            relationships = relationships[:request.max_relationships]
-            
+            entities = entities[: request.max_entities]
+            relationships = relationships[: request.max_relationships]
+
             execution_time = (datetime.now() - start_time).total_seconds()
-            
+
             return KnowledgeGraphQueryResponse(
                 entities=entities,
                 relationships=relationships,
@@ -348,44 +385,56 @@ class AgentHandler:
                 query_type=request.query_type,
                 total_entities=len(entities),
                 total_relationships=len(relationships),
-                execution_time=execution_time
+                execution_time=execution_time,
             )
-            
+
         except Exception as e:
             logger.error(f"Knowledge graph query error: {e}")
-            raise HTTPException(status_code=500, detail=f"Knowledge graph query failed: {str(e)}")
-    
-    async def handle_database_query(self, request: DatabaseQueryRequest) -> DatabaseQueryResponse:
+            raise HTTPException(
+                status_code=500, detail=f"Knowledge graph query failed: {str(e)}"
+            )
+
+    async def handle_database_query(
+        self, request: DatabaseQueryRequest
+    ) -> DatabaseQueryResponse:
         """Handle database queries"""
         start_time = datetime.now()
-        
+
         try:
             # For now, return a mock response
             # In a real implementation, this would connect to the actual database
             mock_results = [
                 {"id": 1, "name": "Example", "value": "test"},
-                {"id": 2, "name": "Sample", "value": "data"}
+                {"id": 2, "name": "Sample", "value": "data"},
             ]
-            
+
             execution_time = (datetime.now() - start_time).total_seconds()
-            
+
             return DatabaseQueryResponse(
                 results=mock_results,
-                schema={"id": "integer", "name": "text", "value": "text"} if request.include_schema else None,
+                schema=(
+                    {"id": "integer", "name": "text", "value": "text"}
+                    if request.include_schema
+                    else None
+                ),
                 row_count=len(mock_results),
                 execution_time=execution_time,
                 database_type=request.database_type,
-                query=request.query
+                query=request.query,
             )
-            
+
         except Exception as e:
             logger.error(f"Database query error: {e}")
-            raise HTTPException(status_code=500, detail=f"Database query failed: {str(e)}")
-    
-    async def handle_web_crawler(self, request: WebCrawlerRequest) -> WebCrawlerResponse:
+            raise HTTPException(
+                status_code=500, detail=f"Database query failed: {str(e)}"
+            )
+
+    async def handle_web_crawler(
+        self, request: WebCrawlerRequest
+    ) -> WebCrawlerResponse:
         """Handle web crawling requests"""
         start_time = datetime.now()
-        
+
         try:
             # For now, return a mock response
             # In a real implementation, this would use a proper web crawler
@@ -394,23 +443,26 @@ class AgentHandler:
                     "url": request.url,
                     "title": "Example Page",
                     "content": "This is example content from the crawled page.",
-                    "links": []
+                    "links": [],
                 }
             ]
-            
+
             execution_time = (datetime.now() - start_time).total_seconds()
-            
+
             return WebCrawlerResponse(
                 pages=mock_pages,
                 pages_crawled=len(mock_pages),
                 total_size=sum(len(page.get("content", "")) for page in mock_pages),
                 url=request.url,
-                crawl_time=execution_time
+                crawl_time=execution_time,
             )
-            
+
         except Exception as e:
             logger.error(f"Web crawler error: {e}")
-            raise HTTPException(status_code=500, detail=f"Web crawling failed: {str(e)}")
+            raise HTTPException(
+                status_code=500, detail=f"Web crawling failed: {str(e)}"
+            )
+
 
 # Create global agent handler instance
-agent_handler = AgentHandler() 
+agent_handler = AgentHandler()

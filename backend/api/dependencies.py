@@ -111,11 +111,11 @@ def get_query_orchestrator() -> QueryOrchestrator:
         metrics_service = get_metrics_service()
         query_repository = get_query_repository()
         _query_orchestrator = QueryOrchestrator(
-            query_processor, 
-            query_validator, 
-            cache_service, 
+            query_processor,
+            query_validator,
+            cache_service,
             metrics_service,
-            query_repository
+            query_repository,
         )
         logger.info("Initialized QueryOrchestrator")
     return _query_orchestrator
@@ -141,7 +141,7 @@ def get_database_service() -> DatabaseService:
 
 async def get_current_user(
     request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> Dict[str, Any]:
     """Get current user from request."""
     # TODO: Implement proper authentication
@@ -150,7 +150,7 @@ async def get_current_user(
         "user_id": "anonymous",
         "username": "anonymous",
         "role": "anonymous",
-        "is_authenticated": False
+        "is_authenticated": False,
     }
 
 
@@ -159,10 +159,7 @@ async def require_authentication(
 ) -> Dict[str, Any]:
     """Require authentication for protected endpoints."""
     if not current_user.get("is_authenticated", False):
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication required"
-        )
+        raise HTTPException(status_code=401, detail="Authentication required")
     return current_user
 
 
@@ -171,17 +168,11 @@ async def require_admin(
 ) -> Dict[str, Any]:
     """Require admin role for admin endpoints."""
     if not current_user.get("is_authenticated", False):
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication required"
-        )
-    
+        raise HTTPException(status_code=401, detail="Authentication required")
+
     if current_user.get("role") != "admin":
-        raise HTTPException(
-            status_code=403,
-            detail="Admin access required"
-        )
-    
+        raise HTTPException(status_code=403, detail="Admin access required")
+
     return current_user
 
 
@@ -191,8 +182,7 @@ def get_request_id(request: Request) -> str:
 
 
 def get_user_context(
-    current_user: Dict[str, Any] = Depends(get_current_user),
-    request: Request = None
+    current_user: Dict[str, Any] = Depends(get_current_user), request: Request = None
 ) -> Dict[str, Any]:
     """Get user context for request processing."""
     return {
@@ -200,11 +190,12 @@ def get_user_context(
         "username": current_user.get("username", "anonymous"),
         "role": current_user.get("role", "anonymous"),
         "is_authenticated": current_user.get("is_authenticated", False),
-        "request_id": get_request_id(request) if request else "unknown"
+        "request_id": get_request_id(request) if request else "unknown",
     }
 
 
 # Repository dependency functions
+
 
 def get_query_repository() -> QueryRepositoryImpl:
     """Get query repository instance."""
@@ -230,4 +221,4 @@ def get_agent_repository() -> AgentRepositoryImpl:
     if _agent_repository is None:
         _agent_repository = AgentRepositoryImpl(storage_type="memory")
         logger.info("Initialized AgentRepository")
-    return _agent_repository 
+    return _agent_repository

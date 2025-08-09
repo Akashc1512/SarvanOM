@@ -22,7 +22,7 @@ from shared.core.agents.agent_utilities import (
     CommonProcessors,
     ResponseFormatter,
     format_standard_response,
-    time_agent_function
+    time_agent_function,
 )
 from shared.core.unified_logging import get_logger
 
@@ -57,7 +57,7 @@ class SynthesisResult:
             "synthesis_method": self.synthesis_method,
             "fact_count": self.fact_count,
             "processing_time_ms": self.processing_time_ms,
-            "metadata": self.metadata or {}
+            "metadata": self.metadata or {},
         }
 
 
@@ -67,20 +67,18 @@ class SynthesisAgent(BaseAgent):
     def __init__(self):
         """Initialize the synthesis agent with shared utilities."""
         super().__init__(agent_id="synthesis_agent", agent_type=AgentType.SYNTHESIS)
-        
+
         # Initialize shared utilities
         self.task_processor = AgentTaskProcessor(self.agent_id)
         self.logger = get_logger(f"{__name__}.{self.agent_id}")
-        
+
         logger.info("✅ SynthesisAgent initialized successfully")
 
     @time_agent_function("synthesis_agent")
-    async def process_task(
-        self, task: Dict[str, Any], context: Any
-    ) -> Dict[str, Any]:
+    async def process_task(self, task: Dict[str, Any], context: Any) -> Dict[str, Any]:
         """
         Process synthesis task using shared utilities.
-        
+
         This method now uses the standardized workflow from AgentTaskProcessor
         to eliminate duplicate logic and ensure consistent behavior.
         """
@@ -91,9 +89,9 @@ class SynthesisAgent(BaseAgent):
             processing_func=self._process_synthesis,
             validation_func=CommonValidators.validate_required_fields,
             timeout_seconds=60,
-            required_fields=["verified_facts", "query"]
+            required_fields=["verified_facts", "query"],
         )
-        
+
         # Convert TaskResult to standard response format
         return ResponseFormatter.format_agent_response(
             success=result.success,
@@ -101,7 +99,7 @@ class SynthesisAgent(BaseAgent):
             error=result.error,
             confidence=result.confidence,
             execution_time_ms=result.execution_time_ms,
-            metadata=result.metadata
+            metadata=result.metadata,
         )
 
     async def _process_synthesis(
@@ -109,7 +107,7 @@ class SynthesisAgent(BaseAgent):
     ) -> Dict[str, Any]:
         """
         Core synthesis processing logic.
-        
+
         This method contains the actual synthesis logic, separated from
         the workflow management for better testability and maintainability.
         """
@@ -117,7 +115,7 @@ class SynthesisAgent(BaseAgent):
         task_data = await CommonProcessors.extract_task_data(
             task, ["verified_facts", "query", "synthesis_params"]
         )
-        
+
         verified_facts = task_data.get("verified_facts", [])
         query = task_data.get("query", "")
         synthesis_params = task_data.get("synthesis_params", {})
@@ -137,7 +135,7 @@ class SynthesisAgent(BaseAgent):
             "answer": synthesis_result,
             "synthesis_method": "rule_based",
             "fact_count": len(verified_facts),
-            "confidence": confidence
+            "confidence": confidence,
         }
 
     async def _synthesize_answer(
@@ -152,9 +150,9 @@ class SynthesisAgent(BaseAgent):
         try:
             # Import prompt template manager
             from shared.core.prompt_templates import get_template_manager
-            
+
             template_manager = get_template_manager()
-            
+
             # Format documents for the enhanced template
             documents_with_sources = []
             for i, fact in enumerate(verified_facts, 1):
@@ -169,22 +167,22 @@ class SynthesisAgent(BaseAgent):
                     source = fact.get("source", "Unknown source")
                     claim = fact.get("claim", "")
                     confidence = fact.get("confidence", 0)
-                
-                documents_with_sources.append({
-                    "id": i,
-                    "content": claim,
-                    "source": source,
-                    "confidence": confidence
-                })
+
+                documents_with_sources.append(
+                    {
+                        "id": i,
+                        "content": claim,
+                        "source": source,
+                        "confidence": confidence,
+                    }
+                )
 
             # Get synthesis template
             synthesis_template = template_manager.get_template("synthesis")
-            
+
             # Format the synthesis prompt
             synthesis_prompt = synthesis_template.format(
-                query=query,
-                documents=documents_with_sources,
-                **params
+                query=query, documents=documents_with_sources, **params
             )
 
             # Use LLM for synthesis
@@ -218,7 +216,7 @@ Guidelines:
 
             # Use dynamic model selection for synthesis
             response = await llm_client.generate_text(llm_request)
-            
+
             return response.content
 
         except Exception as e:
@@ -228,11 +226,11 @@ Guidelines:
     def _fallback_synthesis(self, verified_facts: List[Dict], query: str) -> str:
         """
         Fallback synthesis when LLM is unavailable.
-        
+
         Args:
             verified_facts: List of verified facts
             query: User query
-            
+
         Returns:
             Synthesized answer
         """
@@ -241,10 +239,10 @@ Guidelines:
 
         # Simple text-based synthesis
         answer_parts = []
-        
+
         # Add query context
         answer_parts.append(f"Based on verified information about '{query}':")
-        
+
         # Add facts
         for i, fact in enumerate(verified_facts, 1):
             if hasattr(fact, "claim"):
@@ -255,22 +253,26 @@ Guidelines:
                 claim = fact.get("claim", "")
                 confidence = fact.get("confidence", 0)
                 source = fact.get("source", "Unknown")
-            
+
             if claim:
-                answer_parts.append(f"{i}. {claim} (Source: {source}, Confidence: {confidence:.2f})")
-        
+                answer_parts.append(
+                    f"{i}. {claim} (Source: {source}, Confidence: {confidence:.2f})"
+                )
+
         # Add summary
-        answer_parts.append(f"\nThis synthesis is based on {len(verified_facts)} verified facts.")
-        
+        answer_parts.append(
+            f"\nThis synthesis is based on {len(verified_facts)} verified facts."
+        )
+
         return "\n".join(answer_parts)
 
     def _calculate_synthesis_confidence(self, verified_facts: List[Dict]) -> float:
         """
         Calculate confidence for synthesis based on fact quality.
-        
+
         Args:
             verified_facts: List of verified facts
-            
+
         Returns:
             Confidence score between 0 and 1
         """
@@ -300,32 +302,30 @@ Guidelines:
 async def main():
     """Test the synthesis agent."""
     agent = SynthesisAgent()
-    
+
     # Test task
     task = {
         "verified_facts": [
             {
                 "claim": "Paris is the capital of France.",
                 "confidence": 0.9,
-                "source": "verified_fact"
+                "source": "verified_fact",
             },
             {
                 "claim": "The population of Paris is approximately 2.1 million.",
                 "confidence": 0.8,
-                "source": "verified_fact"
-            }
+                "source": "verified_fact",
+            },
         ],
         "query": "What is the capital of France?",
-        "synthesis_params": {
-            "style": "informative",
-            "length": "medium"
-        }
+        "synthesis_params": {"style": "informative", "length": "medium"},
     }
-    
+
     result = await agent.process_task(task, {})
     print(f"Synthesis result: {result}")
 
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())

@@ -19,7 +19,7 @@ async def test_api_direct():
     """Test the API directly to isolate the AgentResult error."""
     try:
         from shared.core.agents.lead_orchestrator import LeadOrchestrator
-from shared.core.agents.base_agent import QueryContext
+        from shared.core.agents.base_agent import QueryContext
         
         print("🔄 Testing API directly...")
         

@@ -52,7 +52,7 @@ from shared.core.security import get_security_manager
 from shared.core.cache import get_cache_manager
 from services.analytics_service.analytics_v2 import get_analytics_processor
 from shared.core.ml_integration import get_model_manager
-from services.api-gateway.realtime import get_connection_manager
+from services.api_gateway.realtime import get_connection_manager
 
 # Configure logging
 structlog.configure(
