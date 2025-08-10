@@ -56,6 +56,7 @@ from services.gateway.cache_manager import cache_manager
 from services.gateway.streaming_manager import stream_manager
 from services.gateway.background_processor import background_processor, TaskType, TaskPriority
 from services.gateway.prompt_optimizer import prompt_optimizer, PromptType, PromptComplexity
+from services.gateway.huggingface_integration import huggingface_integration
 
 # Initialize the LLM processor
 llm_processor = RealLLMProcessor()
@@ -84,6 +85,10 @@ async def initialize_advanced_features():
         await prompt_optimizer.initialize()
         logger.info("✅ Prompt optimizer initialized")
         
+        # Initialize HuggingFace integration
+        await huggingface_integration.initialize()
+        logger.info("✅ HuggingFace integration initialized")
+        
     except Exception as e:
         logger.error(f"❌ Failed to initialize advanced features: {e}")
 
@@ -98,6 +103,7 @@ async def lifespan(app: FastAPI):
     # Shutdown
     await cache_manager.close()
     await stream_manager.close()
+    await huggingface_integration.close()
     await background_processor.close()
     await prompt_optimizer.close()
 
@@ -307,7 +313,7 @@ class GraphContextRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=200)
     depth: Optional[int] = Field(default=2, ge=1, le=5)
     user_id: Optional[str] = None
-    
+
     @field_validator("topic")
     @classmethod
     def validate_topic(cls, v: str) -> str:
@@ -346,11 +352,11 @@ async def health_check():
         return JSONResponse(
             status_code=503,
             content={
-                "status": "error",
-                "error": str(e),
-                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "overall_healthy": False
-            }
+            "status": "error",
+            "error": str(e),
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "overall_healthy": False
+        }
         )
 
 @app.get("/health/detailed")
@@ -414,12 +420,12 @@ async def detailed_health_check():
         return JSONResponse(
             status_code=503,
             content={
-                "status": "error",
-                "error": str(e),
-                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "overall_healthy": False,
-                "recommendations": ["Health check system is experiencing issues. Contact system administrator."]
-            }
+            "status": "error",
+            "error": str(e),
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "overall_healthy": False,
+            "recommendations": ["Health check system is experiencing issues. Contact system administrator."]
+        }
         )
 
 # Search/Retrieval service endpoint
@@ -1041,7 +1047,16 @@ async def submit_background_task(
     try:
         # Map string to enum
         task_type_enum = TaskType(task_type.lower())
-        priority_enum = TaskPriority(priority.lower())
+        
+        # Map priority string to enum value
+        priority_map = {
+            "critical": TaskPriority.CRITICAL,
+            "high": TaskPriority.HIGH,
+            "normal": TaskPriority.NORMAL,
+            "low": TaskPriority.LOW,
+            "bulk": TaskPriority.BULK
+        }
+        priority_enum = priority_map.get(priority.lower(), TaskPriority.NORMAL)
         
         task_id = await background_processor.submit_task(
             task_type=task_type_enum,
@@ -1180,11 +1195,261 @@ async def system_status():
                 "streaming": stream_stats,
                 "background_processing": background_stats,
                 "prompt_optimization": optimization_stats,
+                "huggingface": {
+                    "device": huggingface_integration.device,
+                    "loaded_models": len(huggingface_integration.models),
+                    "loaded_pipelines": len(huggingface_integration.pipelines),
+                    "embedding_model_loaded": huggingface_integration.embedding_model is not None,
+                    "auth_status": await huggingface_integration.get_auth_status()
+                },
                 "timestamp": datetime.now().isoformat()
             }
         }
     except Exception as e:
         logger.error(f"System status error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# HuggingFace Integration Endpoints
+@app.post("/huggingface/generate")
+async def huggingface_text_generation(
+    prompt: str,
+    model_name: str = "distilgpt2",
+    max_length: int = 100,
+    temperature: float = 0.7
+):
+    """Generate text using HuggingFace models"""
+    try:
+        result = await huggingface_integration.generate_text(
+            prompt=prompt,
+            model_name=model_name,
+            max_length=max_length,
+            temperature=temperature
+        )
+        
+        return {
+            "status": "success",
+            "generated_text": result.result,
+            "metadata": result.metadata,
+            "processing_time": result.processing_time
+        }
+    except Exception as e:
+        logger.error(f"HuggingFace text generation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/huggingface/embeddings")
+async def huggingface_embeddings(
+    texts: List[str],
+    model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+):
+    """Get embeddings for texts using HuggingFace models"""
+    try:
+        result = await huggingface_integration.get_embeddings(
+            texts=texts,
+            model_name=model_name
+        )
+        
+        return {
+            "status": "success",
+            "embeddings": result.result,
+            "metadata": result.metadata,
+            "processing_time": result.processing_time
+        }
+    except Exception as e:
+        logger.error(f"HuggingFace embeddings error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/huggingface/sentiment")
+async def huggingface_sentiment_analysis(
+    text: str,
+    model_name: str = "distilbert-base-uncased-finetuned-sst-2-english"
+):
+    """Analyze sentiment using HuggingFace models"""
+    try:
+        result = await huggingface_integration.analyze_sentiment(
+            text=text,
+            model_name=model_name
+        )
+        
+        return {
+            "status": "success",
+            "sentiment": result.result,
+            "metadata": result.metadata,
+            "processing_time": result.processing_time
+        }
+    except Exception as e:
+        logger.error(f"HuggingFace sentiment analysis error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/huggingface/summarize")
+async def huggingface_summarization(
+    text: str,
+    model_name: str = "facebook/bart-large-cnn",
+    max_length: int = 130
+):
+    """Summarize text using HuggingFace models"""
+    try:
+        result = await huggingface_integration.summarize_text(
+            text=text,
+            model_name=model_name,
+            max_length=max_length
+        )
+        
+        return {
+            "status": "success",
+            "summary": result.result,
+            "metadata": result.metadata,
+            "processing_time": result.processing_time
+        }
+    except Exception as e:
+        logger.error(f"HuggingFace summarization error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/huggingface/translate")
+async def huggingface_translation(
+    text: str,
+    target_language: str = "es",
+    model_name: str = "Helsinki-NLP/opus-mt-en-es"
+):
+    """Translate text using HuggingFace models"""
+    try:
+        result = await huggingface_integration.translate_text(
+            text=text,
+            target_language=target_language,
+            model_name=model_name
+        )
+        return {
+            "status": "success",
+            "translation": result.result,
+            "metadata": result.metadata,
+            "processing_time": result.processing_time
+        }
+    except Exception as e:
+        logger.error(f"HuggingFace translation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/huggingface/entities")
+async def huggingface_entity_extraction(
+    text: str,
+    model_name: str = "dbmdz/bert-large-cased-finetuned-conll03-english"
+):
+    """Extract named entities using HuggingFace models"""
+    try:
+        result = await huggingface_integration.extract_entities(
+            text=text,
+            model_name=model_name
+        )
+        
+        return {
+            "status": "success",
+            "entities": result.result,
+            "metadata": result.metadata,
+            "processing_time": result.processing_time
+        }
+    except Exception as e:
+        logger.error(f"HuggingFace entity extraction error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/huggingface/qa")
+async def huggingface_question_answering(
+    question: str,
+    context: str,
+    model_name: str = "distilbert-base-cased-distilled-squad"
+):
+    """Answer questions using HuggingFace models"""
+    try:
+        result = await huggingface_integration.answer_question(
+            question=question,
+            context=context,
+            model_name=model_name
+        )
+        
+        return {
+            "status": "success",
+            "answer": result.result,
+            "metadata": result.metadata,
+            "processing_time": result.processing_time
+        }
+    except Exception as e:
+        logger.error(f"HuggingFace question answering error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/huggingface/similarity")
+async def huggingface_text_similarity(
+    text1: str,
+    text2: str,
+    model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+):
+    """Calculate text similarity using HuggingFace models"""
+    try:
+        result = await huggingface_integration.calculate_similarity(
+            text1=text1,
+            text2=text2,
+            model_name=model_name
+        )
+        
+        return {
+            "status": "success",
+            "similarity": result.result,
+            "metadata": result.metadata,
+            "processing_time": result.processing_time
+        }
+    except Exception as e:
+        logger.error(f"HuggingFace similarity calculation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/huggingface/zero-shot")
+async def huggingface_zero_shot_classification(
+    text: str,
+    candidate_labels: List[str],
+    model_name: str = "facebook/bart-large-mnli"
+):
+    """Perform zero-shot classification using HuggingFace models"""
+    try:
+        result = await huggingface_integration.zero_shot_classification(
+            text=text,
+            candidate_labels=candidate_labels,
+            model_name=model_name
+        )
+        
+        return {
+            "status": "success",
+            "classification": result.result,
+            "metadata": result.metadata,
+            "processing_time": result.processing_time
+        }
+    except Exception as e:
+        logger.error(f"HuggingFace zero-shot classification error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/huggingface/models")
+async def huggingface_available_models():
+    """Get available HuggingFace models"""
+    try:
+        models = await huggingface_integration.get_available_models()
+        
+        return {
+            "status": "success",
+            "models": models,
+            "device": huggingface_integration.device,
+            "loaded_models": len(huggingface_integration.models),
+            "loaded_pipelines": len(huggingface_integration.pipelines)
+        }
+    except Exception as e:
+        logger.error(f"HuggingFace models error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/huggingface/model/{model_name}")
+async def huggingface_model_info(model_name: str):
+    """Get information about a specific HuggingFace model"""
+    try:
+        model_info = await huggingface_integration.get_model_info(model_name)
+        
+        return {
+            "status": "success",
+            "model_info": model_info
+        }
+    except Exception as e:
+        logger.error(f"HuggingFace model info error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

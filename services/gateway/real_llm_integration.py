@@ -635,7 +635,8 @@ class RealLLMProcessor:
                             timeout=OLLAMA_TIMEOUT
                         )
                         if response.status_code == 200:
-                            return response.json().get("response", "")
+                            response_text = response.json().get("response", "")
+                            return self._sanitize_response(response_text)
                 return None
             
             async with aiohttp.ClientSession() as session:
@@ -666,7 +667,9 @@ class RealLLMProcessor:
                             result = await response.json()
                             response_text = result.get("response", "")
                             if response_text:
-                                return response_text
+                                # Sanitize response to remove problematic characters
+                                sanitized = self._sanitize_response(response_text)
+                                return sanitized
                             else:
                                 print(f"Ollama empty response: {result}")
                                 return None
@@ -824,7 +827,7 @@ class RealLLMProcessor:
                 
                 # Text Generation models (GPT-2, DialoGPT)
                 if "generated_text" in first_result:
-                    return first_result["generated_text"]
+                    return self._sanitize_response(first_result["generated_text"])
                 
                 # Translation models
                 if "translation_text" in first_result:
@@ -854,7 +857,7 @@ class RealLLMProcessor:
             elif isinstance(result, dict):
                 # Direct dictionary responses
                 if "generated_text" in result:
-                    return result["generated_text"]
+                    return self._sanitize_response(result["generated_text"])
                 if "answer" in result:
                     return result["answer"]
                 if "summary_text" in result:
@@ -1012,6 +1015,38 @@ class RealLLMProcessor:
             pass
         return "research_query"
     
+    def _sanitize_response(self, response: str) -> str:
+        """Sanitize LLM response to remove problematic characters."""
+        if not response:
+            return response
+        
+        # Remove emoji and other problematic characters
+        import re
+        # Remove emoji characters
+        emoji_pattern = re.compile("["
+            u"\U0001F600-\U0001F64F"  # emoticons
+            u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+            u"\U0001F680-\U0001F6FF"  # transport & map symbols
+            u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+            u"\U00002702-\U000027B0"
+            u"\U000024C2-\U0001F251"
+            "]+", flags=re.UNICODE)
+        
+        sanitized = emoji_pattern.sub('', response)
+        
+        # Remove other problematic characters
+        sanitized = sanitized.replace('\x00', '')  # Null bytes
+        sanitized = sanitized.replace('\ufffd', '')  # Replacement character
+        
+        # Ensure it's valid UTF-8
+        try:
+            sanitized.encode('utf-8')
+        except UnicodeEncodeError:
+            # If still problematic, force encode/decode
+            sanitized = sanitized.encode('utf-8', errors='ignore').decode('utf-8')
+        
+        return sanitized.strip()
+    
     def _calculate_complexity(self, query: str) -> float:
         """Calculate query complexity score."""
         complexity_indicators = ["analyze", "compare", "synthesize", "evaluate", "comprehensive"]
@@ -1079,19 +1114,19 @@ class RealLLMProcessor:
             ])
             
             prompt = f"""
-Generate proper citations for the following content:
+                    Generate proper citations for the following content:
 
-Content: {content}
+                    Content: {content}
 
-Available Sources:
-{sources_text}
+                    Available Sources:
+                    {sources_text}
 
-Please provide:
-1. In-text citations in the content where appropriate
-2. A formatted bibliography/references section
-3. Citation style: APA format
+                    Please provide:
+                    1. In-text citations in the content where appropriate
+                    2. A formatted bibliography/references section
+                    3. Citation style: APA format
 
-Citations:"""
+                    Citations:"""
 
             llm_response = await self._call_optimal_llm(prompt, max_tokens=500, temperature=0.1)
             

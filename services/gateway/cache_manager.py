@@ -17,6 +17,7 @@ from fastapi import HTTPException
 import pickle
 import gzip
 from datetime import datetime, timedelta
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -387,4 +388,19 @@ class AdvancedCacheManager:
             logger.info("Cache manager closed")
 
 # Global cache instance
-cache_manager = AdvancedCacheManager()
+import os
+
+# Get Redis URL from environment or use None for in-memory only
+redis_url = os.getenv("REDIS_URL", None)
+if redis_url == "redis://localhost:6379" and not os.getenv("REDIS_ENABLED", "false").lower() == "true":
+    # If Redis URL is default but Redis is not explicitly enabled, use in-memory
+    redis_url = None
+
+cache_manager = AdvancedCacheManager(
+    redis_url=redis_url,
+    max_memory_size=int(os.getenv("MAX_CACHE_SIZE", "100")) * 1024 * 1024,  # Convert MB to bytes
+    compression_threshold=int(os.getenv("COMPRESSION_THRESHOLD", "1024")),
+    enable_compression=os.getenv("ENABLE_COMPRESSION", "true").lower() == "true",
+    cache_strategy=CacheStrategy.HYBRID,
+    enable_metrics=True
+)

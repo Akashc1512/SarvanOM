@@ -280,6 +280,7 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .parcel-cache/
+models_cache/
 
 # Documentation and guides (optional - uncomment if you don't want to track these)
 # *.md
