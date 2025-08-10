@@ -87,10 +87,27 @@ async def initialize_advanced_features():
     except Exception as e:
         logger.error(f"❌ Failed to initialize advanced features: {e}")
 
-# Initialize features on startup
-@app.on_event("startup")
-async def startup_event():
+# Initialize features on startup using modern lifespan
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
     await initialize_advanced_features()
+    yield
+    # Shutdown
+    await cache_manager.close()
+    await stream_manager.close()
+    await background_processor.close()
+    await prompt_optimizer.close()
+
+# Update FastAPI app with lifespan
+app = FastAPI(
+    title="Universal Knowledge Platform API Gateway",
+    description="Advanced API Gateway with caching, streaming, background processing, and prompt optimization",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 # Security configuration
 MAX_PAYLOAD_SIZE = 10 * 1024 * 1024  # 10MB
@@ -161,12 +178,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             return True
         return False
 
-# Initialize FastAPI app
-app = FastAPI(
-    title="Universal Knowledge Platform API Gateway",
-    description="API Gateway for routing requests to microservices",
-    version="1.0.0"
-)
+# App is already created above with lifespan
 
 # Setup FastAPI logging integration
 setup_fastapi_logging(app, service_name="sarvanom-gateway-service")
