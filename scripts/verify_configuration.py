@@ -15,6 +15,13 @@ Examples:
     python scripts/verify_configuration.py production
 """
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load .env file if present
+except ImportError:
+    pass  # dotenv not installed, continue without it
+
 import os
 import sys
 import asyncio

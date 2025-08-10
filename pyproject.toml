@@ -1,265 +1,141 @@
 [build-system]
-requires = ["setuptools>=69.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
-name = "universal-knowledge-hub"
-version = "0.1.0"
-description = "Universal Knowledge Platform with AI-powered search and synthesis"
-authors = [{name = "Universal Knowledge Hub Team"}]
+name = "sarvanom"
+version = "2.5.0"
+description = "SarvanOM - Universal Knowledge Hub with 2025 AI Technology"
 readme = "README.md"
-requires-python = ">=3.13.5"
+requires-python = ">=3.13"
+license = {text = "MIT"}
+keywords = ["ai", "knowledge", "search", "llm", "fastapi"]
+authors = [
+    {name = "SarvanOM Team"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
 dependencies = [
-    # Core FastAPI and web framework (Latest stable)
-    "fastapi>=0.116.1",
-    "uvicorn[standard]>=0.32.0",
-    "starlette>=0.38.0",
+    # Core framework - 2025 Latest
+    "fastapi>=0.116.0",
+    "uvicorn[standard]>=0.35.0",
+    "starlette>=0.47.0",
     "python-dotenv>=1.1.1",
     
-    # Data validation and settings (Latest)
-    "pydantic>=2.10.0",
-    "pydantic-settings>=2.8.0",
-    "pydantic_core>=2.28.0",
+    # Async HTTP and utilities
+    "httpx>=0.28.0",
+    "httpcore>=1.0.0",
+    "aiohttp>=3.12.0",
+    "tenacity>=9.0.0",
+    "anyio>=4.10.0",
+    "python-multipart>=0.0.20",
+    "async-timeout>=5.0.0",
     
-    # Security and authentication (Latest secure versions)
+    # AI, LLMs, and orchestration - 2025 Latest
+    "openai>=1.99.0",
+    "anthropic>=0.62.0",
+    "transformers>=4.50.0",
+    "huggingface-hub>=0.25.0",
+    "tqdm>=4.67.0",
+    
+    # Validation and config
+    "pydantic>=2.11.0",
+    "pydantic-settings>=2.10.0",
+    "typing-extensions>=4.14.0",
+    
+    # Database
+    "sqlalchemy>=2.0.0",
+    "asyncpg>=0.29.0",
+    
+    # Security
     "bcrypt>=4.3.0",
     "cryptography>=42.0.0",
     "PyJWT>=2.10.0",
-    "passlib[bcrypt]>=1.7.4",
-    "email-validator>=2.2.0",
     
-    # Logging and monitoring (Latest)
-    "structlog>=24.1.0",
-    "prometheus_client>=0.20.0",
+    # Search and retrieval
+    "meilisearch>=0.36.0",
+    "qdrant-client>=1.9.0",
     
-    # HTTP and async utilities (Latest)
-    "aiohttp>=3.10.0",
+    # Utils
+    "click>=8.2.0",
+    "certifi>=2025.8.0",
     "requests>=2.32.0",
-    "tenacity>=8.2.0",
-    "python-multipart>=0.0.20",
-    "httpx>=0.28.0",
-    "httpcore>=1.0.0",
-    
-    # Data processing (Latest)
-    "numpy>=2.0.0",
-    "spacy>=3.8.0",
-    
-    # Caching and storage (Latest)
-    "aiocache>=0.12.0",
-    "redis>=5.0.0",
-    
-    # Content sanitization (Latest)
-    "bleach>=6.2.0",
-    
-    # System monitoring (Latest)
-    "psutil>=6.0.0",
-    
-    # OpenTelemetry for distributed tracing (Latest)
-    "opentelemetry-api>=1.35.0",
-    "opentelemetry-sdk>=1.35.0",
-    "opentelemetry-instrumentation>=0.56b0",
-    "opentelemetry-instrumentation-fastapi>=0.56b0",
-    "opentelemetry-instrumentation-logging>=0.56b0",
-    "opentelemetry-instrumentation-asgi>=0.56b0",
-    "opentelemetry-semantic-conventions>=0.56b0",
-    "opentelemetry-util-http>=0.56b0",
-    
-    # Database and search (Latest)
-    "SQLAlchemy>=2.0.0",
-    "sqlalchemy-utils>=0.41.2",
-    "elasticsearch>=8.15.0",
-    
-    # AI and ML (Latest)
-    "openai>=1.50.0",
-    "anthropic>=0.25.0",
-    "pinecone-client>=3.0.0",
-    "langchain>=0.1.0",
-    "langgraph>=0.0.20",
-    "scikit-learn>=1.3.0",
-    "torch>=2.0.0",
-    "transformers>=4.30.0",
-    "joblib>=1.3.0",
-    "python-arango>=8.0.0",
-    
-    # Additional utilities (Latest)
-    "typing-extensions>=4.14.0",
-    "anyio>=4.0.0",
-    "sniffio>=1.3.0",
-    "certifi>=2025.7.0",
-    "idna>=3.10",
-    "h11>=0.16.0",
-    "click>=8.1.0",
-    "exceptiongroup>=1.3.0",
-    "annotated-types>=0.7.0",
+    "colorama>=0.4.6",
 ]
 
 [project.optional-dependencies]
 dev = [
-    # Testing (Latest)
     "pytest>=8.0.0",
-    "pytest-cov>=5.0.0",
     "pytest-asyncio>=0.24.0",
-    
-    # Code formatting and linting (Latest)
     "black>=24.0.0",
-    "flake8>=7.0.0",
-    "mypy>=1.10.0",
-    "mypy-extensions>=1.1.0",
-    "isort>=5.13.0",
-    "autopep8>=2.0.0",
-    "pre-commit>=3.0.0",
-    
-    # Development tools (Latest)
-    "ipython>=8.18.0",
-    "ipdb>=0.13.0",
-    
-    # Documentation (Latest)
-    "sphinx>=7.2.0",
-    "sphinx-rtd-theme>=2.0.0",
-    
-    # Type stubs (Latest)
-    "types-requests>=2.31.0",
-    "types-redis>=4.6.0",
-    "types-python-dateutil>=2.8.19",
+    "ruff>=0.7.0",
+    "mypy>=1.11.0",
 ]
 
-test = [
+[project.urls]
+Homepage = "https://github.com/sarvanom/sarvanom"
+Documentation = "https://sarvanom.readthedocs.io"
+Repository = "https://github.com/sarvanom/sarvanom.git"
+"Bug Tracker" = "https://github.com/sarvanom/sarvanom/issues"
+
+[tool.uv]
+dev-dependencies = [
     "pytest>=8.0.0",
-    "pytest-cov>=5.0.0",
     "pytest-asyncio>=0.24.0",
-    "pytest-mock>=3.12.0",
-    "pytest-xdist>=3.5.0",
-    "pytest-benchmark>=4.0.0",
-    "pytest-html>=4.0.0",
-    "pytest-sugar>=0.9.0",
-]
-
-security = [
-    "bandit>=1.8.0",
-    "pip-audit>=2.7.0",
-    "safety>=2.3.5",
-    "semgrep>=1.60.0",
-]
-
-production = [
-    "gunicorn>=21.2.0",
-    "uvloop>=0.19.0",
-    "orjson>=3.9.0",
-    "ujson>=5.9.0",
-    "msgpack>=1.0.0",
-    "cchardet>=2.1.7",
-    "aiodns>=3.1.0",
-    "brotli>=1.1.0",
-]
-
-[tool.setuptools]
-packages = [
-    "services",
-    "shared"
+    "black>=24.0.0",
+    "ruff>=0.7.0",
+    "mypy>=1.11.0",
 ]
 
 [tool.black]
-line-length = 88
+line-length = 120
 target-version = ['py313']
 include = '\.pyi?$'
-extend-exclude = '''
-/(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-)/
-'''
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = [
-    "--disable-warnings",
-    "--tb=short",
-    "--strict-markers",
-    "--strict-config",
-    "--cov=services",
-    "--cov=shared",
-    "--cov-report=html",
-    "--cov-report=term-missing"
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings  
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
 ]
-markers = [
-    "asyncio: mark test as async",
-    "slow: marks tests as slow",
-    "integration: marks tests as integration tests",
-    "unit: marks tests as unit tests",
-    "e2e: marks tests as end-to-end tests",
-    "performance: marks tests as performance tests",
-    "security: marks tests as security tests"
-]
-filterwarnings = [
-    "ignore::DeprecationWarning:fastapi.*",
-    "ignore::RuntimeWarning:agents.*",
-    "ignore::ResourceWarning"
-]
-
-[tool.coverage.run]
-source = ["services", "shared"]
-omit = [
-    "*/tests/*",
-    "*/test_*",
-    "*/__pycache__/*",
-    "*/venv/*",
-    "*/.venv/*",
-]
-
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "def __repr__",
-    "if self.debug:",
-    "if settings.DEBUG",
-    "raise AssertionError",
-    "raise NotImplementedError",
-    "if 0:",
-    "if __name__ == .__main__.:",
-    "class .*\\bProtocol\\):",
-    "@(abc\\.)?abstractmethod",
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
 ]
 
 [tool.mypy]
 python_version = "3.13"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
 check_untyped_defs = true
-disallow_untyped_decorators = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
 
-[[tool.mypy.overrides]]
-module = [
-    "elasticsearch.*",
-    "pinecone.*",
-    "anthropic.*",
-    "openai.*",
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    "tests",
 ]
-ignore_missing_imports = true
+asyncio_mode = "auto"
 
-[tool.bandit]
-exclude_dirs = ["tests", "venv", ".venv"]
-skips = ["B101", "B601"]
-
-[tool.isort]
-profile = "black"
-multi_line_output = 3
-line_length = 88
-known_first_party = ["services", "shared"] 
+[tool.hatch.build.targets.wheel]
+packages = ["services", "shared"]

@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  # PostgreSQL - Essential Database (Lightweight)
+  # PostgreSQL - 2025 Latest LTS (Lightweight)
   postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: sarvanom-postgres
     ports:
       - "5432:5432"
@@ -31,9 +31,9 @@ services:
       retries: 3
       start_period: 30s
 
-  # Qdrant - Essential Vector Database (Lightweight)
+  # Qdrant - 2025 Latest v1.12.0+ (Lightweight)
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.12.0
     container_name: sarvanom-qdrant
     ports:
       - "6333:6333"
@@ -57,9 +57,9 @@ services:
       retries: 3
       start_period: 30s
 
-  # Meilisearch - Essential Search Engine (Lightweight)
+  # Meilisearch - 2025 Latest v1.5.0 (Lightweight)
   meilisearch:
-    image: getmeili/meilisearch:latest
+    image: getmeili/meilisearch:v1.5.0
     container_name: sarvanom-meilisearch
     ports:
       - "7700:7700"
@@ -85,6 +85,86 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+
+  # Redis - 2025 Latest v7.2.0 (Optional Caching)
+  redis:
+    image: redis:7.2-alpine
+    container_name: sarvanom-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - sarvanom-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.15'
+        reservations:
+          memory: 64M
+          cpus: '0.05'
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ArangoDB - 2025 Latest v3.11.0 (Optional Graph Database)
+  arangodb:
+    image: arangodb:3.11.0
+    container_name: sarvanom-arangodb
+    ports:
+      - "8529:8529"
+    environment:
+      - ARANGO_ROOT_PASSWORD=password
+    volumes:
+      - ./data/arangodb:/var/lib/arangodb3
+    networks:
+      - sarvanom-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8529/_api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Ollama - 2025 Latest v2.0.0 (Local LLM Service)
+  ollama:
+    image: ollama/ollama:0.4.0
+    container_name: sarvanom-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./data/ollama:/root/.ollama
+    networks:
+      - sarvanom-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
+      interval: 60s
+      timeout: 20s
+      retries: 3
+      start_period: 120s
 
 networks:
   sarvanom-network:

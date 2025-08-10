@@ -4,7 +4,7 @@ Auth Request Models
 This module contains Pydantic models for authentication-related API requests.
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Dict, Any, Optional
 from datetime import datetime
 
@@ -16,7 +16,8 @@ class LoginRequest(BaseModel):
     password: str = Field(..., min_length=1, max_length=100, description="Password")
     remember_me: bool = Field(False, description="Remember login session")
 
-    @validator("username")
+    @field_validator("username")
+    @classmethod
     def validate_username(cls, v):
         """Validate username."""
         if not v.strip():
@@ -32,7 +33,8 @@ class RegisterRequest(BaseModel):
     password: str = Field(..., min_length=8, max_length=100, description="Password")
     confirm_password: str = Field(..., description="Password confirmation")
 
-    @validator("username")
+    @field_validator("username")
+    @classmethod
     def validate_username(cls, v):
         """Validate username."""
         if not v.strip():
@@ -41,17 +43,19 @@ class RegisterRequest(BaseModel):
             raise ValueError("Username must be at least 3 characters")
         return v.strip()
 
-    @validator("email")
+    @field_validator("email")
+    @classmethod
     def validate_email(cls, v):
         """Validate email."""
         if "@" not in v:
             raise ValueError("Invalid email format")
         return v.lower().strip()
 
-    @validator("confirm_password")
-    def validate_password_match(cls, v, values):
+    @field_validator("confirm_password")
+    @classmethod
+    def validate_password_match(cls, v, info):
         """Validate password confirmation."""
-        if "password" in values and v != values["password"]:
+        if "password" in info.data and v != info.data["password"]:
             raise ValueError("Passwords do not match")
         return v
 
@@ -61,7 +65,8 @@ class PasswordResetRequest(BaseModel):
 
     email: str = Field(..., description="Email address")
 
-    @validator("email")
+    @field_validator("email")
+    @classmethod
     def validate_email(cls, v):
         """Validate email."""
         if "@" not in v:
@@ -78,10 +83,11 @@ class PasswordChangeRequest(BaseModel):
     )
     confirm_new_password: str = Field(..., description="New password confirmation")
 
-    @validator("confirm_new_password")
-    def validate_password_match(cls, v, values):
+    @field_validator("confirm_new_password")
+    @classmethod
+    def validate_password_match(cls, v, info):
         """Validate password confirmation."""
-        if "new_password" in values and v != values["new_password"]:
+        if "new_password" in info.data and v != info.data["new_password"]:
             raise ValueError("Passwords do not match")
         return v
 

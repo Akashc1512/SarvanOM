@@ -6,6 +6,7 @@ and placeholder routes for each microservice.
 """
 
 import logging
+import time
 from shared.core.unified_logging import get_logger
 from datetime import datetime
 from typing import Dict, Any, Optional
@@ -50,6 +51,50 @@ except ImportError:
 
 
 logger = get_logger(__name__)
+
+# Analytics Router
+analytics_router = APIRouter()
+
+@analytics_router.get("/metrics")
+async def get_analytics_metrics():
+    """Get system performance and analytics metrics."""
+    try:
+        from .analytics_collector import analytics
+        
+        performance_metrics = analytics.get_performance_metrics()
+        agent_metrics = analytics.get_agent_metrics()
+        system_health = analytics.get_system_health()
+        
+        return {
+            "status": "success",
+            "timestamp": datetime.now().isoformat(),
+            "performance": performance_metrics,
+            "agents": agent_metrics,
+            "health": system_health,
+            "service": "analytics"
+        }
+    except Exception as e:
+        logger.error(f"Analytics metrics error: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+            "service": "analytics"
+        }
+
+@analytics_router.get("/health-detailed")
+async def get_system_health():
+    """Get detailed system health summary."""
+    try:
+        from .analytics_collector import analytics
+        return analytics.get_system_health()
+    except Exception as e:
+        return {
+            "status": "error",
+            "health_score": 0.0,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 
 # Response Models
@@ -138,20 +183,89 @@ search_router = APIRouter()
 
 
 @search_router.post("/", response_model=ServiceResponse)
+@search_router.post("", response_model=ServiceResponse)
 async def search(request: SearchRequest):
-    """Search endpoint - routes to retrieval service."""
-    logger.info(f"🔍 Search request: {request.query}")
-    return ServiceResponse(
-        status="success",
-        message="Search request received - will route to retrieval service",
-        service="search",
-        timestamp=datetime.now().isoformat(),
-        data={
-            "query": request.query,
-            "user_id": request.user_id,
-            "max_results": request.max_results,
-        },
-    )
+    """Search endpoint with real AI-powered processing and full orchestration."""
+    logger.info(f"🔍 Unified AI Search request: {request.query}")
+    
+    try:
+        # Import consolidated components
+        from .agent_orchestrator import agent_orchestrator, QueryContext
+        from .analytics_collector import analytics
+        from .real_llm_integration import QueryComplexity, real_llm_processor
+        
+        # Create query context
+        context = QueryContext(
+            trace_id=f"search_{int(time.time() * 1000)}",
+            query=request.query,
+            user_id=request.user_id,
+            complexity=real_llm_processor.classify_query_complexity(request.query),
+            timeout=30.0
+        )
+        
+        # Process with agent orchestrator
+        start_time = time.time()
+        orchestration_result = await agent_orchestrator.process_query(context)
+        processing_time = int((time.time() - start_time) * 1000)
+        
+        # Track analytics
+        analytics.track_request(
+            query=request.query,
+            user_id=request.user_id,
+            complexity=context.complexity.value,
+            provider=orchestration_result.get("metadata", {}).get("primary_provider", "orchestrated"),
+            response_time_ms=processing_time,
+            success=orchestration_result.get("success", False)
+        )
+        
+        return ServiceResponse(
+            status="success" if orchestration_result.get("success") else "partial_success",
+            message="AI-powered search with multi-agent orchestration completed",
+            service="search",
+            timestamp=datetime.now().isoformat(),
+            data={
+                **orchestration_result,
+                "request_metadata": {
+                    "max_results": request.max_results,
+                    "orchestration_used": True,
+                    "processing_time_ms": processing_time
+                }
+            },
+        )
+        
+    except Exception as e:
+        logger.error(f"Search processing error: {e}")
+        
+        # Track error in analytics
+        try:
+            from .analytics_collector import analytics
+            analytics.track_request(
+                query=request.query,
+                user_id=request.user_id,
+                complexity="unknown",
+                provider="error",
+                response_time_ms=100,
+                success=False,
+                error_type="search_orchestration_error"
+            )
+        except:
+            pass
+        
+        # Fallback to basic response
+        return ServiceResponse(
+            status="error",
+            message=f"Search orchestration failed, using fallback: {str(e)[:100]}",
+            service="search",
+            timestamp=datetime.now().isoformat(),
+            data={
+                "query": request.query,
+                "user_id": request.user_id,
+                "max_results": request.max_results,
+                "processing_time_ms": 100,
+                "error": "Orchestration unavailable - using fallback",
+                "fallback_active": True
+            },
+        )
 
 
 @search_router.get("/hybrid")

@@ -50,10 +50,10 @@ from enum import Enum
 from abc import ABC, abstractmethod
 
 import structlog
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func
-import aioredis
+# import aioredis  # Temporarily disabled due to Python 3.13 compatibility issues
 from prometheus_client import Counter, Histogram, Gauge
 
 # Type definitions
@@ -152,7 +152,8 @@ class FeedbackRequest(BaseModel):
         default_factory=dict, description="Additional metadata"
     )
 
-    @validator("details")
+    @field_validator("details")
+    @classmethod
     def validate_details(cls, v: Dict[str, Any]) -> Dict[str, Any]:
         """Validate feedback details."""
         if not v:
@@ -174,7 +175,8 @@ class FeedbackRequest(BaseModel):
 
         return v
 
-    @validator("metadata")
+    @field_validator("metadata")
+    @classmethod
     def validate_metadata(cls, v: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         """Validate metadata."""
         if v is None:
@@ -207,10 +209,9 @@ class FeedbackModel(BaseModel):
     sentiment_score: Optional[float] = None
     tags: List[str] = field(default_factory=list)
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        # json_encoders removed for Pydantic V2 compatibility
+    )
 
 
 class FeedbackRepository(ABC):
@@ -373,7 +374,7 @@ class FeedbackStorage:
     def __init__(
         self,
         repository: Optional[FeedbackRepository] = None,
-        redis_client: Optional[aioredis.Redis] = None,
+        redis_client: Optional[Any] = None,  # Temporarily disabled aioredis.Redis due to Python 3.13 compatibility issues
         config: Optional[Dict[str, Any]] = None,
     ):
         """Initialize feedback storage."""

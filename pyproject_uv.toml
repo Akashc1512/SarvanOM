@@ -1,0 +1,141 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sarvanom"
+version = "2.5.0"
+description = "SarvanOM - Universal Knowledge Hub with 2025 AI Technology"
+readme = "README.md"
+requires-python = ">=3.13"
+license = {text = "MIT"}
+keywords = ["ai", "knowledge", "search", "llm", "fastapi"]
+authors = [
+    {name = "SarvanOM Team"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    # Core framework - 2025 Latest
+    "fastapi>=0.116.0",
+    "uvicorn[standard]>=0.35.0",
+    "starlette>=0.47.0",
+    "python-dotenv>=1.1.1",
+    
+    # Async HTTP and utilities
+    "httpx>=0.28.0",
+    "httpcore>=1.0.0",
+    "aiohttp>=3.12.0",
+    "tenacity>=9.0.0",
+    "anyio>=4.10.0",
+    "python-multipart>=0.0.20",
+    "async-timeout>=5.0.0",
+    
+    # AI, LLMs, and orchestration - 2025 Latest
+    "openai>=1.99.0",
+    "anthropic>=0.62.0",
+    "transformers>=4.50.0",
+    "huggingface-hub>=0.25.0",
+    "tqdm>=4.67.0",
+    
+    # Validation and config
+    "pydantic>=2.11.0",
+    "pydantic-settings>=2.10.0",
+    "typing-extensions>=4.14.0",
+    
+    # Database
+    "sqlalchemy>=2.0.0",
+    "asyncpg>=0.29.0",
+    
+    # Security
+    "bcrypt>=4.3.0",
+    "cryptography>=42.0.0",
+    "PyJWT>=2.10.0",
+    
+    # Search and retrieval
+    "meilisearch>=1.5.0",
+    "qdrant-client>=1.12.0",
+    
+    # Utils
+    "click>=8.2.0",
+    "certifi>=2025.8.0",
+    "requests>=2.32.0",
+    "colorama>=0.4.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "black>=24.0.0",
+    "ruff>=0.7.0",
+    "mypy>=1.11.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/sarvanom/sarvanom"
+Documentation = "https://sarvanom.readthedocs.io"
+Repository = "https://github.com/sarvanom/sarvanom.git"
+"Bug Tracker" = "https://github.com/sarvanom/sarvanom/issues"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "black>=24.0.0",
+    "ruff>=0.7.0",
+    "mypy>=1.11.0",
+]
+
+[tool.black]
+line-length = 120
+target-version = ['py313']
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings  
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.mypy]
+python_version = "3.13"
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    "tests",
+]
+asyncio_mode = "auto"
+
+[tool.hatch.build.targets.wheel]
+packages = ["services", "shared"]

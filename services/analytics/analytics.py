@@ -3,6 +3,13 @@ Analytics System for Universal Knowledge Platform
 Provides query tracking and analytics with privacy protection.
 """
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load .env file if present
+except ImportError:
+    pass  # dotenv not installed, continue without it
+
 import asyncio
 import logging
 import time

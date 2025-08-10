@@ -37,8 +37,8 @@ import warnings
 
 from pydantic import (
     Field,
-    validator,
-    root_validator,
+    field_validator,
+    model_validator,
     SecretStr,
     HttpUrl,
     PostgresDsn,
@@ -47,6 +47,8 @@ from pydantic import (
     IPvAnyAddress,
     conint,
     confloat,
+    ValidationInfo,
+    ConfigDict,
 )
 from pydantic_settings import BaseSettings
 from pydantic.types import constr
@@ -109,20 +111,13 @@ class SecureSettings(BaseSettings):
     - Type conversion and validation
     """
 
-    class Config:
-        """Pydantic configuration."""
-
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-
-        # Custom JSON encoders for security
-        json_encoders = {
-            SecretStr: lambda v: "***REDACTED***" if v else None,
-            HttpUrl: str,
-            PostgresDsn: lambda v: "***REDACTED***" if v else None,
-            RedisDsn: lambda v: "***REDACTED***" if v else None,
-        }
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        # Custom JSON encoders for security - removed for Pydantic V2 compatibility
+        # Use model_serializer instead
+    )
 
     def dict(self, **kwargs) -> Dict[str, Any]:
         """Override dict to mask secrets."""
@@ -143,6 +138,11 @@ class SecureSettings(BaseSettings):
             else:
                 masked[key] = value
         return masked
+
+    def model_dump(self, **kwargs) -> Dict[str, Any]:
+        """Override model_dump to mask secrets."""
+        d = super().model_dump(**kwargs)
+        return self._mask_secrets(d)
 
 
 class APISettings(SecureSettings):
@@ -172,7 +172,8 @@ class APISettings(SecureSettings):
     )
     rate_limit_burst: conint(ge=1) = Field(default=10, description="Burst allowance")
 
-    @validator("cors_origins", pre=True)
+    @field_validator("cors_origins", mode="before")
+    @classmethod
     def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
         """Parse CORS origins from string or list."""
         if isinstance(v, str):
@@ -216,20 +217,21 @@ class DatabaseSettings(SecureSettings):
         default=None, description="PostgreSQL password"
     )
 
-    @validator("database_url", pre=True)
+    @field_validator("database_url", mode="before")
+    @classmethod
     def build_database_url(
-        cls, v: Optional[str], values: Dict[str, Any]
+        cls, v: Optional[str], info: ValidationInfo
     ) -> Optional[str]:
         """Build database URL from components if not provided."""
         if v:
             return v
 
         # Build from components
-        user = values.get("postgres_user", "postgres")
-        password = values.get("postgres_password")
-        host = values.get("postgres_host", "localhost")
-        port = values.get("postgres_port", "5432")
-        name = values.get("postgres_db", "sarvanom")
+        user = info.data.get("postgres_user", "postgres")
+        password = info.data.get("postgres_password")
+        host = info.data.get("postgres_host", "localhost")
+        port = info.data.get("postgres_port", "5432")
+        name = info.data.get("postgres_db", "sarvanom")
 
         if user and password:
             return f"postgresql://{user}:{password}@{host}:{port}/{name}"
@@ -313,7 +315,8 @@ class SecuritySettings(SecureSettings):
         default=5, description="Max concurrent sessions"
     )
 
-    @validator("jwt_secret_key")
+    @field_validator("jwt_secret_key")
+    @classmethod
     def validate_jwt_secret(cls, v: SecretStr) -> SecretStr:
         """Ensure JWT secret is strong enough."""
         secret = v.get_secret_value()
@@ -416,7 +419,8 @@ class AISettings(SecureSettings):
         default=384, description="Embedding dimension"
     )
 
-    @validator("vector_db_provider")
+    @field_validator("vector_db_provider")
+    @classmethod
     def validate_vector_provider(cls, v: str) -> str:
         """Validate vector DB provider."""
         valid_providers = {"pinecone", "weaviate", "milvus", "qdrant", "meilisearch"}
@@ -544,7 +548,8 @@ class MonitoringSettings(SecureSettings):
     log_format: str = Field(default="json", description="Log format (json/text)")
     log_file: Optional[Path] = Field(default=None, description="Log file path")
 
-    @validator("log_level", pre=True)
+    @field_validator("log_level", mode="before")
+    @classmethod
     def validate_log_level(cls, v: Union[str, LogLevel]) -> LogLevel:
         """Validate and convert log level from string."""
         if isinstance(v, str):
@@ -850,7 +855,8 @@ class Settings(
         default="redis://redis:6379/1", description="Test Redis URL"
     )
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def validate_environment(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         """Validate environment-specific settings."""
         env = values.get("environment", Environment.DEVELOPMENT)
@@ -894,7 +900,8 @@ class Settings(
 
         return values
 
-    @validator("features", pre=True)
+    @field_validator("features", mode="before")
+    @classmethod
     def parse_features(cls, v: Union[str, Dict[str, bool]]) -> Dict[str, bool]:
         """Parse feature flags from string or dict."""
         if isinstance(v, str):
@@ -964,17 +971,14 @@ class Settings(
 
         return warnings
 
-    class Config(SecureSettings.Config):
-        """Extended configuration."""
-
+    model_config = ConfigDict(
         # Environment variable prefix
-        env_prefix = "UKP_"
-
+        env_prefix="UKP_",
         # Allow extra fields for forward compatibility
-        extra = "ignore"
-
+        extra="ignore",
         # Validate on assignment
-        validate_assignment = True
+        validate_assignment=True,
+    )
 
 
 # Global settings instance

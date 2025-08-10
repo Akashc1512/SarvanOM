@@ -34,7 +34,7 @@ from typing import Any, Dict, List, Optional, Union, Tuple
 from dataclasses import dataclass
 from enum import Enum
 import structlog
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 import bleach
 from markupsafe import Markup
 

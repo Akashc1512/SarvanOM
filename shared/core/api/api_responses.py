@@ -20,7 +20,7 @@ Version:
 from typing import Any, Dict, List, Optional, Union, Generic, TypeVar
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 import uuid
 
 # Type variables for generic responses
@@ -95,7 +95,8 @@ class ErrorResponse(BaseAPIResponse):
 
     error: Dict[str, Any] = Field(..., description="Error details")
 
-    @validator("error")
+    @field_validator("error")
+    @classmethod
     def validate_error(cls, v):
         """Ensure error object has required fields."""
         if not isinstance(v, dict):

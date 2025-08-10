@@ -4,7 +4,7 @@ Query Request Models
 This module contains Pydantic models for query-related API requests.
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
@@ -24,7 +24,8 @@ class QueryRequest(BaseModel):
     )
     cache_enabled: bool = Field(True, description="Enable response caching")
 
-    @validator("query")
+    @field_validator("query")
+    @classmethod
     def validate_query(cls, v):
         """Validate query text."""
         if not v.strip():
@@ -52,7 +53,8 @@ class ComprehensiveQueryRequest(BaseModel):
         0.8, ge=0.0, le=1.0, description="Confidence threshold"
     )
 
-    @validator("query")
+    @field_validator("query")
+    @classmethod
     def validate_query(cls, v):
         """Validate query text."""
         if not v.strip():
@@ -74,7 +76,8 @@ class QueryUpdateRequest(BaseModel):
     )
     cache_enabled: Optional[bool] = Field(None, description="Updated cache setting")
 
-    @validator("query")
+    @field_validator("query")
+    @classmethod
     def validate_query(cls, v):
         """Validate query text if provided."""
         if v is not None and not v.strip():

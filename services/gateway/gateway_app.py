@@ -5,6 +5,13 @@ This module provides the main FastAPI application that serves as the API gateway
 for routing requests to various microservices.
 """
 
+# Load environment variables from .env file first
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load .env file if present
+except ImportError:
+    pass  # dotenv not installed, continue without it
+
 import logging
 from typing import Dict, Any
 

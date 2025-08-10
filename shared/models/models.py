@@ -30,6 +30,13 @@ Version:
     2.0.0 (2024-12-28)
 """
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load .env file if present
+except ImportError:
+    pass  # dotenv not installed, continue without it
+
 import uuid
 import enum
 from datetime import datetime, timezone, timedelta

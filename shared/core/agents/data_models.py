@@ -3,7 +3,7 @@ Standardized Data Models for Multi-Agent Knowledge Platform
 This module defines consistent data structures for inter-agent communication.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Any, Optional, Union
 from enum import Enum
 from dataclasses import dataclass
@@ -13,11 +13,10 @@ from datetime import datetime
 class AgentDataModel(BaseModel):
     """Base model for agent data structures with common validation."""
 
-    class Config:
-        """Pydantic configuration for data models."""
-
-        extra = "forbid"  # Prevent additional fields
-        validate_assignment = True  # Validate on assignment
+    model_config = ConfigDict(
+        extra="forbid",  # Prevent additional fields
+        validate_assignment=True,  # Validate on assignment
+    )
 
 
 class DocumentModel(AgentDataModel):

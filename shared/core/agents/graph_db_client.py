@@ -66,10 +66,10 @@ class GraphDBClient:
         # ArangoDB connection configuration
         from shared.core.config.central_config import get_arangodb_url
 
-        self.arango_url = os.getenv("ARANGO_URL", get_arangodb_url())
-        self.arango_username = os.getenv("ARANGO_USERNAME", "root")
-        self.arango_password = os.getenv("ARANGO_PASSWORD", "")
-        self.arango_database = os.getenv("ARANGO_DATABASE", "knowledge_graph")
+        self.arango_url = os.getenv("ARANGODB_URL", get_arangodb_url())
+        self.arango_username = os.getenv("ARANGODB_USERNAME", "root")
+        self.arango_password = os.getenv("ARANGODB_PASSWORD", "")
+        self.arango_database = os.getenv("ARANGODB_DATABASE", "knowledge_graph")
 
         # ArangoDB client
         self.client: Optional[ArangoClient] = None

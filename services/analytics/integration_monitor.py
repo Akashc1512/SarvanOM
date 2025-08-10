@@ -1,3 +1,10 @@
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load .env file if present
+except ImportError:
+    pass  # dotenv not installed, continue without it
+
 # Try to import settings, but handle gracefully if not available
 try:
     from shared.core.api.config import get_settings
@@ -61,10 +68,10 @@ class IntegrationMonitor:
                 "type": "vector_db",
                 "config_keys": ["VECTOR_DB_HOST", "PINECONE_API_KEY"],
             },
-            "elasticsearch": {
-                "enabled": bool(os.getenv("ELASTICSEARCH_URL")),
+            "meilisearch": {
+                "enabled": bool(os.getenv("MEILISEARCH_URL")),
                 "type": "search",
-                "config_keys": ["ELASTICSEARCH_URL"],
+                "config_keys": ["MEILISEARCH_URL", "MEILI_MASTER_KEY"],
             },
             "knowledge_graph": {
                 "enabled": bool(settings.sparql_endpoint),
@@ -113,8 +120,8 @@ class IntegrationMonitor:
         try:
             if integration_name == "vector_database":
                 status = await self._check_vector_db()
-            elif integration_name == "elasticsearch":
-                status = await self._check_elasticsearch()
+            elif integration_name == "meilisearch":
+                status = await self._check_meilisearch()
             elif integration_name == "knowledge_graph":
                 status = await self._check_knowledge_graph()
             elif integration_name == "llm_api":
@@ -187,28 +194,34 @@ class IntegrationMonitor:
             logger.error(f"Vector DB check failed: {e}")
             return "unhealthy"
 
-    async def _check_elasticsearch(self) -> str:
-        """Check Elasticsearch connectivity."""
+    async def _check_meilisearch(self) -> str:
+        """Check Meilisearch connectivity."""
         try:
-            if not os.getenv("ELASTICSEARCH_URL"):
+            if not os.getenv("MEILISEARCH_URL"):
                 return "not_configured"
 
-            from elasticsearch import AsyncElasticsearch
+            import aiohttp
 
-            es_url = os.getenv("ELASTICSEARCH_URL")
-            es = AsyncElasticsearch([es_url])
+            meili_url = os.getenv("MEILISEARCH_URL")
+            meili_key = os.getenv("MEILI_MASTER_KEY")
+            
+            headers = {}
+            if meili_key:
+                headers["Authorization"] = f"Bearer {meili_key}"
 
-            # Test connection
-            info = await es.info()
-            if info:
-                await es.close()
-                return "healthy"
-            else:
-                await es.close()
-                return "unhealthy"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{meili_url}/health", headers=headers) as response:
+                    if response.status == 200:
+                        health_data = await response.json()
+                        if health_data.get("status") == "available":
+                            return "healthy"
+                        else:
+                            return "degraded"
+                    else:
+                        return "unhealthy"
 
         except Exception as e:
-            logger.error(f"Elasticsearch check failed: {e}")
+            logger.error(f"Meilisearch check failed: {e}")
             return "unhealthy"
 
     async def _check_knowledge_graph(self) -> str:
@@ -276,7 +289,7 @@ class IntegrationMonitor:
             import aioredis
 
             from shared.core.config.central_config import get_redis_url
-    redis_url = settings.redis_url or get_redis_url()
+            redis_url = settings.redis_url or get_redis_url()
 
             # Test Redis connection
             redis = aioredis.from_url(redis_url)

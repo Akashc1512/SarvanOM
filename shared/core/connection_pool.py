@@ -1,3 +1,10 @@
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load .env file if present
+except ImportError:
+    pass  # dotenv not installed, continue without it
+
 from shared.core.api.config import get_settings
 
 settings = get_settings()
@@ -21,7 +28,7 @@ import os
 import time
 from typing import Optional, Dict, Any, List
 
-from elasticsearch import AsyncElasticsearch
+import aiohttp
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -42,7 +49,8 @@ from shared.core.config.central_config import (
 )
 
 VECTOR_DB_URL = os.getenv("VECTOR_DB_URL", get_vector_db_url())
-ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
+MEILISEARCH_URL = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
+MEILI_MASTER_KEY = os.getenv("MEILI_MASTER_KEY")
 REDIS_URL = settings.redis_url or get_redis_url()
 SPARQL_ENDPOINT = os.getenv(
     "SPARQL_ENDPOINT", "http://localhost:7200/repositories/knowledge"
@@ -166,13 +174,13 @@ class ConnectionPoolManager:
     def __init__(self):
         self._http_session: Optional[aiohttp.ClientSession] = None
 
-        self._elasticsearch_client: Optional[AsyncElasticsearch] = None
+        self._meilisearch_session: Optional[aiohttp.ClientSession] = None
         self._initialized = False
         self._lock = asyncio.Lock()
 
         # Circuit breakers for each service
         self._circuit_breakers = {
-            "elasticsearch": CircuitBreaker("elasticsearch"),
+            "meilisearch": CircuitBreaker("meilisearch"),
             "vector_db": CircuitBreaker("vector_db"),
             "sparql": CircuitBreaker("sparql"),
             "http": CircuitBreaker("http"),
@@ -180,7 +188,7 @@ class ConnectionPoolManager:
 
         # Metrics for each service
         self._metrics = {
-            "elasticsearch": PoolMetrics("elasticsearch"),
+            "meilisearch": PoolMetrics("meilisearch"),
             "vector_db": PoolMetrics("vector_db"),
             "sparql": PoolMetrics("sparql"),
             "http": PoolMetrics("http"),
@@ -213,36 +221,45 @@ class ConnectionPoolManager:
                 headers={"User-Agent": "UniversalKnowledgePlatform/1.0"},
             )
 
-            # Initialize Elasticsearch client with connection pooling
+            # Initialize Meilisearch session
             try:
-                if not self._circuit_breakers["elasticsearch"].can_execute():
+                if not self._circuit_breakers["meilisearch"].can_execute():
                     logger.warning(
-                        "Elasticsearch circuit breaker is OPEN, skipping initialization"
+                        "Meilisearch circuit breaker is OPEN, skipping initialization"
                     )
-                    self._elasticsearch_client = None
+                    self._meilisearch_session = None
                 else:
                     start_time = time.time()
-                    self._elasticsearch_client = AsyncElasticsearch(
-                        [ELASTICSEARCH_URL],
-                        retry_on_timeout=True,
-                        max_retries=3,
+                    headers = {"User-Agent": "UniversalKnowledgePlatform/1.0"}
+                    if MEILI_MASTER_KEY:
+                        headers["Authorization"] = f"Bearer {MEILI_MASTER_KEY}"
+                    
+                    self._meilisearch_session = aiohttp.ClientSession(
+                        timeout=timeout,
+                        headers=headers
                     )
-                    await self._elasticsearch_client.ping()
-                    response_time = time.time() - start_time
-
-                    self._circuit_breakers["elasticsearch"].record_success()
-                    self._metrics["elasticsearch"].record_request(True, response_time)
-                    logger.info(
-                        f"Elasticsearch connection pool initialized (response time: {response_time:.3f}s)"
-                    )
+                    
+                    # Test connection
+                    async with self._meilisearch_session.get(f"{MEILISEARCH_URL}/health") as response:
+                        if response.status == 200:
+                            response_time = time.time() - start_time
+                            self._circuit_breakers["meilisearch"].record_success()
+                            self._metrics["meilisearch"].record_request(True, response_time)
+                            logger.info(
+                                f"Meilisearch connection pool initialized (response time: {response_time:.3f}s)"
+                            )
+                        else:
+                            raise Exception(f"Health check failed with status {response.status}")
             except Exception as e:
                 response_time = (
                     time.time() - start_time if "start_time" in locals() else 0.0
                 )
-                self._circuit_breakers["elasticsearch"].record_failure()
-                self._metrics["elasticsearch"].record_request(False, response_time)
-                logger.warning(f"Failed to initialize Elasticsearch pool: {e}")
-                self._elasticsearch_client = None
+                self._circuit_breakers["meilisearch"].record_failure()
+                self._metrics["meilisearch"].record_request(False, response_time)
+                logger.warning(f"Failed to initialize Meilisearch pool: {e}")
+                if self._meilisearch_session:
+                    await self._meilisearch_session.close()
+                self._meilisearch_session = None
 
             self._initialized = True
             logger.info("All connection pools initialized successfully")
@@ -270,9 +287,9 @@ class ConnectionPoolManager:
                 except AttributeError:
                     pass  # Ignore if method doesn't exist
 
-            # Close Elasticsearch client
-            if self._elasticsearch_client:
-                await self._elasticsearch_client.close()
+            # Close Meilisearch session
+            if self._meilisearch_session:
+                await self._meilisearch_session.close()
 
             self._initialized = False
             logger.info("All connection pools shut down successfully")
@@ -289,15 +306,15 @@ class ConnectionPoolManager:
         yield self._http_session
 
     @asynccontextmanager
-    async def get_elasticsearch_client(self):
-        """Get Elasticsearch client from pool."""
+    async def get_meilisearch_session(self):
+        """Get Meilisearch session from pool."""
         if not self._initialized:
             await self.initialize()
 
-        if not self._elasticsearch_client:
-            raise RuntimeError("Elasticsearch client not initialized")
+        if not self._meilisearch_session:
+            raise RuntimeError("Meilisearch session not initialized")
 
-        yield self._elasticsearch_client
+        yield self._meilisearch_session
 
     async def make_http_request(
         self, method: str, url: str, **kwargs
@@ -366,7 +383,7 @@ class ConnectionPoolManager:
         stats = {
             "initialized": self._initialized,
             "http_session": self._http_session is not None,
-            "elasticsearch_client": self._elasticsearch_client is not None,
+            "meilisearch_session": self._meilisearch_session is not None,
             "circuit_breakers": {
                 service: {
                     "state": cb.get_state(),
@@ -414,10 +431,10 @@ class ConnectionPoolManager:
                 "initialized": True,
             }
 
-        if self._elasticsearch_client:
+        if self._meilisearch_session:
             if "pools" not in stats:
                 stats["pools"] = {}
-            stats["pools"]["elasticsearch"] = {
+            stats["pools"]["meilisearch"] = {
                 "max_connections": POOL_SIZE,
                 "initialized": True,
             }
@@ -461,8 +478,8 @@ async def make_pooled_request(
     return await manager.make_http_request(method, url, **kwargs)
 
 
-async def get_elasticsearch_client():
-    """Get Elasticsearch client from pool."""
+async def get_meilisearch_session():
+    """Get Meilisearch session from pool."""
     manager = await get_pool_manager()
-    async with manager.get_elasticsearch_client() as client:
-        yield client
+    async with manager.get_meilisearch_session() as session:
+        yield session

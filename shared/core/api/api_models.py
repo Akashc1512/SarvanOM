@@ -20,7 +20,7 @@ Version:
 
 from datetime import datetime
 from typing import Dict, Any, List, Optional, Union
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
 
@@ -283,7 +283,8 @@ class QueryRequestValidator(BaseModel):
     source: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
-    @validator("query")
+    @field_validator("query")
+    @classmethod
     def validate_query(cls, v):
         if not v.strip():
             raise ValueError("Query cannot be empty")
@@ -299,7 +300,8 @@ class FeedbackRequestValidator(BaseModel):
     category: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
-    @validator("rating")
+    @field_validator("rating")
+    @classmethod
     def validate_rating(cls, v):
         if v < 1 or v > 5:
             raise ValueError("Rating must be between 1 and 5")

@@ -7,7 +7,7 @@ deployment with proper validation, defaults, and security considerations.
 
 import os
 from typing import Dict, Any, Optional
-from pydantic import BaseSettings, Field, validator
+from pydantic import BaseSettings, Field, field_validator, ConfigDict
 from pathlib import Path
 
 
@@ -117,28 +117,32 @@ class ProductionSettings(BaseSettings):
         default=30, description="Backup retention in days"
     )
 
-    @validator("SECRET_KEY")
+    @field_validator("SECRET_KEY")
+    @classmethod
     def validate_secret_key(cls, v):
         """Validate secret key length."""
         if len(v) < 32:
             raise ValueError("SECRET_KEY must be at least 32 characters long")
         return v
 
-    @validator("DATABASE_URL")
+    @field_validator("DATABASE_URL")
+    @classmethod
     def validate_database_url(cls, v):
         """Validate database URL format."""
         if not v.startswith(("postgresql://", "mysql://", "sqlite://")):
             raise ValueError("DATABASE_URL must be a valid database URL")
         return v
 
-    @validator("REDIS_URL")
+    @field_validator("REDIS_URL")
+    @classmethod
     def validate_redis_url(cls, v):
         """Validate Redis URL format."""
         if not v.startswith("redis://"):
             raise ValueError("REDIS_URL must be a valid Redis URL")
         return v
 
-    @validator("LOG_LEVEL")
+    @field_validator("LOG_LEVEL")
+    @classmethod
     def validate_log_level(cls, v):
         """Validate log level."""
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -146,19 +150,19 @@ class ProductionSettings(BaseSettings):
             raise ValueError(f"LOG_LEVEL must be one of {valid_levels}")
         return v.upper()
 
-    @validator("CORS_ORIGINS")
+    @field_validator("CORS_ORIGINS")
+    @classmethod
     def validate_cors_origins(cls, v):
         """Validate CORS origins."""
         if not isinstance(v, list):
             raise ValueError("CORS_ORIGINS must be a list")
         return v
 
-    class Config:
-        """Pydantic configuration."""
-
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+    )
 
 
 def get_settings() -> ProductionSettings:

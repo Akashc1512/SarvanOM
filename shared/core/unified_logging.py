@@ -23,6 +23,13 @@ Authors: Universal Knowledge Platform Engineering Team
 Version: 1.0.0 (2024-12-28)
 """
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load .env file if present
+except ImportError:
+    pass  # dotenv not installed, continue without it
+
 import os
 import sys
 import json
@@ -34,7 +41,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Union, List
 from pathlib import Path
-from contextlib import contextmanager
+from contextlib import contextmanager, asynccontextmanager
 
 try:
     from fastapi import FastAPI, Request
@@ -564,95 +571,101 @@ def log_query_event(logger: UnifiedLogger, query: str, event: str, **context):
     )
 
 
-if FASTAPI_AVAILABLE:
+def setup_fastapi_logging(app: FastAPI = None, service_name: str = None):
+    """
+    Set up logging integration with FastAPI.
+    
+    Args:
+        app: FastAPI application instance (optional)
+        service_name: Service name for logging
+    """
+    if not FASTAPI_AVAILABLE or app is None:
+        logger = get_logger(__name__)
+        logger.warning("FastAPI not available or app not provided, skipping FastAPI logging setup")
+        return
+        
+    # FastAPI logging setup with lifespan context manager
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        """FastAPI lifespan context manager for startup and shutdown events."""
+        # Startup
+        config = setup_logging(service_name=service_name or "fastapi-service")
+        logger = config.get_logger(__name__)
 
-    def setup_fastapi_logging(app: FastAPI, service_name: str = None):
-        """
-        Set up logging integration with FastAPI.
+        logger.info(
+            "FastAPI application starting up",
+            app_title=app.title,
+            app_version=app.version,
+            component="fastapi_startup",
+        )
+        
+        yield
+        
+        # Shutdown
+        logger.info(
+            "FastAPI application shutting down",
+            app_title=app.title,
+            component="fastapi_shutdown",
+        )
+    
+    # Set the lifespan context manager
+    app.router.lifespan_context = lifespan
 
-        Args:
-            app: FastAPI application instance
-            service_name: Service name for logging
-        """
+    @app.middleware("http")
+    async def request_logging_middleware(request: Request, call_next):
+        """Middleware to log HTTP requests."""
+        logger = get_logger(__name__)
+        request_id = str(uuid.uuid4())
+        start_time = time.time()
 
-        @app.on_event("startup")
-        async def startup_event():
-            """FastAPI startup event - configure logging."""
-            config = setup_logging(service_name=service_name or "fastapi-service")
-            logger = config.get_logger(__name__)
+        # Set context for this request
+        logger.set_context(request_id=request_id)
 
+        # Log request start
+        logger.info(
+            "HTTP request received",
+            method=request.method,
+            url=str(request.url),
+            client_ip=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+            request_id=request_id,
+            component="http_request",
+        )
+
+        try:
+            response = await call_next(request)
+            duration = time.time() - start_time
+
+            # Log successful response
             logger.info(
-                "FastAPI application starting up",
-                app_title=app.title,
-                app_version=app.version,
-                component="fastapi_startup",
-            )
-
-        @app.on_event("shutdown")
-        async def shutdown_event():
-            """FastAPI shutdown event."""
-            logger = get_logger(__name__)
-            logger.info(
-                "FastAPI application shutting down",
-                app_title=app.title,
-                component="fastapi_shutdown",
-            )
-
-        @app.middleware("http")
-        async def request_logging_middleware(request: Request, call_next):
-            """Middleware to log HTTP requests."""
-            logger = get_logger(__name__)
-            request_id = str(uuid.uuid4())
-            start_time = time.time()
-
-            # Set context for this request
-            logger.set_context(request_id=request_id)
-
-            # Log request start
-            logger.info(
-                "HTTP request received",
+                "HTTP request completed",
                 method=request.method,
                 url=str(request.url),
-                client_ip=request.client.host if request.client else None,
-                user_agent=request.headers.get("user-agent"),
+                status_code=response.status_code,
+                duration_seconds=round(duration, 3),
+                duration_ms=round(duration * 1000, 1),
                 request_id=request_id,
-                component="http_request",
+                component="http_response",
             )
 
-            try:
-                response = await call_next(request)
-                duration = time.time() - start_time
+            return response
 
-                # Log successful response
-                logger.info(
-                    "HTTP request completed",
-                    method=request.method,
-                    url=str(request.url),
-                    status_code=response.status_code,
-                    duration_seconds=round(duration, 3),
-                    duration_ms=round(duration * 1000, 1),
-                    request_id=request_id,
-                    component="http_response",
-                )
+        except Exception as e:
+            duration = time.time() - start_time
 
-                return response
-
-            except Exception as e:
-                duration = time.time() - start_time
-
-                # Log error response
-                logger.error(
-                    "HTTP request failed",
-                    method=request.method,
-                    url=str(request.url),
-                    error_type=type(e).__name__,
-                    error_message=str(e),
-                    duration_seconds=round(duration, 3),
-                    duration_ms=round(duration * 1000, 1),
-                    request_id=request_id,
-                    component="http_error",
-                )
-                raise
+            # Log error response
+            logger.error(
+                "HTTP request failed",
+                method=request.method,
+                url=str(request.url),
+                error_type=type(e).__name__,
+                error_message=str(e),
+                duration_seconds=round(duration, 3),
+                duration_ms=round(duration * 1000, 1),
+                request_id=request_id,
+                component="http_error",
+            )
+            raise
 
 
 # Export main functions

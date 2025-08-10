@@ -3,9 +3,14 @@ Metrics Collection System for Universal Knowledge Platform
 Provides Prometheus metrics for monitoring and observability.
 """
 
+import os
 import time
 import psutil
 from typing import Dict, Any, Optional
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 from prometheus_client import (
     Counter,
     Gauge,

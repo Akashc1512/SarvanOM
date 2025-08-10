@@ -37,14 +37,16 @@ import warnings
 
 from pydantic import (
     Field,
-    validator,
-    root_validator,
+    field_validator,
+    model_validator,
     SecretStr,
     HttpUrl,
     PostgresDsn,
     RedisDsn,
     conint,
     confloat,
+    ValidationInfo,
+    ConfigDict,
 )
 from pydantic_settings import BaseSettings
 import structlog
@@ -97,15 +99,13 @@ Percentage = confloat(ge=0.0, le=1.0)
 class SecureSettings(BaseSettings):
     """Base settings with security features."""
 
-    class Config:
-        """Pydantic configuration."""
-
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-
-        # Custom JSON encoders for security
-        json_encoders = {SecretStr: lambda v: "***REDACTED***" if v else None}
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        # Custom JSON encoders for security - removed for Pydantic V2 compatibility
+        # Use model_serializer instead
+    )
 
     def dict(self, **kwargs) -> Dict[str, Any]:
         """Convert to dictionary with optional secret masking."""
@@ -140,6 +140,11 @@ class SecureSettings(BaseSettings):
 
         return data
 
+    def model_dump(self, **kwargs) -> Dict[str, Any]:
+        """Override model_dump to mask secrets."""
+        d = super().model_dump(**kwargs)
+        return self._mask_secrets(d)
+
 
 class CentralConfig(SecureSettings):
     """
@@ -169,7 +174,8 @@ class CentralConfig(SecureSettings):
     log_format: str = Field(default="json", description="Log format")
     log_file: Optional[Path] = Field(default=None, description="Log file path")
 
-    @validator("log_level", pre=True)
+    @field_validator("log_level", mode="before")
+    @classmethod
     def validate_log_level(cls, v: Any) -> LogLevel:
         """Validate and convert log level to proper case."""
         if isinstance(v, str):
@@ -629,14 +635,16 @@ class CentralConfig(SecureSettings):
     # VALIDATION METHODS
     # =============================================================================
 
-    @validator("cors_origins", pre=True)
+    @field_validator("cors_origins", mode="before")
+    @classmethod
     def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
         """Parse CORS origins from string or list."""
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 
-    @validator("features", pre=True)
+    @field_validator("features", mode="before")
+    @classmethod
     def parse_features(cls, v: Union[str, Dict[str, bool]]) -> Dict[str, bool]:
         """Parse features from string or dict."""
         if isinstance(v, str):
@@ -647,7 +655,8 @@ class CentralConfig(SecureSettings):
                 return {}
         return v
 
-    @validator("vector_db_provider")
+    @field_validator("vector_db_provider")
+    @classmethod
     def validate_vector_provider(cls, v: str) -> str:
         """Validate vector database provider."""
         valid_providers = ["qdrant", "pinecone", "weaviate", "milvus"]
@@ -656,7 +665,8 @@ class CentralConfig(SecureSettings):
             return "qdrant"
         return v
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def validate_environment(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         """Validate environment-specific configuration."""
         env = values.get("environment", Environment.DEVELOPMENT)
@@ -779,17 +789,14 @@ class CentralConfig(SecureSettings):
 
         return providers if providers else ["None"]
 
-    class Config(SecureSettings.Config):
-        """Extended configuration."""
-
+    model_config = ConfigDict(
         # Environment variable prefix
-        env_prefix = "UKP_"
-
+        env_prefix="UKP_",
         # Allow extra fields for forward compatibility
-        extra = "ignore"
-
+        extra="ignore",
         # Validate on assignment
-        validate_assignment = True
+        validate_assignment=True,
+    )
 
 
 # =============================================================================

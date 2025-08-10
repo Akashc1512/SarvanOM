@@ -40,7 +40,7 @@ from enum import Enum
 import structlog
 from fastapi import HTTPException, status, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 
 
 logger = structlog.get_logger(__name__)

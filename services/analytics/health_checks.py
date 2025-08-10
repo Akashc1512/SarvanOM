@@ -1,3 +1,10 @@
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load .env file if present
+except ImportError:
+    pass  # dotenv not installed, continue without it
+
 from shared.core.api.config import get_settings
 
 settings = get_settings()
@@ -14,7 +21,7 @@ import os
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 import redis.asyncio as aioredis
-from elasticsearch import AsyncElasticsearch
+import aiohttp
 import time
 
 logger = get_logger(__name__)
@@ -23,7 +30,8 @@ logger = get_logger(__name__)
 from shared.core.config.central_config import get_vector_db_url, get_redis_url
 
 VECTOR_DB_URL = os.getenv("VECTOR_DB_URL", get_vector_db_url())
-ELASTICSEARCH_URL = os.getenv("ELASTICSEARCH_URL", "http://localhost:9200")
+MEILISEARCH_URL = os.getenv("MEILISEARCH_URL", "http://localhost:7700")
+MEILI_MASTER_KEY = os.getenv("MEILI_MASTER_KEY")
 REDIS_URL = settings.redis_url or get_redis_url()
 SPARQL_ENDPOINT = os.getenv(
     "SPARQL_ENDPOINT", "http://localhost:7200/repositories/knowledge"
@@ -72,20 +80,29 @@ async def check_vector_db() -> Dict[str, Any]:
         }
 
 
-async def check_elasticsearch() -> Dict[str, Any]:
-    """Check Elasticsearch connectivity."""
+async def check_meilisearch() -> Dict[str, Any]:
+    """Check Meilisearch connectivity."""
     start_time = time.time()
     try:
-        es = AsyncElasticsearch([ELASTICSEARCH_URL])
-        health = await es.cluster.health()
-        await es.close()
+        headers = {}
+        if MEILI_MASTER_KEY:
+            headers["Authorization"] = f"Bearer {MEILI_MASTER_KEY}"
 
-        return {
-            "healthy": health["status"] in ["green", "yellow"],
-            "status": health["status"],
-            "cluster_name": health.get("cluster_name"),
-            "latency_ms": int((time.time() - start_time) * 1000),
-        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{MEILISEARCH_URL}/health", headers=headers) as response:
+                if response.status == 200:
+                    health_data = await response.json()
+                    return {
+                        "healthy": health_data.get("status") == "available",
+                        "status": health_data.get("status", "unknown"),
+                        "latency_ms": int((time.time() - start_time) * 1000),
+                    }
+                else:
+                    return {
+                        "healthy": False,
+                        "error": f"HTTP {response.status}",
+                        "latency_ms": int((time.time() - start_time) * 1000),
+                    }
     except asyncio.TimeoutError:
         return {
             "healthy": False,
@@ -93,7 +110,7 @@ async def check_elasticsearch() -> Dict[str, Any]:
             "latency_ms": int(HEALTH_CHECK_TIMEOUT * 1000),
         }
     except Exception as e:
-        logger.error(f"Elasticsearch health check failed: {e}")
+        logger.error(f"Meilisearch health check failed: {e}")
         return {
             "healthy": False,
             "error": str(e),
@@ -278,7 +295,7 @@ async def check_all_services() -> Dict[str, Any]:
     # Run all health checks in parallel
     results = await asyncio.gather(
         check_vector_db(),
-        check_elasticsearch(),
+        check_meilisearch(),
         check_redis(),
         check_knowledge_graph(),
         check_openai_api(),
@@ -289,7 +306,7 @@ async def check_all_services() -> Dict[str, Any]:
     # Map results to service names
     service_names = [
         "vector_database",
-        "elasticsearch",
+        "meilisearch",
         "redis",
         "knowledge_graph",
         "openai_api",
@@ -324,8 +341,8 @@ async def get_service_dependencies() -> Dict[str, List[str]]:
         Dictionary mapping services to their dependencies
     """
     return {
-        "api": ["redis", "elasticsearch", "vector_database"],
-        "retrieval_agent": ["vector_database", "elasticsearch", "knowledge_graph"],
+        "api": ["redis", "meilisearch", "vector_database"],
+        "retrieval_agent": ["vector_database", "meilisearch", "knowledge_graph"],
         "fact_check_agent": ["openai_api", "anthropic_api"],
         "synthesis_agent": ["openai_api", "anthropic_api"],
         "citation_agent": [],

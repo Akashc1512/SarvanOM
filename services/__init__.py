@@ -22,6 +22,7 @@ from .gateway.routes import (
     crawler_router,
     vector_router,
     graph_router,
+    analytics_router,
 )
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     "crawler_router",
     "vector_router",
     "graph_router",
+    "analytics_router",
 ]
