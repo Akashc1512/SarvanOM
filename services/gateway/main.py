@@ -24,7 +24,7 @@ try:
 except ImportError:
     pass  # Windows compatibility not available
 
-from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
@@ -34,6 +34,7 @@ import logging
 import time
 import re
 import json
+from datetime import datetime
 from starlette.middleware.base import BaseHTTPMiddleware
 
 # Import unified logging
@@ -50,12 +51,46 @@ from services.analytics.metrics.knowledge_platform_metrics import (
 # Import the real LLM processor
 from services.gateway.real_llm_integration import RealLLMProcessor
 
+# Import advanced features
+from services.gateway.cache_manager import cache_manager
+from services.gateway.streaming_manager import stream_manager
+from services.gateway.background_processor import background_processor, TaskType, TaskPriority
+from services.gateway.prompt_optimizer import prompt_optimizer, PromptType, PromptComplexity
+
 # Initialize the LLM processor
 llm_processor = RealLLMProcessor()
 
 # Configure unified logging
 logging_config = setup_logging(service_name="sarvanom-gateway-service")
 logger = get_logger(__name__)
+
+# Initialize advanced features
+async def initialize_advanced_features():
+    """Initialize all advanced features"""
+    try:
+        # Initialize cache manager
+        await cache_manager.initialize()
+        logger.info("✅ Cache manager initialized")
+        
+        # Initialize stream manager
+        await stream_manager.initialize()
+        logger.info("✅ Stream manager initialized")
+        
+        # Initialize background processor
+        await background_processor.initialize()
+        logger.info("✅ Background processor initialized")
+        
+        # Initialize prompt optimizer
+        await prompt_optimizer.initialize()
+        logger.info("✅ Prompt optimizer initialized")
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize advanced features: {e}")
+
+# Initialize features on startup
+@app.on_event("startup")
+async def startup_event():
+    await initialize_advanced_features()
 
 # Security configuration
 MAX_PAYLOAD_SIZE = 10 * 1024 * 1024  # 10MB
@@ -909,6 +944,236 @@ async def internal_error_handler(request, exc):
             "method": request.method
         }
     )
+
+# Advanced Features Endpoints
+
+# Cache Management Endpoints
+@app.get("/cache/stats")
+async def cache_stats():
+    """Get cache statistics"""
+    try:
+        stats = await cache_manager.get_stats()
+        return {
+            "status": "success",
+            "cache_stats": stats
+        }
+    except Exception as e:
+        logger.error(f"Cache stats error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/cache/clear")
+async def clear_cache():
+    """Clear all cache entries"""
+    try:
+        await cache_manager.clear_all()
+        return {
+            "status": "success",
+            "message": "Cache cleared successfully"
+        }
+    except Exception as e:
+        logger.error(f"Cache clear error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Streaming Endpoints
+@app.get("/stream/search")
+async def stream_search_endpoint(query: str, user_id: str = "anonymous"):
+    """Stream search results using Server-Sent Events"""
+    try:
+        return await stream_manager.create_sse_stream(
+            query=query,
+            user_id=user_id,
+            endpoint="search",
+            llm_processor=llm_processor
+        )
+    except Exception as e:
+        logger.error(f"Stream search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.websocket("/ws/search")
+async def websocket_search_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for streaming search results"""
+    try:
+        await stream_manager.create_websocket_stream(
+            websocket=websocket,
+            query="",  # Will be received via WebSocket
+            user_id="anonymous",
+            endpoint="search",
+            llm_processor=llm_processor
+        )
+    except Exception as e:
+        logger.error(f"WebSocket search error: {e}")
+
+@app.get("/stream/fact-check")
+async def stream_fact_check_endpoint(claim: str, user_id: str = "anonymous"):
+    """Stream fact-check results using Server-Sent Events"""
+    try:
+        return await stream_manager.create_sse_stream(
+            query=claim,
+            user_id=user_id,
+            endpoint="fact_check",
+            llm_processor=llm_processor
+        )
+    except Exception as e:
+        logger.error(f"Stream fact-check error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Background Processing Endpoints
+@app.post("/background/task")
+async def submit_background_task(
+    task_type: str,
+    query: str,
+    user_id: str = "anonymous",
+    priority: str = "normal"
+):
+    """Submit a background task for processing"""
+    try:
+        # Map string to enum
+        task_type_enum = TaskType(task_type.lower())
+        priority_enum = TaskPriority(priority.lower())
+        
+        task_id = await background_processor.submit_task(
+            task_type=task_type_enum,
+            query=query,
+            user_id=user_id,
+            endpoint=task_type.lower(),
+            priority=priority_enum
+        )
+        
+        return {
+            "status": "success",
+            "task_id": task_id,
+            "message": f"Background task submitted: {task_id}"
+        }
+    except Exception as e:
+        logger.error(f"Background task submission error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/background/task/{task_id}")
+async def get_background_task_status(task_id: str):
+    """Get background task status and result"""
+    try:
+        task_info = await background_processor.get_task_status(task_id)
+        if not task_info:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        return {
+            "status": "success",
+            "task_info": task_info
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Background task status error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/background/task/{task_id}")
+async def cancel_background_task(task_id: str):
+    """Cancel a background task"""
+    try:
+        cancelled = await background_processor.cancel_task(task_id)
+        if not cancelled:
+            raise HTTPException(status_code=404, detail="Task not found or cannot be cancelled")
+        
+        return {
+            "status": "success",
+            "message": f"Task {task_id} cancelled successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Background task cancellation error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/background/stats")
+async def background_stats():
+    """Get background processing statistics"""
+    try:
+        stats = await background_processor.get_queue_stats()
+        return {
+            "status": "success",
+            "background_stats": stats
+        }
+    except Exception as e:
+        logger.error(f"Background stats error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Prompt Optimization Endpoints
+@app.post("/optimize/prompt")
+async def optimize_prompt_endpoint(
+    prompt: str,
+    prompt_type: str = "search",
+    complexity: str = "medium"
+):
+    """Optimize a prompt for better performance"""
+    try:
+        # Map strings to enums
+        prompt_type_enum = PromptType(prompt_type.lower())
+        complexity_enum = PromptComplexity(complexity.lower())
+        
+        optimized = await prompt_optimizer.optimize_prompt(
+            prompt=prompt,
+            prompt_type=prompt_type_enum,
+            complexity=complexity_enum
+        )
+        
+        return {
+            "status": "success",
+            "optimized_prompt": optimized.to_dict()
+        }
+    except Exception as e:
+        logger.error(f"Prompt optimization error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/optimize/stats")
+async def prompt_optimization_stats():
+    """Get prompt optimization statistics"""
+    try:
+        stats = await prompt_optimizer.get_optimization_stats()
+        return {
+            "status": "success",
+            "optimization_stats": stats
+        }
+    except Exception as e:
+        logger.error(f"Prompt optimization stats error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/optimize/clear-cache")
+async def clear_prompt_cache():
+    """Clear prompt optimization cache"""
+    try:
+        await prompt_optimizer.clear_cache()
+        return {
+            "status": "success",
+            "message": "Prompt optimization cache cleared"
+        }
+    except Exception as e:
+        logger.error(f"Prompt cache clear error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# System Status Endpoint
+@app.get("/system/status")
+async def system_status():
+    """Get comprehensive system status including all advanced features"""
+    try:
+        # Get stats from all systems
+        cache_stats = await cache_manager.get_stats()
+        stream_stats = await stream_manager.get_metrics()
+        background_stats = await background_processor.get_queue_stats()
+        optimization_stats = await prompt_optimizer.get_optimization_stats()
+        
+        return {
+            "status": "success",
+            "system_status": {
+                "cache": cache_stats,
+                "streaming": stream_stats,
+                "background_processing": background_stats,
+                "prompt_optimization": optimization_stats,
+                "timestamp": datetime.now().isoformat()
+            }
+        }
+    except Exception as e:
+        logger.error(f"System status error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
