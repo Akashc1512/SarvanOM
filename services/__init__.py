@@ -7,9 +7,7 @@ This module provides access to all microservices including:
 - Search and retrieval services
 - Fact checking service
 - Synthesis service
-- Crawler service
 - Vector database service
-- Graph service
 """
 
 from .gateway import GatewayApp
@@ -19,9 +17,7 @@ from .gateway.routes import (
     fact_check_router,
     synthesis_router,
     auth_router,
-    crawler_router,
     vector_router,
-    graph_router,
     analytics_router,
 )
 
@@ -32,8 +28,6 @@ __all__ = [
     "fact_check_router",
     "synthesis_router",
     "auth_router",
-    "crawler_router",
     "vector_router",
-    "graph_router",
     "analytics_router",
 ]

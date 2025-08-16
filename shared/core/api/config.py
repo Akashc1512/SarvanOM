@@ -1014,31 +1014,13 @@ def get_settings() -> Settings:
     return _settings
 
 
-def reload_settings() -> Settings:
-    """
-    Reload settings from environment.
-
-    Returns:
-        New settings instance
-    """
-    global _settings
-
-    # Clear cache
-    get_settings.cache_clear()
-
-    # Reload
-    _settings = Settings()
-
-    logger.info("Settings reloaded")
-
-    return _settings
+# REMOVED: reload_settings function - unused
 
 
 # Export public API
 __all__ = [
     "Settings",
     "get_settings",
-    "reload_settings",
     "Environment",
     "LogLevel",
 ]

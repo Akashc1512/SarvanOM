@@ -55,14 +55,14 @@ The API Gateway serves as the main entry point for all client requests, routing 
 python services/gateway/main.py
 
 # Or using uvicorn
-uvicorn services.gateway.gateway_app:app --host 0.0.0.0 --port 8000 --reload
+uvicorn services.gateway.gateway_app:app --host 0.0.0.0 --port 8004 --reload
 ```
 
 ## API Documentation
 
 Once running, visit:
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+- **Swagger UI**: http://localhost:8004/docs
+- **ReDoc**: http://localhost:8004/redoc
 
 ## Development
 

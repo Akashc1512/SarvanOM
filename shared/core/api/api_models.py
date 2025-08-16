@@ -41,6 +41,8 @@ class HealthResponse(BaseModel):
     uptime: float
     memory_usage: Dict[str, Any]
     cpu_usage: float
+    service_health: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
 
 
 class QueryRequest(BaseModel):

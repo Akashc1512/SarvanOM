@@ -1,72 +1,20 @@
 from __future__ import annotations
 
-import time
-from datetime import datetime
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, Response
+import re
 from dotenv import load_dotenv
-from fastapi.middleware.cors import CORSMiddleware
 
+from fastapi import FastAPI
+from shared.core.app_factory import create_app_factory, with_request_metrics
 from shared.core.config import get_central_config
 from shared.core.logging import get_logger
-from shared.core.llm_client_v3 import get_llm_client_v3
+from shared.core.agents.llm_client import LLMClient
 from shared.core.cache import get_cache_manager
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from shared.contracts.query import SynthesisRequest, SynthesisResponse
 
 logger = get_logger(__name__)
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    yield
-
-
 # Ensure .env is loaded before reading central config
 load_dotenv()
-config = get_central_config()
-
-app = FastAPI(
-    title=f"{config.service_name}-synthesis",
-    version=config.app_version,
-    description="Synthesis microservice with real LLM integration",
-    lifespan=lifespan,
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=config.cors_origins,
-    allow_credentials=bool(config.cors_credentials),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.get("/health")
-async def health() -> dict:
-    return {
-        "service": "synthesis",
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
-    }
-
-
-_t0 = time.time()
-REQUEST_COUNTER = Counter("synthesis_requests_total", "Total synthesis requests")
-REQUEST_LATENCY = Histogram(
-    "synthesis_request_latency_seconds", "Synthesis request latency"
-)
-
-
-@app.get("/metrics")
-async def metrics() -> Response:
-    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
-
-
-@app.get("/")
-async def root() -> dict:
-    return {"service": "synthesis", "version": config.app_version, "status": "ok"}
 
 
 def format_sources_for_llm(sources: list) -> str:
@@ -108,14 +56,15 @@ def calculate_confidence(content: str, sources: list) -> float:
     return min(1.0, base_confidence + length_confidence)
 
 
-@app.post("/synthesize", response_model=SynthesisResponse)
-async def synthesize(payload: SynthesisRequest) -> SynthesisResponse:
-    REQUEST_COUNTER.inc()
-
-    with REQUEST_LATENCY.time():
+def add_synthesis_routes(app: FastAPI):
+    """Add synthesis-specific routes to the app."""
+    
+    @app.post("/synthesize", response_model=SynthesisResponse)
+    @with_request_metrics("synthesis")
+    async def synthesize(payload: SynthesisRequest) -> SynthesisResponse:
         try:
             # Get LLM client and cache
-            llm_client = get_llm_client_v3()
+            llm_client = LLMClient()
             cache = get_cache_manager()
 
             # Create cache key
@@ -147,9 +96,14 @@ async def synthesize(payload: SynthesisRequest) -> SynthesisResponse:
             """
 
             # Call LLM
-            response_content = await llm_client.generate_text(
-                prompt=prompt, max_tokens=payload.max_tokens, temperature=0.3
+            from services.gateway.real_llm_integration import LLMRequest
+            llm_request = LLMRequest(
+                prompt=prompt,
+                max_tokens=payload.max_tokens,
+                temperature=0.3
             )
+            response = await llm_client.generate_text(llm_request)
+            response_content = response.text
 
             # Extract citations
             citations = extract_citations(response_content)
@@ -189,6 +143,19 @@ async def synthesize(payload: SynthesisRequest) -> SynthesisResponse:
                 citations=[],
                 confidence=0.0,
             )
+
+
+# Create the FastAPI app using the shared factory
+app_factory = create_app_factory(
+    service_name="synthesis",
+    description="Synthesis microservice with real LLM integration",
+    additional_routes=[add_synthesis_routes],
+    health_prefix="synthesis",
+    metrics_prefix="internal",
+    root_prefix="synthesis"
+)
+
+app = app_factory()
 
 
 if __name__ == "__main__":

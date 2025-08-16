@@ -1,17 +1,13 @@
 from __future__ import annotations
 
-import time
-from datetime import datetime
-from contextlib import asynccontextmanager
-
-from fastapi import FastAPI, Response
-from dotenv import load_dotenv
-from fastapi.middleware.cors import CORSMiddleware
 import os
 import requests
 from bs4 import BeautifulSoup
 import numpy as np
+from dotenv import load_dotenv
 
+from fastapi import FastAPI, HTTPException
+from shared.core.app_factory import create_app_factory, with_request_metrics
 from shared.core.config import get_central_config
 from shared.core.logging import get_logger
 from shared.core.cache import get_cache_manager
@@ -22,56 +18,21 @@ from shared.vectorstores.vector_store_service import (
     InMemoryVectorStore,
     VectorDocument,
 )
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from shared.contracts.query import (
     RetrievalSearchRequest,
     RetrievalSearchResponse,
     RetrievalIndexRequest,
     RetrievalIndexResponse,
+    VectorEmbedRequest,
+    VectorEmbedResponse,
+    VectorSearchRequest,
+    VectorSearchResponse,
 )
 
 logger = get_logger(__name__)
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    yield
-
-
 # Ensure environment variables from .env are loaded for this service
 load_dotenv()
-config = get_central_config()
-
-app = FastAPI(
-    title=f"{config.service_name}-retrieval",
-    version=config.app_version,
-    description="Retrieval microservice with real vector search",
-    lifespan=lifespan,
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=config.cors_origins,
-    allow_credentials=bool(config.cors_credentials),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.get("/health")
-async def health() -> dict:
-    return {
-        "service": "retrieval",
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
-    }
-
-
-_service_start = time.time()
-REQUEST_COUNTER = Counter("retrieval_requests_total", "Total retrieval requests")
-REQUEST_LATENCY = Histogram(
-    "retrieval_request_latency_seconds", "Retrieval request latency"
-)
 
 
 def _init_vector_store():
@@ -100,28 +61,16 @@ def _init_vector_store():
     return ChromaVectorStore(collection_name="knowledge")
 
 
+# Initialize vector store
 VECTOR_STORE = _init_vector_store()
 
 
-@app.get("/metrics")
-async def metrics() -> Response:
-    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
-
-
-@app.get("/")
-async def root() -> dict:
-    return {
-        "service": "retrieval",
-        "version": config.app_version,
-        "status": "ok",
-    }
-
-
-@app.post("/search", response_model=RetrievalSearchResponse)
-async def search(payload: RetrievalSearchRequest) -> RetrievalSearchResponse:
-    REQUEST_COUNTER.inc()
-
-    with REQUEST_LATENCY.time():
+def add_retrieval_routes(app: FastAPI):
+    """Add retrieval-specific routes to the app."""
+    
+    @app.post("/search", response_model=RetrievalSearchResponse)
+    @with_request_metrics("retrieval")
+    async def search(payload: RetrievalSearchRequest) -> RetrievalSearchResponse:
         try:
             # Get cache
             cache = get_cache_manager()
@@ -205,6 +154,130 @@ async def search(payload: RetrievalSearchRequest) -> RetrievalSearchResponse:
                 relevance_scores=[],
                 limit=payload.max_results,
             )
+
+    @app.post("/index", response_model=RetrievalIndexResponse)
+    @with_request_metrics("retrieval")
+    async def index(payload: RetrievalIndexRequest) -> RetrievalIndexResponse:
+        try:
+            # Validate input
+            payload.validate_lengths()
+
+            # Generate embeddings
+            embeddings = embed_texts(payload.texts)
+
+            # Create vector documents
+            documents = []
+            for i, (doc_id, text, embedding) in enumerate(
+                zip(payload.ids, payload.texts, embeddings)
+            ):
+                metadata = payload.metadatas[i] if i < len(payload.metadatas) else {}
+                documents.append(
+                    VectorDocument(
+                        id=doc_id, text=text, embedding=embedding, metadata=metadata
+                    )
+                )
+
+            # Index documents
+            upserted_count = await VECTOR_STORE.upsert(documents)
+
+            logger.info(
+                "Indexing completed",
+                documents_count=len(documents),
+                upserted_count=upserted_count,
+            )
+
+            return RetrievalIndexResponse(upserted=upserted_count)
+
+        except Exception as e:
+            logger.error("Indexing failed", error=str(e))
+            return RetrievalIndexResponse(upserted=0)
+
+    @app.post("/embed", response_model=VectorEmbedResponse)
+    @with_request_metrics("retrieval")
+    async def embed_text(payload: VectorEmbedRequest) -> VectorEmbedResponse:
+        """Embed text endpoint for vector operations."""
+        try:
+            # Generate embedding
+            embedding = embed_texts([payload.text])[0]
+            
+            logger.info(
+                "Text embedding completed",
+                text_length=len(payload.text),
+            )
+            
+            return VectorEmbedResponse(
+                embedding=embedding,
+                text=payload.text,
+                metadata=payload.metadata,
+            )
+            
+        except Exception as e:
+            logger.error("Text embedding failed", error=str(e))
+            raise HTTPException(status_code=500, detail=f"Embedding failed: {str(e)}")
+
+    @app.post("/vector-search", response_model=VectorSearchResponse)
+    @with_request_metrics("retrieval")
+    async def vector_search(payload: VectorSearchRequest) -> VectorSearchResponse:
+        """Vector similarity search endpoint."""
+        try:
+            # Generate embedding for query
+            query_embedding = embed_texts([payload.text])[0]
+            
+            # Perform vector search
+            search_results = await VECTOR_STORE.search(
+                query_embedding=query_embedding, 
+                top_k=payload.top_k
+            )
+            
+            # Format results
+            results = []
+            for result in search_results:
+                if isinstance(result, tuple):
+                    doc, score = result
+                    results.append({
+                        "id": doc.id,
+                        "content": doc.text,
+                        "metadata": doc.metadata,
+                        "score": score,
+                    })
+                else:
+                    # Handle dict format
+                    results.append(result)
+            
+            logger.info(
+                "Vector search completed",
+                query_length=len(payload.text),
+                results_count=len(results),
+            )
+            
+            return VectorSearchResponse(
+                results=results,
+                query_text=payload.text,
+                total_results=len(results),
+                top_k=payload.top_k,
+            )
+            
+        except Exception as e:
+            logger.error("Vector search failed", error=str(e))
+            return VectorSearchResponse(
+                results=[],
+                query_text=payload.text,
+                total_results=0,
+                top_k=payload.top_k,
+            )
+
+
+# Create the FastAPI app using the shared factory
+app_factory = create_app_factory(
+    service_name="retrieval",
+    description="Retrieval microservice with real vector search",
+    additional_routes=[add_retrieval_routes],
+    health_prefix="retrieval",
+    metrics_prefix="internal",
+    root_prefix="retrieval"
+)
+
+app = app_factory()
 
 
 def _ephemeral_web_search(query: str, top_k: int) -> list[dict]:
@@ -290,43 +363,6 @@ def _fetch_text(url: str) -> str:
         tag.decompose()
     text = " ".join(soup.get_text(separator=" ").split())
     return text
-
-
-@app.post("/index", response_model=RetrievalIndexResponse)
-async def index(payload: RetrievalIndexRequest) -> RetrievalIndexResponse:
-    try:
-        # Validate input
-        payload.validate_lengths()
-
-        # Generate embeddings
-        embeddings = embed_texts(payload.texts)
-
-        # Create vector documents
-        documents = []
-        for i, (doc_id, text, embedding) in enumerate(
-            zip(payload.ids, payload.texts, embeddings)
-        ):
-            metadata = payload.metadatas[i] if i < len(payload.metadatas) else {}
-            documents.append(
-                VectorDocument(
-                    id=doc_id, text=text, embedding=embedding, metadata=metadata
-                )
-            )
-
-        # Index documents
-        upserted_count = await VECTOR_STORE.upsert(documents)
-
-        logger.info(
-            "Indexing completed",
-            documents_count=len(documents),
-            upserted_count=upserted_count,
-        )
-
-        return RetrievalIndexResponse(upserted=upserted_count)
-
-    except Exception as e:
-        logger.error("Indexing failed", error=str(e))
-        return RetrievalIndexResponse(upserted=0)
 
 
 if __name__ == "__main__":

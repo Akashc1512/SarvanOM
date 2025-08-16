@@ -51,7 +51,7 @@ switch ($Command) {
         npm install
         .venv\Scripts\pip install -e .[dev,test,security]
         if (!(Test-Path ".env")) {
-            Copy-Item ".env.template" ".env"
+            Copy-Item "env.docker.template" ".env"
             Write-Host "Created .env file from template. Please configure your environment variables." -ForegroundColor Yellow
         }
         Write-Host "Setup complete!" -ForegroundColor Green

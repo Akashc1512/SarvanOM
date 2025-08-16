@@ -46,7 +46,7 @@ if "%1"=="setup" (
     npm install
     .venv\Scripts\pip install -e .[dev,test,security]
     if not exist ".env" (
-        copy ".env.template" ".env"
+        copy "env.docker.template" ".env"
         echo Created .env file from template. Please configure your environment variables.
     )
     echo Setup complete!

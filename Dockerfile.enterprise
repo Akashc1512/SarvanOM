@@ -1,99 +1,72 @@
-# Enterprise Dockerfile - Universal Knowledge Hub
-# Multi-stage build with security best practices
+# SarvanOM Enterprise Backend Dockerfile
+# MAANG/OpenAI/Perplexity Standards Implementation
 
-# Stage 1: Base image with security updates
-FROM python:3.13-slim as base
+# Use Python 3.11 slim image for production
+FROM python:3.11-slim as base
 
-# Install system dependencies and security updates
-RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends \
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
     curl \
-    ca-certificates \
-    gnupg \
-    lsb-release \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
-
-# Stage 2: Dependencies
-FROM base as dependencies
-
+# Create app directory
 WORKDIR /app
 
 # Copy requirements first for better caching
-COPY requirements.txt pyproject.toml ./
+COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir --user -r requirements.txt
-
-# Stage 3: Security scan
-FROM dependencies as security-scan
-
-# Copy application code for security scanning
-COPY . .
-
-# Install security scanning tools
-RUN pip install --no-cache-dir bandit safety pip-audit
-
-# Run security scans
-RUN bandit -r . -f json -o bandit-report.json || true
-RUN safety check --json --output safety-report.json || true
-RUN pip-audit --format json --output pip-audit-report.json || true
-
-# Stage 4: Testing
-FROM dependencies as testing
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
 
-# Install testing dependencies
-RUN pip install --no-cache-dir pytest pytest-cov pytest-asyncio pytest-mock pytest-benchmark
-
-# Run tests
-RUN pytest tests/unit/ --cov=. --cov-report=xml --cov-report=html || true
-RUN pytest tests/integration/ --cov=. --cov-report=xml || true
-
-# Stage 5: Production
-FROM base as production
-
-# Set working directory
-WORKDIR /app
-
-# Copy Python dependencies from dependencies stage
-COPY --from=dependencies /root/.local /home/appuser/.local
-
-# Note: Security reports and test coverage files are optional and may not exist
-
-# Copy application code
-COPY services/ ./services/
-COPY shared/ ./shared/
-COPY config/ ./config/
-COPY scripts/ ./scripts/
-
-# Copy necessary files
-COPY pyproject.toml requirements.txt ./
-
-# Set proper permissions
-RUN chown -R appuser:appuser /app
-
-# Switch to non-root user
-USER appuser
-
-# Add user's local bin to PATH
-ENV PATH=/home/appuser/.local/bin:$PATH
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash app \
+    && chown -R app:app /app
+USER app
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Expose port
 EXPOSE 8000
 
-# Set environment variables
-ENV PYTHONPATH=/app
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
+# Default command
+CMD ["python", "-m", "uvicorn", "services.gateway.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
-# Run application
-CMD ["python", "-m", "services.api_gateway.main"] 
+# Development stage
+FROM base as development
+
+# Install development dependencies
+RUN pip install --no-cache-dir pytest pytest-asyncio pytest-cov black isort flake8
+
+# Development command
+CMD ["python", "-m", "uvicorn", "services.gateway.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+# Testing stage
+FROM base as testing
+
+# Install testing dependencies
+RUN pip install --no-cache-dir pytest pytest-asyncio pytest-cov
+
+# Testing command
+CMD ["python", "-m", "pytest", "tests/", "-v", "--cov=services", "--cov=shared"]
+
+# Production stage
+FROM base as production
+
+# Production optimizations
+ENV PYTHONOPTIMIZE=1
+
+# Production command
+CMD ["python", "-m", "uvicorn", "services.gateway.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"] 

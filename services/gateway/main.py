@@ -327,37 +327,7 @@ class GraphContextRequest(BaseModel):
         
         return v.strip()
 
-@app.get("/health")
-async def health_check():
-    """Enhanced health check endpoint for the API gateway with service status."""
-    import time
-    
-    start_time = time.time()
-    
-    try:
-        # Basic health check - API is responding
-        response_time_ms = int((time.time() - start_time) * 1000)
-        
-        return {
-            "status": "ok",
-            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "response_time_ms": response_time_ms,
-            "service": "sarvanom-gateway",
-            "version": "1.0.0",
-            "overall_healthy": True
-        }
-        
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return JSONResponse(
-            status_code=503,
-            content={
-            "status": "error",
-            "error": str(e),
-            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "overall_healthy": False
-        }
-        )
+# REMOVED: Duplicate health endpoint - using health_router.get("/health") instead
 
 @app.get("/health/detailed")
 async def detailed_health_check():

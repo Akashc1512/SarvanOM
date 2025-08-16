@@ -176,14 +176,13 @@ The gateway provides the following API endpoints:
 
 3. Run the backend:
    ```bash
-   python backend/main.py
+   npm run start:gateway
    ```
 
 ### Development
 For development with auto-reload:
 ```bash
-export BACKEND_RELOAD=true
-python backend/main.py
+npm run dev:backend
 ```
 
 ## Configuration

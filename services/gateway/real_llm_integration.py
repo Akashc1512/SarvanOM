@@ -266,74 +266,123 @@ class RealLLMProcessor:
     
     def select_optimal_provider(self, complexity: QueryComplexity, prefer_free: bool = True) -> LLMProvider:
         """
-        Enhanced provider selection with HuggingFace as primary free option.
+        Dynamic provider selection with proper fallback chain.
         
-        Priority: HuggingFace → Ollama → OpenAI → Anthropic
-        HuggingFace offers excellent free tier with diverse model selection.
+        Priority based on environment variables and user preferences:
+        1. If PRIORITIZE_FREE_MODELS=true: HuggingFace → Ollama → Anthropic → OpenAI
+        2. If USE_DYNAMIC_SELECTION=true: Dynamic based on complexity and availability
+        3. Fallback chain: Available providers in order of preference
         """
         if not USE_DYNAMIC_SELECTION:
             return self._get_fallback_provider()
         
-        # Check which providers have working API keys
-        has_openai = OPENAI_API_KEY and OPENAI_API_KEY.strip() and "your_" not in OPENAI_API_KEY
-        has_anthropic = ANTHROPIC_API_KEY and ANTHROPIC_API_KEY.strip() and "your_" not in ANTHROPIC_API_KEY
-        has_huggingface = HUGGINGFACE_API_KEY and HUGGINGFACE_API_KEY.strip() and "your_" not in HUGGINGFACE_API_KEY
+        # Check provider availability dynamically
+        available_providers = self._get_available_providers()
         
-        # PRIORITIZE WORKING API KEYS FOR FAST 5-SECOND RESPONSES
-        if has_openai:
-            print("🚀 Selected OpenAI for fast response")
-            return LLMProvider.OPENAI
-        elif has_anthropic:
-            print("🚀 Selected Anthropic for fast response")
-            return LLMProvider.ANTHROPIC
-        elif has_huggingface:
-            print("🚀 Selected HuggingFace for free response")
-            return LLMProvider.HUGGINGFACE
+        if not available_providers:
+            print("❌ No providers available - using mock")
+            return LLMProvider.MOCK
         
-        # Zero-budget fallback: try free models only if no API keys
-        elif prefer_free and PRIORITIZE_FREE_MODELS:
-            if self.provider_health.get(LLMProvider.OLLAMA):
-                print("⚠️ Using slow Ollama (no working API keys)")
+        # Dynamic selection based on user preferences and complexity
+        if prefer_free and PRIORITIZE_FREE_MODELS:
+            # Free-first strategy: HuggingFace → Ollama → Paid providers
+            if LLMProvider.HUGGINGFACE in available_providers:
+                print("🚀 Selected HuggingFace (free tier)")
+                return LLMProvider.HUGGINGFACE
+            elif LLMProvider.OLLAMA in available_providers:
+                print("🔄 Selected Ollama (local)")
+                return LLMProvider.OLLAMA
+            elif LLMProvider.ANTHROPIC in available_providers:
+                print("💰 Selected Anthropic (paid)")
+                return LLMProvider.ANTHROPIC
+            elif LLMProvider.OPENAI in available_providers:
+                print("💰 Selected OpenAI (paid)")
+                return LLMProvider.OPENAI
+        else:
+            # Quality-first strategy: Best available provider
+            if LLMProvider.OPENAI in available_providers:
+                print("🚀 Selected OpenAI (high quality)")
+                return LLMProvider.OPENAI
+            elif LLMProvider.ANTHROPIC in available_providers:
+                print("🚀 Selected Anthropic (high quality)")
+                return LLMProvider.ANTHROPIC
+            elif LLMProvider.HUGGINGFACE in available_providers:
+                print("🚀 Selected HuggingFace (free)")
+                return LLMProvider.HUGGINGFACE
+            elif LLMProvider.OLLAMA in available_providers:
+                print("🔄 Selected Ollama (local)")
                 return LLMProvider.OLLAMA
         
-        # For complex reasoning or when free options fail, escalate to paid
-        if complexity == QueryComplexity.COMPLEX_REASONING:
-            # For very complex queries, consider paid models
-            if self.provider_health.get(LLMProvider.OPENAI):
-                return LLMProvider.OPENAI
-            elif self.provider_health.get(LLMProvider.ANTHROPIC):
-                return LLMProvider.ANTHROPIC
+        # Fallback to first available provider
+        selected = available_providers[0]
+        print(f"🔄 Selected {selected.value} (fallback)")
+        return selected
+    
+    def _get_available_providers(self) -> List[LLMProvider]:
+        """Get list of available providers in order of preference."""
+        available = []
         
-        # Final fallback to any available provider
-        return self._get_fallback_provider()
+        # Check HuggingFace (free tier)
+        if self._is_provider_available(LLMProvider.HUGGINGFACE):
+            available.append(LLMProvider.HUGGINGFACE)
+        
+        # Check Ollama (local)
+        if self._is_provider_available(LLMProvider.OLLAMA):
+            available.append(LLMProvider.OLLAMA)
+        
+        # Check Anthropic (paid)
+        if self._is_provider_available(LLMProvider.ANTHROPIC):
+            available.append(LLMProvider.ANTHROPIC)
+        
+        # Check OpenAI (paid)
+        if self._is_provider_available(LLMProvider.OPENAI):
+            available.append(LLMProvider.OPENAI)
+        
+        return available
+    
+    def _is_provider_available(self, provider: LLMProvider) -> bool:
+        """Check if a provider is available and properly configured."""
+        if provider == LLMProvider.HUGGINGFACE:
+            return (HUGGINGFACE_API_KEY and 
+                   HUGGINGFACE_API_KEY.strip() and 
+                   "your_" not in HUGGINGFACE_API_KEY and
+                   HUGGINGFACE_API_KEY != "disabled")
+        
+        elif provider == LLMProvider.OPENAI:
+            return (OPENAI_API_KEY and 
+                   OPENAI_API_KEY.strip() and 
+                   "your_" not in OPENAI_API_KEY and
+                   OPENAI_API_KEY != "disabled")
+        
+        elif provider == LLMProvider.ANTHROPIC:
+            return (ANTHROPIC_API_KEY and 
+                   ANTHROPIC_API_KEY.strip() and 
+                   "your_" not in ANTHROPIC_API_KEY and
+                   ANTHROPIC_API_KEY != "disabled")
+        
+        elif provider == LLMProvider.OLLAMA:
+            # Check if Ollama is running locally
+            try:
+                import requests
+                response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
+                return response.status_code == 200
+            except:
+                return False
+        
+        return False
     
     def _get_fallback_provider(self) -> LLMProvider:
-        """Get best available fallback provider - prioritize available providers."""
+        """Get best available fallback provider using dynamic selection."""
+        available_providers = self._get_available_providers()
         
-        # Check which providers have valid API keys (not placeholder values)
-        has_huggingface = HUGGINGFACE_API_KEY and HUGGINGFACE_API_KEY.strip() and "your_" not in HUGGINGFACE_API_KEY
-        has_openai = OPENAI_API_KEY and OPENAI_API_KEY.strip() and "your_" not in OPENAI_API_KEY  
-        has_anthropic = ANTHROPIC_API_KEY and ANTHROPIC_API_KEY.strip() and "your_" not in ANTHROPIC_API_KEY
-        has_ollama = True  # Ollama is always available locally
+        if not available_providers:
+            print("❌ No providers available - using mock")
+            return LLMProvider.MOCK
         
-        print(f"🔍 Provider availability: HF={has_huggingface}, OpenAI={has_openai}, Anthropic={has_anthropic}, Ollama={has_ollama}")
-        
-        # PRIORITIZE WORKING API KEYS FOR FAST RESPONSES (5 seconds)
-        if has_openai:
-            print("🚀 Using OpenAI (fast API - latest GPT-4o models)")
-            return LLMProvider.OPENAI
-        elif has_anthropic:
-            print("🚀 Using Anthropic (fast API - latest Claude 3.5)")
-            return LLMProvider.ANTHROPIC
-        elif has_huggingface:
-            print("🚀 Using HuggingFace (free API)")
-            return LLMProvider.HUGGINGFACE
-        elif has_ollama:
-            print("⚠️ Using Ollama (slow local model - may timeout)")
-            return LLMProvider.OLLAMA
-        
-        print("❌ No providers available - using mock")
-        return LLMProvider.MOCK
+        # Return first available provider
+        selected = available_providers[0]
+        print(f"🔄 Using {selected.value} as fallback provider")
+        return selected
     
     async def search_with_ai(self, query: str, user_id: str = None, max_results: int = 10) -> Dict[str, Any]:
         """Process search query with AI enhancement using optimal provider selection."""
@@ -688,187 +737,67 @@ class RealLLMProcessor:
             print(f"Ollama API error: {e}")
             return None
     
-    async def _call_huggingface(self, prompt: str, max_tokens: int, temperature: float) -> str:
+    async def _call_huggingface(self, prompt: str, max_tokens: int = 100, temperature: float = 0.7) -> str:
         """
-        Call HuggingFace Inference API with free tier models.
-        
-        Optimized for free-tier models (gpt2, distilgpt2) with proper error handling
-        and fallback logic for zero-budget optimization.
+        Use the comprehensive HuggingFace integration for advanced AI capabilities
+        Following MAANG/OpenAI/Perplexity standards
         """
-        # HuggingFace works with free models even without API key for many cases
-        # But API key provides better rate limits and reliability
-            
         try:
-            headers = {"Authorization": f"Bearer {HUGGINGFACE_API_KEY}"}
+            # Import the HuggingFace integration
+            from services.gateway.huggingface_integration import huggingface_integration
             
-            # Enhanced model selection based on query characteristics
+            # Select appropriate model based on task
             model_name = self._select_huggingface_model(prompt, max_tokens)
-            api_url = f"https://api-inference.huggingface.co/models/{model_name}"
             
-            # Enhanced payload optimized for different model types
-            if "bert" in model_name.lower():
-                # BERT-based models (Q&A, classification)
-                payload = {
-                    "inputs": {
-                        "question": "What is the answer?",
-                        "context": prompt
-                    }
-                } if "squad" in model_name else {
-                    "inputs": prompt
-                }
-            elif "bart" in model_name.lower():
-                # BART summarization models
-                payload = {
-                    "inputs": prompt,
-                    "parameters": {
-                        "max_length": min(max_tokens, 200),
-                        "min_length": 10,
-                        "do_sample": False
-                    }
-                }
-            else:
-                # GPT-2, DialoGPT and other generation models
-                payload = {
-                    "inputs": prompt,
-                    "parameters": {
-                        "max_new_tokens": min(max_tokens, 200),  # Conservative for free tier
-                        "temperature": max(temperature, 0.1),  # Ensure positive temperature
-                        "do_sample": temperature > 0.1,
-                        "top_p": 0.9,
-                        "repetition_penalty": 1.1,
-                        "return_full_text": False
-                    },
-                    "options": {
-                        "wait_for_model": True,
-                        "use_cache": True
-                    }
-                }
+            # Use the comprehensive HuggingFace integration
+            response = await huggingface_integration.generate_text(
+                prompt=prompt,
+                model_name=model_name,
+                max_length=max_tokens,
+                temperature=temperature
+            )
             
-            if AIOHTTP_AVAILABLE:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(
-                        api_url,
-                        headers=headers,
-                        json=payload,
-                        timeout=aiohttp.ClientTimeout(total=LLM_TIMEOUT_SECONDS)
-                    ) as response:
-                        if response.status == 200:
-                            result = await response.json()
-                            return self._parse_huggingface_response(result, model_name)
-                        elif response.status == 503:
-                            # Model loading, try fallback model
-                            return await self._call_huggingface_fallback(prompt, max_tokens, temperature)
-                        else:
-                            # Log error but don't print to console in production
-                            error_text = await response.text()
-                            print(f"HuggingFace API Error: {response.status} - Model: {model_name}")
-                            # Try fallback on any error
-                            return await self._call_huggingface_fallback(prompt, max_tokens, temperature)
-            else:
-                response = requests.post(
-                    api_url,
-                    headers=headers,
-                    json=payload,
-                    timeout=LLM_TIMEOUT_SECONDS
-                )
-                if response.status_code == 200:
-                    result = response.json()
-                    return self._parse_huggingface_response(result, model_name)
-                elif response.status_code == 503:
-                    # Model loading, try fallback
-                    return await self._call_huggingface_fallback(prompt, max_tokens, temperature)
+            # Return the generated text
+            return response.result
             
-            return None
         except Exception as e:
-            print(f"HuggingFace API error: {e}")
-            return None
+            print(f"HuggingFace integration error: {e}")
+            # Fallback to basic API if integration fails
+            return await self._call_huggingface_fallback(prompt, max_tokens, temperature)
     
     def _select_huggingface_model(self, prompt: str, max_tokens: int) -> str:
         """
-        Advanced HuggingFace model selection leveraging all advantages:
-        - Specialized models for different domains
-        - Free tier optimization
-        - Task-specific model routing
+        Advanced HuggingFace model selection using available models
         """
         prompt_lower = prompt.lower()
         
-        # SPECIALIZED MODELS FOR DIFFERENT DOMAINS
+        # Use models that are available in the HuggingFace integration
+        available_models = {
+            "text_generation": ["gpt2", "distilgpt2", "microsoft/DialoGPT-medium"],
+            "summarization": ["facebook/bart-large-cnn", "t5-small"],
+            "sentiment": ["distilbert-base-uncased-finetuned-sst-2-english"],
+            "translation": ["Helsinki-NLP/opus-mt-en-es"],
+            "qa": ["distilbert-base-cased-distilled-squad"]
+        }
         
-        # Use only models that are confirmed available on HuggingFace free tier
-        
-        # Text Generation/Creative/Conversational - use GPT models (most reliable)
+        # Text Generation/Creative/Conversational
         if any(term in prompt_lower for term in ['generate', 'create', 'write', 'story', 'creative', 'compose', 'explain', 'describe', 'tell me', 'how does', 'what is']):
-            return "gpt2"  # Most reliable text generation model
+            return "distilgpt2"  # Fast and reliable
         
-        # Question Answering - use available Q&A models
+        # Question Answering
         if any(term in prompt_lower for term in ['?', 'question', 'answer', 'who', 'what', 'when', 'where', 'why', 'how']):
-            return "gpt2"  # Use GPT-2 for Q&A as well
+            return "distilgpt2"  # Use GPT-2 for Q&A
         
-        # Summarization tasks - use simple models that work
+        # Summarization tasks
         if any(term in prompt_lower for term in ['summarize', 'summary', 'key points', 'overview', 'brief']):
-            return "gpt2"  # GPT-2 can handle summarization
+            return "distilgpt2"  # GPT-2 can handle summarization
         
-        # Scientific/Research/Code/Medical/Financial/Legal content - use reliable models
-        if any(term in prompt_lower for term in ['research', 'study', 'scientific', 'analysis', 'code', 'programming', 'medical', 'healthcare', 'financial', 'business', 'legal', 'law']):
-            return "gpt2"  # Fallback to reliable GPT-2 for specialized content
-        
-        # Complex reasoning - use larger models
+        # Complex reasoning
         if len(prompt) > 200 or max_tokens > 300:
             return "microsoft/DialoGPT-medium"  # Larger model for complex tasks
         
-        # Default: Fast, reliable model for general queries
-        return "distilgpt2"  # Fast and efficient default
-    
-    def _parse_huggingface_response(self, result: Any, model_name: str) -> str:
-        """Advanced HuggingFace response parsing for different model types and tasks."""
-        try:
-            if isinstance(result, list) and len(result) > 0:
-                first_result = result[0]
-                
-                # Text Generation models (GPT-2, DialoGPT)
-                if "generated_text" in first_result:
-                    return self._sanitize_response(first_result["generated_text"])
-                
-                # Translation models
-                if "translation_text" in first_result:
-                    return first_result["translation_text"]
-                
-                # Summarization models (BART)
-                if "summary_text" in first_result:
-                    return first_result["summary_text"]
-                
-                # Question Answering models (BERT, DistilBERT)
-                if "answer" in first_result:
-                    return first_result["answer"]
-                
-                # Sentiment Analysis models
-                if "label" in first_result and "score" in first_result:
-                    label = first_result["label"]
-                    score = first_result["score"]
-                    return f"Sentiment: {label} (confidence: {score:.2f})"
-                
-                # Classification models
-                if "labels" in first_result:
-                    labels = first_result["labels"]
-                    scores = first_result.get("scores", [])
-                    if labels and scores:
-                        return f"Classification: {labels[0]} (confidence: {scores[0]:.2f})"
-                
-            elif isinstance(result, dict):
-                # Direct dictionary responses
-                if "generated_text" in result:
-                    return self._sanitize_response(result["generated_text"])
-                if "answer" in result:
-                    return result["answer"]
-                if "summary_text" in result:
-                    return result["summary_text"]
-            
-            # Fallback - convert to string
-            return str(result) if result else "No response generated"
-                
-        except Exception as e:
-            print(f"Error parsing HuggingFace response for {model_name}: {e}")
-            return f"Response parsing failed for {model_name}"
+        # Default: Fast, reliable model
+        return "distilgpt2"
     
     async def _call_huggingface_fallback(self, prompt: str, max_tokens: int, temperature: float) -> str:
         """Fallback to verified working HuggingFace models when primary fails."""
@@ -1128,7 +1057,7 @@ class RealLLMProcessor:
 
                     Citations:"""
 
-            llm_response = await self._call_optimal_llm(prompt, max_tokens=500, temperature=0.1)
+            llm_response = await self._call_llm(prompt, max_tokens=500, temperature=0.1)
             
             return {
                 "success": True,
@@ -1172,7 +1101,7 @@ Please provide a review that includes:
 
 Review:"""
 
-            llm_response = await self._call_optimal_llm(prompt, max_tokens=600, temperature=0.2)
+            llm_response = await self._call_llm(prompt, max_tokens=600, temperature=0.2)
             
             # Extract quality score if possible
             quality_score = 0.8  # Default

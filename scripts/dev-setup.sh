@@ -89,12 +89,12 @@ fi
 # Step 5: Environment setup
 print_status "Setting up environment variables..."
 if [ ! -f ".env" ]; then
-    if [ -f "env.template" ]; then
-        cp env.template .env
+    if [ -f "env.docker.template" ]; then
+        cp env.docker.template .env
         print_success "Environment file created from template"
         print_warning "Please edit .env file with your API keys"
     else
-        print_warning "No env.template found, please create .env file manually"
+        print_warning "No env.docker.template found, please create .env file manually"
     fi
 else
     print_success "Environment file already exists"

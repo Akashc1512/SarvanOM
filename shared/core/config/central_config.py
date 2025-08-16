@@ -29,10 +29,13 @@ Version:
 import os
 import json
 import secrets
+import hashlib
+import base64
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Union, ClassVar
 from functools import lru_cache
 from enum import Enum
+from datetime import datetime, timezone
 import warnings
 
 from pydantic import (
@@ -72,6 +75,15 @@ class Environment(str, Enum):
             return cls.DEVELOPMENT
 
 
+class SecretVaultType(str, Enum):
+    """Types of secret vaults supported."""
+    ENVIRONMENT = "environment"  # Environment variables (default)
+    FILE = "file"  # Encrypted file storage
+    AZURE_KEYVAULT = "azure_keyvault"
+    AWS_SECRETS = "aws_secrets"
+    HASHICORP_VAULT = "hashicorp_vault"
+
+
 class LogLevel(str, Enum):
     """Logging levels."""
 
@@ -94,6 +106,42 @@ class LogLevel(str, Enum):
 # Custom types
 Port = conint(ge=1, le=65535)
 Percentage = confloat(ge=0.0, le=1.0)
+
+
+class ConfigurationAuditor:
+    """Audits configuration changes for security compliance."""
+    
+    def __init__(self, audit_file: str = "logs/config_audit.jsonl"):
+        self.audit_file = Path(audit_file)
+        self.audit_file.parent.mkdir(exist_ok=True)
+    
+    def log_access(self, config_key: str, environment: str, access_type: str):
+        """Log configuration access."""
+        audit_entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "environment": environment,
+            "config_key": config_key,
+            "access_type": access_type,
+            "process_id": os.getpid(),
+        }
+        
+        with open(self.audit_file, "a") as f:
+            f.write(json.dumps(audit_entry) + "\n")
+    
+    def log_change(self, config_key: str, environment: str, old_value_hash: str, new_value_hash: str):
+        """Log configuration changes."""
+        audit_entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "environment": environment,
+            "config_key": config_key,
+            "change_type": "update",
+            "old_value_hash": old_value_hash,
+            "new_value_hash": new_value_hash,
+            "process_id": os.getpid(),
+        }
+        
+        with open(self.audit_file, "a") as f:
+            f.write(json.dumps(audit_entry) + "\n")
 
 
 class SecureSettings(BaseSettings):
@@ -139,6 +187,10 @@ class SecureSettings(BaseSettings):
                 data[field] = "***REDACTED***"
 
         return data
+    
+    def _hash_value(self, value: str) -> str:
+        """Create hash of value for auditing (not storing the actual value)."""
+        return hashlib.sha256(value.encode()).hexdigest()[:16]
 
     def model_dump(self, **kwargs) -> Dict[str, Any]:
         """Override model_dump to mask secrets."""
@@ -219,6 +271,33 @@ class CentralConfig(SecureSettings):
     )
     enable_api_keys: bool = Field(
         default=True, description="Enable API key authentication"
+    )
+    
+    # Enhanced security features (from enhanced_config.py)
+    secret_vault_type: SecretVaultType = Field(
+        default=SecretVaultType.ENVIRONMENT, description="Secret vault type"
+    )
+    audit_enabled: bool = Field(
+        default=True, description="Enable configuration auditing"
+    )
+    rotate_secrets: bool = Field(
+        default=False, description="Enable secret rotation"
+    )
+    max_requests_per_minute: conint(ge=1) = Field(
+        default=60, description="Max requests per minute"
+    )
+    max_tokens_per_minute: conint(ge=1) = Field(
+        default=10000, description="Max tokens per minute"
+    )
+    enable_rate_limiting: bool = Field(
+        default=True, description="Enable rate limiting"
+    )
+    enable_security_scanning: bool = Field(
+        default=True, description="Enable security scanning"
+    )
+    blocked_keywords: List[str] = Field(
+        default_factory=lambda: ["malicious", "attack", "exploit"], 
+        description="Blocked keywords"
     )
 
     # =============================================================================
@@ -788,6 +867,74 @@ class CentralConfig(SecureSettings):
             providers.append("Ollama")
 
         return providers if providers else ["None"]
+    
+    def get_llm_config(self) -> Dict[str, Any]:
+        """Get LLM configuration with secret management."""
+        return {
+            "openai_api_key": self.openai_api_key.get_secret_value() if self.openai_api_key else None,
+            "anthropic_api_key": self.anthropic_api_key.get_secret_value() if self.anthropic_api_key else None,
+            "huggingface_api_key": self.huggingface_api_key.get_secret_value() if self.huggingface_api_key else None,
+            "ollama_base_url": str(self.ollama_base_url),
+            "prioritize_free_models": self.prioritize_free_models,
+            "use_dynamic_selection": self.use_dynamic_selection,
+            "llm_timeout_seconds": self.agent_timeout_seconds,
+        }
+    
+    def get_security_config(self) -> Dict[str, Any]:
+        """Get security configuration."""
+        return {
+            "max_requests_per_minute": self.max_requests_per_minute,
+            "max_tokens_per_minute": self.max_tokens_per_minute,
+            "enable_rate_limiting": self.enable_rate_limiting,
+            "enable_security_scanning": self.enable_security_scanning,
+            "blocked_keywords": self.blocked_keywords,
+            "jwt_secret_key": self.jwt_secret_key.get_secret_value() if self.jwt_secret_key else None,
+        }
+    
+    def get_analytics_config(self) -> Dict[str, Any]:
+        """Get analytics configuration."""
+        return {
+            "anonymize_queries": True,  # Default for privacy
+            "retention_hours": 24,  # Default retention
+            "enable_performance_monitoring": self.metrics_enabled,
+            "log_query_content": False,  # Default for privacy
+        }
+    
+    def validate_configuration(self) -> Dict[str, Any]:
+        """Validate current configuration and return status."""
+        validation_results = {
+            "valid": True,
+            "warnings": [],
+            "errors": [],
+            "missing_critical": []
+        }
+        
+        # Check critical secrets
+        critical_secrets = ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"]
+        for secret in critical_secrets:
+            if not getattr(self, secret.lower(), None):
+                validation_results["warnings"].append(f"Missing optional secret: {secret}")
+        
+        # Check security configuration
+        if not self.jwt_secret_key and self.environment == Environment.PRODUCTION:
+            validation_results["errors"].append("JWT_SECRET_KEY required in production")
+            validation_results["valid"] = False
+        
+        # Check rate limiting configuration
+        if self.max_requests_per_minute > 1000 and self.environment == Environment.PRODUCTION:
+            validation_results["warnings"].append("Very high rate limit detected")
+        
+        return validation_results
+    
+    def get_environment_info(self) -> Dict[str, Any]:
+        """Get comprehensive environment information."""
+        return {
+            "environment": self.environment.value,
+            "configuration_valid": self.validate_configuration()["valid"],
+            "secret_vault_type": self.secret_vault_type.value,
+            "audit_enabled": self.audit_enabled,
+            "timestamp": datetime.now().isoformat()
+        }
 
     model_config = ConfigDict(
         # Environment variable prefix
@@ -810,10 +957,7 @@ def get_central_config() -> CentralConfig:
     return CentralConfig()
 
 
-def reload_central_config() -> CentralConfig:
-    """Reload central configuration (clears cache)."""
-    get_central_config.cache_clear()
-    return get_central_config()
+# REMOVED: reload_central_config function - unused
 
 
 # =============================================================================
@@ -821,10 +965,7 @@ def reload_central_config() -> CentralConfig:
 # =============================================================================
 
 
-def get_config_value(key: str, default: Any = None) -> Any:
-    """Get configuration value by key."""
-    config = get_central_config()
-    return getattr(config, key, default)
+# REMOVED: get_config_value function - unused
 
 
 def get_database_url() -> str:

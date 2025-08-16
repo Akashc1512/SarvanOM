@@ -64,6 +64,17 @@ class InMemoryVectorStore(VectorStoreService):
         self._docs: Dict[str, VectorDocument] = {}
         super().__init__("in_memory")
 
+    def _cosine_similarity(self, a: List[float], b: List[float]) -> float:
+        """Calculate cosine similarity between two vectors."""
+        if not a or not b or len(a) != len(b):
+            return 0.0
+        dot = sum(x * y for x, y in zip(a, b))
+        na = math.sqrt(sum(x * x for x in a))
+        nb = math.sqrt(sum(y * y for y in b))
+        if na == 0 or nb == 0:
+            return 0.0
+        return dot / (na * nb)
+
     async def upsert(self, docs: List[VectorDocument]) -> int:
         for d in docs:
             self._docs[d.id] = d
@@ -82,20 +93,9 @@ class InMemoryVectorStore(VectorStoreService):
     async def search(
         self, query_embedding: List[float], top_k: int = 5
     ) -> List[Tuple[VectorDocument, float]]:
-        # Cosine similarity search
-        def cosine(a: List[float], b: List[float]) -> float:
-            if not a or not b or len(a) != len(b):
-                return 0.0
-            dot = sum(x * y for x, y in zip(a, b))
-            na = math.sqrt(sum(x * x for x in a))
-            nb = math.sqrt(sum(y * y for y in b))
-            if na == 0 or nb == 0:
-                return 0.0
-            return dot / (na * nb)
-
         scores: List[Tuple[VectorDocument, float]] = []
         for doc in self._docs.values():
-            scores.append((doc, cosine(query_embedding, doc.embedding)))
+            scores.append((doc, self._cosine_similarity(query_embedding, doc.embedding)))
 
         scores.sort(key=lambda x: x[1], reverse=True)
         return scores[:top_k]
@@ -158,7 +158,7 @@ class InMemoryVectorStore(VectorStoreService):
         try:
             scores: List[Tuple[VectorDocument, float]] = []
             for doc in self._docs.values():
-                scores.append((doc, cosine(query_embedding, doc.embedding)))
+                scores.append((doc, self._cosine_similarity(query_embedding, doc.embedding)))
 
             scores.sort(key=lambda x: x[1], reverse=True)
             documents = [

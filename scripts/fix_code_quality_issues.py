@@ -335,7 +335,7 @@ def main():
     print(f"\n🎯 Next Steps:")
     print(f"   1. Run 'python scripts/generate_env_config.py' to create environment files")
     print(f"   2. Copy the generated .env content to your .env file")
-    print(f"   3. Test the application: 'python -m services.api_gateway.main'")
+    print(f"   3. Test the application: 'python -m services.gateway.main'")
     print(f"   4. Run tests: 'python -m pytest tests/ -v'")
     
     return True

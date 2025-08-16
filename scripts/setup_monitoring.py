@@ -184,7 +184,7 @@ async def main():
 
     if not api_healthy:
         print("❌ API is not running. Please start the backend first.")
-        print("   Command: python -m uvicorn services.api_gateway.main:app --reload")
+        print("   Command: python -m uvicorn services.gateway.main:app --reload")
         return False
 
     # Check metrics endpoint

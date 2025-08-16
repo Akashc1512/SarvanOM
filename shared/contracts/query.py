@@ -57,3 +57,31 @@ class RetrievalIndexRequest(BaseModel):
 
 class RetrievalIndexResponse(BaseModel):
     upserted: int
+
+
+class VectorEmbedRequest(BaseModel):
+    """Request model for vector embedding operations."""
+    text: str = Field(..., min_length=1, max_length=10000)
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+
+class VectorEmbedResponse(BaseModel):
+    """Response model for vector embedding operations."""
+    embedding: List[float]
+    text: str
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class VectorSearchRequest(BaseModel):
+    """Request model for vector similarity search."""
+    text: str = Field(..., min_length=1, max_length=10000)
+    top_k: conint(ge=1, le=100) = 10
+    metadata_filter: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+
+class VectorSearchResponse(BaseModel):
+    """Response model for vector similarity search."""
+    results: List[Dict[str, Any]] = Field(default_factory=list)
+    query_text: str
+    total_results: int = 0
+    top_k: int = 10

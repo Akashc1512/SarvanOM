@@ -282,6 +282,20 @@ __pycache__/
 .parcel-cache/
 models_cache/
 
+# Model files (large binary files)
+models/
+models_cache/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.h5
+*.pb
+*.pkl
+*.joblib
+
 # Documentation and guides (optional - uncomment if you don't want to track these)
 # *.md
 # documentation/

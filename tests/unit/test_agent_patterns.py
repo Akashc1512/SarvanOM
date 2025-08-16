@@ -23,7 +23,8 @@ from shared.core.agent_pattern import (
     BaseAgentStrategy,
 )
 from shared.core.base_agent import AgentType, QueryContext, AgentResult
-from shared.core.llm_client_v2 import LLMResponse, LLMRequest
+from shared.core.agents.llm_client import LLMResponse
+from services.gateway.real_llm_integration import LLMRequest
 
 
 class TestAgentFactory:

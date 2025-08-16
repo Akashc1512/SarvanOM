@@ -71,7 +71,7 @@ if %errorlevel% equ 0 (
     echo.
     echo Access your services at:
     echo   Frontend: http://localhost:3000
-    echo   Backend:  http://localhost:8000
+    echo   Backend:  http://localhost:8004
     echo   Ollama:   http://localhost:11434
     echo   Meilisearch: http://localhost:7700
     echo   ArangoDB: http://localhost:8529
@@ -137,7 +137,7 @@ goto end
 echo Checking health of all services...
 echo.
 echo Backend:
-curl -f http://localhost:8000/health/basic 2>nul && echo " - OK" || echo " - FAILED"
+curl -f http://localhost:8004/health/basic 2>nul && echo " - OK" || echo " - FAILED"
 echo.
 echo Frontend:
 curl -f http://localhost:3000 2>nul && echo " - OK" || echo " - FAILED"

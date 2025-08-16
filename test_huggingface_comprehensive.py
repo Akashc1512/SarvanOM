@@ -1,202 +1,194 @@
 #!/usr/bin/env python3
 """
-Comprehensive HuggingFace Testing Suite
-Tests all HuggingFace advantages with real-world problems across different domains
+Comprehensive HuggingFace Integration Test
+MAANG/OpenAI/Perplexity Standards Implementation
+Tests all latest stable features as of August 2025
 """
 
-import requests
+import os
+import asyncio
 import json
-import time
+from dotenv import load_dotenv
 
-def test_domain_specific_queries():
-    """Test HuggingFace specialized models across different domains"""
-    
-    test_cases = [
-        {
-            "domain": "Healthcare/Medical",
-            "query": "What are the treatment options for Type 2 diabetes and their effectiveness?",
-            "expected_model": "BioBERT or medical specialized model",
-            "description": "Medical domain expertise"
-        },
-        {
-            "domain": "Programming/Code",
-            "query": "How to implement a binary search algorithm in Python with error handling?",
-            "expected_model": "CodeBERT",
-            "description": "Code understanding and generation"
-        },
-        {
-            "domain": "Financial/Business",
-            "query": "What are the key financial indicators for evaluating a company's market performance?",
-            "expected_model": "FinBERT",
-            "description": "Financial domain analysis"
-        },
-        {
-            "domain": "Scientific Research",
-            "query": "Explain the peer-reviewed research on quantum computing applications in cryptography",
-            "expected_model": "DistilBERT or BERT-based",
-            "description": "Scientific content understanding"
-        },
-        {
-            "domain": "Legal/Compliance",
-            "query": "What are the legal requirements for data privacy compliance under GDPR?",
-            "expected_model": "Legal-BERT",
-            "description": "Legal domain specialization"
-        },
-        {
-            "domain": "Question Answering",
-            "query": "What is artificial intelligence and how does it differ from machine learning?",
-            "expected_model": "DistilBERT-SQuAD",
-            "description": "Optimized Q&A processing"
-        },
-        {
-            "domain": "Text Generation",
-            "query": "Create a brief summary of renewable energy technologies",
-            "expected_model": "GPT-2",
-            "description": "Creative text generation"
-        },
-        {
-            "domain": "Summarization",
-            "query": "Summarize the key points of climate change impact on global agriculture",
-            "expected_model": "BART-CNN",
-            "description": "Specialized summarization"
-        }
-    ]
-    
-    print("🧠 COMPREHENSIVE HUGGINGFACE DOMAIN TESTING")
-    print("=" * 60)
-    
-    results = []
-    
-    for i, test_case in enumerate(test_cases, 1):
-        print(f"\n🔬 TEST {i}/{len(test_cases)}: {test_case['domain']}")
-        print(f"📝 Query: {test_case['query']}")
-        print(f"🎯 Expected Model: {test_case['expected_model']}")
-        print("-" * 50)
-        
-        start_time = time.time()
-        
-        try:
-            response = requests.post(
-                "http://localhost:8000/search",
-                json={
-                    "query": test_case["query"],
-                    "max_results": 3
-                },
-                timeout=30
-            )
-            
-            request_time = time.time() - start_time
-            
-            if response.status_code == 200:
-                result = response.json()
-                data = result["data"]
-                
-                # Extract and analyze response
-                answer = data["answer"]
-                processing_time = data["execution_time_ms"]
-                complexity = data["complexity"]
-                
-                print(f"✅ Status: SUCCESS")
-                print(f"⏱️ Request Time: {request_time:.2f}s")
-                print(f"⚡ Processing: {processing_time}ms")
-                print(f"🧠 Complexity: {complexity}")
-                
-                # Check if response looks like real AI (not mock/fallback)
-                if answer.startswith("{") and "fallback" in answer.lower():
-                    print(f"⚠️ Response Type: Fallback")
-                    try:
-                        fallback_data = json.loads(answer)
-                        print(f"   Fallback Details: {fallback_data.get('status', 'unknown')}")
-                    except:
-                        pass
-                elif len(answer) > 50 and not answer.startswith("Unable to process"):
-                    print(f"✅ Response Type: Real AI Generated")
-                    print(f"📄 Preview: {answer[:150]}...")
-                else:
-                    print(f"⚠️ Response Type: Minimal/Error")
-                
-                results.append({
-                    "domain": test_case["domain"],
-                    "success": True,
-                    "processing_time": processing_time,
-                    "request_time": request_time,
-                    "complexity": complexity,
-                    "response_length": len(answer)
-                })
-                
-            else:
-                print(f"❌ Status: FAILED ({response.status_code})")
-                results.append({
-                    "domain": test_case["domain"],
-                    "success": False,
-                    "error": response.status_code
-                })
-                
-        except Exception as e:
-            print(f"❌ Error: {e}")
-            results.append({
-                "domain": test_case["domain"],
-                "success": False,
-                "error": str(e)
-            })
-        
-        # Brief pause between tests
-        if i < len(test_cases):
-            print("⏳ Next test in 2 seconds...")
-            time.sleep(2)
-    
-    # Summary Report
-    print("\n" + "=" * 60)
-    print("📊 COMPREHENSIVE TEST RESULTS SUMMARY")
-    print("=" * 60)
-    
-    successful_tests = [r for r in results if r.get("success")]
-    failed_tests = [r for r in results if not r.get("success")]
-    
-    print(f"✅ Successful Tests: {len(successful_tests)}/{len(results)}")
-    print(f"❌ Failed Tests: {len(failed_tests)}/{len(results)}")
-    
-    if successful_tests:
-        avg_processing = sum(r["processing_time"] for r in successful_tests) / len(successful_tests)
-        avg_request = sum(r["request_time"] for r in successful_tests) / len(successful_tests)
-        avg_response_length = sum(r["response_length"] for r in successful_tests) / len(successful_tests)
-        
-        print(f"\n📈 PERFORMANCE METRICS:")
-        print(f"   ⚡ Avg Processing Time: {avg_processing:.0f}ms")
-        print(f"   ⏱️ Avg Request Time: {avg_request:.2f}s")
-        print(f"   📝 Avg Response Length: {avg_response_length:.0f} chars")
-        
-        # Domain breakdown
-        print(f"\n🎯 DOMAIN SUCCESS RATE:")
-        for result in successful_tests:
-            print(f"   ✅ {result['domain']}: {result['processing_time']}ms")
-    
-    if failed_tests:
-        print(f"\n❌ FAILED DOMAINS:")
-        for result in failed_tests:
-            error = result.get('error', 'Unknown')
-            print(f"   ❌ {result['domain']}: {error}")
-    
-    print(f"\n🏆 HUGGINGFACE ADVANTAGES DEMONSTRATED:")
-    print(f"   🔬 Domain-specific models for specialized tasks")
-    print(f"   🆓 Free tier models for cost optimization")
-    print(f"   ⚡ Fast inference with optimized models")
-    print(f"   🎯 Task-specific routing (Q&A, summarization, generation)")
-    print(f"   🧠 Intelligent model selection based on query content")
-    
-    return results
+# Load environment variables
+load_dotenv()
 
-def main():
-    """Run comprehensive HuggingFace testing"""
-    print("🚀 STARTING COMPREHENSIVE HUGGINGFACE TESTING")
-    print("Testing all advantages: domain models, free tier, task specialization")
+async def test_huggingface_comprehensive():
+    """Test all HuggingFace features comprehensively"""
+    
+    print("🔥 COMPREHENSIVE HUGGINGFACE INTEGRATION TEST")
+    print("=" * 60)
+    print("📋 MAANG/OpenAI/Perplexity Standards - August 2025")
     print()
     
-    results = test_domain_specific_queries()
+    # Test environment variables
+    print("🔐 ENVIRONMENT VARIABLES:")
+    print("=" * 40)
     
-    print(f"\n✅ TESTING COMPLETE!")
-    print(f"🎯 HuggingFace integration fully tested across {len(results)} domains")
-    print(f"💡 All mock responses removed - using real HuggingFace models")
+    hf_token = os.getenv("HUGGINGFACE_API_KEY")
+    status = "✅ SET" if hf_token and hf_token != "your_*_here" else "❌ MISSING"
+    preview = f"({hf_token[:10]}...)" if hf_token and hf_token != "your_*_here" else ""
+    print(f"   HuggingFace Token: {status} {preview}")
+    print()
+    
+    # Test HuggingFace integration directly
+    print("🧪 TESTING HUGGINGFACE INTEGRATION:")
+    print("=" * 40)
+    
+    try:
+        # Import the integration
+        from services.gateway.huggingface_integration import HuggingFaceIntegration
+        
+        # Initialize integration
+        print("\n🚀 Initializing HuggingFace Integration...")
+        hf_integration = HuggingFaceIntegration()
+        await hf_integration.initialize()
+        
+        # Test 1: Text Generation
+        print("\n📝 TEST 1: Text Generation")
+        print("-" * 30)
+        await test_text_generation(hf_integration)
+        
+        # Test 2: Embeddings
+        print("\n🔍 TEST 2: Text Embeddings")
+        print("-" * 30)
+        await test_embeddings(hf_integration)
+        
+        # Test 3: Sentiment Analysis
+        print("\n😊 TEST 3: Sentiment Analysis")
+        print("-" * 30)
+        await test_sentiment_analysis(hf_integration)
+        
+        # Test 4: Question Answering
+        print("\n❓ TEST 4: Question Answering")
+        print("-" * 30)
+        await test_question_answering(hf_integration)
+        
+        # Test 5: Summarization
+        print("\n📄 TEST 5: Text Summarization")
+        print("-" * 30)
+        await test_summarization(hf_integration)
+        
+        # Test 6: Zero-shot Classification
+        print("\n🎯 TEST 6: Zero-shot Classification")
+        print("-" * 30)
+        await test_zero_shot_classification(hf_integration)
+        
+        print("\n✅ ALL HUGGINGFACE TESTS COMPLETED!")
+        
+    except Exception as e:
+        print(f"❌ HuggingFace integration test failed: {e}")
+        import traceback
+        traceback.print_exc()
+
+async def test_text_generation(hf_integration):
+    """Test text generation with latest models"""
+    try:
+        prompt = "Artificial intelligence is"
+        response = await hf_integration.generate_text(
+            prompt=prompt,
+            model_name="microsoft/DialoGPT-medium",
+            max_length=50,
+            temperature=0.7
+        )
+        
+        print(f"   ✅ Text Generation: {response.result[:100]}...")
+        print(f"   ⏱️ Processing Time: {response.processing_time:.2f}s")
+        print(f"   🤖 Model: {response.model_name}")
+        
+    except Exception as e:
+        print(f"   ❌ Text Generation Failed: {e}")
+
+async def test_embeddings(hf_integration):
+    """Test text embeddings"""
+    try:
+        texts = [
+            "Artificial intelligence is transforming the world",
+            "Machine learning is a subset of AI",
+            "The weather is nice today"
+        ]
+        
+        response = await hf_integration.get_embeddings(texts)
+        
+        print(f"   ✅ Embeddings Generated: {len(response.result)} vectors")
+        print(f"   📊 Vector Dimensions: {len(response.result[0])}")
+        print(f"   ⏱️ Processing Time: {response.processing_time:.2f}s")
+        print(f"   🤖 Model: {response.model_name}")
+        
+    except Exception as e:
+        print(f"   ❌ Embeddings Failed: {e}")
+
+async def test_sentiment_analysis(hf_integration):
+    """Test sentiment analysis"""
+    try:
+        texts = [
+            "I love this new AI technology!",
+            "This is terrible and disappointing",
+            "The weather is neutral today"
+        ]
+        
+        for text in texts:
+            response = await hf_integration.analyze_sentiment(text)
+            sentiment = response.result[0]['label']
+            score = response.result[0]['score']
+            print(f"   📝 '{text[:30]}...' → {sentiment} ({score:.3f})")
+        
+        print(f"   ⏱️ Processing Time: {response.processing_time:.2f}s")
+        print(f"   🤖 Model: {response.model_name}")
+        
+    except Exception as e:
+        print(f"   ❌ Sentiment Analysis Failed: {e}")
+
+async def test_question_answering(hf_integration):
+    """Test question answering"""
+    try:
+        context = "Artificial intelligence (AI) is intelligence demonstrated by machines, in contrast to the natural intelligence displayed by humans and animals."
+        question = "What is artificial intelligence?"
+        
+        response = await hf_integration.answer_question(question, context)
+        
+        print(f"   ❓ Question: {question}")
+        print(f"   📖 Context: {context[:50]}...")
+        print(f"   ✅ Answer: {response.result['answer']}")
+        print(f"   📊 Confidence: {response.result['score']:.3f}")
+        print(f"   ⏱️ Processing Time: {response.processing_time:.2f}s")
+        
+    except Exception as e:
+        print(f"   ❌ Question Answering Failed: {e}")
+
+async def test_summarization(hf_integration):
+    """Test text summarization"""
+    try:
+        text = """
+        Artificial intelligence (AI) is intelligence demonstrated by machines, in contrast to the natural intelligence displayed by humans and animals. 
+        Leading AI textbooks define the field as the study of "intelligent agents": any device that perceives its environment and takes actions that maximize its chance of successfully achieving its goals. 
+        Colloquially, the term "artificial intelligence" is often used to describe machines (or computers) that mimic "cognitive" functions that humans associate with the human mind, such as "learning" and "problem solving".
+        """
+        
+        response = await hf_integration.summarize_text(text)
+        
+        print(f"   📄 Original: {len(text)} characters")
+        print(f"   📝 Summary: {response.result[0]['summary_text']}")
+        print(f"   ⏱️ Processing Time: {response.processing_time:.2f}s")
+        
+    except Exception as e:
+        print(f"   ❌ Summarization Failed: {e}")
+
+async def test_zero_shot_classification(hf_integration):
+    """Test zero-shot classification"""
+    try:
+        text = "I love this new AI technology!"
+        candidate_labels = ["positive", "negative", "neutral"]
+        
+        response = await hf_integration.zero_shot_classify(text, candidate_labels)
+        
+        print(f"   📝 Text: {text}")
+        print(f"   🏷️ Labels: {candidate_labels}")
+        print(f"   ✅ Classification: {response.result['labels'][0]} ({response.result['scores'][0]:.3f})")
+        print(f"   ⏱️ Processing Time: {response.processing_time:.2f}s")
+        
+    except Exception as e:
+        print(f"   ❌ Zero-shot Classification Failed: {e}")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(test_huggingface_comprehensive())

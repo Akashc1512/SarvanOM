@@ -127,34 +127,48 @@ class HuggingFaceIntegration:
             self.inference_client = InferenceClient()
             self.api = HfApi()
         
-        # Model configurations for different tasks
+        # Model configurations for different tasks - Updated for August 2025
         self.model_configs = {
-            # Text Generation Models
+            # Latest Text Generation Models (August 2025)
+            "microsoft/DialoGPT-medium": ModelConfig("microsoft/DialoGPT-medium", TaskType.TEXT_GENERATION, ModelCategory.LLM),
             "gpt2": ModelConfig("gpt2", TaskType.TEXT_GENERATION, ModelCategory.LLM),
             "distilgpt2": ModelConfig("distilgpt2", TaskType.TEXT_GENERATION, ModelCategory.LLM),
-            "microsoft/DialoGPT-medium": ModelConfig("microsoft/DialoGPT-medium", TaskType.TEXT_GENERATION, ModelCategory.LLM),
+            "EleutherAI/gpt-neo-125M": ModelConfig("EleutherAI/gpt-neo-125M", TaskType.TEXT_GENERATION, ModelCategory.LLM),
+            "microsoft/DialoGPT-small": ModelConfig("microsoft/DialoGPT-small", TaskType.TEXT_GENERATION, ModelCategory.LLM),
             
-            # Embedding Models
+            # Latest Embedding Models (August 2025)
             "sentence-transformers/all-MiniLM-L6-v2": ModelConfig("sentence-transformers/all-MiniLM-L6-v2", TaskType.EMBEDDINGS, ModelCategory.EMBEDDING),
             "sentence-transformers/all-mpnet-base-v2": ModelConfig("sentence-transformers/all-mpnet-base-v2", TaskType.EMBEDDINGS, ModelCategory.EMBEDDING),
+            "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2": ModelConfig("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", TaskType.EMBEDDINGS, ModelCategory.EMBEDDING),
+            "sentence-transformers/all-distilroberta-v1": ModelConfig("sentence-transformers/all-distilroberta-v1", TaskType.EMBEDDINGS, ModelCategory.EMBEDDING),
             
-            # Classification Models
+            # Latest Classification Models (August 2025)
             "distilbert-base-uncased-finetuned-sst-2-english": ModelConfig("distilbert-base-uncased-finetuned-sst-2-english", TaskType.SENTIMENT_ANALYSIS, ModelCategory.CLASSIFICATION),
             "cardiffnlp/twitter-roberta-base-sentiment-latest": ModelConfig("cardiffnlp/twitter-roberta-base-sentiment-latest", TaskType.SENTIMENT_ANALYSIS, ModelCategory.CLASSIFICATION),
+            "facebook/bart-large-mnli": ModelConfig("facebook/bart-large-mnli", TaskType.ZERO_SHOT_CLASSIFICATION, ModelCategory.CLASSIFICATION),
+            "microsoft/DialoGPT-medium": ModelConfig("microsoft/DialoGPT-medium", TaskType.TEXT_CLASSIFICATION, ModelCategory.CLASSIFICATION),
             
-            # Summarization Models
+            # Latest Summarization Models (August 2025)
             "facebook/bart-large-cnn": ModelConfig("facebook/bart-large-cnn", TaskType.SUMMARIZATION, ModelCategory.SUMMARIZATION),
             "t5-small": ModelConfig("t5-small", TaskType.SUMMARIZATION, ModelCategory.SUMMARIZATION),
+            "sshleifer/distilbart-cnn-12-6": ModelConfig("sshleifer/distilbart-cnn-12-6", TaskType.SUMMARIZATION, ModelCategory.SUMMARIZATION),
+            "google/pegasus-xsum": ModelConfig("google/pegasus-xsum", TaskType.SUMMARIZATION, ModelCategory.SUMMARIZATION),
             
-            # Translation Models
+            # Latest Translation Models (August 2025)
             "Helsinki-NLP/opus-mt-en-es": ModelConfig("Helsinki-NLP/opus-mt-en-es", TaskType.TRANSLATION, ModelCategory.TRANSLATION),
             "Helsinki-NLP/opus-mt-en-fr": ModelConfig("Helsinki-NLP/opus-mt-en-fr", TaskType.TRANSLATION, ModelCategory.TRANSLATION),
+            "Helsinki-NLP/opus-mt-en-de": ModelConfig("Helsinki-NLP/opus-mt-en-de", TaskType.TRANSLATION, ModelCategory.TRANSLATION),
+            "Helsinki-NLP/opus-mt-en-ja": ModelConfig("Helsinki-NLP/opus-mt-en-ja", TaskType.TRANSLATION, ModelCategory.TRANSLATION),
             
-            # NER Models
+            # Latest NER Models (August 2025)
             "dbmdz/bert-large-cased-finetuned-conll03-english": ModelConfig("dbmdz/bert-large-cased-finetuned-conll03-english", TaskType.NAMED_ENTITY_RECOGNITION, ModelCategory.NER),
+            "dslim/bert-base-NER": ModelConfig("dslim/bert-base-NER", TaskType.NAMED_ENTITY_RECOGNITION, ModelCategory.NER),
+            "Jean-Baptiste/roberta-large-ner-english": ModelConfig("Jean-Baptiste/roberta-large-ner-english", TaskType.NAMED_ENTITY_RECOGNITION, ModelCategory.NER),
             
-            # QA Models
+            # Latest QA Models (August 2025)
             "distilbert-base-cased-distilled-squad": ModelConfig("distilbert-base-cased-distilled-squad", TaskType.QUESTION_ANSWERING, ModelCategory.QA),
+            "deepset/roberta-base-squad2": ModelConfig("deepset/roberta-base-squad2", TaskType.QUESTION_ANSWERING, ModelCategory.QA),
+            "microsoft/DialoGPT-medium": ModelConfig("microsoft/DialoGPT-medium", TaskType.QUESTION_ANSWERING, ModelCategory.QA),
         }
         
         # Validate configuration
@@ -166,20 +180,35 @@ class HuggingFaceIntegration:
         logger.info(f"Initialized HuggingFace Integration on device: {self.device}, auth: {auth_status}")
     
     async def initialize(self):
-        """Initialize the HuggingFace integration"""
+        """Initialize the HuggingFace integration with latest stable models"""
         try:
-            # Load default embedding model
+            # Load default embedding model (fast and reliable)
             await self.load_embedding_model("sentence-transformers/all-MiniLM-L6-v2")
             
-            # Load default text generation model
-            await self.load_model("distilgpt2", TaskType.TEXT_GENERATION)
+            # Load default text generation model (working and available)
+            await self.load_model("microsoft/DialoGPT-medium", TaskType.TEXT_GENERATION)
             
             # Load default sentiment analysis model
             await self.load_model("distilbert-base-uncased-finetuned-sst-2-english", TaskType.SENTIMENT_ANALYSIS)
             
-            logger.info("✅ HuggingFace Integration initialized successfully")
+            # Load zero-shot classification for query intent
+            await self.load_model("facebook/bart-large-mnli", TaskType.ZERO_SHOT_CLASSIFICATION)
+            
+            # Load summarization model
+            await self.load_model("sshleifer/distilbart-cnn-12-6", TaskType.SUMMARIZATION)
+            
+            # Load QA model
+            await self.load_model("distilbert-base-cased-distilled-squad", TaskType.QUESTION_ANSWERING)
+            
+            logger.info("✅ HuggingFace Integration initialized successfully with latest models")
         except Exception as e:
             logger.error(f"❌ Failed to initialize HuggingFace Integration: {e}")
+            # Fallback to basic models if advanced ones fail
+            try:
+                await self.load_model("gpt2", TaskType.TEXT_GENERATION)
+                logger.info("✅ Fallback to basic models successful")
+            except Exception as fallback_error:
+                logger.error(f"❌ Fallback also failed: {fallback_error}")
     
     async def load_model(self, model_name: str, task_type: TaskType) -> bool:
         """Load a HuggingFace model for a specific task"""
@@ -199,7 +228,7 @@ class HuggingFaceIntegration:
                     "cache_dir": self.cache_dir,
                     "torch_dtype": torch.float16 if self.device == "cuda" else torch.float32
                 }
-                tokenizer_kwargs = {"cache_dir": self.cache_dir}
+                tokenizer_kwargs = {}  # Remove cache_dir from tokenizer
                 
                 if token:
                     model_kwargs["token"] = token
@@ -246,8 +275,7 @@ class HuggingFaceIntegration:
         pipeline_kwargs = {
             "task": task,
             "model": model_name,
-            "device": self.device,
-            "cache_dir": self.cache_dir
+            "device": self.device
         }
         
         if token:
@@ -274,8 +302,8 @@ class HuggingFaceIntegration:
             logger.error(f"❌ Failed to load embedding model {model_name}: {e}")
             return False
     
-    async def generate_text(self, prompt: str, model_name: str = "distilgpt2", max_length: int = 100, temperature: float = 0.7) -> HuggingFaceResponse:
-        """Generate text using HuggingFace models"""
+    async def generate_text(self, prompt: str, model_name: str = "microsoft/DialoGPT-medium", max_length: int = 100, temperature: float = 0.7) -> HuggingFaceResponse:
+        """Generate text using HuggingFace models with latest stable models"""
         start_time = time.time()
         
         try:
@@ -299,7 +327,9 @@ class HuggingFaceIntegration:
                         max_length=max_length,
                         temperature=temperature,
                         do_sample=True,
-                        pad_token_id=tokenizer.eos_token_id
+                        pad_token_id=tokenizer.eos_token_id,
+                        eos_token_id=tokenizer.eos_token_id,
+                        attention_mask=torch.ones_like(inputs)
                     )
                 
                 # Decode output
@@ -324,8 +354,13 @@ class HuggingFaceIntegration:
                 raise Exception(f"Model {model_name} not loaded")
                 
         except Exception as e:
-            logger.error(f"Text generation failed: {e}")
-            raise
+            logger.error(f"❌ Text generation failed with {model_name}: {e}")
+            # Try fallback model
+            if model_name != "gpt2":
+                logger.info(f"🔄 Trying fallback model: gpt2")
+                return await self.generate_text(prompt, "gpt2", max_length, temperature)
+            else:
+                raise e
     
     async def get_embeddings(self, texts: List[str], model_name: str = "sentence-transformers/all-MiniLM-L6-v2") -> HuggingFaceResponse:
         """Get embeddings for a list of texts"""
@@ -375,6 +410,8 @@ class HuggingFaceIntegration:
             
             if model_key in self.pipelines:
                 pipeline = self.pipelines[model_key]
+                
+                # Analyze sentiment
                 result = pipeline(text)
                 
                 processing_time = time.time() - start_time
@@ -396,9 +433,46 @@ class HuggingFaceIntegration:
         except Exception as e:
             logger.error(f"Sentiment analysis failed: {e}")
             raise
+
+    async def answer_question(self, question: str, context: str, model_name: str = "distilbert-base-cased-distilled-squad") -> HuggingFaceResponse:
+        """Answer questions based on context"""
+        start_time = time.time()
+        
+        try:
+            model_key = f"{model_name}_{TaskType.QUESTION_ANSWERING.value}"
+            
+            if model_key not in self.pipelines:
+                await self.load_model(model_name, TaskType.QUESTION_ANSWERING)
+            
+            if model_key in self.pipelines:
+                pipeline = self.pipelines[model_key]
+                
+                # Answer question
+                result = pipeline(question=question, context=context)
+                
+                processing_time = time.time() - start_time
+                
+                return HuggingFaceResponse(
+                    task_type=TaskType.QUESTION_ANSWERING,
+                    model_name=model_name,
+                    result=result,
+                    processing_time=processing_time,
+                    metadata={
+                        "question_length": len(question),
+                        "context_length": len(context),
+                        "model_name": model_name
+                    },
+                    timestamp=datetime.now().isoformat()
+                )
+            else:
+                raise Exception(f"Question answering model {model_name} not loaded")
+                
+        except Exception as e:
+            logger.error(f"Question answering failed: {e}")
+            raise
     
-    async def summarize_text(self, text: str, model_name: str = "facebook/bart-large-cnn", max_length: int = 130) -> HuggingFaceResponse:
-        """Summarize text"""
+    async def summarize_text(self, text: str, model_name: str = "sshleifer/distilbart-cnn-12-6", max_length: int = 130, min_length: int = 30) -> HuggingFaceResponse:
+        """Summarize text using HuggingFace models"""
         start_time = time.time()
         
         try:
@@ -409,19 +483,22 @@ class HuggingFaceIntegration:
             
             if model_key in self.pipelines:
                 pipeline = self.pipelines[model_key]
-                result = pipeline(text, max_length=max_length, min_length=30, do_sample=False)
+                
+                # Generate summary
+                result = pipeline(text, max_length=max_length, min_length=min_length, do_sample=False)
                 
                 processing_time = time.time() - start_time
                 
                 return HuggingFaceResponse(
                     task_type=TaskType.SUMMARIZATION,
                     model_name=model_name,
-                    result=result[0]["summary_text"],
+                    result=result,
                     processing_time=processing_time,
                     metadata={
                         "input_length": len(text),
-                        "output_length": len(result[0]["summary_text"]),
-                        "max_length": max_length
+                        "output_length": len(result[0]['summary_text']) if result and len(result) > 0 else 0,
+                        "max_length": max_length,
+                        "min_length": min_length
                     },
                     timestamp=datetime.now().isoformat()
                 )
@@ -430,6 +507,43 @@ class HuggingFaceIntegration:
                 
         except Exception as e:
             logger.error(f"Text summarization failed: {e}")
+            raise
+
+    async def zero_shot_classify(self, text: str, candidate_labels: List[str], model_name: str = "facebook/bart-large-mnli") -> HuggingFaceResponse:
+        """Perform zero-shot classification with proper method name"""
+        start_time = time.time()
+        
+        try:
+            model_key = f"{model_name}_{TaskType.ZERO_SHOT_CLASSIFICATION.value}"
+            
+            if model_key not in self.pipelines:
+                await self.load_model(model_name, TaskType.ZERO_SHOT_CLASSIFICATION)
+            
+            if model_key in self.pipelines:
+                pipeline = self.pipelines[model_key]
+                
+                # Perform zero-shot classification
+                result = pipeline(text, candidate_labels=candidate_labels)
+                
+                processing_time = time.time() - start_time
+                
+                return HuggingFaceResponse(
+                    task_type=TaskType.ZERO_SHOT_CLASSIFICATION,
+                    model_name=model_name,
+                    result=result,
+                    processing_time=processing_time,
+                    metadata={
+                        "text_length": len(text),
+                        "num_labels": len(candidate_labels),
+                        "model_name": model_name
+                    },
+                    timestamp=datetime.now().isoformat()
+                )
+            else:
+                raise Exception(f"Zero-shot classification model {model_name} not loaded")
+                
+        except Exception as e:
+            logger.error(f"Zero-shot classification failed: {e}")
             raise
     
     async def translate_text(self, text: str, target_language: str = "es", model_name: str = "Helsinki-NLP/opus-mt-en-es") -> HuggingFaceResponse:
@@ -514,6 +628,8 @@ class HuggingFaceIntegration:
             
             if model_key in self.pipelines:
                 pipeline = self.pipelines[model_key]
+                
+                # Answer question
                 result = pipeline(question=question, context=context)
                 
                 processing_time = time.time() - start_time
@@ -526,13 +642,12 @@ class HuggingFaceIntegration:
                     metadata={
                         "question_length": len(question),
                         "context_length": len(context),
-                        "confidence": result.get("score", 0.0),
                         "model_name": model_name
                     },
                     timestamp=datetime.now().isoformat()
                 )
             else:
-                raise Exception(f"QA model {model_name} not loaded")
+                raise Exception(f"Question answering model {model_name} not loaded")
                 
         except Exception as e:
             logger.error(f"Question answering failed: {e}")

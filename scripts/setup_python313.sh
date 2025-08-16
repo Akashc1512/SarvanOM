@@ -179,7 +179,7 @@ main() {
     echo "   - macOS/Linux: source .venv/bin/activate"
     echo ""
     echo "2. Configure environment variables:"
-    echo "   cp env.template .env"
+    echo "   cp env.docker.template .env"
     echo "   # Edit .env with your API keys"
     echo ""
     echo "3. Start development servers:"

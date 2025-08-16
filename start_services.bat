@@ -19,7 +19,7 @@ if %errorlevel% equ 0 (
     echo.
     echo Access your services at:
     echo   Frontend: http://localhost:3000
-    echo   Backend:  http://localhost:8000
+    echo   Backend:  http://localhost:8004
     echo   Ollama:   http://localhost:11434
     echo.
     echo Run '.\docker-windows.bat health' to check service health

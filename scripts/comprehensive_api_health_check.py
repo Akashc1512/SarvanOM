@@ -486,7 +486,7 @@ async def main():
         print(f"   Error: {e}")
         print("   Please ensure the server is running with:")
         print(
-            "   uvicorn services.api_gateway.main:app --reload --host 0.0.0.0 --port 8000"
+            "   uvicorn services.gateway.main:app --reload --host 0.0.0.0 --port 8004"
         )
         return
 

@@ -163,7 +163,7 @@ def check_environment_files() -> Dict[str, bool]:
     """Check if environment configuration files exist."""
     print_status("Checking environment configuration...")
 
-    files = [".env", "env.template"]
+    files = [".env", "env.docker.template"]
     results = {}
 
     for file in files:

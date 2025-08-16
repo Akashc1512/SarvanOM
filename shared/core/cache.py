@@ -5,7 +5,7 @@ This module implements a sophisticated caching system following MAANG
 best practices for performance, scalability, and reliability.
 
 Features:
-    - Multiple cache backends (In-Memory, Hybrid)
+    - Multiple cache backends (In-Memory, Redis, Hybrid)
     - Cache warming and preloading
     - TTL management with jitter
     - Cache stampede prevention
@@ -58,6 +58,14 @@ import structlog
 from aiocache import Cache as AiocacheBase
 from aiocache.serializers import JsonSerializer, PickleSerializer
 from cryptography.fernet import Fernet
+
+# Redis imports
+try:
+    import redis.asyncio as redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+    redis = None
 
 
 # Monitoring functions - implement in actual services as needed
@@ -225,6 +233,216 @@ class CacheBackend(Protocol):
     async def close(self) -> None:
         """Close backend connections."""
         ...
+
+
+# Redis cache backend
+class RedisBackend:
+    """Redis cache backend for distributed caching."""
+
+    def __init__(
+        self,
+        redis_url: str = "redis://localhost:6379",
+        ttl: Optional[int] = None,
+        max_connections: int = 10,
+        retry_on_timeout: bool = True,
+        socket_keepalive: bool = True,
+    ) -> None:
+        """
+        Initialize Redis backend.
+
+        Args:
+            redis_url: Redis connection URL
+            ttl: Default TTL in seconds
+            max_connections: Maximum number of connections
+            retry_on_timeout: Whether to retry on timeout
+            socket_keepalive: Whether to enable socket keepalive
+        """
+        self.redis_url = redis_url
+        self.default_ttl = ttl
+        self.max_connections = max_connections
+        self.retry_on_timeout = retry_on_timeout
+        self.socket_keepalive = socket_keepalive
+        
+        self._redis: Optional[redis.Redis] = None
+        self.stats = CacheStats()
+        self._lock = asyncio.Lock()
+
+    async def initialize(self) -> None:
+        """Initialize Redis connection."""
+        if not REDIS_AVAILABLE:
+            raise RuntimeError("Redis is not available. Install redis package.")
+        
+        try:
+            self._redis = redis.from_url(
+                self.redis_url,
+                max_connections=self.max_connections,
+                retry_on_timeout=self.retry_on_timeout,
+                socket_keepalive=self.socket_keepalive,
+                decode_responses=True,
+            )
+            
+            # Test connection
+            await self._redis.ping()
+            logger.info(f"Redis backend initialized: {self.redis_url}")
+            
+        except Exception as e:
+            logger.error(f"Failed to initialize Redis backend: {e}")
+            raise
+
+    async def get(self, key: CacheKey) -> Optional[Any]:
+        """Get value from Redis cache."""
+        if not self._redis:
+            return None
+        
+        try:
+            value = await self._redis.get(key)
+            if value is None:
+                self.stats.misses += 1
+                return None
+            
+            # Try to deserialize JSON first, then pickle
+            try:
+                result = json.loads(value)
+            except (json.JSONDecodeError, TypeError):
+                try:
+                    result = pickle.loads(value.encode('latin1'))
+                except Exception:
+                    result = value
+            
+            self.stats.hits += 1
+            return result
+            
+        except Exception as e:
+            logger.error(f"Redis get error for key {key}: {e}")
+            self.stats.misses += 1
+            return None
+
+    async def set(self, key: CacheKey, value: Any, ttl: Optional[int] = None) -> bool:
+        """Set value in Redis cache."""
+        if not self._redis:
+            return False
+        
+        try:
+            # Serialize value
+            if isinstance(value, (dict, list, str, int, float, bool)):
+                serialized = json.dumps(value)
+            else:
+                serialized = pickle.dumps(value).decode('latin1')
+            
+            # Set with TTL
+            ttl = ttl or self.default_ttl
+            if ttl:
+                await self._redis.setex(key, ttl, serialized)
+            else:
+                await self._redis.set(key, serialized)
+            
+            self.stats.sets += 1
+            self.stats.total_size += len(serialized)
+            return True
+            
+        except Exception as e:
+            logger.error(f"Redis set error for key {key}: {e}")
+            return False
+
+    async def delete(self, key: CacheKey) -> bool:
+        """Delete value from Redis cache."""
+        if not self._redis:
+            return False
+        
+        try:
+            result = await self._redis.delete(key)
+            return result > 0
+        except Exception as e:
+            logger.error(f"Redis delete error for key {key}: {e}")
+            return False
+
+    async def exists(self, key: CacheKey) -> bool:
+        """Check if key exists in Redis cache."""
+        if not self._redis:
+            return False
+        
+        try:
+            return await self._redis.exists(key) > 0
+        except Exception as e:
+            logger.error(f"Redis exists error for key {key}: {e}")
+            return False
+
+    async def clear(self) -> int:
+        """Clear all cache entries (use with caution)."""
+        if not self._redis:
+            return 0
+        
+        try:
+            # Flush all databases
+            await self._redis.flushall()
+            return 1
+        except Exception as e:
+            logger.error(f"Redis clear error: {e}")
+            return 0
+
+    async def get_many(self, keys: List[CacheKey]) -> Dict[CacheKey, Any]:
+        """Get multiple values from Redis cache."""
+        if not self._redis or not keys:
+            return {}
+        
+        try:
+            # Use pipeline for efficiency
+            async with self._redis.pipeline() as pipe:
+                for key in keys:
+                    pipe.get(key)
+                results = await pipe.execute()
+            
+            # Process results
+            result_dict = {}
+            for key, value in zip(keys, results):
+                if value is not None:
+                    try:
+                        result_dict[key] = json.loads(value)
+                    except (json.JSONDecodeError, TypeError):
+                        try:
+                            result_dict[key] = pickle.loads(value.encode('latin1'))
+                        except Exception:
+                            result_dict[key] = value
+            
+            return result_dict
+            
+        except Exception as e:
+            logger.error(f"Redis get_many error: {e}")
+            return {}
+
+    async def set_many(
+        self, mapping: Dict[CacheKey, Any], ttl: Optional[int] = None
+    ) -> bool:
+        """Set multiple values in Redis cache."""
+        if not self._redis or not mapping:
+            return False
+        
+        try:
+            # Use pipeline for efficiency
+            async with self._redis.pipeline() as pipe:
+                for key, value in mapping.items():
+                    if isinstance(value, (dict, list, str, int, float, bool)):
+                        serialized = json.dumps(value)
+                    else:
+                        serialized = pickle.dumps(value).decode('latin1')
+                    
+                    if ttl:
+                        pipe.setex(key, ttl, serialized)
+                    else:
+                        pipe.set(key, serialized)
+                
+                await pipe.execute()
+            return True
+            
+        except Exception as e:
+            logger.error(f"Redis set_many error: {e}")
+            return False
+
+    async def close(self) -> None:
+        """Close Redis connections."""
+        if self._redis:
+            await self._redis.close()
+            logger.info("Redis backend connections closed")
 
 
 # In-memory cache backend
@@ -422,12 +640,32 @@ class CacheManager:
 
         # Initialize default backends if none provided
         if not self.backends:
-            settings = get_settings()
+            from shared.core.config.central_config import initialize_config
+            config = initialize_config()
 
-            # L1: In-memory cache
+            # L1: In-memory cache (fastest)
             self.backends.append(
                 InMemoryBackend(max_size=1000, ttl=60)  # 1 minute for L1
             )
+
+            # L2: Redis cache (distributed) - if available and configured
+            if REDIS_AVAILABLE and config.redis_url:
+                try:
+                    redis_backend = RedisBackend(
+                        redis_url=config.redis_url,
+                        ttl=300,  # 5 minutes for L2
+                        max_connections=10,
+                    )
+                    await redis_backend.initialize()
+                    self.backends.append(redis_backend)
+                    logger.info("Redis backend added to cache manager")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize Redis backend: {e}")
+
+        # Initialize all backends
+        for backend in self.backends:
+            if hasattr(backend, 'initialize') and callable(backend.initialize):
+                await backend.initialize()
 
         self._initialized = True
         logger.info("Cache manager initialized", backends=len(self.backends))
@@ -775,6 +1013,7 @@ __all__ = [
     "CacheManager",
     "CacheBackend",
     "InMemoryBackend",
+    "RedisBackend",
     "CacheStats",
     # Enums
     "CacheStrategy",
@@ -785,6 +1024,8 @@ __all__ = [
     "get_cache_manager",
     "invalidate_cache",
     "initialize_caches",
+    # Constants
+    "REDIS_AVAILABLE",
 ]
 
 # Create global cache instance for backward compatibility

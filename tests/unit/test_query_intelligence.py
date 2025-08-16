@@ -12,10 +12,10 @@ from shared.core.query_classifier import QueryClassifier, QueryCategory, QueryCo
 
 # Minimal facades to map old test names to available classifier
 class IntentType:
-    FACTUAL = QueryCategory.GENERAL_FACTUAL
+    FACTUAL = QueryCategory.FACTUAL
     ANALYTICAL = QueryCategory.ANALYTICAL
     HOW_TO = QueryCategory.PROCEDURAL
-    DEFINITION = QueryCategory.GENERAL_FACTUAL
+    DEFINITION = QueryCategory.FACTUAL
     UNKNOWN = QueryCategory.UNKNOWN
 
 class ComplexityLevel:
@@ -53,24 +53,27 @@ class IntentClassifier:
     def __init__(self):
         self._qc = QueryClassifier()
     async def classify(self, query: str):
-        result = await self._qc.classify_query(query)
+        result = self._qc.classify_query(query)
         return QueryCategory(result.category)
 
 class ComplexityScorer:
     def __init__(self):
         self._qc = QueryClassifier()
     async def score(self, query: str):
-        result = await self._qc.classify_query(query)
+        result = self._qc.classify_query(query)
         return QueryComplexity(result.complexity)
 
 class DomainDetector:
     async def detect(self, query: str):
         q = query.lower()
-        if any(k in q for k in ["machine learning", "python", "computing", "ai"]):
-            return DomainType.TECHNOLOGY
-        if "quantum" in q:
+        # Check for science terms first (more specific)
+        if any(k in q for k in ["quantum", "physics", "chemistry", "biology", "molecular", "atomic"]):
             return DomainType.SCIENCE
-        if any(k in q for k in ["symptom", "diabetes", "treatment"]):
+        # Check for technology terms
+        if any(k in q for k in ["machine learning", "python", "computing", "artificial intelligence", "programming"]):
+            return DomainType.TECHNOLOGY
+        # Check for healthcare terms
+        if any(k in q for k in ["symptom", "diabetes", "treatment", "medical", "health"]):
             return DomainType.HEALTHCARE
         return DomainType.GENERAL
 
@@ -90,7 +93,7 @@ class QueryIntelligenceLayer:
         cached = await self.cache.get(query)
         if cached:
             return cached
-        result = await self.classifier.classify_query(query)
+        result = self.classifier.classify_query(query)
         processed = ProcessedQuery(
             original=query,
             intent=result.category,

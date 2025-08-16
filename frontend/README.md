@@ -95,7 +95,7 @@ Create a `.env.local` file with the following variables:
 
 ```env
 # API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_API_URL=http://localhost:8004
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 # Analytics (optional)

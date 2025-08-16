@@ -294,21 +294,32 @@ class RateLimiter:
 
 
 class SessionManager:
-    """Session management with database."""
+    """Session management with Redis cache."""
 
     def __init__(self, database_service=None, config: AuthConfig = None):
-        try:
-            from shared.core.database import get_database_service
-
-            self.db_service = database_service or get_database_service()
-        except Exception as e:
-            logger.warning(f"Database service not available: {e}")
-            self.db_service = None
-
         self.config = config
+        self.redis = None
+        
+        try:
+            from shared.core.cache import get_cache_manager
+            from shared.core.cache.cache_config import CacheLevel
+            
+            cache_manager = get_cache_manager(CacheLevel.RATE_LIMITING)
+            if hasattr(cache_manager, 'redis_backend') and cache_manager.redis_backend:
+                self.redis = cache_manager.redis_backend.redis_client
+                logger.info("Redis session storage initialized")
+            else:
+                logger.warning("Redis not available for session storage")
+        except Exception as e:
+            logger.warning(f"Session storage not available: {e}")
+            self.redis = None
 
     async def create_session(self, session: UserSession) -> None:
         """Create new user session."""
+        if not self.redis:
+            logger.warning("Redis not available, skipping session creation")
+            return
+            
         session_data = {
             "user_id": session.user_id,
             "role": session.role.value,
@@ -332,6 +343,10 @@ class SessionManager:
 
     async def get_session(self, session_id: str) -> Optional[UserSession]:
         """Get session by ID."""
+        if not self.redis:
+            logger.warning("Redis not available, cannot get session")
+            return None
+            
         session_data = await self.redis.hgetall(f"session:{session_id}")
 
         if not session_data:
@@ -358,6 +373,9 @@ class SessionManager:
 
     async def update_session_activity(self, session_id: str) -> None:
         """Update session last activity."""
+        if not self.redis:
+            return
+            
         await self.redis.hset(
             f"session:{session_id}",
             "last_activity",
@@ -366,6 +384,9 @@ class SessionManager:
 
     async def invalidate_session(self, session_id: str) -> None:
         """Invalidate session."""
+        if not self.redis:
+            return
+            
         session_data = await self.redis.hgetall(f"session:{session_id}")
         if session_data:
             user_id = session_data[b"user_id"].decode()
@@ -374,6 +395,9 @@ class SessionManager:
 
     async def invalidate_user_sessions(self, user_id: str) -> None:
         """Invalidate all sessions for user."""
+        if not self.redis:
+            return
+            
         session_ids = await self.redis.smembers(f"user_sessions:{user_id}")
         for session_id in session_ids:
             await self.redis.delete(f"session:{session_id.decode()}")
@@ -517,18 +541,48 @@ class AuthManager:
         }
 
     async def _get_user_by_username(self, username: str) -> Optional[Dict[str, Any]]:
-        """Get user by username (implement your database lookup)."""
-        # This is a placeholder - implement your actual user lookup
-        # Example implementation:
-        # return await db.users.find_one({"username": username})
-        return None
+        """Get user by username from database."""
+        try:
+            from backend.repositories.database.user_repository import UserRepository
+            user_repo = UserRepository()
+            user = await user_repo.get_user_by_username(username)
+            
+            if user:
+                return {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "password_hash": user.password_hash,
+                    "role": user.role,
+                    "permissions": user.permissions or [],
+                    "status": "active" if user.is_active else "inactive"
+                }
+            return None
+        except Exception as e:
+            logger.error("Failed to get user by username", username=username, error=str(e))
+            return None
 
     async def _get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Get user by ID (implement your database lookup)."""
-        # This is a placeholder - implement your actual user lookup
-        # Example implementation:
-        # return await db.users.find_one({"_id": user_id})
-        return None
+        """Get user by ID from database."""
+        try:
+            from backend.repositories.database.user_repository import UserRepository
+            user_repo = UserRepository()
+            user = await user_repo.get_by_id(user_id)
+            
+            if user:
+                return {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "password_hash": user.password_hash,
+                    "role": user.role,
+                    "permissions": user.permissions or [],
+                    "status": "active" if user.is_active else "inactive"
+                }
+            return None
+        except Exception as e:
+            logger.error("Failed to get user by ID", user_id=user_id, error=str(e))
+            return None
 
     async def _is_account_locked(self, username: str) -> bool:
         """Check if account is locked due to failed attempts."""

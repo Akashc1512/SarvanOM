@@ -52,7 +52,7 @@ SarvanOM is a Universal Knowledge Platform designed for founders with zero codin
 git clone https://github.com/Akashc1512/SarvanOM.git && \
 cd SarvanOM && \
 python scripts/setup_sarvanom.py && \
-python run_server.py
+npm run dev:backend
 ```
 
 ### Manual Setup
@@ -65,32 +65,32 @@ cd SarvanOM
 .venv/bin/pip install -r requirements.txt
 
 # 3. Configure environment
-cp env.template .env
+cp env.docker.template .env
 # Edit .env with your actual credentials
 
 # 4. Run setup validation
 python scripts/setup_sarvanom.py
 
 # 5. Start development servers
-python run_server.py
+npm run dev:backend
 ```
 
 **🎉 You're ready!** 
 - Frontend: http://localhost:3000
-- API Gateway: http://localhost:8000
-- API Docs: http://localhost:8000/docs
+- API Gateway: http://localhost:8004 (services/gateway/)
+- API Docs: http://localhost:8004/docs
 
 ## 🏗️ Architecture Overview
 
 ```
 sarvanom/
 ├── services/                    # Microservices Architecture
-│   ├── api_gateway/            # 🚪 Main entry point & orchestration
-│   ├── auth_service/           # 🔐 Authentication & authorization
-│   ├── search_service/         # 🔍 Knowledge retrieval & vector search
-│   ├── synthesis_service/      # 🤖 AI synthesis & recommendations
-│   ├── factcheck_service/      # ✅ Fact verification & validation
-│   └── analytics_service/      # 📊 Metrics & monitoring
+│   ├── gateway/                # 🚪 Main entry point & orchestration
+│   ├── auth/                   # 🔐 Authentication & authorization
+│   ├── search/                 # 🔍 Knowledge retrieval & vector search
+│   ├── synthesis/              # 🤖 AI synthesis & recommendations
+│   ├── fact_check/             # ✅ Fact verification & validation
+│   └── analytics/              # 📊 Metrics & monitoring
 ├── shared/                     # 📚 Shared libraries & utilities
 │   ├── core/                   # Core functionality
 │   │   ├── agent_pattern.py    # Agent strategy patterns
@@ -109,7 +109,7 @@ sarvanom/
 ### Essential Commands
 ```bash
 # Development
-python run_server.py             # Start all services
+npm run dev                      # Start all services
 python scripts/setup_sarvanom.py # Validate setup
 
 # Testing
@@ -125,9 +125,9 @@ python scripts/check_hardcoded_values.py # Security audit
 ### Service-Specific Development
 ```bash
 # Start individual services
-python services/api_gateway/main.py
-python services/auth_service/auth_endpoints.py
-python services/search_service/retrieval_agent.py
+npm run start:gateway
+npm run start:auth
+npm run start:search
 ```
 
 ## 🔒 Security Configuration
@@ -137,7 +137,7 @@ All sensitive configuration is managed through environment variables:
 
 ```bash
 # Copy template and configure
-cp env.template .env
+cp env.docker.template .env
 
 # Required variables for basic setup
 ENVIRONMENT=development
@@ -183,13 +183,13 @@ PRIORITIZE_FREE_MODELS=true
 ### Health Checks
 ```bash
 # Basic health check
-curl http://localhost:8000/health
+curl http://localhost:8004/health
 
 # Comprehensive diagnostics
-curl http://localhost:8000/system/diagnostics
+curl http://localhost:8004/system/diagnostics
 
 # Metrics (Prometheus format)
-curl http://localhost:8000/metrics
+curl http://localhost:8004/metrics
 ```
 
 ### Logging
@@ -254,7 +254,7 @@ kubectl get pods -n sarvanom
 
 ### Architecture Documentation
 - [C4 Model](documentation/architecture/c4-model.md)
-- [API Documentation](http://localhost:8000/docs)
+- [API Documentation](http://localhost:8004/docs)
 - [Security Guide](SECURITY.md)
 - [Deployment Guide](documentation/ENTERPRISE_DEPLOYMENT_GUIDE.md)
 

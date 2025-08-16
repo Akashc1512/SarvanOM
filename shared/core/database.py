@@ -21,6 +21,7 @@ from sqlalchemy.pool import QueuePool
 from sqlalchemy import text, func
 from sqlalchemy import select, update, delete
 from sqlalchemy.sql import Select
+from sqlalchemy.exc import OperationalError, DisconnectionError
 
 # Retry mechanism
 from tenacity import (

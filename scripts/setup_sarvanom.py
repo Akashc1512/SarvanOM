@@ -78,7 +78,7 @@ class SarvanOMSetupValidator:
         self.results: List[ValidationResult] = []
         self.settings = get_settings()
         self.env_file = project_root / ".env"
-        self.template_file = project_root / "env.template"
+        self.template_file = project_root / "env.docker.template"
 
     async def run_all_validations(self) -> bool:
         """Run all validation checks."""
@@ -138,7 +138,7 @@ class SarvanOMSetupValidator:
                 ValidationResult(
                     name="Environment Template",
                     status=False,
-                    message="❌ env.template not found. This is required for setup.",
+                    message="❌ env.docker.template not found. This is required for setup.",
                     details={"file_path": str(self.template_file)},
                 )
             )
@@ -577,9 +577,9 @@ async def main():
         print("✅ Setup validation completed successfully!")
         print("\n📋 Next steps:")
         print("1. Update your .env file with actual credentials")
-        print("2. Start the development server: python run_server.py")
-        print("3. Access the platform at http://localhost:8000")
-        print("4. Check the API documentation at http://localhost:8000/docs")
+        print("2. Start the development server: npm run dev:backend")
+        print("3. Access the platform at http://localhost:8004")
+        print("4. Check the API documentation at http://localhost:8004/docs")
     else:
         print("❌ Setup validation failed. Please address the issues above.")
         sys.exit(1)

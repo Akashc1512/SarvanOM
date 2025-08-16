@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Test script to verify the backend is working with all updated dependencies
+Comprehensive Backend Test Script
+Tests all endpoints and features of the updated SarvanOM backend
 """
 
 import requests
 import json
 import time
 
-BASE_URL = "http://localhost:8002"
+BASE_URL = "http://localhost:8009"
 
 def test_health():
     """Test health endpoint"""

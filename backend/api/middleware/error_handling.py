@@ -399,3 +399,70 @@ class CORSMiddleware(BaseHTTPMiddleware):
         response.headers["Access-Control-Max-Age"] = "86400"  # 24 hours
 
         return response
+
+
+def handle_service_error(error: Exception, service_name: str = "unknown") -> Dict[str, Any]:
+    """Handle service-specific errors and return structured error response."""
+    error_type = type(error).__name__
+    error_message = str(error)
+    
+    # Map common error types to appropriate status codes
+    if isinstance(error, ConnectionError):
+        status_code = 503
+        error_category = "connection_error"
+    elif isinstance(error, ValidationError):
+        status_code = 422
+        error_category = "validation_error"
+    elif isinstance(error, PermissionError):
+        status_code = 403
+        error_category = "permission_error"
+    elif isinstance(error, FileNotFoundError):
+        status_code = 404
+        error_category = "not_found_error"
+    else:
+        status_code = 500
+        error_category = "internal_error"
+    
+    return {
+        "error_type": error_type,
+        "error_category": error_category,
+        "status_code": status_code,
+        "message": error_message,
+        "service": service_name,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+def validate_service_response(response: Any, expected_type: type = None) -> bool:
+    """Validate service response format and type."""
+    if response is None:
+        return False
+    
+    if expected_type and not isinstance(response, expected_type):
+        return False
+    
+    return True
+
+
+def log_service_operation(operation: str, service: str, success: bool, duration: float = 0.0, error: str = None):
+    """Log service operation details."""
+    log_data = {
+        "operation": operation,
+        "service": service,
+        "success": success,
+        "duration": duration,
+        "timestamp": datetime.now().isoformat()
+    }
+    
+    if error:
+        log_data["error"] = error
+    
+    if success:
+        logger.info(f"Service operation completed: {log_data}")
+    else:
+        logger.error(f"Service operation failed: {log_data}")
+
+
+def create_error_handling_middleware():
+    """Create and return error handling middleware instance."""
+    return ErrorHandlingMiddleware(None)

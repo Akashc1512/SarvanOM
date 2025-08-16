@@ -91,18 +91,29 @@ class UserRepositoryImpl(UserRepository, BaseRepository[User]):
         super().__init__(connection_string)
         self.storage_type = storage_type
 
-        # For now, use in-memory storage
-        # TODO: Implement database-backed storage
-        if storage_type == "memory":
+        # Initialize database repository if PostgreSQL is configured
+        if storage_type == "postgres":
+            try:
+                from backend.repositories.database.user_repository import UserRepository as DBUserRepository
+                self._db_repository = DBUserRepository()
+                logger.info("PostgreSQL user repository initialized")
+            except ImportError as e:
+                logger.warning(f"Could not import database repository: {e}")
+                self._db_repository = None
+        else:
+            self._db_repository = None
+
+        # Fallback to in-memory storage
+        if not self._db_repository:
             self._memory_store = InMemoryRepository[User]()
+            logger.info(f"User repository initialized with {storage_type} storage")
 
-        # User-specific indices for faster lookups
-        self._username_index: Dict[str, str] = {}  # username -> user_id
-        self._email_index: Dict[str, str] = {}  # email -> user_id
-        self._role_index: Dict[UserRole, List[str]] = {}  # role -> [user_ids]
-        self._status_index: Dict[UserStatus, List[str]] = {}  # status -> [user_ids]
-
-        logger.info(f"User repository initialized with {storage_type} storage")
+        # User-specific indices for faster lookups (for in-memory storage)
+        if not self._db_repository:
+            self._username_index: Dict[str, str] = {}  # username -> user_id
+            self._email_index: Dict[str, str] = {}  # email -> user_id
+            self._role_index: Dict[UserRole, List[str]] = {}  # role -> [user_ids]
+            self._status_index: Dict[UserStatus, List[str]] = {}  # status -> [user_ids]
 
     async def create(self, entity: User) -> User:
         """Create a new user (BaseRepository interface)."""
@@ -165,6 +176,17 @@ class UserRepositoryImpl(UserRepository, BaseRepository[User]):
     async def create_user(self, user: User) -> User:
         """Create a new user with validation and indexing."""
         try:
+            # Use database repository if available
+            if self._db_repository:
+                return await self._db_repository.create_user(
+                    username=user.username,
+                    email=user.email,
+                    password=user.password_hash,  # Assuming this is already hashed
+                    full_name=user.full_name,
+                    **{k: v for k, v in user.__dict__.items() if k not in ['username', 'email', 'password_hash', 'full_name']}
+                )
+
+            # Fallback to in-memory storage
             # Check for duplicate username
             existing_user = await self.get_user_by_username(user.username)
             if existing_user:
@@ -176,11 +198,7 @@ class UserRepositoryImpl(UserRepository, BaseRepository[User]):
                 raise ValueError(f"Email '{user.email}' already exists")
 
             # Store the user
-            if self.storage_type == "memory":
-                created_user = await self._memory_store.create(user)
-            else:
-                # TODO: Implement database storage
-                created_user = user
+            created_user = await self._memory_store.create(user)
 
             # Update indices
             await self._add_to_indices(created_user)
@@ -198,11 +216,12 @@ class UserRepositoryImpl(UserRepository, BaseRepository[User]):
     async def get_user_by_id(self, user_id: str) -> Optional[User]:
         """Get a user by their ID."""
         try:
-            if self.storage_type == "memory":
-                user = await self._memory_store.get_by_id(user_id)
-            else:
-                # TODO: Implement database retrieval
-                user = None
+            # Use database repository if available
+            if self._db_repository:
+                return await self._db_repository.get_by_id(user_id)
+
+            # Fallback to in-memory storage
+            user = await self._memory_store.get_by_id(user_id)
 
             self._track_operation("get_user_by_id", success=True)
             return user
@@ -215,6 +234,11 @@ class UserRepositoryImpl(UserRepository, BaseRepository[User]):
     async def get_user_by_username(self, username: str) -> Optional[User]:
         """Get a user by their username."""
         try:
+            # Use database repository if available
+            if self._db_repository:
+                return await self._db_repository.get_by_username(username)
+
+            # Fallback to in-memory storage
             user_id = self._username_index.get(username)
             if user_id:
                 return await self.get_user_by_id(user_id)
@@ -230,6 +254,11 @@ class UserRepositoryImpl(UserRepository, BaseRepository[User]):
     async def get_user_by_email(self, email: str) -> Optional[User]:
         """Get a user by their email."""
         try:
+            # Use database repository if available
+            if self._db_repository:
+                return await self._db_repository.get_by_email(email)
+
+            # Fallback to in-memory storage
             user_id = self._email_index.get(email)
             if user_id:
                 return await self.get_user_by_id(user_id)

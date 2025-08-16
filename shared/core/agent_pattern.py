@@ -30,7 +30,8 @@ from abc import ABC, abstractmethod
 import structlog
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from .llm_client_v2 import EnhancedLLMClient, LLMRequest, LLMResponse, LLMError
+from .agents.llm_client import LLMClient, LLMResponse, LLMError
+from services.gateway.real_llm_integration import LLMRequest
 from .base_agent import BaseAgent, AgentType, AgentResult, QueryContext
 from shared.core.api.config import get_settings
 
@@ -257,7 +258,7 @@ class EnhancedLLMClientWithFallback:
     """Enhanced LLM client with intelligent fallback and model selection."""
 
     def __init__(self):
-        self.llm_client = EnhancedLLMClient()
+        self.llm_client = LLMClient()
         self.model_selector = ModelSelectionStrategy()
         self.logger = structlog.get_logger(__name__)
 

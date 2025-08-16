@@ -228,7 +228,7 @@ function Main {
     Write-Host "   .venv\Scripts\Activate.ps1" -ForegroundColor Gray
     Write-Host ""
     Write-Host "2. Configure environment variables:" -ForegroundColor White
-    Write-Host "   Copy-Item env.template .env" -ForegroundColor Gray
+    Write-Host "   Copy-Item env.docker.template .env" -ForegroundColor Gray
     Write-Host "   # Edit .env with your API keys" -ForegroundColor Gray
     Write-Host ""
     Write-Host "3. Start development servers:" -ForegroundColor White

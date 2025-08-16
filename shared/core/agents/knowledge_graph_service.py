@@ -17,7 +17,7 @@ from shared.core.agents.base_agent import (
     AgentResult,
 )
 from shared.core.agents.graph_db_client import GraphDBClient, GraphNode, GraphEdge
-from shared.core.llm_client_v3 import EnhancedLLMClientV3
+from shared.core.agents.llm_client import LLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class KnowledgeGraphService:
     def __init__(self):
         """Initialize the KnowledgeGraphService."""
         self.graph_client = GraphDBClient()
-        self.llm_client = EnhancedLLMClientV3()
+        self.llm_client = LLMClient()
 
         # Initialize mock data as fallback
         self.mock_knowledge_graph = self._initialize_mock_knowledge_graph()

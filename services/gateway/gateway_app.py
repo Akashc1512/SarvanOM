@@ -60,9 +60,7 @@ from .routes import (
     fact_check_router,
     synthesis_router,
     auth_router,
-    crawler_router,
     vector_router,
-    graph_router,
 )
 
 # Import unified logging
@@ -120,9 +118,7 @@ def create_gateway_app() -> FastAPI:
         app.include_router(fact_check_router, prefix="/fact-check", tags=["Fact Check"])
         app.include_router(synthesis_router, prefix="/synthesize", tags=["Synthesis"])
         app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
-        app.include_router(crawler_router, prefix="/crawler", tags=["Crawler"])
         app.include_router(vector_router, prefix="/vector", tags=["Vector"])
-        app.include_router(graph_router, prefix="/graph", tags=["Graph"])
 
         @app.middleware("http")
         async def log_requests(request: Request, call_next):

@@ -25,7 +25,7 @@ class DevelopmentManager:
 
         # Check if .env exists, create from template if not
         env_file = Path(".env")
-        env_template = Path("env.template")
+        env_template = Path("env.docker.template")
 
         if not env_file.exists():
             if env_template.exists():
@@ -42,7 +42,7 @@ class DevelopmentManager:
                 print("   - ANTHROPIC_API_KEY")
                 print("   - PINECONE_API_KEY (optional)")
             else:
-                print("❌ env.template not found")
+                print("❌ env.docker.template not found")
                 return False
 
         return True
