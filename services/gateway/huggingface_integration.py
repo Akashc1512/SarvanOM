@@ -752,8 +752,8 @@ class HuggingFaceIntegration:
         """Get authentication status and configuration"""
         return {
             "authenticated": self.config.is_authenticated(),
-            "has_read_token": bool(self.config.read_token),
-            "has_write_token": bool(self.config.write_token),
+            "has_read_token": bool(self.config.api_token),
+            "has_write_token": bool(self.config.api_token),
             "has_api_token": bool(self.config.api_token),
             "device": self.device,
             "cache_dir": self.cache_dir,

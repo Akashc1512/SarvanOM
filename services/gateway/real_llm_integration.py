@@ -10,6 +10,7 @@ This is the UNIFIED LLM processor implementing:
 - Zero-budget optimization with free-tier APIs
 - Real-time performance monitoring
 - Comprehensive error handling and retry logic
+- LLM Router Hardening with provider order gating, timeouts, retries, and exponential backoff
 
 Based on Sarvanom_blueprint.md specifications for multi-agent AI orchestration.
 """
@@ -26,6 +27,8 @@ import json
 import time
 import hashlib
 import re
+import uuid
+import logging
 from typing import Dict, Any, List, Optional, Union
 import os
 from datetime import datetime
@@ -66,6 +69,24 @@ PRIORITIZE_FREE_MODELS = os.getenv("PRIORITIZE_FREE_MODELS", "true").lower() == 
 USE_DYNAMIC_SELECTION = os.getenv("USE_DYNAMIC_SELECTION", "true").lower() == "true"
 LLM_TIMEOUT_SECONDS = int(os.getenv("LLM_TIMEOUT_SECONDS", "15"))
 
+# LLM Router Hardening Configuration
+LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "3"))
+LLM_BASE_TIMEOUT = int(os.getenv("LLM_BASE_TIMEOUT", "10"))
+LLM_EXPONENTIAL_BACKOFF_BASE = float(os.getenv("LLM_EXPONENTIAL_BACKOFF_BASE", "2.0"))
+LLM_EXPONENTIAL_BACKOFF_MAX = float(os.getenv("LLM_EXPONENTIAL_BACKOFF_MAX", "30.0"))
+
+# Setup structured logging
+logger = logging.getLogger(__name__)
+
+# LLM Router Hardening Configuration
+LLM_MAX_RETRIES = int(os.getenv("LLM_MAX_RETRIES", "3"))
+LLM_BASE_TIMEOUT = int(os.getenv("LLM_BASE_TIMEOUT", "10"))
+LLM_EXPONENTIAL_BACKOFF_BASE = float(os.getenv("LLM_EXPONENTIAL_BACKOFF_BASE", "2.0"))
+LLM_EXPONENTIAL_BACKOFF_MAX = float(os.getenv("LLM_EXPONENTIAL_BACKOFF_MAX", "30.0"))
+
+# Setup structured logging
+logger = logging.getLogger(__name__)
+
 
 class LLMProvider(str, Enum):
     """Supported LLM providers with zero-budget optimization."""
@@ -73,6 +94,7 @@ class LLMProvider(str, Enum):
     HUGGINGFACE = "huggingface"  # Free tier API
     OPENAI = "openai"      # Paid (fallback)
     ANTHROPIC = "anthropic"  # Paid (fallback)
+    LOCAL_STUB = "local_stub"  # Stub response when no providers available
     MOCK = "mock"          # Testing fallback
 
 
@@ -139,12 +161,69 @@ class LLMRequest:
     complexity: QueryComplexity = QueryComplexity.RESEARCH_SYNTHESIS
     prefer_free: bool = True
     timeout: int = 15
+    trace_id: Optional[str] = None
+
+
+@dataclass
+class LLMResponse:
+    """Structured LLM response with metadata."""
+    content: str
+    provider: LLMProvider
+    model: str
+    latency_ms: float
+    success: bool
+    error_message: Optional[str] = None
+    trace_id: Optional[str] = None
+    attempt: int = 1
+    retries: int = 0
+
+
+@dataclass
+class ProviderConfig:
+    """Configuration for each LLM provider."""
+    provider: LLMProvider
+    timeout_s: int
+    max_retries: int
+    priority: int
+    enabled: bool = True
+    api_key_required: bool = True
+    api_key: Optional[str] = None
+    trace_id: Optional[str] = None
+
+
+@dataclass
+class LLMResponse:
+    """Structured LLM response with metadata."""
+    content: str
+    provider: LLMProvider
+    model: str
+    latency_ms: float
+    success: bool
+    error_message: Optional[str] = None
+    trace_id: Optional[str] = None
+    attempt: int = 1
+    retries: int = 0
+
+
+@dataclass
+class ProviderConfig:
+    """Configuration for each LLM provider."""
+    provider: LLMProvider
+    timeout_s: int
+    max_retries: int
+    priority: int
+    enabled: bool = True
+    api_key_required: bool = True
+    api_key: Optional[str] = None
+
 
 class RealLLMProcessor:
-    """Real LLM processing with multiple provider support."""
+    """Real LLM processing with multiple provider support and router hardening."""
     
     def __init__(self):
         self.setup_clients()
+        self.setup_provider_configs()
+        self.last_used_provider = None
     
     def setup_clients(self):
         """Setup LLM clients with zero-budget optimization."""
@@ -159,7 +238,7 @@ class RealLLMProcessor:
                 self.clients[LLMProvider.OPENAI] = self.openai_client
                 self.provider_health[LLMProvider.OPENAI] = True
             except Exception as e:
-                print(f"OpenAI client setup failed: {e}")
+                logger.error(f"OpenAI client setup failed: {e}")
                 self.provider_health[LLMProvider.OPENAI] = False
             
         if ANTHROPIC_AVAILABLE and ANTHROPIC_API_KEY:
@@ -171,7 +250,446 @@ class RealLLMProcessor:
         # HuggingFace as primary free provider (re-enabled with working models)
         self.provider_health[LLMProvider.OLLAMA] = True  # ENABLED - Ollama is running with deepseek-r1:8b
         self.provider_health[LLMProvider.HUGGINGFACE] = True  # ENABLED - Real API key working
+        self.provider_health[LLMProvider.LOCAL_STUB] = True
         self.provider_health[LLMProvider.MOCK] = True
+    
+    def setup_provider_configs(self):
+        """Setup provider configurations with timeout, retries, and priority."""
+        self.provider_configs = {
+            LLMProvider.HUGGINGFACE: ProviderConfig(
+                provider=LLMProvider.HUGGINGFACE,
+                timeout_s=LLM_BASE_TIMEOUT,
+                max_retries=LLM_MAX_RETRIES,
+                priority=1,  # Highest priority for free models
+                enabled=True,
+                api_key_required=True,
+                api_key=HUGGINGFACE_API_KEY
+            ),
+            LLMProvider.OLLAMA: ProviderConfig(
+                provider=LLMProvider.OLLAMA,
+                timeout_s=LLM_BASE_TIMEOUT + 5,  # Slightly longer for local models
+                max_retries=LLM_MAX_RETRIES,
+                priority=2,
+                enabled=True,
+                api_key_required=False
+            ),
+            LLMProvider.ANTHROPIC: ProviderConfig(
+                provider=LLMProvider.ANTHROPIC,
+                timeout_s=LLM_BASE_TIMEOUT,
+                max_retries=LLM_MAX_RETRIES,
+                priority=3,
+                enabled=True,
+                api_key_required=True,
+                api_key=ANTHROPIC_API_KEY
+            ),
+            LLMProvider.OPENAI: ProviderConfig(
+                provider=LLMProvider.OPENAI,
+                timeout_s=LLM_BASE_TIMEOUT,
+                max_retries=LLM_MAX_RETRIES,
+                priority=4,
+                enabled=True,
+                api_key_required=True,
+                api_key=OPENAI_API_KEY
+            ),
+            LLMProvider.LOCAL_STUB: ProviderConfig(
+                provider=LLMProvider.LOCAL_STUB,
+                timeout_s=1,  # Very fast stub response
+                max_retries=0,
+                priority=999,  # Lowest priority - only used when all else fails
+                enabled=True,
+                api_key_required=False
+            )
+        }
+    
+    def get_provider_order(self, prefer_free: bool = True) -> List[LLMProvider]:
+        """Get ordered list of providers based on preferences and availability."""
+        if prefer_free and PRIORITIZE_FREE_MODELS:
+            # Free-first order: HuggingFace → Ollama → Paid providers → Stub
+            order = [
+                LLMProvider.HUGGINGFACE,
+                LLMProvider.OLLAMA,
+                LLMProvider.ANTHROPIC,
+                LLMProvider.OPENAI,
+                LLMProvider.LOCAL_STUB
+            ]
+        else:
+            # Quality-first order: Paid → Free → Stub
+            order = [
+                LLMProvider.OPENAI,
+                LLMProvider.ANTHROPIC,
+                LLMProvider.HUGGINGFACE,
+                LLMProvider.OLLAMA,
+                LLMProvider.LOCAL_STUB
+            ]
+        
+        # Filter to only available providers
+        available_order = []
+        for provider in order:
+            config = self.provider_configs.get(provider)
+            if config and config.enabled and self._is_provider_available(provider):
+                available_order.append(provider)
+        
+        return available_order
+    
+    def get_provider_order(self, prefer_free: bool = True) -> List[LLMProvider]:
+        """Get ordered list of providers based on preferences and availability."""
+        if prefer_free and PRIORITIZE_FREE_MODELS:
+            # Free-first order: HuggingFace → Ollama → Paid providers → Stub
+            order = [
+                LLMProvider.HUGGINGFACE,
+                LLMProvider.OLLAMA,
+                LLMProvider.ANTHROPIC,
+                LLMProvider.OPENAI,
+                LLMProvider.LOCAL_STUB
+            ]
+        else:
+            # Quality-first order: Paid → Free → Stub
+            order = [
+                LLMProvider.OPENAI,
+                LLMProvider.ANTHROPIC,
+                LLMProvider.HUGGINGFACE,
+                LLMProvider.OLLAMA,
+                LLMProvider.LOCAL_STUB
+            ]
+        
+        # Filter to only available providers
+        available_order = []
+        for provider in order:
+            config = self.provider_configs.get(provider)
+            if config and config.enabled and self._is_provider_available(provider):
+                available_order.append(provider)
+        
+        return available_order
+    
+    def _is_provider_available(self, provider: LLMProvider) -> bool:
+        """Check if a provider is available and properly configured."""
+        config = self.provider_configs.get(provider)
+        if not config or not config.enabled:
+            return False
+        
+        if provider == LLMProvider.HUGGINGFACE:
+            return (config.api_key and 
+                   config.api_key.strip() and 
+                   "your_" not in config.api_key and
+                   config.api_key != "disabled")
+        
+        elif provider == LLMProvider.OPENAI:
+            return (config.api_key and 
+                   config.api_key.strip() and 
+                   "your_" not in config.api_key and
+                   config.api_key != "disabled")
+        
+        elif provider == LLMProvider.ANTHROPIC:
+            return (config.api_key and 
+                   config.api_key.strip() and 
+                   "your_" not in config.api_key and
+                   config.api_key != "disabled")
+        
+        elif provider == LLMProvider.OLLAMA:
+            # Check if Ollama is running locally
+            try:
+                response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
+                return response.status_code == 200
+            except:
+                return False
+        
+        elif provider == LLMProvider.LOCAL_STUB:
+            return True  # Always available
+        
+        return False
+    
+    async def _call_llm_with_retry(self, request: LLMRequest, provider: LLMProvider) -> LLMResponse:
+        """Call LLM provider with retry logic, exponential backoff, and structured logging."""
+        config = self.provider_configs.get(provider)
+        if not config:
+            return self._create_error_response(provider, "Provider not configured", request.trace_id)
+        
+        trace_id = request.trace_id or str(uuid.uuid4())
+        start_time = time.time()
+        
+        for attempt in range(1, config.max_retries + 2):  # +2 because we start from 1 and want to include max_retries
+            try:
+                # Calculate timeout with exponential backoff
+                timeout = min(
+                    config.timeout_s * (LLM_EXPONENTIAL_BACKOFF_BASE ** (attempt - 1)),
+                    LLM_EXPONENTIAL_BACKOFF_MAX
+                )
+                
+                # Log attempt
+                logger.info(f"LLM attempt {attempt}/{config.max_retries + 1} for provider {provider.value}", extra={
+                    "provider": provider.value,
+                    "attempt": attempt,
+                    "timeout_s": timeout,
+                    "trace_id": trace_id
+                })
+                
+                # Call the specific provider
+                if provider == LLMProvider.OLLAMA:
+                    content = await self._call_ollama_with_timeout(request.prompt, request.max_tokens, request.temperature, timeout)
+                elif provider == LLMProvider.HUGGINGFACE:
+                    content = await self._call_huggingface_with_timeout(request.prompt, request.max_tokens, request.temperature, timeout)
+                elif provider == LLMProvider.OPENAI:
+                    content = await self._call_openai_with_timeout(request.prompt, request.max_tokens, request.temperature, timeout)
+                elif provider == LLMProvider.ANTHROPIC:
+                    content = await self._call_anthropic_with_timeout(request.prompt, request.max_tokens, request.temperature, timeout)
+                elif provider == LLMProvider.LOCAL_STUB:
+                    content = self._generate_stub_response(request.prompt)
+                else:
+                    content = None
+                
+                # Calculate latency
+                latency_ms = (time.time() - start_time) * 1000
+                
+                if content is not None:
+                    # Success
+                    logger.info(f"LLM success for provider {provider.value}", extra={
+                        "provider": provider.value,
+                        "attempt": attempt,
+                        "latency_ms": latency_ms,
+                        "ok": True,
+                        "trace_id": trace_id
+                    })
+                    
+                    self.last_used_provider = provider
+                    return LLMResponse(
+                        content=content,
+                        provider=provider,
+                        model=self._get_model_name(provider),
+                        latency_ms=latency_ms,
+                        success=True,
+                        trace_id=trace_id,
+                        attempt=attempt,
+                        retries=attempt - 1
+                    )
+                else:
+                    # Provider returned None - treat as error
+                    raise Exception(f"Provider {provider.value} returned None")
+                    
+            except Exception as e:
+                latency_ms = (time.time() - start_time) * 1000
+                error_msg = str(e)
+                
+                # Log error
+                logger.warning(f"LLM attempt {attempt} failed for provider {provider.value}: {error_msg}", extra={
+                    "provider": provider.value,
+                    "attempt": attempt,
+                    "latency_ms": latency_ms,
+                    "ok": False,
+                    "error": error_msg,
+                    "trace_id": trace_id
+                })
+                
+                # If this was the last attempt, return error response
+                if attempt >= config.max_retries + 1:
+                    return LLMResponse(
+                        content="",
+                        provider=provider,
+                        model=self._get_model_name(provider),
+                        latency_ms=latency_ms,
+                        success=False,
+                        error_message=error_msg,
+                        trace_id=trace_id,
+                        attempt=attempt,
+                        retries=attempt - 1
+                    )
+                
+                # Wait before retry (exponential backoff)
+                if attempt < config.max_retries + 1:
+                    wait_time = min(
+                        LLM_EXPONENTIAL_BACKOFF_BASE ** (attempt - 1),
+                        LLM_EXPONENTIAL_BACKOFF_MAX
+                    )
+                    await asyncio.sleep(wait_time)
+        
+        # Should never reach here, but just in case
+        return self._create_error_response(provider, "Max retries exceeded", trace_id)
+    
+    def _create_error_response(self, provider: LLMProvider, error_msg: str, trace_id: str) -> LLMResponse:
+        """Create error response for failed LLM calls."""
+        return LLMResponse(
+            content="",
+            provider=provider,
+            model=self._get_model_name(provider),
+            latency_ms=0,
+            success=False,
+            error_message=error_msg,
+            trace_id=trace_id,
+            attempt=0,
+            retries=0
+        )
+    
+    def _get_model_name(self, provider: LLMProvider) -> str:
+        """Get model name for provider."""
+        model_map = {
+            LLMProvider.OPENAI: "gpt-4o-mini",
+            LLMProvider.ANTHROPIC: "claude-3-5-haiku-20241022",
+            LLMProvider.OLLAMA: "deepseek-r1:8b",
+            LLMProvider.HUGGINGFACE: "distilgpt2",
+            LLMProvider.LOCAL_STUB: "local_stub",
+            LLMProvider.MOCK: "mock"
+        }
+        return model_map.get(provider, "unknown")
+    
+    def _generate_stub_response(self, prompt: str) -> str:
+        """Generate a stub response when no providers are available."""
+        return f"""I'm currently unable to process your request: "{prompt[:100]}{'...' if len(prompt) > 100 else ''}"
+
+This is a stub response (provider=local_stub) because no LLM providers are currently available. Please check your API keys and try again later.
+
+For immediate assistance, you can:
+1. Verify your API keys are properly configured
+2. Check your internet connection
+3. Try again in a few moments
+
+If the problem persists, please contact support."""
+    
+    async def _call_ollama_with_timeout(self, prompt: str, max_tokens: int, temperature: float, timeout: float) -> Optional[str]:
+        """Call Ollama with timeout."""
+        try:
+            selected_model = self._select_ollama_model(prompt, max_tokens)
+            
+            if AIOHTTP_AVAILABLE:
+                async with aiohttp.ClientSession() as session:
+                    payload = {
+                        "model": selected_model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "temperature": temperature,
+                            "num_predict": min(max_tokens, 150),
+                            "stop": ["\n\n", "Human:", "Assistant:"],
+                            "num_ctx": 1024
+                        }
+                    }
+                    
+                    timeout_obj = aiohttp.ClientTimeout(total=timeout)
+                    
+                    async with session.post(
+                        f"{OLLAMA_BASE_URL}/api/generate",
+                        json=payload,
+                        timeout=timeout_obj
+                    ) as response:
+                        if response.status == 200:
+                            result = await response.json()
+                            response_text = result.get("response", "")
+                            if response_text:
+                                return self._sanitize_response(response_text)
+            else:
+                # Fallback to requests
+                response = requests.post(
+                    f"{OLLAMA_BASE_URL}/api/generate",
+                    json={
+                        "model": selected_model,
+                        "prompt": prompt,
+                        "options": {
+                            "temperature": temperature,
+                            "num_predict": max_tokens
+                        }
+                    },
+                    timeout=timeout
+                )
+                if response.status_code == 200:
+                    result = response.json()
+                    return self._sanitize_response(result.get("response", ""))
+        except Exception as e:
+            logger.error(f"Ollama call failed: {e}")
+        
+        return None
+    
+    async def _call_huggingface_with_timeout(self, prompt: str, max_tokens: int, temperature: float, timeout: float) -> Optional[str]:
+        """Call HuggingFace with timeout."""
+        try:
+            from services.gateway.huggingface_integration import huggingface_integration
+            
+            model_name = self._select_huggingface_model(prompt, max_tokens)
+            
+            # Use the comprehensive HuggingFace integration
+            response = await asyncio.wait_for(
+                huggingface_integration.generate_text(
+                    prompt=prompt,
+                    model_name=model_name,
+                    max_length=max_tokens,
+                    temperature=temperature
+                ),
+                timeout=timeout
+            )
+            
+            return response.result
+            
+        except asyncio.TimeoutError:
+            logger.error(f"HuggingFace call timed out after {timeout}s")
+        except Exception as e:
+            logger.error(f"HuggingFace call failed: {e}")
+        
+        return None
+    
+    async def _call_openai_with_timeout(self, prompt: str, max_tokens: int, temperature: float, timeout: float) -> Optional[str]:
+        """Call OpenAI with timeout."""
+        try:
+            if not OPENAI_AVAILABLE or not OPENAI_API_KEY:
+                return None
+                
+            # Select optimal accessible model based on task complexity (2025 models)
+            if len(prompt) > 1000 or "reasoning" in prompt.lower() or "complex" in prompt.lower():
+                model = "gpt-4o"  # Latest multimodal model for complex tasks
+            elif max_tokens > 1000:
+                model = "gpt-4o"  # Latest multimodal model for long responses
+            else:
+                model = "gpt-4o-mini"  # Cost-efficient latest model for standard tasks
+            
+            # Use the pre-configured OpenAI client with latest models
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self.openai_client.chat.completions.create,
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=max_tokens,
+                    temperature=temperature
+                ),
+                timeout=timeout
+            )
+            return response.choices[0].message.content
+        except asyncio.TimeoutError:
+            logger.error(f"OpenAI call timed out after {timeout}s")
+        except Exception as e:
+            logger.error(f"OpenAI call failed: {e}")
+        
+        return None
+    
+    async def _call_anthropic_with_timeout(self, prompt: str, max_tokens: int, temperature: float, timeout: float) -> Optional[str]:
+        """Call Anthropic with timeout."""
+        try:
+            # Select optimal latest Claude model based on task complexity (2025 models)
+            if len(prompt) > 1000 or max_tokens > 1000:
+                model = "claude-3-5-sonnet-20241022"  # Latest Claude 3.5 Sonnet for complex tasks
+            else:
+                model = "claude-3-5-haiku-20241022"   # Latest Claude 3.5 Haiku for efficient tasks
+            
+            message = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self.anthropic_client.messages.create,
+                    model=model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    messages=[{"role": "user", "content": prompt}]
+                ),
+                timeout=timeout
+            )
+            return message.content[0].text
+        except asyncio.TimeoutError:
+            logger.error(f"Anthropic call timed out after {timeout}s")
+        except Exception as e:
+            logger.error(f"Anthropic call failed: {e}")
+        
+        return None
+    
+    def _select_ollama_model(self, prompt: str, max_tokens: int) -> str:
+        """Select optimal Ollama model based on query characteristics."""
+        prompt_lower = prompt.lower()
+        
+        # Use available DeepSeek R1 model for all tasks (it's currently the only available model)
+        # DeepSeek R1 is a powerful reasoning model that can handle various tasks well
+        return "deepseek-r1:8b"
     
     def classify_query_complexity(self, query: str) -> QueryComplexity:
         """
@@ -280,42 +798,42 @@ class RealLLMProcessor:
         available_providers = self._get_available_providers()
         
         if not available_providers:
-            print("❌ No providers available - using mock")
-            return LLMProvider.MOCK
+            logger.warning("❌ No providers available - using local_stub")
+            return LLMProvider.LOCAL_STUB
         
         # Dynamic selection based on user preferences and complexity
         if prefer_free and PRIORITIZE_FREE_MODELS:
             # Free-first strategy: HuggingFace → Ollama → Paid providers
             if LLMProvider.HUGGINGFACE in available_providers:
-                print("🚀 Selected HuggingFace (free tier)")
+                logger.info("🚀 Selected HuggingFace (free tier)")
                 return LLMProvider.HUGGINGFACE
             elif LLMProvider.OLLAMA in available_providers:
-                print("🔄 Selected Ollama (local)")
+                logger.info("🔄 Selected Ollama (local)")
                 return LLMProvider.OLLAMA
             elif LLMProvider.ANTHROPIC in available_providers:
-                print("💰 Selected Anthropic (paid)")
+                logger.info("💰 Selected Anthropic (paid)")
                 return LLMProvider.ANTHROPIC
             elif LLMProvider.OPENAI in available_providers:
-                print("💰 Selected OpenAI (paid)")
-                return LLMProvider.OPENAI
+                logger.info("💰 Selected OpenAI (paid)")
+            return LLMProvider.OPENAI
         else:
             # Quality-first strategy: Best available provider
             if LLMProvider.OPENAI in available_providers:
-                print("🚀 Selected OpenAI (high quality)")
+                logger.info("🚀 Selected OpenAI (high quality)")
                 return LLMProvider.OPENAI
             elif LLMProvider.ANTHROPIC in available_providers:
-                print("🚀 Selected Anthropic (high quality)")
-                return LLMProvider.ANTHROPIC
+                logger.info("🚀 Selected Anthropic (high quality)")
+            return LLMProvider.ANTHROPIC
             elif LLMProvider.HUGGINGFACE in available_providers:
-                print("🚀 Selected HuggingFace (free)")
-                return LLMProvider.HUGGINGFACE
+                logger.info("🚀 Selected HuggingFace (free)")
+            return LLMProvider.HUGGINGFACE
             elif LLMProvider.OLLAMA in available_providers:
-                print("🔄 Selected Ollama (local)")
+                logger.info("🔄 Selected Ollama (local)")
                 return LLMProvider.OLLAMA
         
         # Fallback to first available provider
         selected = available_providers[0]
-        print(f"🔄 Selected {selected.value} (fallback)")
+        logger.info(f"🔄 Selected {selected.value} (fallback)")
         return selected
     
     def _get_available_providers(self) -> List[LLMProvider]:
@@ -340,49 +858,129 @@ class RealLLMProcessor:
         
         return available
     
-    def _is_provider_available(self, provider: LLMProvider) -> bool:
-        """Check if a provider is available and properly configured."""
-        if provider == LLMProvider.HUGGINGFACE:
-            return (HUGGINGFACE_API_KEY and 
-                   HUGGINGFACE_API_KEY.strip() and 
-                   "your_" not in HUGGINGFACE_API_KEY and
-                   HUGGINGFACE_API_KEY != "disabled")
-        
-        elif provider == LLMProvider.OPENAI:
-            return (OPENAI_API_KEY and 
-                   OPENAI_API_KEY.strip() and 
-                   "your_" not in OPENAI_API_KEY and
-                   OPENAI_API_KEY != "disabled")
-        
-        elif provider == LLMProvider.ANTHROPIC:
-            return (ANTHROPIC_API_KEY and 
-                   ANTHROPIC_API_KEY.strip() and 
-                   "your_" not in ANTHROPIC_API_KEY and
-                   ANTHROPIC_API_KEY != "disabled")
-        
-        elif provider == LLMProvider.OLLAMA:
-            # Check if Ollama is running locally
-            try:
-                import requests
-                response = requests.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2)
-                return response.status_code == 200
-            except:
-                return False
-        
-        return False
-    
     def _get_fallback_provider(self) -> LLMProvider:
         """Get best available fallback provider using dynamic selection."""
         available_providers = self._get_available_providers()
         
         if not available_providers:
-            print("❌ No providers available - using mock")
-            return LLMProvider.MOCK
+            logger.warning("❌ No providers available - using local_stub")
+            return LLMProvider.LOCAL_STUB
         
         # Return first available provider
         selected = available_providers[0]
-        print(f"🔄 Using {selected.value} as fallback provider")
+        logger.info(f"🔄 Using {selected.value} as fallback provider")
         return selected
+    
+    async def call_llm_with_provider_gating(self, prompt: str, max_tokens: int = 1000, temperature: float = 0.2, prefer_free: bool = True) -> LLMResponse:
+        """
+        Call LLM with provider order gating, automatic fallback to stub responses.
+        
+        This method implements the LLM router hardening requirements:
+        - Provider order gating with PRIORITIZE_FREE_MODELS=true by default
+        - Timeout, max_retries, exponential backoff per provider
+        - Automatic fallback to stub response if no API keys available
+        - Structured logging with {provider, attempt, latency_ms, ok} and trace_id
+        - Never hangs - always returns a response within 2s for stub
+        """
+        trace_id = str(uuid.uuid4())
+        start_time = time.time()
+        
+        # Get provider order based on preferences
+        provider_order = self.get_provider_order(prefer_free)
+        
+        if not provider_order:
+            # No providers available - return stub immediately
+            logger.warning("No LLM providers available - returning stub response", extra={
+                "provider": "local_stub",
+                "attempt": 1,
+                "latency_ms": 0,
+                "ok": True,
+                "trace_id": trace_id
+            })
+            
+            return LLMResponse(
+                content=self._generate_stub_response(prompt),
+                provider=LLMProvider.LOCAL_STUB,
+                model="local_stub",
+                latency_ms=0,
+                success=True,
+                trace_id=trace_id,
+                attempt=1,
+                retries=0
+            )
+        
+        # Try providers in order until one succeeds
+        for i, provider in enumerate(provider_order):
+            try:
+                logger.info(f"Trying provider {provider.value} (attempt {i+1}/{len(provider_order)})", extra={
+                    "provider": provider.value,
+                    "attempt": i+1,
+                    "trace_id": trace_id
+                })
+                
+                request = LLMRequest(
+                    prompt=prompt,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    prefer_free=prefer_free,
+                    trace_id=trace_id
+                )
+                
+                response = await self._call_llm_with_retry(request, provider)
+                
+                if response.success:
+                    # Success - log and return
+                    logger.info(f"LLM call successful with {provider.value}", extra={
+                        "provider": provider.value,
+                        "attempt": i+1,
+                        "latency_ms": response.latency_ms,
+                        "ok": True,
+                        "trace_id": trace_id
+                    })
+                    return response
+                else:
+                    # Provider failed - log and continue to next
+                    logger.warning(f"Provider {provider.value} failed: {response.error_message}", extra={
+                        "provider": provider.value,
+                        "attempt": i+1,
+                        "latency_ms": response.latency_ms,
+                        "ok": False,
+                        "error": response.error_message,
+                        "trace_id": trace_id
+                    })
+                    
+            except Exception as e:
+                # Provider threw exception - log and continue to next
+                latency_ms = (time.time() - start_time) * 1000
+                logger.error(f"Provider {provider.value} exception: {str(e)}", extra={
+                    "provider": provider.value,
+                    "attempt": i+1,
+                    "latency_ms": latency_ms,
+                    "ok": False,
+                    "error": str(e),
+                    "trace_id": trace_id
+                })
+        
+        # All providers failed - return stub response
+        total_latency_ms = (time.time() - start_time) * 1000
+        logger.warning("All LLM providers failed - returning stub response", extra={
+            "provider": "local_stub",
+            "attempt": len(provider_order) + 1,
+            "latency_ms": total_latency_ms,
+            "ok": True,
+            "trace_id": trace_id
+        })
+        
+        return LLMResponse(
+            content=self._generate_stub_response(prompt),
+            provider=LLMProvider.LOCAL_STUB,
+            model="local_stub",
+            latency_ms=total_latency_ms,
+            success=True,
+            trace_id=trace_id,
+            attempt=len(provider_order) + 1,
+            retries=len(provider_order)
+        )
     
     async def search_with_ai(self, query: str, user_id: str = None, max_results: int = 10) -> Dict[str, Any]:
         """Process search query with AI enhancement using optimal provider selection."""
@@ -417,10 +1015,10 @@ class RealLLMProcessor:
             timeout=LLM_TIMEOUT_SECONDS
         )
         
-        ai_analysis = await self._call_llm_with_provider(llm_request, selected_provider)
+        ai_analysis = await self._call_llm_with_retry(llm_request, selected_provider)
         
         # Generate search results with AI-enhanced metadata
-        results = self._generate_search_results(query, ai_analysis)
+        results = self._generate_search_results(query, ai_analysis.content)
         
         processing_time = time.time() - start_time
         
@@ -431,13 +1029,14 @@ class RealLLMProcessor:
             "processing_time_ms": int(processing_time * 1000),
             "results": results,
             "total_results": len(results),
-            "ai_analysis": ai_analysis,
-            "query_classification": self._extract_classification(ai_analysis),
+            "ai_analysis": ai_analysis.content,
+            "query_classification": self._extract_classification(ai_analysis.content),
             "complexity_score": complexity.value,
             "selected_provider": selected_provider.value,
             "zero_budget_mode": PRIORITIZE_FREE_MODELS,
             "timestamp": datetime.now().isoformat(),
-            "search_strategy": "ai_enhanced_hybrid"
+            "search_strategy": "ai_enhanced_hybrid",
+            "trace_id": ai_analysis.trace_id
         }
     
     async def fact_check_with_ai(self, claim: str, sources: List[Dict[str, Any]] = None, context: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -470,12 +1069,12 @@ class RealLLMProcessor:
         Respond in JSON format with structured verification data.
         """
         
-        ai_verification = await self._call_llm(fact_check_prompt, max_tokens=1000)
+        ai_verification = await self._call_llm_with_retry(LLMRequest(prompt=fact_check_prompt, max_tokens=1000), self.select_optimal_provider(QueryComplexity.COMPLEX_REASONING))
         
         processing_time = time.time() - start_time
         
         # Extract verification details
-        verification_result = self._parse_fact_check_result(ai_verification)
+        verification_result = self._parse_fact_check_result(ai_verification.content)
         
         return {
             "claim": claim,
@@ -484,12 +1083,13 @@ class RealLLMProcessor:
             "confidence_score": verification_result.get("confidence", 0.8),
             "consensus_score": verification_result.get("consensus", 0.75),
             "evidence_sources": verification_result.get("sources", []),
-            "verification_details": ai_verification,
+            "verification_details": ai_verification.content,
             "processing_time_ms": int(processing_time * 1000),
             "timestamp": datetime.now().isoformat(),
             "expert_analysis": verification_result.get("analysis", "AI-powered verification completed"),
             "limitations": verification_result.get("limitations", []),
-            "follow_up_needed": verification_result.get("follow_up", False)
+            "follow_up_needed": verification_result.get("follow_up", False),
+            "trace_id": ai_verification.trace_id
         }
     
     async def synthesize_with_ai(self, content: str = None, query: str = None, style: str = "default", 
@@ -527,16 +1127,16 @@ class RealLLMProcessor:
         Respond in JSON format with structured synthesis data.
         """
         
-        ai_synthesis = await self._call_llm(synthesis_prompt, max_tokens=1500)
+        ai_synthesis = await self._call_llm_with_retry(LLMRequest(prompt=synthesis_prompt, max_tokens=1500), self.select_optimal_provider(QueryComplexity.RESEARCH_SYNTHESIS))
         
         # Handle case where LLM call returns None - use enhanced fallback
-        if ai_synthesis is None:
-            ai_synthesis = await self._generate_fallback_response(synthesis_prompt)
+        if ai_synthesis.content is None:
+            ai_synthesis.content = await self._generate_fallback_response(synthesis_prompt)
         
         processing_time = time.time() - start_time
         
         # Parse synthesis results
-        synthesis_result = self._parse_synthesis_result(ai_synthesis)
+        synthesis_result = self._parse_synthesis_result(ai_synthesis.content)
         
         return {
             "content": content,
@@ -544,7 +1144,7 @@ class RealLLMProcessor:
             "style": style,
             "target_audience": target_audience,
             "sources": sources or [],
-            "synthesis": synthesis_result.get("synthesis", synthesis_result.get("response", ai_synthesis)),
+            "synthesis": synthesis_result.get("synthesis", synthesis_result.get("response", ai_synthesis.content)),
             "executive_summary": synthesis_result.get("summary", synthesis_result.get("analysis", "AI synthesis completed")),
             "key_insights": synthesis_result.get("insights", synthesis_result.get("key_terms", [])),
             "recommendations": synthesis_result.get("recommendations", synthesis_result.get("suggested_sources", [])),
@@ -552,48 +1152,27 @@ class RealLLMProcessor:
             "processing_time_ms": int(processing_time * 1000),
             "timestamp": datetime.now().isoformat(),
             "synthesis_method": "multi_agent_ai",
-            "quality_score": synthesis_result.get("quality", 0.8)
+            "quality_score": synthesis_result.get("quality", 0.8),
+            "trace_id": ai_synthesis.trace_id
         }
     
-    async def _call_llm_with_provider(self, request: LLMRequest, provider: LLMProvider) -> str:
-        """Call specific LLM provider with intelligent fallback."""
-        try:
-            if provider == LLMProvider.OLLAMA:
-                return await self._call_ollama(request.prompt, request.max_tokens, request.temperature)
-            elif provider == LLMProvider.HUGGINGFACE:
-                return await self._call_huggingface(request.prompt, request.max_tokens, request.temperature)
-            elif provider == LLMProvider.OPENAI and LLMProvider.OPENAI in self.clients:
-                return await self._call_openai(request.prompt, request.max_tokens, request.temperature)
-            elif provider == LLMProvider.ANTHROPIC and LLMProvider.ANTHROPIC in self.clients:
-                return await self._call_anthropic(request.prompt, request.max_tokens, request.temperature)
-            else:
-                # Fallback to next best provider
-                fallback_provider = self._get_fallback_provider()
-                if fallback_provider != provider and fallback_provider != LLMProvider.MOCK:
-                    return await self._call_llm_with_provider(request, fallback_provider)
-                else:
-                    return self._generate_fallback_response(request.prompt)
-        except Exception as e:
-            print(f"{provider.value} call failed: {e}")
-            # Try fallback provider
-            fallback_provider = self._get_fallback_provider()
-            if fallback_provider != provider and fallback_provider != LLMProvider.MOCK:
-                return await self._call_llm_with_provider(request, fallback_provider)
-            else:
-                return self._generate_fallback_response(request.prompt)
+    async def _call_llm_with_provider(self, request: LLMRequest, provider: LLMProvider) -> LLMResponse:
+        """Call specific LLM provider with router hardening, retry logic, and structured logging."""
+        # Use the new router hardening method
+        return await self._call_llm_with_retry(request, provider)
 
-    async def _call_llm(self, prompt: str, max_tokens: int = 1000, temperature: float = 0.2) -> str:
+    async def _call_llm(self, prompt: str, max_tokens: int = 1000, temperature: float = 0.2) -> LLMResponse:
         """Legacy method - call LLM with automatic provider selection."""
         complexity = self.classify_query_complexity(prompt)
         provider = self.select_optimal_provider(complexity)
         request = LLMRequest(prompt=prompt, max_tokens=max_tokens, temperature=temperature)
         return await self._call_llm_with_provider(request, provider)
     
-    async def _call_openai(self, prompt: str, max_tokens: int, temperature: float) -> str:
+    async def _call_openai(self, prompt: str, max_tokens: int, temperature: float) -> LLMResponse:
         """Call OpenAI API."""
         try:
             if not OPENAI_AVAILABLE or not OPENAI_API_KEY:
-                return None
+                return self._create_error_response(LLMProvider.OPENAI, "OpenAI API key not configured or invalid", None)
                 
             # Select optimal accessible model based on task complexity (2025 models)
             if len(prompt) > 1000 or "reasoning" in prompt.lower() or "complex" in prompt.lower():
@@ -612,12 +1191,21 @@ class RealLLMProcessor:
                 temperature=temperature,
                 timeout=LLM_TIMEOUT_SECONDS
             )
-            return response.choices[0].message.content
+            return LLMResponse(
+                content=response.choices[0].message.content,
+                provider=LLMProvider.OPENAI,
+                model=model,
+                latency_ms=0, # This will be calculated by _call_llm_with_provider
+                success=True,
+                trace_id=None, # Trace ID will be added by _call_llm_with_provider
+                attempt=1,
+                retries=0
+            )
         except Exception as e:
-            print(f"OpenAI API error: {e}")
-            return None
+            logger.error(f"OpenAI API error: {e}")
+            return self._create_error_response(LLMProvider.OPENAI, str(e), None)
     
-    async def _call_anthropic(self, prompt: str, max_tokens: int, temperature: float) -> str:
+    async def _call_anthropic(self, prompt: str, max_tokens: int, temperature: float) -> LLMResponse:
         """Call Anthropic API."""
         try:
             # Select optimal latest Claude model based on task complexity (2025 models)
@@ -633,10 +1221,19 @@ class RealLLMProcessor:
                 temperature=temperature,
                 messages=[{"role": "user", "content": prompt}]
             )
-            return message.content[0].text
+            return LLMResponse(
+                content=message.content[0].text,
+                provider=LLMProvider.ANTHROPIC,
+                model=model,
+                latency_ms=0, # This will be calculated by _call_llm_with_provider
+                success=True,
+                trace_id=None, # Trace ID will be added by _call_llm_with_provider
+                attempt=1,
+                retries=0
+            )
         except Exception as e:
-            print(f"Anthropic API error: {e}")
-            return None
+            logger.error(f"Anthropic API error: {e}")
+            return self._create_error_response(LLMProvider.ANTHROPIC, str(e), None)
     
     def _select_ollama_model(self, prompt: str, max_tokens: int) -> str:
         """Select optimal Ollama model based on query characteristics."""
@@ -646,7 +1243,7 @@ class RealLLMProcessor:
         # DeepSeek R1 is a powerful reasoning model that can handle various tasks well
         return "deepseek-r1:8b"
 
-    async def _call_ollama(self, prompt: str, max_tokens: int, temperature: float) -> str:
+    async def _call_ollama(self, prompt: str, max_tokens: int, temperature: float) -> LLMResponse:
         """Enhanced Ollama integration with intelligent model selection."""
         try:
             # Select optimal model based on query characteristics
@@ -670,7 +1267,16 @@ class RealLLMProcessor:
                 )
                 if response.status_code == 200:
                     result = response.json()
-                    return result.get("response", "")
+                    return LLMResponse(
+                        content=result.get("response", ""),
+                        provider=LLMProvider.OLLAMA,
+                        model=selected_model,
+                        latency_ms=0, # This will be calculated by _call_llm_with_provider
+                        success=True,
+                        trace_id=None, # Trace ID will be added by _call_llm_with_provider
+                        attempt=1,
+                        retries=0
+                    )
                 else:
                     # Try fallback model if primary fails
                     if selected_model != "llama3":
@@ -685,9 +1291,17 @@ class RealLLMProcessor:
                         )
                         if response.status_code == 200:
                             response_text = response.json().get("response", "")
-                            return self._sanitize_response(response_text)
-                return None
-            
+                            return LLMResponse(
+                                content=self._sanitize_response(response_text),
+                                provider=LLMProvider.OLLAMA,
+                                model="llama3",
+                                latency_ms=0, # This will be calculated by _call_llm_with_provider
+                                success=True,
+                                trace_id=None, # Trace ID will be added by _call_llm_with_provider
+                                attempt=1,
+                                retries=0
+                            )
+            else:
             async with aiohttp.ClientSession() as session:
                 # Simple, fast payload for quick responses (5 seconds target)
                 payload = {
@@ -718,26 +1332,35 @@ class RealLLMProcessor:
                             if response_text:
                                 # Sanitize response to remove problematic characters
                                 sanitized = self._sanitize_response(response_text)
-                                return sanitized
+                                    return LLMResponse(
+                                        content=sanitized,
+                                        provider=LLMProvider.OLLAMA,
+                                        model=selected_model,
+                                        latency_ms=0, # This will be calculated by _call_llm_with_provider
+                                        success=True,
+                                        trace_id=None, # Trace ID will be added by _call_llm_with_provider
+                                        attempt=1,
+                                        retries=0
+                                    )
                             else:
-                                print(f"Ollama empty response: {result}")
-                                return None
+                                    logger.warning(f"Ollama empty response: {result}")
+                                    return self._create_error_response(LLMProvider.OLLAMA, "Ollama returned empty response", None)
                         except Exception as parse_error:
-                            print(f"Ollama JSON parse error: {parse_error}")
+                                logger.error(f"Ollama JSON parse error: {parse_error}")
                             # Try reading as text
                             text_response = await response.text()
-                            print(f"Ollama raw response: {text_response[:200]}...")
-                            return None
+                                logger.warning(f"Ollama raw response: {text_response[:200]}...")
+                                return self._create_error_response(LLMProvider.OLLAMA, "Ollama JSON parse error", None)
                     else:
                         error_text = await response.text()
-                        print(f"Ollama API error {response.status}: {error_text}")
-                        return None
-            return None
+                            logger.error(f"Ollama API error {response.status}: {error_text}")
+                            return self._create_error_response(LLMProvider.OLLAMA, f"Ollama API error {response.status}: {error_text}", None)
+            return self._create_error_response(LLMProvider.OLLAMA, "Ollama call failed", None)
         except Exception as e:
-            print(f"Ollama API error: {e}")
-            return None
+            logger.error(f"Ollama API error: {e}")
+            return self._create_error_response(LLMProvider.OLLAMA, str(e), None)
     
-    async def _call_huggingface(self, prompt: str, max_tokens: int = 100, temperature: float = 0.7) -> str:
+    async def _call_huggingface(self, prompt: str, max_tokens: int = 100, temperature: float = 0.7) -> LLMResponse:
         """
         Use the comprehensive HuggingFace integration for advanced AI capabilities
         Following MAANG/OpenAI/Perplexity standards
@@ -758,10 +1381,19 @@ class RealLLMProcessor:
             )
             
             # Return the generated text
-            return response.result
+            return LLMResponse(
+                content=response.result,
+                provider=LLMProvider.HUGGINGFACE,
+                model=model_name,
+                latency_ms=0, # This will be calculated by _call_llm_with_provider
+                success=True,
+                trace_id=None, # Trace ID will be added by _call_llm_with_provider
+                attempt=1,
+                retries=0
+            )
             
         except Exception as e:
-            print(f"HuggingFace integration error: {e}")
+            logger.error(f"HuggingFace integration error: {e}")
             # Fallback to basic API if integration fails
             return await self._call_huggingface_fallback(prompt, max_tokens, temperature)
     
@@ -799,7 +1431,7 @@ class RealLLMProcessor:
         # Default: Fast, reliable model
         return "distilgpt2"
     
-    async def _call_huggingface_fallback(self, prompt: str, max_tokens: int, temperature: float) -> str:
+    async def _call_huggingface_fallback(self, prompt: str, max_tokens: int, temperature: float) -> LLMResponse:
         """Fallback to verified working HuggingFace models when primary fails."""
         fallback_models = ["gpt2", "distilgpt2"]  # Only use verified working free models
         
@@ -829,7 +1461,16 @@ class RealLLMProcessor:
                                 result = await response.json()
                                 parsed = self._parse_huggingface_response(result, model)
                                 if parsed:
-                                    return parsed
+                                    return LLMResponse(
+                                        content=parsed,
+                                        provider=LLMProvider.HUGGINGFACE,
+                                        model=model,
+                                        latency_ms=0, # This will be calculated by _call_llm_with_provider
+                                        success=True,
+                                        trace_id=None, # Trace ID will be added by _call_llm_with_provider
+                                        attempt=1,
+                                        retries=0
+                                    )
                 else:
                     response = requests.post(
                         api_url,
@@ -841,12 +1482,21 @@ class RealLLMProcessor:
                         result = response.json()
                         parsed = self._parse_huggingface_response(result, model)
                         if parsed:
-                            return parsed
+                            return LLMResponse(
+                                content=parsed,
+                                provider=LLMProvider.HUGGINGFACE,
+                                model=model,
+                                latency_ms=0, # This will be calculated by _call_llm_with_provider
+                                success=True,
+                                trace_id=None, # Trace ID will be added by _call_llm_with_provider
+                                attempt=1,
+                                retries=0
+                            )
             except Exception as e:
-                print(f"HuggingFace fallback error with {model}: {e}")
+                logger.error(f"HuggingFace fallback error with {model}: {e}")
                 continue
         
-        return None
+        return self._create_error_response(LLMProvider.HUGGINGFACE, "All HuggingFace fallback models failed", None)
     
     async def _generate_fallback_response(self, prompt: str) -> str:
         """
@@ -904,7 +1554,7 @@ class RealLLMProcessor:
                                 return parsed
                                 
             except Exception as e:
-                print(f"Fallback model {model} failed: {e}")
+                logger.error(f"Fallback model {model} failed: {e}")
                 continue
         
         # Final fallback - return meaningful response without mock data
@@ -1057,22 +1707,24 @@ class RealLLMProcessor:
 
                     Citations:"""
 
-            llm_response = await self._call_llm(prompt, max_tokens=500, temperature=0.1)
+            llm_response = await self._call_llm_with_retry(LLMRequest(prompt=prompt, max_tokens=500, temperature=0.1), self.select_optimal_provider(QueryComplexity.SIMPLE_FACTUAL))
             
             return {
                 "success": True,
-                "citations": llm_response,
+                "citations": llm_response.content,
                 "provider": self.last_used_provider.value if self.last_used_provider else "unknown",
                 "sources_cited": len(sources or []),
-                "citation_style": "APA"
+                "citation_style": "APA",
+                "trace_id": llm_response.trace_id
             }
         except Exception as e:
-            print(f"Citation generation error: {e}")
+            logger.error(f"Citation generation error: {e}")
             return {
                 "success": False,
                 "citations": f"Basic citations: {', '.join([s.get('title', 'Source') for s in (sources or [])[:3]])}",
                 "error": str(e),
-                "sources_cited": len(sources or [])
+                "sources_cited": len(sources or []),
+                "trace_id": None
             }
 
     async def review_content(self, content: str, sources: List[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -1101,32 +1753,34 @@ Please provide a review that includes:
 
 Review:"""
 
-            llm_response = await self._call_llm(prompt, max_tokens=600, temperature=0.2)
+            llm_response = await self._call_llm_with_retry(LLMRequest(prompt=prompt, max_tokens=600, temperature=0.2), self.select_optimal_provider(QueryComplexity.RESEARCH_SYNTHESIS))
             
             # Extract quality score if possible
             quality_score = 0.8  # Default
-            if "score:" in llm_response.lower():
+            if "score:" in llm_response.content.lower():
                 try:
-                    score_text = llm_response.lower().split("score:")[1].split()[0]
+                    score_text = llm_response.content.lower().split("score:")[1].split()[0]
                     quality_score = float(score_text.replace("/10", "")) / 10
                 except:
                     pass
             
             return {
                 "success": True,
-                "review": llm_response,
+                "review": llm_response.content,
                 "quality_score": quality_score,
                 "provider": self.last_used_provider.value if self.last_used_provider else "unknown",
-                "sources_reviewed": len(sources or [])
+                "sources_reviewed": len(sources or []),
+                "trace_id": llm_response.trace_id
             }
         except Exception as e:
-            print(f"Content review error: {e}")
+            logger.error(f"Content review error: {e}")
             return {
                 "success": False,
                 "review": f"Content appears to be about: {content[:100]}... Review unavailable.",
                 "quality_score": 0.5,
                 "error": str(e),
-                "sources_reviewed": len(sources or [])
+                "sources_reviewed": len(sources or []),
+                "trace_id": None
             }
 
 # Global processor instance

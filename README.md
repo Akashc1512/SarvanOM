@@ -8,6 +8,8 @@
 [![Code Coverage](https://codecov.io/gh/your-org/universal-knowledge-hub/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/universal-knowledge-hub)
 [![Security](https://img.shields.io/badge/security-audited-brightgreen.svg)](SECURITY.md)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Development](https://img.shields.io/badge/development-make%20doctor-blue.svg)](README.md#development-environment-check)
+[![Environment Check](https://img.shields.io/badge/env%20check-python%20scripts%2Fdev_check.py-green.svg)](README.md#development-environment-check)
 
 ## 🎯 Project Overview
 
@@ -105,6 +107,25 @@ sarvanom/
 ```
 
 ## 🔧 Development Commands
+
+## 🔍 Development Environment Check
+
+### Quick Check Commands
+```bash
+# Check your development environment setup
+make doctor                    # Linux/macOS (requires make)
+python scripts/dev_check.py    # Cross-platform Python (recommended)
+.\scripts\dev_check.ps1        # Windows PowerShell
+.\scripts\dev_check.bat        # Windows Batch file
+
+# This will verify:
+# - Python ≥3.11
+# - Node ≥18
+# - Docker present
+# - Required environment variables in .env, .env.docker, frontend/.env.local
+# - Project structure
+# - Free mode configuration (recommended defaults)
+```
 
 ### Essential Commands
 ```bash

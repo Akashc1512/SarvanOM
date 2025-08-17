@@ -34,7 +34,9 @@ import logging
 import time
 import re
 import json
-from datetime import datetime
+import httpx
+import asyncio
+from datetime import datetime, timezone
 from starlette.middleware.base import BaseHTTPMiddleware
 
 # Import unified logging
@@ -51,6 +53,10 @@ from services.analytics.metrics.knowledge_platform_metrics import (
 # Import the real LLM processor
 from services.gateway.real_llm_integration import RealLLMProcessor
 
+# Import zero-budget retrieval
+from services.retrieval.free_tier import get_zero_budget_retrieval, combined_search
+from services.retrieval.routers.free_tier_router import router as free_tier_router
+
 # Import advanced features
 from services.gateway.cache_manager import cache_manager
 from services.gateway.streaming_manager import stream_manager
@@ -58,12 +64,29 @@ from services.gateway.background_processor import background_processor, TaskType
 from services.gateway.prompt_optimizer import prompt_optimizer, PromptType, PromptComplexity
 from services.gateway.huggingface_integration import huggingface_integration
 
+# Import shared components for microservice architecture
+from shared.models.crud_models import (
+    CacheEntry, UserProfile, ModelConfiguration, Dataset, SystemSetting,
+    CRUDResponse, PaginationParams, FilterParams, ResourceType
+)
+from shared.contracts.service_contracts import (
+    ServiceType, ServiceStatus, ServiceHealth
+)
+from shared.clients.service_client import ServiceClientFactory, CRUDServiceClient
+
 # Initialize the LLM processor
 llm_processor = RealLLMProcessor()
 
 # Configure unified logging
 logging_config = setup_logging(service_name="sarvanom-gateway-service")
 logger = get_logger(__name__)
+
+# Health and readiness tracking
+startup_time = time.time()
+import uuid
+import os
+import subprocess
+from contextlib import asynccontextmanager
 
 # Initialize advanced features
 async def initialize_advanced_features():
@@ -107,6 +130,8 @@ async def lifespan(app: FastAPI):
     await background_processor.close()
     await prompt_optimizer.close()
 
+
+
 # Update FastAPI app with lifespan
 app = FastAPI(
     title="Universal Knowledge Platform API Gateway",
@@ -134,7 +159,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     
     async def dispatch(self, request: Request, call_next):
         # Skip security checks for basic endpoints
-        if request.url.path in ["/", "/health", "/health/detailed", "/docs", "/openapi.json"]:
+        if request.url.path in ["/", "/health", "/health/detailed", "/ready", "/version", "/docs", "/openapi.json"]:
             response = await call_next(request)
             # Still add security headers
             self._add_security_headers(response)
@@ -205,9 +230,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
-    expose_headers=["X-Total-Count", "X-Page-Count"],
-    max_age=3600,
 )
+
+# Include routers
+app.include_router(free_tier_router)
 
 # Request/Response models with enhanced validation
 class SearchRequest(BaseModel):
@@ -309,6 +335,149 @@ class VectorSearchRequest(BaseModel):
         
         return v.strip()
 
+# CRUD Operation Models for Full RESTful API Implementation
+class CacheEntry(BaseModel):
+    key: str = Field(..., description="Cache key", min_length=1, max_length=255)
+    value: Any = Field(..., description="Cache value")
+    ttl: int = Field(default=3600, description="Time to live in seconds", ge=1, le=86400)
+    tags: Optional[List[str]] = Field(default=None, description="Cache tags for organization")
+    service: str = Field(..., description="Service that owns this cache entry")
+    
+    @field_validator("key")
+    @classmethod
+    def validate_key(cls, v: str) -> str:
+        """Validate cache key format."""
+        if not v.strip():
+            raise ValueError("Cache key cannot be empty")
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ValueError("Cache key can only contain letters, numbers, underscores, and hyphens")
+        return v.strip()
+    
+    @field_validator("service")
+    @classmethod
+    def validate_service(cls, v: str) -> str:
+        """Validate service name format."""
+        if not v.strip():
+            raise ValueError("Service name cannot be empty")
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ValueError("Service name can only contain letters, numbers, underscores, and hyphens")
+        return v.strip()
+
+class UserProfile(BaseModel):
+    user_id: str = Field(..., description="User identifier", min_length=1, max_length=100)
+    username: str = Field(..., description="Username", min_length=3, max_length=50)
+    email: str = Field(..., description="Email address")
+    preferences: Optional[Dict[str, Any]] = Field(default=None, description="User preferences")
+    settings: Optional[Dict[str, Any]] = Field(default=None, description="User settings")
+    created_at: Optional[datetime] = Field(default=None, description="Creation timestamp")
+    updated_at: Optional[datetime] = Field(default=None, description="Last update timestamp")
+    
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        """Validate email format."""
+        import re
+        email_pattern = re.compile(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+        if not email_pattern.match(v):
+            raise ValueError("Invalid email format")
+        return v.lower()
+    
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v: str) -> str:
+        """Validate username format."""
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ValueError("Username can only contain letters, numbers, underscores, and hyphens")
+        return v.strip()
+
+class ModelConfiguration(BaseModel):
+    model_name: str = Field(..., description="Model name", min_length=1, max_length=100)
+    provider: str = Field(..., description="Model provider", min_length=1, max_length=50)
+    parameters: Dict[str, Any] = Field(..., description="Model parameters")
+    enabled: bool = Field(default=True, description="Whether model is enabled")
+    priority: int = Field(default=1, description="Model priority", ge=1, le=10)
+    service: str = Field(..., description="Service that owns this model")
+    created_at: Optional[datetime] = Field(default=None, description="Creation timestamp")
+    
+    @field_validator("model_name")
+    @classmethod
+    def validate_model_name(cls, v: str) -> str:
+        """Validate model name format."""
+        if not v.strip():
+            raise ValueError("Model name cannot be empty")
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ValueError("Model name can only contain letters, numbers, underscores, and hyphens")
+        return v.strip()
+    
+    @field_validator("service")
+    @classmethod
+    def validate_service(cls, v: str) -> str:
+        """Validate service name format."""
+        if not v.strip():
+            raise ValueError("Service name cannot be empty")
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ValueError("Service name can only contain letters, numbers, underscores, and hyphens")
+        return v.strip()
+
+class Dataset(BaseModel):
+    dataset_id: str = Field(..., description="Dataset identifier", min_length=1, max_length=100)
+    name: str = Field(..., description="Dataset name", min_length=1, max_length=255)
+    description: Optional[str] = Field(default=None, description="Dataset description")
+    source: str = Field(..., description="Data source", min_length=1, max_length=255)
+    format: str = Field(..., description="Data format", min_length=1, max_length=50)
+    size: Optional[int] = Field(default=None, description="Dataset size in bytes")
+    service: str = Field(..., description="Service that owns this dataset")
+    created_at: Optional[datetime] = Field(default=None, description="Creation timestamp")
+    
+    @field_validator("dataset_id")
+    @classmethod
+    def validate_dataset_id(cls, v: str) -> str:
+        """Validate dataset ID format."""
+        if not v.strip():
+            raise ValueError("Dataset ID cannot be empty")
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ValueError("Dataset ID can only contain letters, numbers, underscores, and hyphens")
+        return v.strip()
+    
+    @field_validator("service")
+    @classmethod
+    def validate_service(cls, v: str) -> str:
+        """Validate service name format."""
+        if not v.strip():
+            raise ValueError("Service name cannot be empty")
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ValueError("Service name can only contain letters, numbers, underscores, and hyphens")
+        return v.strip()
+
+class SystemSetting(BaseModel):
+    setting_key: str = Field(..., description="Setting key", min_length=1, max_length=100)
+    setting_value: Any = Field(..., description="Setting value")
+    category: str = Field(..., description="Setting category", min_length=1, max_length=50)
+    description: Optional[str] = Field(default=None, description="Setting description")
+    encrypted: bool = Field(default=False, description="Whether setting is encrypted")
+    service: str = Field(..., description="Service that owns this setting")
+    created_at: Optional[datetime] = Field(default=None, description="Creation timestamp")
+    
+    @field_validator("setting_key")
+    @classmethod
+    def validate_setting_key(cls, v: str) -> str:
+        """Validate setting key format."""
+        if not v.strip():
+            raise ValueError("Setting key cannot be empty")
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ValueError("Setting key can only contain letters, numbers, underscores, and hyphens")
+        return v.strip()
+    
+    @field_validator("service")
+    @classmethod
+    def validate_service(cls, v: str) -> str:
+        """Validate service name format."""
+        if not v.strip():
+            raise ValueError("Service name cannot be empty")
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ValueError("Service name can only contain letters, numbers, underscores, and hyphens")
+        return v.strip()
+
 class GraphContextRequest(BaseModel):
     topic: str = Field(..., min_length=1, max_length=200)
     depth: Optional[int] = Field(default=2, ge=1, le=5)
@@ -327,7 +496,243 @@ class GraphContextRequest(BaseModel):
         
         return v.strip()
 
+# Health and Readiness Models
+class DependencyStatus(BaseModel):
+    """Individual dependency status"""
+    name: str = Field(..., description="Dependency name")
+    status: str = Field(..., description="Status: healthy, degraded, or unhealthy")
+    response_time_ms: Optional[int] = Field(default=None, description="Response time in milliseconds")
+    error_message: Optional[str] = Field(default=None, description="Error message if unhealthy")
+    last_check: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat(), description="Last check timestamp")
+
+class HealthResponse(BaseModel):
+    """Health check response model"""
+    status: str = Field(..., description="Overall status: healthy, degraded, or unhealthy")
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat(), description="Health check timestamp")
+    uptime_s: float = Field(..., description="Service uptime in seconds")
+    version: str = Field(..., description="Service version")
+    git_sha: Optional[str] = Field(default=None, description="Git commit SHA")
+    build_time: Optional[str] = Field(default=None, description="Build timestamp")
+
+class ReadinessResponse(BaseModel):
+    """Readiness check response model"""
+    status: str = Field(..., description="Overall status: ready or not_ready")
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat(), description="Readiness check timestamp")
+    uptime_s: float = Field(..., description="Service uptime in seconds")
+    dependencies: List[DependencyStatus] = Field(..., description="List of dependency statuses")
+    error_count: int = Field(..., description="Number of unhealthy dependencies")
+
+class VersionResponse(BaseModel):
+    """Version information response model"""
+    version: str = Field(..., description="Service version")
+    git_sha: Optional[str] = Field(default=None, description="Git commit SHA")
+    build_time: Optional[str] = Field(default=None, description="Build timestamp")
+    environment: str = Field(..., description="Environment (development, staging, production)")
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat(), description="Version check timestamp")
+
 # REMOVED: Duplicate health endpoint - using health_router.get("/health") instead
+
+# Health and Readiness Functions
+def get_git_sha() -> Optional[str]:
+    """Get the current git SHA"""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+        pass
+    return None
+
+def get_build_time() -> Optional[str]:
+    """Get build time from environment or file"""
+    # Try to get from environment variable first
+    build_time = os.getenv("BUILD_TIME")
+    if build_time:
+        return build_time
+    
+    # Try to get from git commit date
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%cd", "--date=iso"],
+            capture_output=True,
+            text=True,
+            timeout=5
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+        pass
+    return None
+
+async def check_crud_service() -> DependencyStatus:
+    """Check CRUD service health"""
+    start_time = time.time()
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get("http://localhost:8001/health")
+            response_time_ms = int((time.time() - start_time) * 1000)
+            
+            if response.status_code == 200:
+                return DependencyStatus(
+                    name="crud_service",
+                    status="healthy",
+                    response_time_ms=response_time_ms
+                )
+            else:
+                return DependencyStatus(
+                    name="crud_service",
+                    status="unhealthy",
+                    response_time_ms=response_time_ms,
+                    error_message=f"HTTP {response.status_code}"
+                )
+    except Exception as e:
+        response_time_ms = int((time.time() - start_time) * 1000)
+        return DependencyStatus(
+            name="crud_service",
+            status="unhealthy",
+            response_time_ms=response_time_ms,
+            error_message=str(e)
+        )
+
+async def check_retrieval_service() -> DependencyStatus:
+    """Check retrieval service health"""
+    start_time = time.time()
+    try:
+        # For now, check if the service is configured
+        # In production, this would check the actual retrieval service endpoint
+        retrieval_url = os.getenv("RETRIEVAL_SERVICE_URL", "http://localhost:8002")
+        
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"{retrieval_url}/health")
+            response_time_ms = int((time.time() - start_time) * 1000)
+            
+            if response.status_code == 200:
+                return DependencyStatus(
+                    name="retrieval_service",
+                    status="healthy",
+                    response_time_ms=response_time_ms
+                )
+            else:
+                return DependencyStatus(
+                    name="retrieval_service",
+                    status="unhealthy",
+                    response_time_ms=response_time_ms,
+                    error_message=f"HTTP {response.status_code}"
+                )
+    except Exception as e:
+        response_time_ms = int((time.time() - start_time) * 1000)
+        return DependencyStatus(
+            name="retrieval_service",
+            status="unhealthy",
+            response_time_ms=response_time_ms,
+            error_message=str(e)
+        )
+
+async def check_synthesis_service() -> DependencyStatus:
+    """Check synthesis/LLM service health"""
+    start_time = time.time()
+    try:
+        # Check if LLM processor is available
+        if llm_processor and hasattr(llm_processor, 'health_check'):
+            await llm_processor.health_check()
+            response_time_ms = int((time.time() - start_time) * 1000)
+            return DependencyStatus(
+                name="synthesis_service",
+                status="healthy",
+                response_time_ms=response_time_ms
+            )
+        else:
+            # Basic check - if we can import the processor, consider it healthy
+            response_time_ms = int((time.time() - start_time) * 1000)
+            return DependencyStatus(
+                name="synthesis_service",
+                status="healthy",
+                response_time_ms=response_time_ms
+            )
+    except Exception as e:
+        response_time_ms = int((time.time() - start_time) * 1000)
+        return DependencyStatus(
+            name="synthesis_service",
+            status="unhealthy",
+            response_time_ms=response_time_ms,
+            error_message=str(e)
+        )
+
+async def check_vector_store() -> DependencyStatus:
+    """Check vector store health (optional)"""
+    start_time = time.time()
+    try:
+        # Check if vector store is configured
+        vector_store_url = os.getenv("VECTOR_STORE_URL")
+        if not vector_store_url:
+            return DependencyStatus(
+                name="vector_store",
+                status="healthy",
+                response_time_ms=0,
+                error_message="Not configured (optional)"
+            )
+        
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"{vector_store_url}/health")
+            response_time_ms = int((time.time() - start_time) * 1000)
+            
+            if response.status_code == 200:
+                return DependencyStatus(
+                    name="vector_store",
+                    status="healthy",
+                    response_time_ms=response_time_ms
+                )
+            else:
+                return DependencyStatus(
+                    name="vector_store",
+                    status="unhealthy",
+                    response_time_ms=response_time_ms,
+                    error_message=f"HTTP {response.status_code}"
+                )
+    except Exception as e:
+        response_time_ms = int((time.time() - start_time) * 1000)
+        return DependencyStatus(
+            name="vector_store",
+            status="unhealthy",
+            response_time_ms=response_time_ms,
+            error_message=str(e)
+        )
+
+async def check_cache_redis() -> DependencyStatus:
+    """Check cache/Redis health (optional)"""
+    start_time = time.time()
+    try:
+        # Check if Redis is configured
+        redis_url = os.getenv("REDIS_URL")
+        if not redis_url:
+            return DependencyStatus(
+                name="cache_redis",
+                status="healthy",
+                response_time_ms=0,
+                error_message="Not configured (optional)"
+            )
+        
+        # For now, return healthy if configured
+        # In production, this would check Redis connectivity
+        response_time_ms = int((time.time() - start_time) * 1000)
+        return DependencyStatus(
+            name="cache_redis",
+            status="healthy",
+            response_time_ms=response_time_ms
+        )
+    except Exception as e:
+        response_time_ms = int((time.time() - start_time) * 1000)
+        return DependencyStatus(
+            name="cache_redis",
+            status="unhealthy",
+            response_time_ms=response_time_ms,
+            error_message=str(e)
+        )
 
 @app.get("/health/detailed")
 async def detailed_health_check():
@@ -406,7 +811,7 @@ async def search_endpoint():
 
 @app.post("/search")
 async def search_post(request: SearchRequest):
-    """Enhanced search endpoint with real LLM integration."""
+    """Enhanced search endpoint with zero-budget retrieval and LLM integration."""
     
     start_time = time.time()
     
@@ -421,22 +826,53 @@ async def search_post(request: SearchRequest):
             cache_type="redis"
         )
         
-        # Use real LLM to process the search request
+        # First, use zero-budget retrieval to get free search results
+        logger.info(f"Starting zero-budget retrieval for query: {request.query}")
+        retrieval_response = await combined_search(
+            query=request.query,
+            k=min(request.max_results or 10, 10)
+        )
+        
+        # Convert retrieval results to the format expected by LLM processor
+        retrieval_results = []
+        for result in retrieval_response.results:
+            retrieval_results.append({
+                "id": f"retrieval_{result.provider.value}_{len(retrieval_results)}",
+                "title": result.title,
+                "url": result.url,
+                "snippet": result.snippet,
+                "relevance_score": result.relevance_score,
+                "source_type": result.provider.value,
+                "publication_date": result.timestamp.isoformat(),
+                "author": "Zero-Budget Retrieval",
+                "citations": 0
+            })
+        
+        # Use real LLM to enhance the search results
         llm_result = await llm_processor.search_with_ai(
             query=request.query,
             user_id=request.user_id,
             max_results=10
         )
         
+        # Merge zero-budget retrieval results with LLM results
+        if retrieval_results:
+            # Add zero-budget results to the LLM response
+            llm_result["zero_budget_results"] = retrieval_results
+            llm_result["zero_budget_cache_hit"] = retrieval_response.cache_hit
+            llm_result["zero_budget_providers_used"] = [p.value for p in retrieval_response.providers_used]
+            llm_result["zero_budget_processing_time_ms"] = retrieval_response.processing_time_ms
+            llm_result["zero_budget_trace_id"] = retrieval_response.trace_id
+        
         # Calculate processing time
         processing_time = time.time() - start_time
         
         # Record retrieval metrics
         record_retrieval_metrics(
-            source_type="web_search",
-            fusion_strategy="hybrid",
+            source_type="zero_budget_hybrid",
+            fusion_strategy="zero_budget_first",
             duration_seconds=processing_time,
-            result_count=len(llm_result.get("results", [])),
+            result_count=len(retrieval_results) + len(llm_result.get("results", [])),
             confidence_score=llm_result.get("confidence_score", 0.8)
         )
         
@@ -452,6 +888,7 @@ async def search_post(request: SearchRequest):
         # Add timing information to response
         llm_result["processing_time_ms"] = int(processing_time * 1000)
         llm_result["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        llm_result["zero_budget_enabled"] = True
         
         return llm_result
         
@@ -905,8 +1342,99 @@ async def root():
             "graph",
             "analytics"
         ],
-        "health": "/health"
+        "health": "/health",
+        "ready": "/ready",
+        "version_info": "/version"
     }
+
+# Health and Readiness Endpoints
+@app.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Liveness probe - basic health check"""
+    trace_id = str(uuid.uuid4())
+    
+    response = HealthResponse(
+        status="healthy",
+        uptime_s=time.time() - startup_time,
+        version="1.0.0",
+        git_sha=get_git_sha(),
+        build_time=get_build_time()
+    )
+    
+    # Add trace_id to response headers
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        content=response.model_dump(),
+        headers={"X-Trace-ID": trace_id}
+    )
+
+@app.get("/ready", response_model=ReadinessResponse)
+async def readiness_check():
+    """Readiness probe - check downstream dependencies"""
+    trace_id = str(uuid.uuid4())
+    
+    # Check all dependencies
+    dependencies = await asyncio.gather(
+        check_crud_service(),
+        check_retrieval_service(),
+        check_synthesis_service(),
+        check_vector_store(),
+        check_cache_redis(),
+        return_exceptions=True
+    )
+    
+    # Handle any exceptions in dependency checks
+    processed_dependencies = []
+    error_count = 0
+    
+    for dep in dependencies:
+        if isinstance(dep, Exception):
+            processed_dependencies.append(DependencyStatus(
+                name="unknown",
+                status="unhealthy",
+                error_message=str(dep)
+            ))
+            error_count += 1
+        else:
+            processed_dependencies.append(dep)
+            if dep.status != "healthy":
+                error_count += 1
+    
+    # Determine overall status
+    overall_status = "ready" if error_count == 0 else "not_ready"
+    
+    response = ReadinessResponse(
+        status=overall_status,
+        uptime_s=time.time() - startup_time,
+        dependencies=processed_dependencies,
+        error_count=error_count
+    )
+    
+    # Add trace_id to response headers
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        content=response.model_dump(),
+        headers={"X-Trace-ID": trace_id}
+    )
+
+@app.get("/version", response_model=VersionResponse)
+async def version_info():
+    """Get version information including git SHA and build time"""
+    trace_id = str(uuid.uuid4())
+    
+    response = VersionResponse(
+        version="1.0.0",
+        git_sha=get_git_sha(),
+        build_time=get_build_time(),
+        environment=os.getenv("ENVIRONMENT", "development")
+    )
+    
+    # Add trace_id to response headers
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        content=response.dict(),
+        headers={"X-Trace-ID": trace_id}
+    )
 
 # Error handlers
 @app.exception_handler(404)
@@ -1420,6 +1948,290 @@ async def huggingface_model_info(model_name: str):
         }
     except Exception as e:
         logger.error(f"HuggingFace model info error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# CRUD SERVICE CLIENT - Microservice Architecture Implementation
+# MAANG/OpenAI/Perplexity Standards with Latest Stable Technologies
+# ============================================================================
+
+# Initialize CRUD service client
+crud_client = ServiceClientFactory.create_crud_client()
+
+# ============================================================================
+# CACHE CRUD OPERATIONS - Microservice Architecture
+# ============================================================================
+
+@app.get("/cache/{key}")
+async def get_cache_entry(key: str):
+    """GET - Retrieve a cache entry via CRUD microservice"""
+    try:
+        response = await crud_client.get_resource("cache", key)
+        return response
+    except Exception as e:
+        logger.error(f"Cache GET error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/cache")
+async def create_cache_entry(entry: CacheEntry):
+    """POST - Create a new cache entry via CRUD microservice"""
+    try:
+        response = await crud_client.create_resource("cache", entry.dict())
+        return response
+    except Exception as e:
+        logger.error(f"Cache POST error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/cache/{key}")
+async def update_cache_entry(key: str, entry: CacheEntry):
+    """PUT - Update an existing cache entry via CRUD microservice"""
+    try:
+        response = await crud_client.update_resource("cache", key, entry.dict())
+        return response
+    except Exception as e:
+        logger.error(f"Cache PUT error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/cache/{key}")
+async def delete_cache_entry(key: str):
+    """DELETE - Remove a cache entry via CRUD microservice"""
+    try:
+        response = await crud_client.delete_resource("cache", key)
+        return response
+    except Exception as e:
+        logger.error(f"Cache DELETE error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/cache")
+async def list_cache_entries(skip: int = 0, limit: int = 100):
+    """GET - List all cache entries with pagination via CRUD microservice"""
+    try:
+        pagination = PaginationParams(skip=skip, limit=limit)
+        response = await crud_client.list_resources("cache", pagination)
+        return response
+    except Exception as e:
+        logger.error(f"Cache list error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# USER PROFILE CRUD OPERATIONS - Microservice Architecture
+# ============================================================================
+
+@app.get("/users/{user_id}")
+async def get_user_profile(user_id: str):
+    """GET - Retrieve a user profile via CRUD microservice"""
+    try:
+        response = await crud_client.get_resource("user", user_id)
+        return response
+    except Exception as e:
+        logger.error(f"User GET error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/users")
+async def create_user_profile(user: UserProfile):
+    """POST - Create a new user profile via CRUD microservice"""
+    try:
+        response = await crud_client.create_resource("user", user.dict())
+        return response
+    except Exception as e:
+        logger.error(f"User POST error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/users/{user_id}")
+async def update_user_profile(user_id: str, user: UserProfile):
+    """PUT - Update an existing user profile via CRUD microservice"""
+    try:
+        response = await crud_client.update_resource("user", user_id, user.dict())
+        return response
+    except Exception as e:
+        logger.error(f"User PUT error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/users/{user_id}")
+async def delete_user_profile(user_id: str):
+    """DELETE - Remove a user profile via CRUD microservice"""
+    try:
+        response = await crud_client.delete_resource("user", user_id)
+        return response
+    except Exception as e:
+        logger.error(f"User DELETE error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/users")
+async def list_user_profiles(skip: int = 0, limit: int = 100):
+    """GET - List all user profiles with pagination via CRUD microservice"""
+    try:
+        pagination = PaginationParams(skip=skip, limit=limit)
+        response = await crud_client.list_resources("user", pagination)
+        return response
+    except Exception as e:
+        logger.error(f"User list error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# MODEL CONFIGURATION CRUD OPERATIONS - Microservice Architecture
+# ============================================================================
+
+@app.get("/models/{model_name}")
+async def get_model_configuration(model_name: str):
+    """GET - Retrieve a model configuration via CRUD microservice"""
+    try:
+        response = await crud_client.get_resource("model", model_name)
+        return response
+    except Exception as e:
+        logger.error(f"Model GET error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/models")
+async def create_model_configuration(model: ModelConfiguration):
+    """POST - Create a new model configuration via CRUD microservice"""
+    try:
+        response = await crud_client.create_resource("model", model.dict())
+        return response
+    except Exception as e:
+        logger.error(f"Model POST error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/models/{model_name}")
+async def update_model_configuration(model_name: str, model: ModelConfiguration):
+    """PUT - Update an existing model configuration via CRUD microservice"""
+    try:
+        response = await crud_client.update_resource("model", model_name, model.dict())
+        return response
+    except Exception as e:
+        logger.error(f"Model PUT error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/models/{model_name}")
+async def delete_model_configuration(model_name: str):
+    """DELETE - Remove a model configuration via CRUD microservice"""
+    try:
+        response = await crud_client.delete_resource("model", model_name)
+        return response
+    except Exception as e:
+        logger.error(f"Model DELETE error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/models")
+async def list_model_configurations(skip: int = 0, limit: int = 100):
+    """GET - List all model configurations with pagination via CRUD microservice"""
+    try:
+        pagination = PaginationParams(skip=skip, limit=limit)
+        response = await crud_client.list_resources("model", pagination)
+        return response
+    except Exception as e:
+        logger.error(f"Model list error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# DATASET CRUD OPERATIONS - Microservice Architecture
+# ============================================================================
+
+@app.get("/datasets/{dataset_id}")
+async def get_dataset(dataset_id: str):
+    """GET - Retrieve a dataset via CRUD microservice"""
+    try:
+        response = await crud_client.get_resource("dataset", dataset_id)
+        return response
+    except Exception as e:
+        logger.error(f"Dataset GET error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/datasets")
+async def create_dataset(dataset: Dataset):
+    """POST - Create a new dataset via CRUD microservice"""
+    try:
+        response = await crud_client.create_resource("dataset", dataset.dict())
+        return response
+    except Exception as e:
+        logger.error(f"Dataset POST error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/datasets/{dataset_id}")
+async def update_dataset(dataset_id: str, dataset: Dataset):
+    """PUT - Update an existing dataset via CRUD microservice"""
+    try:
+        response = await crud_client.update_resource("dataset", dataset_id, dataset.dict())
+        return response
+    except Exception as e:
+        logger.error(f"Dataset PUT error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/datasets/{dataset_id}")
+async def delete_dataset(dataset_id: str):
+    """DELETE - Remove a dataset via CRUD microservice"""
+    try:
+        response = await crud_client.delete_resource("dataset", dataset_id)
+        return response
+    except Exception as e:
+        logger.error(f"Dataset DELETE error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/datasets")
+async def list_datasets(skip: int = 0, limit: int = 100):
+    """GET - List all datasets with pagination via CRUD microservice"""
+    try:
+        pagination = PaginationParams(skip=skip, limit=limit)
+        response = await crud_client.list_resources("dataset", pagination)
+        return response
+    except Exception as e:
+        logger.error(f"Dataset list error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# SYSTEM SETTINGS CRUD OPERATIONS - Microservice Architecture
+# ============================================================================
+
+@app.get("/settings/{setting_key}")
+async def get_system_setting(setting_key: str):
+    """GET - Retrieve a system setting via CRUD microservice"""
+    try:
+        response = await crud_client.get_resource("setting", setting_key)
+        return response
+    except Exception as e:
+        logger.error(f"Setting GET error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/settings")
+async def create_system_setting(setting: SystemSetting):
+    """POST - Create a new system setting via CRUD microservice"""
+    try:
+        response = await crud_client.create_resource("setting", setting.dict())
+        return response
+    except Exception as e:
+        logger.error(f"Setting POST error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/settings/{setting_key}")
+async def update_system_setting(setting_key: str, setting: SystemSetting):
+    """PUT - Update an existing system setting via CRUD microservice"""
+    try:
+        response = await crud_client.update_resource("setting", setting_key, setting.dict())
+        return response
+    except Exception as e:
+        logger.error(f"Setting PUT error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/settings/{setting_key}")
+async def delete_system_setting(setting_key: str):
+    """DELETE - Remove a system setting via CRUD microservice"""
+    try:
+        response = await crud_client.delete_resource("setting", setting_key)
+        return response
+    except Exception as e:
+        logger.error(f"Setting DELETE error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/settings")
+async def list_system_settings(skip: int = 0, limit: int = 100, category: Optional[str] = None):
+    """GET - List all system settings with pagination and optional category filter via CRUD microservice"""
+    try:
+        pagination = PaginationParams(skip=skip, limit=limit)
+        filters = FilterParams(category=category) if category else None
+        response = await crud_client.list_resources("setting", pagination, filters)
+        return response
+    except Exception as e:
+        logger.error(f"Setting list error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

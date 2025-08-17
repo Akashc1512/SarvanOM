@@ -3,7 +3,7 @@
 # Optimized for Windows 11 Docker Desktop (WSL2 backend)
 # =============================================================================
 
-.PHONY: help up down build logs clean restart health-check test-docker-health
+.PHONY: help up down build logs clean restart health-check test-docker-health doctor
 
 # Default target
 help:
@@ -19,6 +19,7 @@ help:
 	@echo "  restart      - Restart all services"
 	@echo "  health-check - Check health of all services"
 	@echo "  test-docker-health - Run comprehensive Docker health tests"
+	@echo "  doctor       - Check development environment setup"
 	@echo ""
 
 # Start all services with .env.docker
@@ -81,6 +82,11 @@ health-check:
 test-docker-health:
 	@echo "Running comprehensive Docker health tests..."
 	python test_docker_health.py
+
+# Check development environment setup
+doctor:
+	@echo "Checking development environment setup..."
+	python scripts/dev_check.py
 
 # Windows-specific commands
 windows-up:

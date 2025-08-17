@@ -1,8 +1,7 @@
 """
-Tests Package
-============
+Tests package for SarvanOM backend
 
-Comprehensive test suite for the Universal Knowledge Platform.
+This package contains unit tests and integration tests for the microservices.
 """
 
 # Test modules

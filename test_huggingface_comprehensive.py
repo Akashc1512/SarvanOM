@@ -103,8 +103,8 @@ async def test_embeddings(hf_integration):
     """Test text embeddings"""
     try:
         texts = [
-            "Artificial intelligence is transforming the world",
-            "Machine learning is a subset of AI",
+                    "Artificial intelligence is transforming the world",
+                    "Machine learning is a subset of AI",
             "The weather is nice today"
         ]
         
