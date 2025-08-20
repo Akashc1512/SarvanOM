@@ -159,7 +159,7 @@ quick-start: preflight up
 # Code Garden - Code Cleanup and Refactoring Tools
 # =============================================================================
 
-.PHONY: cg-audit cg-plan cg-apply cg-preview cg-split cg-restore
+.PHONY: cg-audit cg-plan cg-apply cg-preview cg-split cg-restore cg-syntax
 
 cg-audit:
 	@if [ "$(OS)" = "Windows_NT" ]; then \
@@ -182,4 +182,7 @@ cg-split:
 
 cg-restore:
 	@echo "Restore by copying files from latest archive/cg_* back to their original paths"
-	@ls -1d archive/cg_* | tail -n 1 || true 
+	@ls -1d archive/cg_* | tail -n 1 || true
+
+cg-syntax:
+	@python scripts/code_garden/check_syntax.py 

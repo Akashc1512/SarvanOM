@@ -99,9 +99,9 @@ def check_docker() -> Tuple[bool, str]:
             if 'version' in version_line:
                 version = version_line.split('version')[1].split(',')[0].strip()
                 return True, version
-        else:
+            else:
                 return True, "Available"
-    else:
+        else:
             return False, "Not found"
     except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
         return False, "Not found"
@@ -192,7 +192,7 @@ def analyze_env_keys(env_data: Dict[str, Dict[str, str]], required_keys: Dict[st
                     'status': 'present',
                     'value': '***' if 'KEY' in key or 'SECRET' in key else env_vars[key]
                 }
-                else:
+            else:
                 analysis[env_file][key] = {
                     'status': 'missing',
                     'value': config['default']
@@ -263,7 +263,7 @@ def print_recommendations(analysis: Dict[str, Dict[str, str]], required_keys: Di
     
     if free_mode_enabled:
         print_success("Free mode is enabled (recommended for development)")
-        else:
+    else:
         print_warning("Free mode is not enabled - consider setting PRIORITIZE_FREE_MODELS=true")
     
     # Check for vector DB configuration

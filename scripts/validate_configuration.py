@@ -188,7 +188,7 @@ def check_security_configuration() -> Tuple[bool, List[str]]:
     return len(warnings) == 0, warnings
 
 
-def check_database_connections() -> Tuple[bool, List[str]]:
+async def check_database_connections() -> Tuple[bool, List[str]]:
     """
     Test database connections if possible.
 

@@ -165,8 +165,8 @@ class ExternalServiceError(UKPException):
     """External service integration failed."""
 
 
-        def __init__(self):
-            super().__init__(
+    def __init__(self, service: str, operation: str, error: str, retryable: bool = True):
+        super().__init__(
             message=f"External service {service} failed during {operation}: {error}",
             details={
                 "service": service,
@@ -182,8 +182,8 @@ class ValidationError(UKPHTTPException):
     """Request validation failed."""
 
 
-        def __init__(self):
-            super().__init__(
+    def __init__(self, field: str, message: str, value: Any = None):
+        super().__init__(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Validation error: {message}",
             internal_message=f"Validation failed for {field}: {message} (value: {value})",
@@ -194,8 +194,8 @@ class SecurityViolationError(UKPHTTPException):
     """Security policy violation."""
 
 
-        def __init__(self):
-            super().__init__(
+    def __init__(self, violation_type: str, details: str = None):
+        super().__init__(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Request blocked by security policy",
             internal_message=f"Security violation: {violation_type} - {details or 'No details'}",
@@ -211,6 +211,7 @@ RateLimitError = RateLimitExceededError
 class ConfigurationError(UKPException):
     """Configuration error."""
 
+    def __init__(self, component: str, issue: str, suggestion: str = None):
         message = f"Configuration error in {component}: {issue}"
         if suggestion:
             message += f". Suggestion: {suggestion}"
@@ -226,8 +227,10 @@ class ExpertReviewError(UKPHTTPException):
     """Expert review operation failed."""
 
 
-        def __init__(self):
-            super().__init__(
+
+
+    def __init__(self, operation: str, review_id: str, reason: str):
+        super().__init__(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Expert review {operation} failed",
             internal_message=f"Expert review {operation} failed for {review_id}: {reason}",

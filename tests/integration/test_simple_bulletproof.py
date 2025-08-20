@@ -282,7 +282,7 @@ class TestSecuritySimple(unittest.TestCase):
         """Set up test environment"""
         self.base_url = TEST_API_BASE_URL
 
-    def test_input_validation(self):
+    async def test_input_validation(self):
         """Test input validation"""
         try:
             # Test with empty query
@@ -297,7 +297,7 @@ class TestSecuritySimple(unittest.TestCase):
         except Exception:
             self.skipTest("API not available")
 
-    def test_sql_injection_protection(self):
+    async def test_sql_injection_protection(self):
         """Test SQL injection protection"""
         try:
             malicious_query = "'; DROP TABLE users; --"

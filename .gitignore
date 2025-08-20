@@ -304,4 +304,4 @@ models_cache/
 # Code Garden generated files
 reports/
 code_garden/refactor_preview/
-archive/**
+archive/
