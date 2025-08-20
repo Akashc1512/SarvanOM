@@ -79,11 +79,11 @@ def check_node_version() -> Tuple[bool, str]:
             version_parts = version_str.split('.')
             major_version = int(version_parts[0])
         
-        if major_version >= 18:
+            if major_version >= 18:
                 return True, version_str
-        else:
+            else:
                 return False, version_str
-    else:
+        else:
             return False, "Not found"
     except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
         return False, "Not found"

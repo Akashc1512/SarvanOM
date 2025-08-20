@@ -221,85 +221,103 @@ class RealLLMProcessor:
     """Real LLM processing with multiple provider support and router hardening."""
     
     def __init__(self):
-        self.setup_clients()
+        self.setup_provider_registry()
         self.setup_provider_configs()
         self.last_used_provider = None
     
-    def setup_clients(self):
-        """Setup LLM clients with zero-budget optimization."""
-        self.clients = {}
-        self.provider_health = {}
-        
-        # Setup clients based on availability and budget preference
-        if OPENAI_AVAILABLE and OPENAI_API_KEY:
-            try:
-                # Try modern OpenAI client first
-                self.openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
-                self.clients[LLMProvider.OPENAI] = self.openai_client
-                self.provider_health[LLMProvider.OPENAI] = True
-            except Exception as e:
-                logger.error(f"OpenAI client setup failed: {e}")
-                self.provider_health[LLMProvider.OPENAI] = False
+    def setup_provider_registry(self):
+        """Setup LLM provider registry with zero-budget optimization."""
+        try:
+            from services.gateway.providers import PROVIDERS, get_available_providers
             
-        if ANTHROPIC_AVAILABLE and ANTHROPIC_API_KEY:
-            self.anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-            self.clients[LLMProvider.ANTHROPIC] = self.anthropic_client
-            self.provider_health[LLMProvider.ANTHROPIC] = True
-        
-        # Always available local/free options
-        # HuggingFace as primary free provider (re-enabled with working models)
-        self.provider_health[LLMProvider.OLLAMA] = True  # ENABLED - Ollama is running with deepseek-r1:8b
-        self.provider_health[LLMProvider.HUGGINGFACE] = True  # ENABLED - Real API key working
-        self.provider_health[LLMProvider.LOCAL_STUB] = True
-        self.provider_health[LLMProvider.MOCK] = True
+            self.provider_registry = PROVIDERS
+            self.available_providers = get_available_providers()
+            self.provider_health = {}
+            
+            # Initialize provider health status
+            for provider_name in self.available_providers:
+                try:
+                    provider_class = self.provider_registry.get(provider_name)
+                    if provider_class:
+                        provider_instance = provider_class()
+                        self.provider_health[provider_name] = provider_instance.is_available()
+                        logger.info(f"✅ {provider_name} provider: {'available' if self.provider_health[provider_name] else 'unavailable'}")
+                    else:
+                        self.provider_health[provider_name] = False
+                        logger.warning(f"❌ {provider_name} provider class not found")
+                except Exception as e:
+                    logger.error(f"Failed to initialize {provider_name} provider: {e}")
+                    self.provider_health[provider_name] = False
+            
+            # Always available fallback options
+            self.provider_health["local_stub"] = True
+            self.provider_health["mock"] = True
+            
+            logger.info(f"📋 Provider registry initialized with {len(self.available_providers)} providers")
+            
+        except Exception as e:
+            logger.error(f"Failed to setup provider registry: {e}")
+            self.provider_registry = {}
+            self.available_providers = []
+            self.provider_health = {"local_stub": True, "mock": True}
     
     def setup_provider_configs(self):
         """Setup provider configurations with timeout, retries, and priority."""
-        self.provider_configs = {
-            LLMProvider.HUGGINGFACE: ProviderConfig(
-                provider=LLMProvider.HUGGINGFACE,
+        self.provider_configs = {}
+        
+        # Configure available providers from registry
+        if "huggingface" in self.available_providers:
+            self.provider_configs["huggingface"] = ProviderConfig(
+                provider="huggingface",
                 timeout_s=LLM_BASE_TIMEOUT,
                 max_retries=LLM_MAX_RETRIES,
                 priority=1,  # Highest priority for free models
                 enabled=True,
                 api_key_required=True,
                 api_key=HUGGINGFACE_API_KEY
-            ),
-            LLMProvider.OLLAMA: ProviderConfig(
-                provider=LLMProvider.OLLAMA,
+            )
+        
+        if "ollama" in self.available_providers:
+            self.provider_configs["ollama"] = ProviderConfig(
+                provider="ollama",
                 timeout_s=LLM_BASE_TIMEOUT + 5,  # Slightly longer for local models
                 max_retries=LLM_MAX_RETRIES,
                 priority=2,
                 enabled=True,
                 api_key_required=False
-            ),
-            LLMProvider.ANTHROPIC: ProviderConfig(
-                provider=LLMProvider.ANTHROPIC,
+            )
+        
+        if "anthropic" in self.available_providers:
+            self.provider_configs["anthropic"] = ProviderConfig(
+                provider="anthropic",
                 timeout_s=LLM_BASE_TIMEOUT,
                 max_retries=LLM_MAX_RETRIES,
                 priority=3,
                 enabled=True,
                 api_key_required=True,
                 api_key=ANTHROPIC_API_KEY
-            ),
-            LLMProvider.OPENAI: ProviderConfig(
-                provider=LLMProvider.OPENAI,
+            )
+        
+        if "openai" in self.available_providers:
+            self.provider_configs["openai"] = ProviderConfig(
+                provider="openai",
                 timeout_s=LLM_BASE_TIMEOUT,
                 max_retries=LLM_MAX_RETRIES,
                 priority=4,
                 enabled=True,
                 api_key_required=True,
                 api_key=OPENAI_API_KEY
-            ),
-            LLMProvider.LOCAL_STUB: ProviderConfig(
-                provider=LLMProvider.LOCAL_STUB,
-                timeout_s=1,  # Very fast stub response
-                max_retries=0,
-                priority=999,  # Lowest priority - only used when all else fails
-                enabled=True,
-                api_key_required=False
             )
-        }
+        
+        # Always available fallback options
+        self.provider_configs["local_stub"] = ProviderConfig(
+            provider="local_stub",
+            timeout_s=1,  # Very fast stub response
+            max_retries=0,
+            priority=999,  # Lowest priority - only used when all else fails
+            enabled=True,
+            api_key_required=False
+        )
     
     def get_provider_order(self, prefer_free: bool = True) -> List[LLMProvider]:
         """Get ordered list of providers based on preferences and availability."""
@@ -823,10 +841,10 @@ If the problem persists, please contact support."""
                 return LLMProvider.OPENAI
             elif LLMProvider.ANTHROPIC in available_providers:
                 logger.info("🚀 Selected Anthropic (high quality)")
-            return LLMProvider.ANTHROPIC
+                return LLMProvider.ANTHROPIC
             elif LLMProvider.HUGGINGFACE in available_providers:
                 logger.info("🚀 Selected HuggingFace (free)")
-            return LLMProvider.HUGGINGFACE
+                return LLMProvider.HUGGINGFACE
             elif LLMProvider.OLLAMA in available_providers:
                 logger.info("🔄 Selected Ollama (local)")
                 return LLMProvider.OLLAMA
@@ -1302,36 +1320,36 @@ If the problem persists, please contact support."""
                                 retries=0
                             )
             else:
-            async with aiohttp.ClientSession() as session:
-                # Simple, fast payload for quick responses (5 seconds target)
-                payload = {
-                    "model": selected_model,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": temperature,
-                        "num_predict": min(max_tokens, 150),  # Limit tokens for faster response
-                        "stop": ["\n\n", "Human:", "Assistant:"],  # Stop tokens for cleaner responses
-                        "num_ctx": 1024  # Smaller context for faster processing
+                async with aiohttp.ClientSession() as session:
+                    # Simple, fast payload for quick responses (5 seconds target)
+                    payload = {
+                        "model": selected_model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {
+                            "temperature": temperature,
+                            "num_predict": min(max_tokens, 150),  # Limit tokens for faster response
+                            "stop": ["\n\n", "Human:", "Assistant:"],  # Stop tokens for cleaner responses
+                            "num_ctx": 1024  # Smaller context for faster processing
+                        }
                     }
-                }
-                
-                # Fast timeout for quick responses (5-10 seconds max)
-                timeout = aiohttp.ClientTimeout(total=15)
-                
-                async with session.post(
-                    f"{OLLAMA_BASE_URL}/api/generate",
-                    json=payload,
-                    timeout=timeout
-                ) as response:
-                    if response.status == 200:
-                        # For non-streaming, expect simple JSON response
-                        try:
-                            result = await response.json()
-                            response_text = result.get("response", "")
-                            if response_text:
-                                # Sanitize response to remove problematic characters
-                                sanitized = self._sanitize_response(response_text)
+                    
+                    # Fast timeout for quick responses (5-10 seconds max)
+                    timeout = aiohttp.ClientTimeout(total=15)
+                    
+                    async with session.post(
+                        f"{OLLAMA_BASE_URL}/api/generate",
+                        json=payload,
+                        timeout=timeout
+                    ) as response:
+                        if response.status == 200:
+                            # For non-streaming, expect simple JSON response
+                            try:
+                                result = await response.json()
+                                response_text = result.get("response", "")
+                                if response_text:
+                                    # Sanitize response to remove problematic characters
+                                    sanitized = self._sanitize_response(response_text)
                                     return LLMResponse(
                                         content=sanitized,
                                         provider=LLMProvider.OLLAMA,
@@ -1342,17 +1360,17 @@ If the problem persists, please contact support."""
                                         attempt=1,
                                         retries=0
                                     )
-                            else:
+                                else:
                                     logger.warning(f"Ollama empty response: {result}")
                                     return self._create_error_response(LLMProvider.OLLAMA, "Ollama returned empty response", None)
-                        except Exception as parse_error:
+                            except Exception as parse_error:
                                 logger.error(f"Ollama JSON parse error: {parse_error}")
-                            # Try reading as text
-                            text_response = await response.text()
+                                # Try reading as text
+                                text_response = await response.text()
                                 logger.warning(f"Ollama raw response: {text_response[:200]}...")
                                 return self._create_error_response(LLMProvider.OLLAMA, "Ollama JSON parse error", None)
-                    else:
-                        error_text = await response.text()
+                        else:
+                            error_text = await response.text()
                             logger.error(f"Ollama API error {response.status}: {error_text}")
                             return self._create_error_response(LLMProvider.OLLAMA, f"Ollama API error {response.status}: {error_text}", None)
             return self._create_error_response(LLMProvider.OLLAMA, "Ollama call failed", None)

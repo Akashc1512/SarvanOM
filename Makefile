@@ -153,4 +153,33 @@ quick-start: preflight up
 	@echo "SarvanOM is starting up..."
 	@echo "This may take a few minutes for all services to be healthy."
 	@echo "Run 'make health-check' to verify all services are running."
-	@echo "Run 'make logs' to view service logs." 
+	@echo "Run 'make logs' to view service logs."
+
+# =============================================================================
+# Code Garden - Code Cleanup and Refactoring Tools
+# =============================================================================
+
+.PHONY: cg-audit cg-plan cg-apply cg-preview cg-split cg-restore
+
+cg-audit:
+	@if [ "$(OS)" = "Windows_NT" ]; then \
+		powershell -ExecutionPolicy Bypass -File scripts/code_garden/run_audit.ps1; \
+	else \
+		bash scripts/code_garden/run_audit.sh; \
+	fi
+
+cg-plan:
+	@python scripts/code_garden/parse_reports.py
+
+cg-apply:
+	@python scripts/code_garden/apply_plan.py
+
+cg-preview:
+	@CG_SPLIT_LINES=500 python scripts/code_garden/split_large_modules.py
+
+cg-split:
+	@python scripts/code_garden/apply_refactor.py
+
+cg-restore:
+	@echo "Restore by copying files from latest archive/cg_* back to their original paths"
+	@ls -1d archive/cg_* | tail -n 1 || true 

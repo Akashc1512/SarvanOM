@@ -1,4 +1,4 @@
-from ..\shared\core\api\config import get_settings
+from shared.core.api.config import get_settings
 #!/usr/bin/env python3
 settings = get_settings()
 """

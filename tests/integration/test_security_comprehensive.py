@@ -70,7 +70,7 @@ SECURITY_CONFIG = {
     ],
     "path_traversal_patterns": [
         "../../../etc/passwd",
-        "..\\..\\..\\windows\\system32\\drivers\\etc\\hosts",
+        r"..\\..\\..\\windows\\system32\\drivers\\etc\\hosts",
         "....//....//....//etc/passwd",
         "..%2F..%2F..%2Fetc%2Fpasswd",
         "..%5C..%5C..%5Cwindows%5Csystem32%5Cdrivers%5Cetc%5Chosts",
@@ -293,7 +293,7 @@ class TestPathTraversalProtection(unittest.TestCase):
 
         malicious_paths = [
             "/../../../etc/passwd",
-            "/..\\..\\..\\windows\\system32\\drivers\\etc\\hosts",
+            r"/..\\..\\..\\windows\\system32\\drivers\\etc\\hosts",
             "/....//....//....//etc/passwd",
         ]
 

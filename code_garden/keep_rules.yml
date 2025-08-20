@@ -1,0 +1,19 @@
+# Mark what we always keep/adopt or can quarantine by default.
+keep:
+  - "backend/app/**"
+  - "services/gateway/**"
+  - "frontend/**"
+adopt:
+  - "**/huggingface_*"
+  - "**/anthropic_*"
+  - "**/openai_*"
+  - "**/ollama_*"
+  - "**/retrieval/**"
+  - "**/agent*/**"
+quarantine:
+  - "**/old/**"
+  - "**/legacy/**"
+  - "**/playground/**"
+  - "**/examples/**"
+  - "**/unused/**"
+  - "**/tmp/**"

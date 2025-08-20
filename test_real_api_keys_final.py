@@ -63,7 +63,7 @@ def test_real_api_keys():
         print(f"   📊 Response: {health_response.json()}")
     except Exception as e:
         print(f"   ❌ Server not responding: {e}")
-        print("   💡 Make sure server is running with: .\venv\Scripts\python.exe -m uvicorn services.gateway.gateway_app:app --host 0.0.0.0 --port 8000 --reload")
+        print(r"   💡 Make sure server is running with: .\venv\Scripts\python.exe -m uvicorn services.gateway.gateway_app:app --host 0.0.0.0 --port 8000 --reload")
         return
     
     print()

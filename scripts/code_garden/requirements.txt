@@ -1,0 +1,6 @@
+vulture==2.11
+radon==6.0.1
+ruff==0.5.7
+pycln==2.4.0
+grimp==3.9
+PyYAML==6.0.1

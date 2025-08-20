@@ -56,9 +56,9 @@ def provide_venv_setup_instructions():
     print("\n2️⃣  Activate virtual environment:")
     if system == "windows":
         print("   # PowerShell:")
-        print("   venv\\Scripts\\Activate.ps1")
+        print(r"   venv\Scripts\Activate.ps1")
         print("   # Command Prompt:")
-        print("   venv\\Scripts\\activate.bat")
+        print(r"   venv\Scripts\activate.bat")
     else:
         print("   source venv/bin/activate")
 

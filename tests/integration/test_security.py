@@ -96,7 +96,7 @@ class TestSecurityVulnerabilities:
         """Test path traversal prevention."""
         path_traversal_attempts = [
             "../../../etc/passwd",
-            "..\\..\\..\\windows\\system32\\config\\sam",
+            r"..\\..\\..\\windows\\system32\\config\\sam",
             "....//....//....//etc/passwd",
             "%2e%2e%2f%2e%2e%2f%2e%2e%2fetc%2fpasswd",
         ]

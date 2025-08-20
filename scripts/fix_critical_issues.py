@@ -335,7 +335,7 @@ def format_sources_for_llm(sources: list) -> str:
     formatted_sources = []
     for i, source in enumerate(sources, 1):
         formatted_sources.append(f"Source {i}: {source.get('content', '')}")
-    return "\\n\\n".join(formatted_sources)
+    return r"\n\n".join(formatted_sources)
 
 def extract_citations(content: str) -> list:
     """Extract citations from LLM response."""

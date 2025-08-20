@@ -144,7 +144,7 @@ class HealthChecker:
         
         try:
             from shared.core.config.central_config import get_meilisearch_url
-    meilisearch_url = settings.meilisearch_url or get_meilisearch_url()
+            meilisearch_url = settings.meilisearch_url or get_meilisearch_url()
             health_url = f"{meilisearch_url}/health"
             
             async with self.session.get(health_url) as response:
@@ -188,7 +188,7 @@ class HealthChecker:
         try:
             # Check if vector database is accessible
             from shared.core.config.central_config import get_vector_db_url
-    vector_db_url = os.getenv("VECTOR_DB_URL", get_vector_db_url())
+            vector_db_url = os.getenv("VECTOR_DB_URL", get_vector_db_url())
             
             # Try to connect to vector database
             async with self.session.get(f"{vector_db_url}/collections") as response:
@@ -258,7 +258,7 @@ class HealthChecker:
         
         try:
             from shared.core.config.central_config import get_ollama_url
-    ollama_url = settings.ollama_base_url or get_ollama_url()
+            ollama_url = settings.ollama_base_url or get_ollama_url()
             health_url = f"{ollama_url}/api/tags"
             
             async with self.session.get(health_url) as response:

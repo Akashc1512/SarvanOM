@@ -118,7 +118,7 @@ class ZeroBudgetLLMSetup:
                     [
                         "powershell",
                         "-Command",
-                        "Invoke-WebRequest -Uri https://ollama.ai/install.ps1 -OutFile install.ps1; .\\install.ps1",
+                        r"Invoke-WebRequest -Uri https://ollama.ai/install.ps1 -OutFile install.ps1; .\install.ps1",
                     ],
                     check=True,
                 )

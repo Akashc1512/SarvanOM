@@ -547,7 +547,7 @@ class TestSecurityTesting:
             
             # Path Traversal
             "../../../etc/passwd",
-            "..\\..\\..\\windows\\system32\\config\\sam",
+            r"..\\..\\..\\windows\\system32\\config\\sam",
             
             # Template Injection
             "{{7*7}}",

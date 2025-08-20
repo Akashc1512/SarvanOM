@@ -1,4 +1,4 @@
-from ..\shared\core\api\config import get_settings
+from shared.core.api.config import get_settings
 settings = get_settings()
 """
 Frontend States Table Migration Script - Universal Knowledge Platform

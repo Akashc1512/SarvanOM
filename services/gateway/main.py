@@ -57,9 +57,72 @@ from services.gateway.real_llm_integration import RealLLMProcessor
 from services.retrieval.free_tier import get_zero_budget_retrieval, combined_search
 from services.retrieval.routers.free_tier_router import router as free_tier_router
 
+# Import gateway routers
+from services.gateway.routes import (
+    analytics_router,
+    health_router,
+    search_router,
+    fact_check_router,
+    synthesis_router,
+    auth_router,
+    vector_router
+)
+
+# Import additional service routers (with error handling)
+try:
+    from services.auth.routes import router as auth_service_router
+except Exception as e:
+    print(f"Warning: Could not import auth service router: {e}")
+    auth_service_router = None
+
+try:
+    from services.fact_check.routes import router as fact_check_service_router
+except Exception as e:
+    print(f"Warning: Could not import fact check service router: {e}")
+    fact_check_service_router = None
+
+# Import backend API routers (with error handling)
+try:
+    from backend.api.routers.admin_router import router as admin_router
+except Exception as e:
+    print(f"Warning: Could not import admin router: {e}")
+    admin_router = None
+
+try:
+    from backend.api.routers.agent_router import router as agent_router
+except Exception as e:
+    print(f"Warning: Could not import agent router: {e}")
+    agent_router = None
+
+try:
+    from backend.api.routers.auth_router import router as backend_auth_router
+except Exception as e:
+    print(f"Warning: Could not import backend auth router: {e}")
+    backend_auth_router = None
+
+try:
+    from backend.api.routers.database_router import router as database_router
+except Exception as e:
+    print(f"Warning: Could not import database router: {e}")
+    database_router = None
+
+try:
+    from backend.api.routers.health_router import router as backend_health_router
+except Exception as e:
+    print(f"Warning: Could not import backend health router: {e}")
+    backend_health_router = None
+
+try:
+    from backend.api.routers.query_router import router as query_router
+except Exception as e:
+    print(f"Warning: Could not import query router: {e}")
+    query_router = None
+
+# Import streaming manager
+from services.gateway.streaming_manager import streaming_manager, create_sse_response
+
 # Import advanced features
 from services.gateway.cache_manager import cache_manager
-from services.gateway.streaming_manager import stream_manager
 from services.gateway.background_processor import background_processor, TaskType, TaskPriority
 from services.gateway.prompt_optimizer import prompt_optimizer, PromptType, PromptComplexity
 from services.gateway.huggingface_integration import huggingface_integration
@@ -233,7 +296,40 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(free_tier_router)
+app.include_router(free_tier_router, prefix="/retrieval")
+app.include_router(analytics_router, prefix="/analytics")
+app.include_router(health_router, prefix="/health")
+app.include_router(search_router, prefix="/search")
+app.include_router(fact_check_router, prefix="/factcheck")
+app.include_router(synthesis_router, prefix="/synthesis")
+app.include_router(auth_router, prefix="/auth")
+app.include_router(vector_router, prefix="/vector")
+
+# Include additional service routers (only if successfully imported)
+if auth_service_router:
+    app.include_router(auth_service_router, prefix="/auth-service")
+
+if fact_check_service_router:
+    app.include_router(fact_check_service_router, prefix="/fact-check-service")
+
+# Include backend API routers (only if successfully imported)
+if admin_router:
+    app.include_router(admin_router, prefix="/admin")
+
+if agent_router:
+    app.include_router(agent_router, prefix="/agents")
+
+if backend_auth_router:
+    app.include_router(backend_auth_router, prefix="/backend-auth")
+
+if database_router:
+    app.include_router(database_router, prefix="/database")
+
+if backend_health_router:
+    app.include_router(backend_health_router, prefix="/backend-health")
+
+if query_router:
+    app.include_router(query_router, prefix="/query")
 
 # Request/Response models with enhanced validation
 class SearchRequest(BaseModel):
@@ -905,6 +1001,81 @@ async def search_post(request: SearchRequest):
         )
         
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+# ============================================================================
+# SSE STREAMING ENDPOINTS - Server-Sent Events Implementation
+# Following MAANG/OpenAI/Perplexity standards for real-time streaming
+# ============================================================================
+
+@app.get("/stream/search")
+async def stream_search_endpoint(
+    query: str,
+    max_tokens: int = 1000,
+    temperature: float = 0.2,
+    user_id: Optional[str] = None
+):
+    """
+    SSE streaming search endpoint with comprehensive lifecycle management.
+    
+    Args:
+        query: Search query
+        max_tokens: Maximum tokens to generate
+        temperature: Generation temperature
+        user_id: Optional user ID for tracking
+        
+    Returns:
+        StreamingResponse with SSE events
+    """
+    try:
+        # Validate query
+        if not query or not query.strip():
+            raise HTTPException(status_code=400, detail="Query cannot be empty")
+        
+        # Sanitize query
+        query = query.strip()
+        if len(query) > 1000:
+            raise HTTPException(status_code=400, detail="Query too long (max 1000 characters)")
+        
+        # Log stream start
+        logger.info(f"SSE stream started for query: {query[:50]}...", extra={
+            "query": query,
+            "user_id": user_id,
+            "max_tokens": max_tokens,
+            "temperature": temperature
+        })
+        
+        # Create SSE response
+        response = await create_sse_response(
+            query=query,
+            max_tokens=max_tokens,
+            temperature=temperature
+        )
+        
+        # Add trace ID to headers
+        trace_id = str(uuid.uuid4())
+        response.headers["X-Trace-ID"] = trace_id
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"SSE stream error: {e}")
+        raise HTTPException(status_code=500, detail=f"Streaming failed: {str(e)}")
+
+@app.get("/stream/stats")
+async def get_stream_stats():
+    """Get streaming statistics."""
+    try:
+        stats = streaming_manager.get_stream_stats()
+        return {
+            "status": "success",
+            "data": stats,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Failed to get stream stats: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Fact-check service endpoint
 @app.post("/fact-check")
@@ -1957,6 +2128,17 @@ async def huggingface_model_info(model_name: str):
 
 # Initialize CRUD service client
 crud_client = ServiceClientFactory.create_crud_client()
+
+# Initialize streaming manager
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup."""
+    await streaming_manager.initialize()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup services on shutdown."""
+    await streaming_manager.close()
 
 # ============================================================================
 # CACHE CRUD OPERATIONS - Microservice Architecture

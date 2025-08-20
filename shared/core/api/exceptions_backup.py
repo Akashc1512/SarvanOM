@@ -64,6 +64,7 @@ class AuthorizationError(UKPHTTPException):
 class InvalidAPIKeyError(AuthenticationError):
     """Invalid API key provided."""
 
+    def __init__(self, api_key_hint: str = None):
         internal_msg = f"Invalid API key: {api_key_hint}" if api_key_hint else "Invalid API key"
         super().__init__(internal_message=internal_msg)
 
@@ -71,6 +72,7 @@ class InvalidAPIKeyError(AuthenticationError):
 class RateLimitExceededError(UKPHTTPException):
     """Rate limit exceeded."""
 
+    def __init__(self, limit: int, window: str, retry_after: int = None):
         headers = {"Retry-After": str(retry_after)} if retry_after else None
         super().__init__(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -84,18 +86,16 @@ class RateLimitExceededError(UKPHTTPException):
 class AgentError(UKPException):
     """Base exception for agent errors."""
 
-
-        def __init__(self):
-            self.agent_type = agent_type
+    def __init__(self, agent_type: str, message: str, details: dict = None):
+        self.agent_type = agent_type
         super().__init__(message, details)
 
 
 class AgentTimeoutError(AgentError):
     """Agent processing timeout."""
 
-
-        def __init__(self):
-            super().__init__(
+    def __init__(self, agent_type: str, timeout_seconds: int):
+        super().__init__(
             agent_type=agent_type,
             message=f"Agent {agent_type} timed out after {timeout_seconds} seconds",
             details={"timeout_seconds": timeout_seconds},
@@ -105,9 +105,8 @@ class AgentTimeoutError(AgentError):
 class AgentProcessingError(AgentError):
     """Agent processing failed."""
 
-
-        def __init__(self):
-            super().__init__(
+    def __init__(self, agent_type: str, error_message: str, recoverable: bool = True):
+        super().__init__(
             agent_type=agent_type,
             message=f"Agent {agent_type} processing failed: {error_message}",
             details={"recoverable": recoverable, "error": error_message},
@@ -117,6 +116,7 @@ class AgentProcessingError(AgentError):
 class QueryProcessingError(UKPHTTPException):
     """Query processing failed."""
 
+    def __init__(self, query_id: str, internal_error: str, recoverable: bool = True):
         detail = "Query processing failed" if recoverable else "Query processing failed permanently"
         super().__init__(
             status_code=(
@@ -133,9 +133,8 @@ class QueryProcessingError(UKPHTTPException):
 class ResourceNotFoundError(UKPHTTPException):
     """Requested resource not found."""
 
-
-        def __init__(self):
-            super().__init__(
+    def __init__(self, resource_type: str, resource_id: str):
+        super().__init__(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"{resource_type} not found",
             internal_message=f"{resource_type} {resource_id} not found",
@@ -145,9 +144,8 @@ class ResourceNotFoundError(UKPHTTPException):
 class DatabaseError(UKPException):
     """Database operation failed."""
 
-
-        def __init__(self):
-            super().__init__(
+    def __init__(self, operation: str, database: str, error: str):
+        super().__init__(
             message=f"Database {operation} failed on {database}: {error}",
             details={"operation": operation, "database": database, "error": error},
         )
@@ -156,9 +154,8 @@ class DatabaseError(UKPException):
 class CacheError(UKPException):
     """Cache operation failed."""
 
-
-        def __init__(self):
-            super().__init__(
+    def __init__(self, operation: str, cache_type: str, error: str):
+        super().__init__(
             message=f"Cache {operation} failed on {cache_type}: {error}",
             details={"operation": operation, "cache_type": cache_type, "error": error},
         )
