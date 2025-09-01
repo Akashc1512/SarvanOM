@@ -243,7 +243,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             
             return response
             
-        except HTTPException:
+        except HTTPException as http_exc:
+            # Preserve original HTTPException details
+            log_error(
+                "http_exception",
+                f"HTTP {http_exc.status_code}: {http_exc.detail}",
+                {"request_id": get_request_id(), "user_id": get_user_id(), "status_code": http_exc.status_code}
+            )
             raise
         except Exception as e:
             log_error(
@@ -253,7 +259,7 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             )
             raise HTTPException(
                 status_code=500,
-                detail="Internal server error"
+                detail=f"Internal server error: {str(e)}"
             )
     
     def _is_trusted_host(self, request: Request) -> bool:
@@ -421,7 +427,13 @@ class InputValidationMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             return response
             
-        except HTTPException:
+        except HTTPException as http_exc:
+            # Preserve original HTTPException details
+            log_error(
+                "input_validation_http_exception",
+                f"HTTP {http_exc.status_code}: {http_exc.detail}",
+                {"request_id": get_request_id(), "user_id": get_user_id(), "status_code": http_exc.status_code}
+            )
             raise
         except Exception as e:
             log_error(
@@ -431,7 +443,7 @@ class InputValidationMiddleware(BaseHTTPMiddleware):
             )
             raise HTTPException(
                 status_code=400,
-                detail="Invalid input"
+                detail=f"Invalid input: {str(e)}"
             )
     
     async def _validate_request_body(self, request: Request):
