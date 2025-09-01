@@ -39,6 +39,10 @@ import asyncio
 from datetime import datetime, timezone
 from starlette.middleware.base import BaseHTTPMiddleware
 
+# Security patterns for input validation
+XSS_PATTERN = re.compile(r'<script[^>]*>.*?</script>|<iframe[^>]*>.*?</iframe>|javascript:|on\w+\s*=', re.IGNORECASE | re.DOTALL)
+SQL_INJECTION_PATTERN = re.compile(r'(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|EXEC|UNION|SCRIPT)\b)|(\b(OR|AND)\s+\d+\s*=\s*\d+)|(\b(OR|AND)\s+\w+\s*=\s*\w+)|(\b(OR|AND)\s+\'\s*=\s*\')', re.IGNORECASE)
+
 # Import unified logging
 from shared.core.unified_logging import setup_logging, get_logger, setup_fastapi_logging
 

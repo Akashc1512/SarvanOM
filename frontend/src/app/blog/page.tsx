@@ -8,8 +8,8 @@ const FallbackBlog = () => (
   </section>
 );
 
-const MaybeBlog = dynamic(
-  () => import('@/components/blog/EruditeBlog'),
+const EruditeBlog = dynamic(
+  () => import('@/components/blog/EruditeBlog').then(mod => ({ default: mod.EruditeBlog })),
   { 
     ssr: true,
     loading: () => <FallbackBlog />
@@ -22,7 +22,7 @@ export default function BlogPage() {
   return (
     <main className="cosmic min-h-screen">
       <div className="container-std">
-        <MaybeBlog />
+        <EruditeBlog />
       </div>
     </main>
   );

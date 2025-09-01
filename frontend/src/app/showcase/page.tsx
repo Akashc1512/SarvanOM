@@ -8,8 +8,8 @@ const FallbackShowcase = () => (
   </section>
 );
 
-const MaybeShowcase = dynamic(
-  () => import('@/components/portfolio/PortfolioShowcase'),
+const PortfolioShowcase = dynamic(
+  () => import('@/components/portfolio/PortfolioShowcase').then(mod => ({ default: mod.PortfolioShowcase })),
   { 
     ssr: true,
     loading: () => <FallbackShowcase />
@@ -22,7 +22,7 @@ export default function ShowcasePage() {
   return (
     <main className="cosmic min-h-screen">
       <div className="container-std">
-        <MaybeShowcase />
+        <PortfolioShowcase />
       </div>
     </main>
   );

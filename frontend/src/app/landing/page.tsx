@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BlackspikeLanding } from '@/components/landing/BlackspikeLanding';
+import dynamic from 'next/dynamic';
 
 // Fallback component for when BlackspikeLanding is not available
 const FallbackLanding = () => (
@@ -14,8 +14,14 @@ const FallbackLanding = () => (
   </section>
 );
 
-// Use BlackspikeLanding component directly
-const MaybeLanding = BlackspikeLanding;
+// Use dynamic import with proper error handling
+const BlackspikeLanding = dynamic(
+  () => import('@/components/landing/BlackspikeLanding').then(mod => ({ default: mod.BlackspikeLanding })),
+  { 
+    ssr: true,
+    loading: () => <FallbackLanding />
+  }
+);
 
 export const metadata = { title: 'SarvanOM — Landing' };
 
@@ -23,7 +29,7 @@ export default function LandingPage() {
   return (
     <main className="cosmic min-h-screen">
       <div className="container-std">
-        <MaybeLanding />
+        <BlackspikeLanding />
       </div>
     </main>
   );

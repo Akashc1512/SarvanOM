@@ -8,8 +8,8 @@ const FallbackHub = () => (
   </section>
 );
 
-const MaybeHub = dynamic(
-  () => import('@/components/hub/PersonalHub'),
+const PersonalHub = dynamic(
+  () => import('@/components/hub/PersonalHub').then(mod => ({ default: mod.PersonalHub })),
   { 
     ssr: true,
     loading: () => <FallbackHub />
@@ -22,7 +22,7 @@ export default function HubPage() {
   return (
     <main className="cosmic min-h-screen">
       <div className="container-std">
-        <MaybeHub />
+        <PersonalHub />
       </div>
     </main>
   );

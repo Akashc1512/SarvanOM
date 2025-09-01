@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8004';
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const STREAM = (process.env.NEXT_PUBLIC_ENABLE_STREAMING || 'true') === 'true';
 
 export default function SearchPage() {

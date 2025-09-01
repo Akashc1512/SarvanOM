@@ -8,8 +8,8 @@ const FallbackAnalytics = () => (
   </section>
 );
 
-const MaybeDashboard = dynamic(
-  () => import('@/components/analytics/DataNovaDashboard'),
+const DataNovaDashboard = dynamic(
+  () => import('@/components/analytics/DataNovaDashboard').then(mod => ({ default: mod.DataNovaDashboard })),
   { 
     ssr: true,
     loading: () => <FallbackAnalytics />
@@ -22,7 +22,7 @@ export default function AnalyticsPage() {
   return (
     <main className="cosmic min-h-screen">
       <div className="container-std">
-        <MaybeDashboard />
+        <DataNovaDashboard />
       </div>
     </main>
   );
