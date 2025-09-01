@@ -11,7 +11,10 @@ import {
   UserIcon,
   Bars3Icon,
   XMarkIcon,
-  RocketLaunchIcon
+  RocketLaunchIcon,
+  DocumentTextIcon,
+  CodeBracketIcon,
+  LinkIcon
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +33,12 @@ const navigation: NavItem[] = [
     description: 'Main dashboard'
   },
   {
+    name: 'Landing',
+    href: '/landing',
+    icon: RocketLaunchIcon,
+    description: 'Marketing landing page'
+  },
+  {
     name: 'Search',
     href: '/search',
     icon: MagnifyingGlassIcon,
@@ -42,10 +51,22 @@ const navigation: NavItem[] = [
     description: 'Platform analytics'
   },
   {
-    name: 'Profile',
-    href: '/profile',
-    icon: UserIcon,
-    description: 'User settings'
+    name: 'Blog',
+    href: '/blog',
+    icon: DocumentTextIcon,
+    description: 'Content blog'
+  },
+  {
+    name: 'Showcase',
+    href: '/showcase',
+    icon: CodeBracketIcon,
+    description: 'Portfolio showcase'
+  },
+  {
+    name: 'Hub',
+    href: '/hub',
+    icon: LinkIcon,
+    description: 'Personal hub'
   }
 ];
 
