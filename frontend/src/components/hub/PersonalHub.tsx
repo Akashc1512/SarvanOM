@@ -14,7 +14,7 @@ import {
   GlobeAltIcon,
   HeartIcon,
   ShareIcon,
-  ExternalLinkIcon,
+  ArrowTopRightOnSquareIcon,
   PlusIcon,
   PencilIcon,
   TrashIcon
@@ -379,7 +379,7 @@ export function PersonalHub() {
                             onClick={() => handleLinkClick(link.id)}
                             className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded hover:from-blue-600 hover:to-purple-700 transition-all duration-300 text-sm"
                           >
-                            <ExternalLinkIcon className="w-3 h-3" />
+                            <ArrowTopRightOnSquareIcon className="w-3 h-3" />
                             Visit
                           </a>
                         </div>

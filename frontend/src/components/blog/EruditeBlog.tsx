@@ -8,7 +8,7 @@ import {
   UserIcon,
   TagIcon,
   ArrowRightIcon,
-  SearchIcon,
+  MagnifyingGlassIcon,
   BookOpenIcon,
   ChatBubbleLeftRightIcon,
   ShareIcon,
@@ -155,7 +155,7 @@ export function EruditeBlog() {
             
             {/* Search Bar */}
             <div className="max-w-md mx-auto relative">
-              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Search articles..."

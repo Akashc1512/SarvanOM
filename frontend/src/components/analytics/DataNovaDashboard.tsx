@@ -8,8 +8,6 @@ import {
   GlobeAltIcon,
   UsersIcon,
   ClockIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
   ArrowUpIcon,
   ArrowDownIcon,
   EyeIcon,
@@ -281,8 +279,8 @@ export function DataNovaDashboard() {
                         query.trend === "up" ? "text-green-400" : 
                         query.trend === "down" ? "text-red-400" : "text-gray-400"
                       }`}>
-                        {query.trend === "up" && <TrendingUpIcon className="w-3 h-3" />}
-                        {query.trend === "down" && <TrendingDownIcon className="w-3 h-3" />}
+                        {query.trend === "up" && <ArrowUpIcon className="w-3 h-3" />}
+                        {query.trend === "down" && <ArrowDownIcon className="w-3 h-3" />}
                         {query.trend}
                       </div>
                     </div>

@@ -745,3 +745,55 @@ a {
     padding: 2rem;
   }
 }
+
+/* Design System Tokens */
+:root {
+  --bg: #0b1020;
+  --fg: #e6f0ff;
+  --accent: #7aa2ff;
+  --card: #121a2e;
+}
+
+html, body { 
+  height: 100%; 
+}
+
+body { 
+  background: var(--bg); 
+  color: var(--fg); 
+}
+
+/* Cosmic starfield (perf-aware) */
+.cosmic {
+  background:
+    radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,.8) 0, transparent 40%),
+    radial-gradient(2px 2px at 80% 20%, rgba(255,255,255,.5) 0, transparent 40%),
+    radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,.3) 0, transparent 40%),
+    linear-gradient(180deg, rgba(10,15,30,.8), rgba(10,15,30,.9));
+}
+
+/* Standard Layout Utilities */
+.container-std { 
+  @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8; 
+}
+
+.section-std { 
+  @apply space-y-6 py-6; 
+}
+
+.card-std { 
+  @apply rounded-lg text-[var(--fg)] border border-white/10; 
+  background-color: rgba(18, 26, 46, 0.9);
+}
+
+.link-std { 
+  @apply underline decoration-[var(--accent)] hover:opacity-80; 
+}
+
+.text-body { 
+  @apply text-base leading-relaxed; 
+}
+
+.text-title { 
+  @apply text-2xl font-semibold; 
+}
