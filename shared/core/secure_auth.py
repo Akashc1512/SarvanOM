@@ -641,7 +641,7 @@ async def get_current_user(
     return await auth_manager.validate_token(credentials.credentials)
 
 
-async def require_role(required_role: UserRole):
+def require_role(required_role: UserRole):
     """Dependency to require specific role."""
 
     async def role_checker(current_user: Dict[str, Any] = Depends(get_current_user)):

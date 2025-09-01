@@ -586,3 +586,40 @@ async def start_metrics_cleanup():
 def init_metrics_cleanup():
     """Initialize the metrics cleanup task."""
     asyncio.create_task(start_metrics_cleanup())
+
+
+# FastAPI app creation
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+
+app = FastAPI(
+    title="Analytics Service",
+    description="Analytics microservice for Universal Knowledge Platform",
+    version="1.0.0"
+)
+
+@app.get("/")
+async def root():
+    """Root endpoint."""
+    return {"message": "Analytics Service", "status": "running"}
+
+@app.get("/health")
+async def health():
+    """Health check endpoint."""
+    return {"status": "healthy", "service": "analytics"}
+
+@app.get("/analytics")
+async def get_analytics_endpoint():
+    """Get analytics data."""
+    try:
+        analytics_data = await get_analytics()
+        return JSONResponse(content=analytics_data)
+    except Exception as e:
+        logger.error(f"Failed to get analytics: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve analytics")
+
+# Initialize metrics cleanup on startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize services on startup."""
+    init_metrics_cleanup()

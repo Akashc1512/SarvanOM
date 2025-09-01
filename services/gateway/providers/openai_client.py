@@ -37,7 +37,7 @@ class OpenAIClient:
         
         try:
             self.client = openai.OpenAI(api_key=self.api_key)
-            logger.info("✅ OpenAI client initialized successfully")
+            logger.info("[OK] OpenAI client initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI client: {e}")
             self.client = None

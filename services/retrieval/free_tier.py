@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 # Environment variables
 BRAVE_API_KEY = os.getenv("BRAVE_API_KEY", "")
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 CACHE_TTL_MIN = int(os.getenv("CACHE_TTL_MIN", "10"))
 CACHE_TTL_MAX = int(os.getenv("CACHE_TTL_MAX", "60"))
@@ -54,6 +55,12 @@ class SearchProvider(str, Enum):
     MEDIAWIKI = "mediawiki"
     BRAVE = "brave"
     DUCKDUCKGO = "duckduckgo"
+    STACKEXCHANGE = "stackexchange"
+    MDN = "mdn"
+    GITHUB = "github"
+    OPENALEX = "openalex"
+    ARXIV = "arxiv"
+    YOUTUBE = "youtube"
     CACHE = "cache"
 
 
@@ -299,6 +306,344 @@ class ZeroBudgetRetrieval:
         # Fallback to DuckDuckGo
         return await self._duckduckgo_search(query, k)
     
+    async def stackexchange_search(self, query: str, k: int = 3, site: str = "stackoverflow") -> List[SearchResult]:
+        """Search Stack Exchange sites using their API."""
+        try:
+            # Stack Exchange API endpoint
+            api_url = f"https://api.stackexchange.com/2.3/search"
+            params = {
+                "order": "desc",
+                "sort": "relevance",
+                "intitle": query,
+                "site": site,
+                "pagesize": k,
+                "filter": "withbody"  # Include body content
+            }
+            
+            data = await self._make_request_with_retry(api_url, params=params)
+            if not data or "items" not in data:
+                return []
+            
+            results = []
+            for item in data["items"][:k]:
+                try:
+                    # Extract relevant content
+                    title = item.get("title", "")
+                    body = item.get("body", "")
+                    # Strip HTML tags for snippet
+                    import re
+                    clean_body = re.sub(r'<[^>]+>', '', body)
+                    snippet = clean_body[:200] + "..." if len(clean_body) > 200 else clean_body
+                    
+                    result = SearchResult(
+                        title=title,
+                        url=item.get("link", ""),
+                        snippet=snippet,
+                        domain=f"{site}.stackexchange.com",
+                        provider=SearchProvider.STACKEXCHANGE,
+                        metadata={
+                            "score": item.get("score", 0),
+                            "answer_count": item.get("answer_count", 0),
+                            "is_answered": item.get("is_answered", False),
+                            "tags": item.get("tags", [])
+                        }
+                    )
+                    result.relevance_score = self._calculate_relevance_score(result, query)
+                    results.append(result)
+                    
+                    # Polite delay
+                    await asyncio.sleep(0.1)
+                    
+                except Exception as e:
+                    logger.warning(f"Error processing StackExchange result: {e}")
+                    continue
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"StackExchange search error: {e}")
+            return []
+    
+    async def mdn_search(self, query: str, k: int = 3) -> List[SearchResult]:
+        """Search MDN (Mozilla Developer Network) documentation."""
+        try:
+            # MDN search API endpoint
+            api_url = "https://developer.mozilla.org/api/v1/search"
+            params = {
+                "q": query,
+                "locale": "en-US",
+                "size": k
+            }
+            
+            data = await self._make_request_with_retry(api_url, params=params)
+            if not data or "documents" not in data:
+                return []
+            
+            results = []
+            for doc in data["documents"][:k]:
+                try:
+                    result = SearchResult(
+                        title=doc.get("title", ""),
+                        url=f"https://developer.mozilla.org{doc.get('mdn_url', '')}",
+                        snippet=doc.get("excerpt", "")[:300] + "...",
+                        domain="developer.mozilla.org",
+                        provider=SearchProvider.MDN,
+                        metadata={
+                            "locale": doc.get("locale", ""),
+                            "popularity": doc.get("popularity", 0),
+                            "score": doc.get("score", 0)
+                        }
+                    )
+                    result.relevance_score = self._calculate_relevance_score(result, query)
+                    results.append(result)
+                    
+                    # Polite delay
+                    await asyncio.sleep(0.1)
+                    
+                except Exception as e:
+                    logger.warning(f"Error processing MDN result: {e}")
+                    continue
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"MDN search error: {e}")
+            return []
+    
+    async def github_search(self, query: str, k: int = 3) -> List[SearchResult]:
+        """Search GitHub issues and repositories."""
+        try:
+            # GitHub API endpoint (unauthenticated, rate limited)
+            api_url = "https://api.github.com/search/issues"
+            params = {
+                "q": query,
+                "sort": "relevance",
+                "order": "desc",
+                "per_page": k
+            }
+            
+            headers = {
+                "Accept": "application/vnd.github.v3+json",
+                "User-Agent": USER_AGENT
+            }
+            
+            data = await self._make_request_with_retry(api_url, params=params, headers=headers)
+            if not data or "items" not in data:
+                return []
+            
+            results = []
+            for item in data["items"][:k]:
+                try:
+                    result = SearchResult(
+                        title=item.get("title", ""),
+                        url=item.get("html_url", ""),
+                        snippet=item.get("body", "")[:300] + "..." if item.get("body") else "",
+                        domain="github.com",
+                        provider=SearchProvider.GITHUB,
+                        metadata={
+                            "state": item.get("state", ""),
+                            "comments": item.get("comments", 0),
+                            "created_at": item.get("created_at", ""),
+                            "repository": item.get("repository", {}).get("full_name", "")
+                        }
+                    )
+                    result.relevance_score = self._calculate_relevance_score(result, query)
+                    results.append(result)
+                    
+                    # Polite delay
+                    await asyncio.sleep(0.1)
+                    
+                except Exception as e:
+                    logger.warning(f"Error processing GitHub result: {e}")
+                    continue
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"GitHub search error: {e}")
+            return []
+    
+    async def openalex_search(self, query: str, k: int = 3) -> List[SearchResult]:
+        """Search OpenAlex for academic papers."""
+        try:
+            # OpenAlex API endpoint
+            api_url = "https://api.openalex.org/works"
+            params = {
+                "search": query,
+                "per_page": k,
+                "sort": "relevance_score:desc"
+            }
+            
+            data = await self._make_request_with_retry(api_url, params=params)
+            if not data or "results" not in data:
+                return []
+            
+            results = []
+            for work in data["results"][:k]:
+                try:
+                    # Get authors
+                    authors = []
+                    if "authorships" in work:
+                        for authorship in work["authorships"][:3]:  # First 3 authors
+                            if "author" in authorship and "display_name" in authorship["author"]:
+                                authors.append(authorship["author"]["display_name"])
+                    
+                    title = work.get("title", "")
+                    abstract = work.get("abstract_inverted_index", {})
+                    # Reconstruct abstract from inverted index
+                    if abstract:
+                        words = []
+                        for word, positions in abstract.items():
+                            for pos in positions:
+                                words.append((pos, word))
+                        words.sort(key=lambda x: x[0])
+                        abstract_text = " ".join([word for _, word in words])
+                    else:
+                        abstract_text = ""
+                    
+                    result = SearchResult(
+                        title=title,
+                        url=work.get("doi", ""),
+                        snippet=abstract_text[:300] + "..." if abstract_text else "",
+                        domain="openalex.org",
+                        provider=SearchProvider.OPENALEX,
+                        metadata={
+                            "doi": work.get("doi", ""),
+                            "publication_year": work.get("publication_year", ""),
+                            "authors": authors,
+                            "citations": work.get("cited_by_count", 0)
+                        }
+                    )
+                    result.relevance_score = self._calculate_relevance_score(result, query)
+                    results.append(result)
+                    
+                    # Polite delay
+                    await asyncio.sleep(0.1)
+                    
+                except Exception as e:
+                    logger.warning(f"Error processing OpenAlex result: {e}")
+                    continue
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"OpenAlex search error: {e}")
+            return []
+    
+    async def arxiv_search(self, query: str, k: int = 3) -> List[SearchResult]:
+        """Search arXiv for preprints."""
+        try:
+            # arXiv API endpoint
+            api_url = "http://export.arxiv.org/api/query"
+            params = {
+                "search_query": f"all:{query}",
+                "start": 0,
+                "max_results": k,
+                "sortBy": "relevance",
+                "sortOrder": "descending"
+            }
+            
+            data = await self._make_request_with_retry(api_url, params=params)
+            if not data or "feed" not in data or "entry" not in data["feed"]:
+                return []
+            
+            results = []
+            for entry in data["feed"]["entry"][:k]:
+                try:
+                    # Get authors
+                    authors = []
+                    if "author" in entry:
+                        for author in entry["author"][:3]:  # First 3 authors
+                            authors.append(author.get("name", ""))
+                    
+                    result = SearchResult(
+                        title=entry.get("title", ""),
+                        url=entry.get("id", ""),
+                        snippet=entry.get("summary", "")[:300] + "..." if entry.get("summary") else "",
+                        domain="arxiv.org",
+                        provider=SearchProvider.ARXIV,
+                        metadata={
+                            "authors": authors,
+                            "published": entry.get("published", ""),
+                            "updated": entry.get("updated", ""),
+                            "categories": entry.get("arxiv:primary_category", {}).get("term", "")
+                        }
+                    )
+                    result.relevance_score = self._calculate_relevance_score(result, query)
+                    results.append(result)
+                    
+                    # Polite delay
+                    await asyncio.sleep(0.1)
+                    
+                except Exception as e:
+                    logger.warning(f"Error processing arXiv result: {e}")
+                    continue
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"arXiv search error: {e}")
+            return []
+    
+    async def youtube_search(self, query: str, k: int = 3) -> List[SearchResult]:
+        """Search YouTube for educational videos."""
+        try:
+            # YouTube Data API endpoint
+            if not YOUTUBE_API_KEY or "your_" in YOUTUBE_API_KEY:
+                logger.warning("YouTube API key not configured, skipping YouTube search")
+                return []
+            
+            api_url = "https://www.googleapis.com/youtube/v3/search"
+            params = {
+                "part": "snippet",
+                "q": query,
+                "type": "video",
+                "maxResults": k,
+                "order": "relevance",
+                "videoDuration": "medium",  # Prefer medium length videos
+                "videoEmbeddable": "true",
+                "key": YOUTUBE_API_KEY
+            }
+            
+            data = await self._make_request_with_retry(api_url, params=params)
+            if not data or "items" not in data:
+                return []
+            
+            results = []
+            for item in data["items"][:k]:
+                try:
+                    snippet_data = item.get("snippet", {})
+                    video_id = item.get("id", {}).get("videoId", "")
+                    
+                    result = SearchResult(
+                        title=snippet_data.get("title", ""),
+                        url=f"https://www.youtube.com/watch?v={video_id}",
+                        snippet=snippet_data.get("description", "")[:300] + "..." if snippet_data.get("description") else "",
+                        domain="youtube.com",
+                        provider=SearchProvider.YOUTUBE,
+                        metadata={
+                            "channel_title": snippet_data.get("channelTitle", ""),
+                            "published_at": snippet_data.get("publishedAt", ""),
+                            "duration": "medium",
+                            "video_id": video_id
+                        }
+                    )
+                    result.relevance_score = self._calculate_relevance_score(result, query)
+                    results.append(result)
+                    
+                    # Polite delay
+                    await asyncio.sleep(0.1)
+                    
+                except Exception as e:
+                    logger.warning(f"Error processing YouTube result: {e}")
+                    continue
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"YouTube search error: {e}")
+            return []
+    
     async def _brave_search(self, query: str, k: int) -> List[SearchResult]:
         """Search using Brave Search API."""
         try:
@@ -511,10 +856,64 @@ class ZeroBudgetRetrieval:
             except Exception as e:
                 logger.error(f"Wikipedia search failed: {e}")
         
-        # Web search
+        # StackExchange search
+        try:
+            stack_results = await self.stackexchange_search(query, k=min(k, 2))
+            all_results.extend(stack_results)
+            providers_used.append(SearchProvider.STACKEXCHANGE)
+            logger.info(f"StackExchange search returned {len(stack_results)} results")
+        except Exception as e:
+            logger.error(f"StackExchange search failed: {e}")
+        
+        # MDN search
+        try:
+            mdn_results = await self.mdn_search(query, k=min(k, 2))
+            all_results.extend(mdn_results)
+            providers_used.append(SearchProvider.MDN)
+            logger.info(f"MDN search returned {len(mdn_results)} results")
+        except Exception as e:
+            logger.error(f"MDN search failed: {e}")
+        
+        # GitHub search
+        try:
+            github_results = await self.github_search(query, k=min(k, 2))
+            all_results.extend(github_results)
+            providers_used.append(SearchProvider.GITHUB)
+            logger.info(f"GitHub search returned {len(github_results)} results")
+        except Exception as e:
+            logger.error(f"GitHub search failed: {e}")
+        
+        # OpenAlex search
+        try:
+            openalex_results = await self.openalex_search(query, k=min(k, 2))
+            all_results.extend(openalex_results)
+            providers_used.append(SearchProvider.OPENALEX)
+            logger.info(f"OpenAlex search returned {len(openalex_results)} results")
+        except Exception as e:
+            logger.error(f"OpenAlex search failed: {e}")
+        
+        # arXiv search
+        try:
+            arxiv_results = await self.arxiv_search(query, k=min(k, 2))
+            all_results.extend(arxiv_results)
+            providers_used.append(SearchProvider.ARXIV)
+            logger.info(f"arXiv search returned {len(arxiv_results)} results")
+        except Exception as e:
+            logger.error(f"arXiv search failed: {e}")
+        
+        # YouTube search
+        try:
+            youtube_results = await self.youtube_search(query, k=min(k, 2))
+            all_results.extend(youtube_results)
+            providers_used.append(SearchProvider.YOUTUBE)
+            logger.info(f"YouTube search returned {len(youtube_results)} results")
+        except Exception as e:
+            logger.error(f"YouTube search failed: {e}")
+        
+        # Web search (fallback)
         if use_web:
             try:
-                web_results = await self.free_web_search(query, k=min(k, 5))
+                web_results = await self.free_web_search(query, k=min(k, 3))
                 all_results.extend(web_results)
                 providers_used.extend([r.provider for r in web_results])
                 logger.info(f"Web search returned {len(web_results)} results")

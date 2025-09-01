@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Palette, Sparkles, Moon, Sun, Zap, Star, Galaxy } from "lucide-react";
+import { Palette, Sparkles, Moon, Sun, Zap, Star, Globe } from "lucide-react";
 import { Button } from "@/ui/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/ui/card";
 import { Badge } from "@/ui/ui/badge";
@@ -59,7 +59,7 @@ const cosmicThemes: CosmicTheme[] = [
     id: "nebula-blue",
     name: "Nebula Blue",
     description: "Ethereal blue nebulas with cosmic dust",
-    icon: <Galaxy className="h-5 w-5" />,
+    icon: <Globe className="h-5 w-5" />,
     colors: {
       primary: "#3b82f6",
       secondary: "#60a5fa",

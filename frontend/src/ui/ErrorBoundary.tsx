@@ -1,71 +1,250 @@
 "use client";
 
-import React from "react";
-import { ErrorBoundary as ReactErrorBoundary } from "react-error-boundary";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/ui/card";
+import React, { Component, ErrorInfo, ReactNode } from "react";
+import { AlertTriangle, RefreshCw, Home, MessageCircle } from "lucide-react";
 import { Button } from "@/ui/ui/button";
-import { AlertTriangle, RefreshCw, Home, AlertCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/ui/card";
+import { Badge } from "@/ui/ui/badge";
+import { useToast } from "@/hooks/useToast";
+import Link from "next/link";
 
-interface ErrorFallbackProps {
-  error: Error;
-  resetErrorBoundary: () => void;
-  componentStack?: string;
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
+  traceId: string | null;
 }
 
-function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
-  const [isClient, setIsClient] = React.useState(false);
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+}
 
-  React.useEffect(() => {
-    setIsClient(true);
-  }, []);
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      traceId: null,
+    };
+  }
 
-  const handleReset = () => {
-    resetErrorBoundary();
-    if (isClient && typeof window !== "undefined") {
-      window.location.reload();
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+    // Generate a trace ID for this error
+    const traceId = `frontend-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    return {
+      hasError: true,
+      error,
+      traceId,
+    };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Log the error
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    
+    // Update state with error info
+    this.setState({ errorInfo });
+    
+    // Call custom error handler if provided
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
+    
+    // Log to external service (in a real app, you'd send this to your logging service)
+    this.logErrorToService(error, errorInfo);
+  }
+
+  private logErrorToService(error: Error, errorInfo: ErrorInfo) {
+    const errorData = {
+      message: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack,
+      traceId: this.state.traceId,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+    };
+
+    // In a real implementation, you'd send this to your logging service
+    // For now, we'll just log it to console
+    console.error("Error logged:", errorData);
+    
+    // You could also send to your backend API
+    // fetch('/api/log-error', {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify(errorData)
+    // }).catch(console.error);
+  }
+
+  private handleRetry = () => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      traceId: null,
+    });
+  };
+
+  private handleGoHome = () => {
+    window.location.href = "/";
+  };
+
+  private copyTraceId = () => {
+    if (this.state.traceId) {
+      navigator.clipboard.writeText(this.state.traceId);
+      // You could show a toast here
     }
   };
 
-  const handleGoHome = () => {
-    if (isClient && typeof window !== "undefined") {
-      window.location.href = "/";
+  render() {
+    if (this.state.hasError) {
+      // Custom fallback UI
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
+
+      // Default error UI
+      return <ErrorFallback 
+        error={this.state.error}
+        errorInfo={this.state.errorInfo}
+        traceId={this.state.traceId}
+        onRetry={this.handleRetry}
+        onGoHome={this.handleGoHome}
+        onCopyTraceId={this.copyTraceId}
+      />;
     }
+
+    return this.props.children;
+  }
+}
+
+interface ErrorFallbackProps {
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
+  traceId: string | null;
+  onRetry: () => void;
+  onGoHome: () => void;
+  onCopyTraceId: () => void;
+}
+
+function ErrorFallback({
+  error,
+  errorInfo,
+  traceId,
+  onRetry,
+  onGoHome,
+  onCopyTraceId,
+}: ErrorFallbackProps) {
+  const { toast } = useToast();
+
+  const handleCopyTraceId = () => {
+    onCopyTraceId();
+    toast({
+      title: "Trace ID copied",
+      description: "Trace ID copied to clipboard for support",
+      variant: "default",
+    });
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-orange-50 dark:from-slate-900 dark:via-red-900/20 dark:to-orange-900/20 flex items-center justify-center p-4">
+      <Card className="max-w-2xl w-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-red-200/50 dark:border-red-800/50">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="h-6 w-6 text-destructive" />
+          <div className="mx-auto mb-4 w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+            <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
           </div>
-          <CardTitle className="text-xl">Something went wrong</CardTitle>
-          <CardDescription>
-            We encountered an unexpected error. Please try again or contact
-            support if the problem persists.
-          </CardDescription>
+          <CardTitle className="text-2xl font-bold text-red-600 dark:text-red-400">
+            Something went wrong
+          </CardTitle>
+          <p className="text-gray-600 dark:text-gray-300 mt-2">
+            We encountered an unexpected error. Don't worry, our team has been notified.
+          </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {process.env.NODE_ENV === "development" && (
-            <details className="rounded-md bg-muted p-3 text-sm">
-              <summary className="cursor-pointer font-medium">
+        
+        <CardContent className="space-y-6">
+          {/* Error Details */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900 dark:text-white">
                 Error Details
-              </summary>
-              <pre className="mt-2 whitespace-pre-wrap text-xs">
-                {error.message}
-                {error.stack && `\n\n${error.stack}`}
-              </pre>
-            </details>
+              </h3>
+              <Badge variant="destructive" className="text-xs">
+                {error?.name || "Unknown Error"}
+              </Badge>
+            </div>
+            
+            {error && (
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-4">
+                <p className="text-sm text-gray-700 dark:text-gray-300 font-mono">
+                  {error.message}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Trace ID */}
+          {traceId && (
+            <div className="space-y-2">
+              <h4 className="font-medium text-gray-900 dark:text-white">
+                Trace ID
+              </h4>
+              <div className="flex items-center space-x-2">
+                <code className="flex-1 bg-gray-50 dark:bg-slate-700/50 rounded px-3 py-2 text-sm font-mono text-gray-700 dark:text-gray-300">
+                  {traceId}
+                </code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyTraceId}
+                  className="shrink-0"
+                >
+                  Copy
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Please include this trace ID when contacting support
+              </p>
+            </div>
           )}
-          <div className="flex flex-col space-y-2 sm:flex-row sm:space-x-2 sm:space-y-0">
-            <Button onClick={handleReset} className="flex-1">
-              <RefreshCw className="mr-2 h-4 w-4" />
+
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
+            <Button
+              onClick={onRetry}
+              className="flex-1 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
               Try Again
             </Button>
-            <Button variant="outline" onClick={handleGoHome} className="flex-1">
-              <Home className="mr-2 h-4 w-4" />
+            
+            <Button
+              variant="outline"
+              onClick={onGoHome}
+              className="flex-1"
+            >
+              <Home className="w-4 h-4 mr-2" />
               Go Home
             </Button>
+          </div>
+
+          {/* Support */}
+          <div className="border-t border-gray-200 dark:border-slate-600 pt-4">
+            <div className="flex items-center justify-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+              <MessageCircle className="w-4 h-4" />
+              <span>Need help?</span>
+              <Link
+                href="/support"
+                className="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                Contact Support
+              </Link>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -73,108 +252,72 @@ function ErrorFallback({ error, resetErrorBoundary }: ErrorFallbackProps) {
   );
 }
 
-interface ErrorBoundaryProps {
-  children: React.ReactNode;
-  fallback?: React.ComponentType<ErrorFallbackProps>;
-  onError?: (error: Error, errorInfo: any) => void;
-}
-
-export function ErrorBoundary({ 
-  children, 
-  fallback = ErrorFallback,
-  onError
-}: ErrorBoundaryProps) {
-  const handleError = (error: Error, errorInfo: any) => {
-    console.error("Error caught by ErrorBoundary:", error, errorInfo);
-    
-    // Send error to analytics
-    try {
-      // analytics.track('error', { error: error.message, stack: error.stack });
-    } catch (analyticsError) {
-      console.error("Failed to send error to analytics:", analyticsError);
-    }
-
-    onError?.(error, errorInfo);
+// Hook for functional components to trigger error boundary
+export function useErrorHandler() {
+  const throwError = (error: Error) => {
+    throw error;
   };
 
+  return { throwError };
+}
+
+// Higher-order component for error boundary
+export function withErrorBoundary<P extends object>(
+  Component: React.ComponentType<P>,
+  fallback?: ReactNode,
+  onError?: (error: Error, errorInfo: ErrorInfo) => void
+) {
+  const WrappedComponent = (props: P) => (
+    <ErrorBoundary fallback={fallback} onError={onError}>
+      <Component {...props} />
+    </ErrorBoundary>
+  );
+
+  WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`;
+  return WrappedComponent;
+}
+
+// Specific error boundary for search results
+export function SearchErrorBoundary({ children }: { children: ReactNode }) {
   return (
-    <ReactErrorBoundary
-      FallbackComponent={fallback}
-      onError={handleError}
+    <ErrorBoundary
+      fallback={
+        <div className="p-6 text-center">
+          <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Search Error
+          </h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            We encountered an error while processing your search. Please try again.
+          </p>
+          <Button onClick={() => window.location.reload()}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Retry Search
+          </Button>
+        </div>
+      }
     >
       {children}
-    </ReactErrorBoundary>
-  );
-}
-
-// Specialized error boundaries for different contexts
-export function QueryErrorBoundary({ children }: { children: React.ReactNode }) {
-  const QueryErrorFallback = ({ error, resetErrorBoundary }: ErrorFallbackProps) => (
-    <div className="p-6 border rounded-lg bg-red-50">
-      <div className="flex items-center space-x-2 mb-4">
-        <AlertCircle className="h-5 w-5 text-red-500" />
-        <h3 className="font-medium text-red-800">Query Error</h3>
-      </div>
-      <p className="text-sm text-red-700 mb-4">
-        There was an error processing your query. Please try again.
-      </p>
-      <Button onClick={resetErrorBoundary} size="sm">
-        <RefreshCw className="mr-2 h-4 w-4" />
-        Retry Query
-      </Button>
-    </div>
-  );
-
-  return (
-    <ErrorBoundary fallback={QueryErrorFallback}>
-      {children}
     </ErrorBoundary>
   );
 }
 
-export function AnalyticsErrorBoundary({ children }: { children: React.ReactNode }) {
-  const AnalyticsErrorFallback = ({ error, resetErrorBoundary }: ErrorFallbackProps) => (
-    <div className="p-6 border rounded-lg bg-yellow-50">
-      <div className="flex items-center space-x-2 mb-4">
-        <AlertCircle className="h-5 w-5 text-yellow-500" />
-        <h3 className="font-medium text-yellow-800">Analytics Error</h3>
-      </div>
-      <p className="text-sm text-yellow-700 mb-4">
-        Unable to load analytics data. Please refresh the page.
-      </p>
-      <Button onClick={resetErrorBoundary} size="sm" variant="outline">
-        <RefreshCw className="mr-2 h-4 w-4" />
-        Refresh Data
-      </Button>
-    </div>
-  );
-
+// Specific error boundary for streaming
+export function StreamingErrorBoundary({ children }: { children: ReactNode }) {
   return (
-    <ErrorBoundary fallback={AnalyticsErrorFallback}>
+    <ErrorBoundary
+      fallback={
+        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+            <span className="text-sm text-yellow-800 dark:text-yellow-200">
+              Streaming interrupted. Please refresh to continue.
+            </span>
+          </div>
+        </div>
+      }
+    >
       {children}
     </ErrorBoundary>
   );
-}
-
-// Hook for functional components to handle errors
-export function useErrorHandler() {
-  const [error, setError] = React.useState<Error | null>(null);
-
-  const handleError = React.useCallback((error: Error) => {
-    console.error("Error caught by useErrorHandler:", error);
-    setError(error);
-
-    // Send error to analytics
-    try {
-      // analytics.track('error', { error: error.message, stack: error.stack });
-    } catch (analyticsError) {
-      console.error("Failed to send error to analytics:", analyticsError);
-    }
-  }, []);
-
-  const clearError = React.useCallback(() => {
-    setError(null);
-  }, []);
-
-  return { error, handleError, clearError };
 }

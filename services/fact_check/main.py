@@ -7,7 +7,6 @@ from .routes import router as fact_check_router
 app = create_app_factory(
     service_name="fact_check",
     description="Fact-check microservice",
-    port=8013,
     additional_routes=[fact_check_router],
     health_prefix="fact-check",
     metrics_prefix="internal",

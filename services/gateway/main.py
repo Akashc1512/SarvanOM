@@ -24,7 +24,7 @@ try:
 except ImportError:
     pass  # Windows compatibility not available
 
-from fastapi import FastAPI, HTTPException, Request, Response, WebSocket
+from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
@@ -41,6 +41,40 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 # Import unified logging
 from shared.core.unified_logging import setup_logging, get_logger, setup_fastapi_logging
+
+# Import observability middleware
+from services.gateway.middleware.observability import (
+    ObservabilityMiddleware, 
+    MetricsMiddleware,
+    log_llm_call,
+    log_cache_event,
+    log_stream_event,
+    log_error,
+    monitor_performance
+)
+
+# Import security middleware
+from services.gateway.middleware.security import (
+    SecurityMiddleware,
+    InputValidationMiddleware,
+    SecurityConfig,
+    RateLimitConfig
+)
+
+# Import resilience components
+from services.gateway.resilience.circuit_breaker import (
+    circuit_breaker_manager,
+    CircuitBreakerConfig,
+    CircuitBreakerError
+)
+
+from services.gateway.resilience.graceful_degradation import (
+    degradation_manager,
+    error_boundary,
+    get_fallback_response,
+    check_fallback_needed,
+    get_degradation_status
+)
 
 # Import analytics metrics
 from services.analytics.metrics.knowledge_platform_metrics import (
@@ -67,6 +101,13 @@ from services.gateway.routes import (
     auth_router,
     vector_router
 )
+
+# Import advanced features router
+try:
+    from services.gateway.routers.advanced_features_router import router as advanced_features_router
+except Exception as e:
+    print(f"Warning: Could not import advanced features router: {e}")
+    advanced_features_router = None
 
 # Import additional service routers (with error handling)
 try:
@@ -203,87 +244,61 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Security configuration
-MAX_PAYLOAD_SIZE = 10 * 1024 * 1024  # 10MB
+# Security and observability configuration
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:3001", 
     "https://sarvanom.com",
     "https://www.sarvanom.com"
 ]
-TRUSTED_HOSTS = ["localhost", "127.0.0.1", "sarvanom.com", "www.sarvanom.com"]
 
-# Input validation patterns
-XSS_PATTERN = re.compile(r'<script[^>]*>.*?</script>|<iframe[^>]*>.*?</iframe>|<object[^>]*>.*?</object>', re.IGNORECASE | re.DOTALL)
-SQL_INJECTION_PATTERN = re.compile(r'(\b(union|select|insert|update|delete|drop|create|alter|exec|execute)\b.*?\b(from|into|table|database|where)\b)', re.IGNORECASE)
-
-class SecurityMiddleware(BaseHTTPMiddleware):
-    """Security middleware for input validation and security headers."""
-    
-    async def dispatch(self, request: Request, call_next):
-        # Skip security checks for basic endpoints
-        if request.url.path in ["/", "/health", "/health/detailed", "/ready", "/version", "/docs", "/openapi.json"]:
-            response = await call_next(request)
-            # Still add security headers
-            self._add_security_headers(response)
-            return response
-        
-        # Check payload size only for POST/PUT requests with content
-        if request.method in ["POST", "PUT", "PATCH"]:
-            content_length = request.headers.get("content-length")
-            if content_length and int(content_length) > MAX_PAYLOAD_SIZE:
-                return JSONResponse(
-                    status_code=413,
-                    content={"error": "Payload too large", "max_size_mb": MAX_PAYLOAD_SIZE // (1024 * 1024)}
-                )
-        
-        # Only validate query parameters for specific endpoints that accept user input
-        if request.url.path in ["/search", "/fact-check", "/synthesize", "/vector/search"] and request.query_params:
-            query_params = str(request.query_params)
-            if self._contains_malicious_content(query_params):
-                return JSONResponse(
-                    status_code=400,
-                    content={"error": "Malicious content detected in query parameters"}
-                )
-        
-        # Process request
-        response = await call_next(request)
-        
-        # Add security headers
-        self._add_security_headers(response)
-        
-        return response
-    
-    def _add_security_headers(self, response: Response):
-        """Add security headers to response."""
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
-    
-    def _contains_malicious_content(self, content: str) -> bool:
-        """Check for malicious content patterns."""
-        if XSS_PATTERN.search(content):
-            return True
-        if SQL_INJECTION_PATTERN.search(content):
-            return True
-        return False
+# Security configuration
+security_config = SecurityConfig(
+    rate_limit=RateLimitConfig(
+        requests_per_minute=60,
+        burst_limit=10,
+        window_size=60,
+        block_duration=300
+    ),
+    trusted_hosts={
+        "localhost",
+        "127.0.0.1",
+        "::1",
+        "sarvanom.local",
+        "*.sarvanom.com",
+        "*.sarvanom.org"
+    },
+    max_request_size=10 * 1024 * 1024,  # 10MB
+    max_query_length=1000,
+    max_headers_size=8192,
+    enable_csp=True,
+    enable_hsts=True,
+    enable_x_frame_options=True,
+    enable_x_content_type_options=True,
+    enable_referrer_policy=True
+)
 
 # App is already created above with lifespan
 
 # Setup FastAPI logging integration
 setup_fastapi_logging(app, service_name="sarvanom-gateway-service")
 
+# Add observability middleware (first - to capture all requests)
+app.add_middleware(ObservabilityMiddleware, service_name="sarvanom-gateway")
+
+# Add metrics middleware for Prometheus metrics
+app.add_middleware(MetricsMiddleware)
+
 # Add security middleware
-app.add_middleware(SecurityMiddleware)
+app.add_middleware(SecurityMiddleware, config=security_config)
+
+# Add input validation middleware
+app.add_middleware(InputValidationMiddleware)
 
 # Add trusted host middleware with permissive configuration for testing
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=TRUSTED_HOSTS + ["testserver", "*"]
+    allowed_hosts=list(security_config.trusted_hosts) + ["testserver", "*"]
 )
 
 # Add CORS middleware with secure configuration
@@ -298,6 +313,65 @@ app.add_middleware(
 # Include routers
 app.include_router(free_tier_router, prefix="/retrieval")
 app.include_router(analytics_router, prefix="/analytics")
+
+# Resilience endpoints
+@app.get("/health/resilience")
+async def get_resilience_health():
+    """Get resilience system health status."""
+    try:
+        circuit_breaker_status = circuit_breaker_manager.get_all_status()
+        degradation_status = get_degradation_status()
+        
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "circuit_breakers": circuit_breaker_status,
+            "degradation": degradation_status,
+            "request_id": get_request_id()
+        }
+    except Exception as e:
+        log_error("resilience_health_check_failed", str(e))
+        raise HTTPException(status_code=500, detail="Resilience health check failed")
+
+@app.post("/resilience/reset-circuit-breakers")
+async def reset_circuit_breakers():
+    """Reset all circuit breakers."""
+    try:
+        await circuit_breaker_manager.reset_all_circuit_breakers()
+        return {
+            "status": "success",
+            "message": "All circuit breakers reset",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "request_id": get_request_id()
+        }
+    except Exception as e:
+        log_error("circuit_breaker_reset_failed", str(e))
+        raise HTTPException(status_code=500, detail="Failed to reset circuit breakers")
+
+@app.get("/resilience/circuit-breakers/{provider}")
+async def get_circuit_breaker_status(provider: str):
+    """Get circuit breaker status for specific provider."""
+    try:
+        circuit_breaker = circuit_breaker_manager.get_circuit_breaker(provider)
+        return circuit_breaker.get_status()
+    except Exception as e:
+        log_error("circuit_breaker_status_failed", str(e))
+        raise HTTPException(status_code=404, detail=f"Circuit breaker not found for provider: {provider}")
+
+@app.post("/resilience/circuit-breakers/{provider}/reset")
+async def reset_circuit_breaker(provider: str):
+    """Reset circuit breaker for specific provider."""
+    try:
+        await circuit_breaker_manager.reset_circuit_breaker(provider)
+        return {
+            "status": "success",
+            "message": f"Circuit breaker reset for {provider}",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "request_id": get_request_id()
+        }
+    except Exception as e:
+        log_error("circuit_breaker_reset_failed", str(e))
+        raise HTTPException(status_code=500, detail=f"Failed to reset circuit breaker for {provider}")
 app.include_router(health_router, prefix="/health")
 app.include_router(search_router, prefix="/search")
 app.include_router(fact_check_router, prefix="/factcheck")
@@ -330,6 +404,10 @@ if backend_health_router:
 
 if query_router:
     app.include_router(query_router, prefix="/query")
+
+# Include advanced features router
+if advanced_features_router:
+    app.include_router(advanced_features_router)
 
 # Request/Response models with enhanced validation
 class SearchRequest(BaseModel):
@@ -1001,6 +1079,176 @@ async def search_post(request: SearchRequest):
         )
         
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
+
+# ============================================================================
+# FILE UPLOAD ENDPOINTS - Vector DB Integration
+# Following MAANG/OpenAI/Perplexity standards for document processing
+# ============================================================================
+
+@app.post("/upload")
+async def upload_document(
+    file: UploadFile = File(...),
+    user_id: Optional[str] = None
+):
+    """Upload document for vector indexing."""
+    try:
+        # Check if vector DB is enabled
+        config = get_central_config()
+        if not getattr(config, "use_vector_db", False):
+            raise HTTPException(
+                status_code=400, 
+                detail="Vector database is disabled. Enable USE_VECTOR_DB=true to upload documents."
+            )
+        
+        # Validate file type
+        allowed_types = ["application/pdf", "text/plain", "text/markdown"]
+        if file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type. Allowed: {', '.join(allowed_types)}"
+            )
+        
+        # Read file content
+        content = await file.read()
+        
+        # Process based on file type
+        if file.content_type == "application/pdf":
+            # Extract text from PDF
+            try:
+                import PyPDF2
+                import io
+                pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+                text_content = ""
+                for page in pdf_reader.pages:
+                    text_content += page.extract_text() + "\n"
+            except ImportError:
+                raise HTTPException(
+                    status_code=500,
+                    detail="PDF processing requires PyPDF2. Install with: pip install PyPDF2"
+                )
+        else:
+            # Text or markdown file
+            text_content = content.decode('utf-8')
+        
+        # Chunk the text
+        chunks = _chunk_text(text_content, chunk_size=1000, overlap=200)
+        
+        # Generate embeddings and store in vector DB
+        from shared.embeddings.local_embedder import embed_texts
+        from shared.vectorstores.vector_store_service import ChromaVectorStore
+        
+        embeddings = await embed_texts(chunks)
+        
+        # Create vector store instance
+        vector_store = ChromaVectorStore(collection_name=f"user_{user_id or 'anonymous'}")
+        
+        # Store documents
+        from shared.vectorstores.vector_store_service import VectorDocument
+        documents = []
+        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+            doc = VectorDocument(
+                id=f"{file.filename}_{i}",
+                text=chunk,
+                embedding=embedding,
+                metadata={
+                    "filename": file.filename,
+                    "content_type": file.content_type,
+                    "user_id": user_id or "anonymous",
+                    "chunk_index": i,
+                    "upload_time": datetime.now().isoformat()
+                }
+            )
+            documents.append(doc)
+        
+        # Upsert documents
+        upserted_count = await vector_store.upsert(documents)
+        
+        logger.info(f"Document uploaded successfully", extra={
+            "filename": file.filename,
+            "user_id": user_id,
+            "chunks": len(chunks),
+            "upserted": upserted_count
+        })
+        
+        return {
+            "message": "Document uploaded successfully",
+            "filename": file.filename,
+            "chunks_processed": len(chunks),
+            "chunks_stored": upserted_count,
+            "collection": f"user_{user_id or 'anonymous'}"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Document upload failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+@app.get("/status/vector")
+async def get_vector_status():
+    """Get vector database status and collection sizes."""
+    try:
+        config = get_central_config()
+        use_vector_db = getattr(config, "use_vector_db", False)
+        
+        if not use_vector_db:
+            return {
+                "vector_db_enabled": False,
+                "message": "Vector database is disabled"
+            }
+        
+        # Get collection information
+        from shared.vectorstores.vector_store_service import ChromaVectorStore
+        
+        collections = {}
+        # This would need to be implemented based on the specific vector store
+        # For now, return basic status
+        
+        return {
+            "vector_db_enabled": True,
+            "provider": config.vector_db_provider,
+            "collections": collections,
+            "message": "Vector database is enabled"
+        }
+        
+    except Exception as e:
+        logger.error(f"Vector status check failed: {e}")
+        return {
+            "vector_db_enabled": False,
+            "error": str(e)
+        }
+
+
+def _chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
+    """Split text into overlapping chunks."""
+    if len(text) <= chunk_size:
+        return [text]
+    
+    chunks = []
+    start = 0
+    
+    while start < len(text):
+        end = start + chunk_size
+        
+        # Try to break at sentence boundary
+        if end < len(text):
+            # Look for sentence endings
+            for i in range(end, max(start + chunk_size - 100, start), -1):
+                if text[i] in '.!?':
+                    end = i + 1
+                    break
+        
+        chunk = text[start:end].strip()
+        if chunk:
+            chunks.append(chunk)
+        
+        start = end - overlap
+        if start >= len(text):
+            break
+    
+    return chunks
+
 
 # ============================================================================
 # SSE STREAMING ENDPOINTS - Server-Sent Events Implementation

@@ -15,6 +15,9 @@ from ...services.core.metrics_service import MetricsService
 from ...services.health.health_service import HealthService
 from ..dependencies import get_cache_service, get_metrics_service, get_health_service
 
+# GPU Provider Health
+from services.gateway.real_llm_integration import real_llm_processor
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -107,3 +110,27 @@ async def metrics_health_check(
     except Exception as e:
         logger.error(f"Metrics health check failed: {e}", exc_info=True)
         raise HTTPException(status_code=503, detail="Metrics service unhealthy")
+
+
+@router.get("/gpu-providers")
+async def gpu_providers_health_check():
+    """GPU providers health check with circuit breaker status."""
+    try:
+        health_data = await real_llm_processor.get_gpu_provider_health()
+        return {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "gpu_providers": health_data,
+        }
+    except Exception as e:
+        logger.error(f"GPU providers health check failed: {e}", exc_info=True)
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+            "gpu_providers": {
+                "providers": {},
+                "available_providers": [],
+                "error": str(e)
+            }
+        }

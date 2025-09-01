@@ -13,7 +13,7 @@ class LocalStubClient:
     """Local stub client for fallback responses."""
     
     def __init__(self):
-        logger.info("✅ Local Stub client initialized")
+        logger.info("[OK] Local Stub client initialized")
     
     async def generate_text(
         self, 

@@ -19,6 +19,7 @@ redis_url: "redis://localhost:6379/0"
 # Vector Database Configuration
 vector_db_url: "http://localhost:6333"  # Qdrant default
 vector_db_api_key: null  # Optional for local dev
+use_vector_db: false  # OFF by default for zero-budget mode
 
 # Search Configuration
 meilisearch_url: "http://localhost:7700"

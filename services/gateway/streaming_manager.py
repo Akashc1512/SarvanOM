@@ -26,6 +26,13 @@ import os
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 
+# Import observability functions
+from services.gateway.middleware.observability import (
+    log_stream_event,
+    log_error,
+    monitor_performance
+)
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -141,7 +148,7 @@ class StreamingManager:
                 logger.info("Heartbeat monitor cancelled")
                 break
             except Exception as e:
-                logger.error(f"Heartbeat monitor error: {e}")
+                log_error("heartbeat_monitor_error", str(e))
                 await asyncio.sleep(5)  # Wait before retrying
     
     async def _send_heartbeat(self, stream_id: str, context: StreamContext):
@@ -159,12 +166,20 @@ class StreamingManager:
                 trace_id=context.trace_id
             )
             
-            # Note: In a real implementation, this would send to the specific stream
-            # For now, we just log it
-            logger.debug(f"Heartbeat sent for stream {stream_id}")
+            # Log heartbeat with observability
+            log_stream_event("heartbeat", stream_id, {
+                "trace_id": context.trace_id,
+                "query": context.query[:100],  # Truncate for logging
+                "uptime_seconds": (datetime.now(timezone.utc) - context.start_time).total_seconds(),
+                "total_chunks": context.total_chunks,
+                "total_tokens": context.total_tokens
+            })
             
         except Exception as e:
-            logger.error(f"Failed to send heartbeat for stream {stream_id}: {e}")
+            log_error("heartbeat_failed", str(e), {
+                "stream_id": stream_id,
+                "trace_id": context.trace_id
+            })
     
     async def _close_stream(self, stream_id: str):
         """Close a specific stream."""
@@ -192,7 +207,7 @@ class StreamingManager:
         temperature: float = 0.2
     ) -> AsyncGenerator[str, None]:
         """
-        Create a streaming search response.
+        Create a streaming search response with comprehensive lifecycle management.
         
         Args:
             query: Search query
@@ -223,42 +238,43 @@ class StreamingManager:
         logger.info(f"Stream started: {stream_id}", extra={
             "stream_id": stream_id,
             "trace_id": trace_id,
-            "query": query,
+            "query": query[:100],
             "max_tokens": max_tokens,
             "temperature": temperature
         })
         
         try:
-            # Import here to avoid circular imports
-            from services.gateway.real_llm_integration import RealLLMProcessor
-            from services.retrieval.free_tier import combined_search
+            # Check stream duration limit
+            if (datetime.now(timezone.utc) - start_time).total_seconds() > STREAM_MAX_SECONDS:
+                logger.warning(f"Stream duration limit exceeded: {stream_id}")
+                context.client_connected = False
+                return
             
-            llm_processor = RealLLMProcessor()
+            # First, get retrieval results
+            from services.retrieval.free_tier import get_zero_budget_retrieval
+            retrieval_system = get_zero_budget_retrieval()
             
-            # First, get zero-budget retrieval results
-            logger.info(f"Starting zero-budget retrieval for stream {stream_id}")
-            retrieval_response = await combined_search(query, k=5)
+            # Get search results
+            retrieval_response = await retrieval_system.search(query, k=10)
             
-            # Convert retrieval results to context
+            # Convert to context for LLM
             retrieval_context = []
             for result in retrieval_response.results:
                 retrieval_context.append({
                     "title": result.title,
                     "url": result.url,
                     "snippet": result.snippet,
-                    "relevance_score": result.relevance_score,
+                    "domain": result.domain,
                     "provider": result.provider.value
                 })
             
-            # Send initial context event
+            # Send context event with sources
             context_event = StreamEvent(
                 event_type=StreamEventType.CONTENT_CHUNK,
                 data={
                     "type": "context",
                     "stream_id": stream_id,
-                    "retrieval_results": retrieval_context,
-                    "cache_hit": retrieval_response.cache_hit,
-                    "providers_used": [p.value for p in retrieval_response.providers_used]
+                    "sources": retrieval_context
                 },
                 trace_id=trace_id
             )
@@ -266,10 +282,18 @@ class StreamingManager:
             yield self._format_sse_event(context_event)
             context.total_chunks += 1
             
+            # Check if client is still connected
+            if not context.client_connected:
+                logger.info(f"Client disconnected before LLM generation: {stream_id}")
+                return
+            
             # Generate streaming response using LLM
             logger.info(f"Starting LLM generation for stream {stream_id}")
             
             # Use the LLM processor to generate streaming content
+            from services.gateway.real_llm_integration import RealLLMProcessor
+            llm_processor = RealLLMProcessor()
+            
             llm_response = await llm_processor.call_llm_with_provider_gating(
                 prompt=f"Based on the following search results, provide a comprehensive answer to: {query}\n\nSearch Results:\n{json.dumps(retrieval_context, indent=2)}",
                 max_tokens=max_tokens,
@@ -277,14 +301,83 @@ class StreamingManager:
             )
             
             if llm_response.success:
-                # Stream the content in chunks
+                # Get the generated content
                 content = llm_response.content
-                words = content.split()
+                
+                # Now apply fact-checking and citations
+                from services.gateway.citations import get_citations_manager
+                citations_manager = get_citations_manager()
+                
+                # Convert retrieval results to SearchResult format for citations
+                from services.retrieval.free_tier import SearchResult, SearchProvider
+                search_results = []
+                for i, result in enumerate(retrieval_response.results):
+                    search_results.append(SearchResult(
+                        title=result.title,
+                        url=result.url,
+                        snippet=result.snippet,
+                        domain=result.domain,
+                        provider=result.provider,
+                        relevance_score=result.relevance_score,
+                        credibility_score=getattr(result, 'credibility_score', 0.8)
+                    ))
+                
+                # Apply fact-checking and citations
+                fact_check_result = await citations_manager.fact_check_text(
+                    text=content,
+                    sources=search_results,
+                    min_confidence=0.3
+                )
+                
+                # Send citations event
+                citations_event = StreamEvent(
+                    event_type=StreamEventType.CONTENT_CHUNK,
+                    data={
+                        "type": "citations",
+                        "stream_id": stream_id,
+                        "citations": [
+                            {
+                                "marker": citation.marker,
+                                "source": {
+                                    "title": citation.source.title,
+                                    "url": citation.source.url,
+                                    "snippet": citation.source.snippet,
+                                    "source_type": citation.source.provider.value,
+                                    "relevance_score": citation.source.relevance_score,
+                                    "credibility_score": citation.source.credibility_score,
+                                    "domain": citation.source.domain,
+                                    "provider": citation.source.provider.value
+                                },
+                                "confidence": citation.confidence,
+                                "sentence_start": citation.sentence_start,
+                                "sentence_end": citation.sentence_end,
+                                "claim_type": citation.claim_type
+                            }
+                            for citation in fact_check_result.citations
+                        ],
+                        "bibliography": fact_check_result.bibliography,
+                        "uncertainty_flags": fact_check_result.uncertainty_flags,
+                        "overall_confidence": fact_check_result.overall_confidence
+                    },
+                    trace_id=trace_id
+                )
+                
+                yield self._format_sse_event(citations_event)
+                context.total_chunks += 1
+                
+                # Stream the fact-checked content with citations
+                words = fact_check_result.text.split()
                 chunk_size = max(1, len(words) // 20)  # Split into ~20 chunks
                 
                 for i in range(0, len(words), chunk_size):
+                    # Check if client is still connected
                     if not context.client_connected:
                         logger.info(f"Client disconnected during streaming: {stream_id}")
+                        break
+                    
+                    # Check stream duration limit
+                    if (datetime.now(timezone.utc) - start_time).total_seconds() > STREAM_MAX_SECONDS:
+                        logger.warning(f"Stream duration limit exceeded during generation: {stream_id}")
                         break
                     
                     chunk_words = words[i:i + chunk_size]
@@ -308,24 +401,39 @@ class StreamingManager:
                     
                     # Small delay between chunks for realistic streaming
                     await asyncio.sleep(CHUNK_DELAY_MS / 1000)
-                    
-                    # Check stream duration limit
-                    elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
-                    if elapsed >= STREAM_MAX_SECONDS:
-                        logger.warning(f"Stream duration limit reached: {stream_id}")
-                        break
                 
-                # Send completion event
+                # Send complete event with enhanced data
                 complete_event = StreamEvent(
                     event_type=StreamEventType.COMPLETE,
                     data={
                         "stream_id": stream_id,
-                        "status": "success",
                         "total_chunks": context.total_chunks,
                         "total_tokens": context.total_tokens,
                         "duration_seconds": (datetime.now(timezone.utc) - start_time).total_seconds(),
-                        "provider": llm_response.provider.value,
-                        "model": llm_response.model
+                        "sources": retrieval_context,
+                        "citations": [
+                            {
+                                "marker": citation.marker,
+                                "source": {
+                                    "title": citation.source.title,
+                                    "url": citation.source.url,
+                                    "snippet": citation.source.snippet,
+                                    "source_type": citation.source.provider.value,
+                                    "relevance_score": citation.source.relevance_score,
+                                    "credibility_score": citation.source.credibility_score,
+                                    "domain": citation.source.domain,
+                                    "provider": citation.source.provider.value
+                                },
+                                "confidence": citation.confidence,
+                                "sentence_start": citation.sentence_start,
+                                "sentence_end": citation.sentence_end,
+                                "claim_type": citation.claim_type
+                            }
+                            for citation in fact_check_result.citations
+                        ],
+                        "bibliography": fact_check_result.bibliography,
+                        "uncertainty_flags": fact_check_result.uncertainty_flags,
+                        "overall_confidence": fact_check_result.overall_confidence
                     },
                     trace_id=trace_id
                 )
@@ -339,8 +447,7 @@ class StreamingManager:
                     data={
                         "stream_id": stream_id,
                         "error": "LLM generation failed",
-                        "error_message": llm_response.error_message or "Unknown error",
-                        "provider": llm_response.provider.value
+                        "error_message": llm_response.error_message or "Unknown error"
                     },
                     trace_id=trace_id
                 )

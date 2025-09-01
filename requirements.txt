@@ -327,3 +327,5 @@ setuptools>=80.9.0  # Required for Python 3.13 compatibility
 # HuggingFace Additional Tools
 gradio>=5.42.0
 gradio-client>=1.11.1
+scikit-learn
+numpy

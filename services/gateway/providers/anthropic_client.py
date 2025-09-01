@@ -37,7 +37,7 @@ class AnthropicClient:
         
         try:
             self.client = anthropic.Anthropic(api_key=self.api_key)
-            logger.info("✅ Anthropic client initialized successfully")
+            logger.info("[OK] Anthropic client initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize Anthropic client: {e}")
             self.client = None

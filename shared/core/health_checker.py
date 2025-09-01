@@ -18,6 +18,7 @@ Version: 1.0.0 (2024-12-28)
 
 import asyncio
 import aiohttp
+import httpx
 import logging
 import time
 import os
@@ -529,6 +530,27 @@ class HealthChecker:
                     "unknown_components": 0
                 }
             }
+
+
+async def check_ollama(settings) -> Dict[str, Any]:
+    """
+    Health probe for a local/remote Ollama daemon.
+    Returns: {"service":"ollama","url":..., "ok":bool, "latency_ms":int, "error":str|None}
+    """
+    url = getattr(settings, "ollama_base_url", None) or (
+        get_ollama_url() if "get_ollama_url" in globals() else "http://localhost:11434"
+    )
+    start = time.perf_counter()
+    ok, err = False, None
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(f"{url.rstrip('/')}/api/tags")
+            r.raise_for_status()
+        ok = True
+    except Exception as e:
+        err = str(e)
+    latency = int((time.perf_counter() - start) * 1000)
+    return {"service": "ollama", "url": url, "ok": ok, "latency_ms": latency, "error": err}
 
 
 async def get_health_checker() -> HealthChecker:

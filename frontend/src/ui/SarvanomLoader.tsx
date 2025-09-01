@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 
 // Loader for Sarvanom - Enhanced Cosmic Galaxy
@@ -35,7 +37,7 @@ export const SarvanomLoader: React.FC<SarvanomLoaderProps> = ({ size = 120, clas
         return (
           <div
             key={i}
-            className={`absolute top-1/2 left-1/2 bg-gradient-to-r ${particleType.color} rounded-full animate-spin-slow`}
+            className={`absolute top-1/2 left-1/2 bg-gradient-to-r ${particleType.color} rounded-full`}
             style={{
               width: `${Math.random() * particleType.size + 0.5}px`,
               height: `${Math.random() * particleType.size + 0.5}px`,
@@ -44,6 +46,7 @@ export const SarvanomLoader: React.FC<SarvanomLoaderProps> = ({ size = 120, clas
               opacity: `${Math.random() * 0.9 + 0.1}`,
               zIndex: Math.floor(Math.random() * 15),
               filter: 'drop-shadow(0 0 2px currentColor)',
+              animation: 'spin-slow 120s linear infinite',
             }}
           />
         );
@@ -52,7 +55,7 @@ export const SarvanomLoader: React.FC<SarvanomLoaderProps> = ({ size = 120, clas
       {/* Central star with enhanced glow */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div 
-          className="w-6 h-6 bg-gradient-to-br from-yellow-300 via-orange-400 to-red-500 rounded-full shadow-glow animate-pulse"
+          className="w-6 h-6 bg-gradient-to-br from-yellow-300 via-orange-400 to-red-500 rounded-full animate-pulse"
           style={{
             boxShadow: '0 0 20px rgba(251, 191, 36, 0.8), 0 0 30px rgba(251, 146, 60, 0.6), 0 0 40px rgba(239, 68, 68, 0.4), 0 0 50px rgba(220, 38, 38, 0.2)'
           }}
@@ -69,40 +72,25 @@ export const SarvanomLoader: React.FC<SarvanomLoaderProps> = ({ size = 120, clas
 
       {/* Orbital rings for depth */}
       <div className="absolute inset-0 flex items-center justify-center">
-        <div className="w-16 h-16 border border-cyan-300/20 rounded-full animate-spin-slow" 
-          style={{ animationDuration: '180s' }} />
-        <div className="w-24 h-24 border border-purple-300/15 rounded-full animate-spin-slow" 
-          style={{ animationDuration: '240s', animationDirection: 'reverse' }} />
-        <div className="w-32 h-32 border border-pink-300/10 rounded-full animate-spin-slow" 
-          style={{ animationDuration: '300s' }} />
+        <div 
+          className="w-16 h-16 border border-cyan-300/20 rounded-full" 
+          style={{ 
+            animation: 'spin-slow 180s linear infinite'
+          }} 
+        />
+        <div 
+          className="w-24 h-24 border border-purple-300/15 rounded-full" 
+          style={{ 
+            animation: 'spin-slow 240s linear infinite reverse'
+          }} 
+        />
+        <div 
+          className="w-32 h-32 border border-pink-300/10 rounded-full" 
+          style={{ 
+            animation: 'spin-slow 300s linear infinite'
+          }} 
+        />
       </div>
-
-      <style jsx>{`
-        @keyframes spin-slow {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-
-        .animate-spin-slow {
-          animation: spin-slow 120s linear infinite;
-        }
-
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 0.9; }
-          50% { transform: scale(1.8); opacity: 0.6; }
-        }
-
-        .animate-pulse {
-          animation: pulse 3s ease-in-out infinite;
-        }
-
-        .shadow-glow {
-          box-shadow: 0 0 20px rgba(251, 191, 36, 0.8),
-                      0 0 30px rgba(251, 146, 60, 0.6),
-                      0 0 40px rgba(239, 68, 68, 0.4),
-                      0 0 50px rgba(220, 38, 38, 0.2);
-        }
-      `}</style>
     </div>
   </div>
 );

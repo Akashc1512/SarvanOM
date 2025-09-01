@@ -1,11 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, ReactNode } from "react";
+import React, { createContext, useContext } from "react";
+import type { ReactNode } from "react";
 import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ErrorBoundary } from "@/components/error-boundary";
-import { StateProvider } from "@/components/state-provider";
+// import { StateProvider } from "@/components/state-provider";
 import { CollaborationProvider } from "@/providers/collaboration-provider";
 import { Toaster } from "@/ui/ui/toaster";
 import { Analytics } from "@/ui/Analytics";
@@ -43,26 +43,12 @@ const queryClient = new QueryClient({
         return failureCount < 3;
       },
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: true,
-      onError: (error: any) => {
-        errorMonitor.captureError(error, {
-          severity: 'medium' as any,
-          category: 'network' as any,
-          tags: { source: 'react-query' },
-        });
-      },
+             refetchOnWindowFocus: false,
+       refetchOnReconnect: true,
     },
-    mutations: {
-      retry: 1,
-      onError: (error: any) => {
-        errorMonitor.captureError(error, {
-          severity: 'high' as any,
-          category: 'network' as any,
-          tags: { source: 'react-query-mutation' },
-        });
-      },
-    },
+         mutations: {
+       retry: 1,
+     },
   },
 });
 
@@ -102,6 +88,9 @@ function PerformanceWrapper({ children }: { children: ReactNode }) {
         return () => window.removeEventListener('load', handleLoad);
       }
     }
+    
+    // Return empty cleanup function for cases where window is undefined
+    return () => {};
   }, []);
 
   // Track user interactions globally
@@ -152,37 +141,34 @@ export function AppProvider({ children }: AppProviderProps) {
         console.error('App-level error:', error, errorInfo);
       }}
     >
-      <StateProvider>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-            themes={['light', 'dark', 'system']}
-          >
-            <CollaborationProvider>
-              <AppContext.Provider value={contextValue}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+          themes={['light', 'dark', 'system']}
+        >
+          <CollaborationProvider>
+            <AppContext.Provider value={contextValue}>
+              <div>
                 <PerformanceWrapper>
                   {children}
-                  
-                  {/* Global UI Components */}
-                  <Toaster />
-                  <Analytics />
-                  
-                  {/* Development Tools */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <>
-                      <ReactQueryDevtools initialIsOpen={false} />
-                      <DevelopmentTools />
-                    </>
-                  )}
                 </PerformanceWrapper>
-              </AppContext.Provider>
-            </CollaborationProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
-      </StateProvider>
+                
+                {/* Global UI Components */}
+                <Toaster />
+                <Analytics />
+                
+                {/* Development Tools */}
+                {process.env.NODE_ENV === 'development' && (
+                  <DevelopmentTools />
+                )}
+              </div>
+            </AppContext.Provider>
+          </CollaborationProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

@@ -27,7 +27,6 @@ const nextConfig = {
 
   // Experimental features for performance
   experimental: {
-    serverComponentsExternalPackages: ['@prisma/client'],
     optimizePackageImports: [
       'lucide-react',
       '@radix-ui/react-accordion',
@@ -42,9 +41,10 @@ const nextConfig = {
       '@radix-ui/react-tooltip',
     ],
     webVitalsAttribution: ['CLS', 'LCP'],
-    instrumentationHook: true,
-    strictNextHead: true,
   },
+
+  // Server external packages
+  serverExternalPackages: ['@prisma/client'],
 
   // Image optimization
   images: {

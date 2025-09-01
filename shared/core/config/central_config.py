@@ -447,7 +447,8 @@ class CentralConfig(SecureSettings):
     )
 
     # Vector database provider
-    vector_db_provider: str = Field(default="qdrant", description="Vector DB provider")
+    vector_db_provider: str = Field(default="inmemory", description="Vector DB provider")
+    use_vector_db: bool = Field(default=False, description="Enable vector database")
     vector_db_url: Optional[HttpUrl] = Field(
         default="http://localhost:6333", description="Vector database URL"
     )

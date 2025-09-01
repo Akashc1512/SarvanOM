@@ -27,7 +27,7 @@ class HuggingfaceClient:
             # Import the HuggingFace integration
             from services.gateway.huggingface_integration import huggingface_integration
             self.integration = huggingface_integration
-            logger.info("✅ HuggingFace client initialized successfully")
+            logger.info("[OK] HuggingFace client initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize HuggingFace client: {e}")
             self.integration = None

@@ -33,7 +33,7 @@ class OllamaClient:
             # Test connection to Ollama
             response = requests.get(f"{self.base_url}/api/tags", timeout=5)
             if response.status_code == 200:
-                logger.info("✅ Ollama client initialized successfully")
+                logger.info("[OK] Ollama client initialized successfully")
             else:
                 logger.warning(f"Ollama connection test failed: {response.status_code}")
         except Exception as e:

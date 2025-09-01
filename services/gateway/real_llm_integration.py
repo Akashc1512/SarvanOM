@@ -56,6 +56,25 @@ except ImportError:
 
 import requests
 
+# Central registry import
+from services.gateway.providers import register, get_ordered_providers
+
+# GPU Provider Orchestration
+from services.gateway.providers.gpu_providers import (
+    gpu_orchestrator, 
+    LLMRequest as GPURequest, 
+    LLMResponse as GPUResponse,
+    ProviderType
+)
+
+"""
+At startup, ensure provider singletons are constructed and registered.
+If your code already creates them elsewhere, import and register them there instead.
+Example (pseudocode):
+    from .clients.openai_client import OpenAIClient
+    register("openai", OpenAIClient)
+"""
+
 # Configuration from environment
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
@@ -224,6 +243,7 @@ class RealLLMProcessor:
         self.setup_provider_registry()
         self.setup_provider_configs()
         self.last_used_provider = None
+        self.gpu_orchestrator = gpu_orchestrator
     
     def setup_provider_registry(self):
         """Setup LLM provider registry with zero-budget optimization."""
@@ -241,10 +261,10 @@ class RealLLMProcessor:
                     if provider_class:
                         provider_instance = provider_class()
                         self.provider_health[provider_name] = provider_instance.is_available()
-                        logger.info(f"✅ {provider_name} provider: {'available' if self.provider_health[provider_name] else 'unavailable'}")
+                        logger.info(f"[OK] {provider_name} provider: {'available' if self.provider_health[provider_name] else 'unavailable'}")
                     else:
                         self.provider_health[provider_name] = False
-                        logger.warning(f"❌ {provider_name} provider class not found")
+                        logger.warning(f"[ERROR] {provider_name} provider class not found")
                 except Exception as e:
                     logger.error(f"Failed to initialize {provider_name} provider: {e}")
                     self.provider_health[provider_name] = False
@@ -253,7 +273,7 @@ class RealLLMProcessor:
             self.provider_health["local_stub"] = True
             self.provider_health["mock"] = True
             
-            logger.info(f"📋 Provider registry initialized with {len(self.available_providers)} providers")
+            logger.info(f"[INFO] Provider registry initialized with {len(self.available_providers)} providers")
             
         except Exception as e:
             logger.error(f"Failed to setup provider registry: {e}")
@@ -319,65 +339,7 @@ class RealLLMProcessor:
             api_key_required=False
         )
     
-    def get_provider_order(self, prefer_free: bool = True) -> List[LLMProvider]:
-        """Get ordered list of providers based on preferences and availability."""
-        if prefer_free and PRIORITIZE_FREE_MODELS:
-            # Free-first order: HuggingFace → Ollama → Paid providers → Stub
-            order = [
-                LLMProvider.HUGGINGFACE,
-                LLMProvider.OLLAMA,
-                LLMProvider.ANTHROPIC,
-                LLMProvider.OPENAI,
-                LLMProvider.LOCAL_STUB
-            ]
-        else:
-            # Quality-first order: Paid → Free → Stub
-            order = [
-                LLMProvider.OPENAI,
-                LLMProvider.ANTHROPIC,
-                LLMProvider.HUGGINGFACE,
-                LLMProvider.OLLAMA,
-                LLMProvider.LOCAL_STUB
-            ]
-        
-        # Filter to only available providers
-        available_order = []
-        for provider in order:
-            config = self.provider_configs.get(provider)
-            if config and config.enabled and self._is_provider_available(provider):
-                available_order.append(provider)
-        
-        return available_order
-    
-    def get_provider_order(self, prefer_free: bool = True) -> List[LLMProvider]:
-        """Get ordered list of providers based on preferences and availability."""
-        if prefer_free and PRIORITIZE_FREE_MODELS:
-            # Free-first order: HuggingFace → Ollama → Paid providers → Stub
-            order = [
-                LLMProvider.HUGGINGFACE,
-                LLMProvider.OLLAMA,
-                LLMProvider.ANTHROPIC,
-                LLMProvider.OPENAI,
-                LLMProvider.LOCAL_STUB
-            ]
-        else:
-            # Quality-first order: Paid → Free → Stub
-            order = [
-                LLMProvider.OPENAI,
-                LLMProvider.ANTHROPIC,
-                LLMProvider.HUGGINGFACE,
-                LLMProvider.OLLAMA,
-                LLMProvider.LOCAL_STUB
-            ]
-        
-        # Filter to only available providers
-        available_order = []
-        for provider in order:
-            config = self.provider_configs.get(provider)
-            if config and config.enabled and self._is_provider_available(provider):
-                available_order.append(provider)
-        
-        return available_order
+
     
     def _is_provider_available(self, provider: LLMProvider) -> bool:
         """Check if a provider is available and properly configured."""
@@ -802,57 +764,28 @@ If the problem persists, please contact support."""
     
     def select_optimal_provider(self, complexity: QueryComplexity, prefer_free: bool = True) -> LLMProvider:
         """
-        Dynamic provider selection with proper fallback chain.
+        Dynamic provider selection using centralized registry.
         
-        Priority based on environment variables and user preferences:
-        1. If PRIORITIZE_FREE_MODELS=true: HuggingFace → Ollama → Anthropic → OpenAI
-        2. If USE_DYNAMIC_SELECTION=true: Dynamic based on complexity and availability
-        3. Fallback chain: Available providers in order of preference
+        Uses environment-driven provider order with proper fallback chain.
         """
         if not USE_DYNAMIC_SELECTION:
             return self._get_fallback_provider()
         
-        # Check provider availability dynamically
-        available_providers = self._get_available_providers()
-        
-        if not available_providers:
-            logger.warning("❌ No providers available - using local_stub")
+        # Use centralized, env-driven order
+        ordered = get_ordered_providers()
+        if not ordered:
+            logger.warning("❌ No providers in registry - using local_stub")
             return LLMProvider.LOCAL_STUB
         
-        # Dynamic selection based on user preferences and complexity
-        if prefer_free and PRIORITIZE_FREE_MODELS:
-            # Free-first strategy: HuggingFace → Ollama → Paid providers
-            if LLMProvider.HUGGINGFACE in available_providers:
-                logger.info("🚀 Selected HuggingFace (free tier)")
-                return LLMProvider.HUGGINGFACE
-            elif LLMProvider.OLLAMA in available_providers:
-                logger.info("🔄 Selected Ollama (local)")
-                return LLMProvider.OLLAMA
-            elif LLMProvider.ANTHROPIC in available_providers:
-                logger.info("💰 Selected Anthropic (paid)")
-                return LLMProvider.ANTHROPIC
-            elif LLMProvider.OPENAI in available_providers:
-                logger.info("💰 Selected OpenAI (paid)")
-            return LLMProvider.OPENAI
-        else:
-            # Quality-first strategy: Best available provider
-            if LLMProvider.OPENAI in available_providers:
-                logger.info("🚀 Selected OpenAI (high quality)")
-                return LLMProvider.OPENAI
-            elif LLMProvider.ANTHROPIC in available_providers:
-                logger.info("🚀 Selected Anthropic (high quality)")
-                return LLMProvider.ANTHROPIC
-            elif LLMProvider.HUGGINGFACE in available_providers:
-                logger.info("🚀 Selected HuggingFace (free)")
-                return LLMProvider.HUGGINGFACE
-            elif LLMProvider.OLLAMA in available_providers:
-                logger.info("🔄 Selected Ollama (local)")
-                return LLMProvider.OLLAMA
+        # Return first available provider from ordered registry
+        for provider_name, provider in ordered.items():
+            if self._is_provider_available(LLMProvider(provider_name)):
+                logger.info(f"🚀 Selected {provider_name} from registry")
+                return LLMProvider(provider_name)
         
-        # Fallback to first available provider
-        selected = available_providers[0]
-        logger.info(f"🔄 Selected {selected.value} (fallback)")
-        return selected
+        # Fallback to local stub if no providers available
+        logger.warning("❌ No providers available - using local_stub")
+        return LLMProvider.LOCAL_STUB
     
     def _get_available_providers(self) -> List[LLMProvider]:
         """Get list of available providers in order of preference."""
@@ -876,6 +809,38 @@ If the problem persists, please contact support."""
         
         return available
     
+    async def get_gpu_provider_health(self) -> Dict[str, Any]:
+        """Get health status of all GPU providers with circuit breaker info."""
+        try:
+            health_status = await self.gpu_orchestrator.get_provider_health()
+            
+            # Convert to API-friendly format
+            formatted_health = {}
+            for provider_name, health in health_status.items():
+                formatted_health[provider_name] = {
+                    "status": health.status.value,
+                    "last_check": health.last_check.isoformat(),
+                    "latency_ms": health.latency_ms,
+                    "error_count": health.error_count,
+                    "success_count": health.success_count,
+                    "circuit_open_until": health.circuit_open_until.isoformat() if health.circuit_open_until else None,
+                    "last_error": health.last_error
+                }
+            
+            return {
+                "providers": formatted_health,
+                "available_providers": self.gpu_orchestrator.get_available_providers(),
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Failed to get GPU provider health: {e}")
+            return {
+                "providers": {},
+                "available_providers": [],
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+    
     def _get_fallback_provider(self) -> LLMProvider:
         """Get best available fallback provider using dynamic selection."""
         available_providers = self._get_available_providers()
@@ -891,6 +856,45 @@ If the problem persists, please contact support."""
     
     async def call_llm_with_provider_gating(self, prompt: str, max_tokens: int = 1000, temperature: float = 0.2, prefer_free: bool = True) -> LLMResponse:
         """
+        Call LLM with GPU provider orchestration and automatic fallback.
+        
+        This method uses the new GPU orchestrator with:
+        - Free GPU prioritization (ollama_local, remote_gpu, huggingface)
+        - Circuit breaker pattern (3 failures → skip 5 min)
+        - Health checks with latency monitoring
+        - Timeout handling (15s per call)
+        - Automatic fallback to stub response
+        """
+        # Use GPU orchestrator for free GPU orchestration
+        gpu_request = GPURequest(
+            prompt=prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            timeout=LLM_TIMEOUT_SECONDS
+        )
+        
+        try:
+            gpu_response = await self.gpu_orchestrator.complete_request(gpu_request)
+            
+            # Convert GPU response to legacy format
+            return LLMResponse(
+                content=gpu_response.content,
+                provider=LLMProvider(gpu_response.provider.value),
+                model=gpu_response.model,
+                latency_ms=gpu_response.latency_ms,
+                success=gpu_response.success,
+                error_message=gpu_response.error_message,
+                trace_id=gpu_response.trace_id,
+                attempt=gpu_response.attempt,
+                retries=0
+            )
+        except Exception as e:
+            logger.error(f"GPU orchestrator failed: {e}")
+            # Fallback to legacy method
+            return await self._call_llm_with_provider_gating_legacy(prompt, max_tokens, temperature, prefer_free)
+    
+    async def _call_llm_with_provider_gating_legacy(self, prompt: str, max_tokens: int = 1000, temperature: float = 0.2, prefer_free: bool = True) -> LLMResponse:
+        """
         Call LLM with provider order gating, automatic fallback to stub responses.
         
         This method implements the LLM router hardening requirements:
@@ -903,8 +907,18 @@ If the problem persists, please contact support."""
         trace_id = str(uuid.uuid4())
         start_time = time.time()
         
-        # Get provider order based on preferences
-        provider_order = self.get_provider_order(prefer_free)
+        # Get provider order based on preferences using centralized utility
+        base_order = get_provider_order()
+        provider_order = []
+        for provider_name in base_order:
+            try:
+                provider = LLMProvider(provider_name)
+                config = self.provider_configs.get(provider)
+                if config and config.enabled and self._is_provider_available(provider):
+                    provider_order.append(provider)
+            except ValueError:
+                # Skip unknown providers
+                continue
         
         if not provider_order:
             # No providers available - return stub immediately

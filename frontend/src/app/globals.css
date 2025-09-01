@@ -29,6 +29,130 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+
+    /* Cosmic Theme Colors */
+    --cosmos-bg: #0b1020;
+    --cosmos-fg: #e2e8f0;
+    --cosmos-card: #1a2332;
+    --cosmos-accent: #3b82f6;
+    --cosmos-accent-hover: #2563eb;
+    --cosmos-border: #334155;
+    --cosmos-muted: #64748b;
+
+    /* Standardized Spacing Scale (8px base unit) */
+    --space-0: 0px;
+    --space-1: 0.25rem;  /* 4px */
+    --space-2: 0.5rem;   /* 8px */
+    --space-3: 0.75rem;  /* 12px */
+    --space-4: 1rem;     /* 16px */
+    --space-5: 1.25rem;  /* 20px */
+    --space-6: 1.5rem;   /* 24px */
+    --space-8: 2rem;     /* 32px */
+    --space-10: 2.5rem;  /* 40px */
+    --space-12: 3rem;    /* 48px */
+    --space-16: 4rem;    /* 64px */
+    --space-20: 5rem;    /* 80px */
+    --space-24: 6rem;    /* 96px */
+    --space-32: 8rem;    /* 128px */
+    --space-40: 10rem;   /* 160px */
+    --space-48: 12rem;   /* 192px */
+    --space-56: 14rem;   /* 224px */
+    --space-64: 16rem;   /* 256px */
+
+    /* Standardized Typography Scale */
+    --font-size-xs: 0.75rem;    /* 12px */
+    --font-size-sm: 0.875rem;   /* 14px */
+    --font-size-base: 1rem;     /* 16px */
+    --font-size-lg: 1.125rem;   /* 18px */
+    --font-size-xl: 1.25rem;    /* 20px */
+    --font-size-2xl: 1.5rem;    /* 24px */
+    --font-size-3xl: 1.875rem;  /* 30px */
+    --font-size-4xl: 2.25rem;   /* 36px */
+    --font-size-5xl: 3rem;      /* 48px */
+    --font-size-6xl: 3.75rem;   /* 60px */
+    --font-size-7xl: 4.5rem;    /* 72px */
+    --font-size-8xl: 6rem;      /* 96px */
+    --font-size-9xl: 8rem;      /* 128px */
+
+    /* Standardized Line Heights */
+    --line-height-none: 1;
+    --line-height-tight: 1.25;
+    --line-height-snug: 1.375;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+    --line-height-loose: 2;
+
+    /* Standardized Border Radius */
+    --radius-none: 0px;
+    --radius-sm: 0.125rem;   /* 2px */
+    --radius-base: 0.25rem;  /* 4px */
+    --radius-md: 0.375rem;   /* 6px */
+    --radius-lg: 0.5rem;     /* 8px */
+    --radius-xl: 0.75rem;    /* 12px */
+    --radius-2xl: 1rem;      /* 16px */
+    --radius-3xl: 1.5rem;    /* 24px */
+    --radius-full: 9999px;
+
+    /* Standardized Shadows */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-base: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+    /* Standardized Z-Index Scale */
+    --z-auto: auto;
+    --z-0: 0;
+    --z-10: 10;
+    --z-20: 20;
+    --z-30: 30;
+    --z-40: 40;
+    --z-50: 50;
+    --z-dropdown: 1000;
+    --z-sticky: 1020;
+    --z-fixed: 1030;
+    --z-modal-backdrop: 1040;
+    --z-modal: 1050;
+    --z-popover: 1060;
+    --z-tooltip: 1070;
+    --z-toast: 1080;
+
+    /* Standardized Breakpoints */
+    --breakpoint-xs: 475px;
+    --breakpoint-sm: 640px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1280px;
+    --breakpoint-2xl: 1536px;
+    --breakpoint-3xl: 1600px;
+    --breakpoint-4xl: 1920px;
+
+    /* Standardized Container Max Widths */
+    --container-xs: 20rem;    /* 320px */
+    --container-sm: 24rem;    /* 384px */
+    --container-md: 28rem;    /* 448px */
+    --container-lg: 32rem;    /* 512px */
+    --container-xl: 36rem;    /* 576px */
+    --container-2xl: 42rem;   /* 672px */
+    --container-3xl: 48rem;   /* 768px */
+    --container-4xl: 56rem;   /* 896px */
+    --container-5xl: 64rem;   /* 1024px */
+    --container-6xl: 72rem;   /* 1152px */
+    --container-7xl: 80rem;   /* 1280px */
+    --container-full: 100%;
+
+    /* Standardized Aspect Ratios */
+    --aspect-auto: auto;
+    --aspect-square: 1 / 1;
+    --aspect-video: 16 / 9;
+    --aspect-photo: 4 / 3;
+    --aspect-golden: 1.618 / 1;
+    --aspect-ultrawide: 21 / 9;
+    --aspect-portrait: 3 / 4;
+    --aspect-landscape: 4 / 3;
   }
 
   .dark {
@@ -60,9 +184,6 @@
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings:
@@ -74,6 +195,291 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* VSCode-Inspired High-Contrast Color Scheme */
+  :root {
+    /* Light Theme - High Contrast */
+    --vscode-bg-primary: #ffffff;
+    --vscode-bg-secondary: #f3f4f6;
+    --vscode-bg-tertiary: #e5e7eb;
+    --vscode-text-primary: #1f2937;
+    --vscode-text-secondary: #374151;
+    --vscode-text-muted: #6b7280;
+    --vscode-accent-blue: #2563eb;
+    --vscode-accent-purple: #7c3aed;
+    --vscode-accent-green: #059669;
+    --vscode-accent-orange: #ea580c;
+    --vscode-accent-red: #dc2626;
+    --vscode-border: #d1d5db;
+    --vscode-border-focus: #3b82f6;
+    --vscode-shadow: rgba(0, 0, 0, 0.1);
+  }
+
+  .dark {
+    /* Dark Theme - High Contrast */
+    --vscode-bg-primary: #0f172a;
+    --vscode-bg-secondary: #1e293b;
+    --vscode-bg-tertiary: #334155;
+    --vscode-text-primary: #f8fafc;
+    --vscode-text-secondary: #e2e8f0;
+    --vscode-text-muted: #94a3b8;
+    --vscode-accent-blue: #3b82f6;
+    --vscode-accent-purple: #8b5cf6;
+    --vscode-accent-green: #10b981;
+    --vscode-accent-orange: #f97316;
+    --vscode-accent-red: #ef4444;
+    --vscode-border: #475569;
+    --vscode-border-focus: #60a5fa;
+    --vscode-shadow: rgba(0, 0, 0, 0.3);
+  }
+
+  /* Cosmic Theme Utilities - VSCode-Inspired */
+  .cosmic-bg {
+    background: linear-gradient(135deg, var(--vscode-bg-primary) 0%, var(--vscode-bg-secondary) 50%, var(--vscode-bg-primary) 100%);
+  }
+
+  .cosmic-bg-dark {
+    background: linear-gradient(135deg, var(--vscode-bg-primary) 0%, var(--vscode-bg-secondary) 50%, var(--vscode-bg-primary) 100%);
+  }
+
+  .cosmic-bg-vscode {
+    background: var(--vscode-bg-primary);
+    border: 1px solid var(--vscode-border);
+    box-shadow: 0 4px 6px -1px var(--vscode-shadow);
+  }
+
+            .cosmic-starfield {
+            background-image:
+              radial-gradient(1px 1px at 25px 25px, rgba(255, 255, 255, 0.8), transparent),
+              radial-gradient(1px 1px at 50px 50px, rgba(255, 255, 255, 0.6), transparent),
+              radial-gradient(1px 1px at 75px 75px, rgba(255, 255, 255, 0.7), transparent),
+              radial-gradient(1px 1px at 100px 100px, rgba(255, 255, 255, 0.5), transparent),
+              radial-gradient(1px 1px at 125px 125px, rgba(255, 255, 255, 0.6), transparent),
+              radial-gradient(1px 1px at 150px 150px, rgba(255, 255, 255, 0.8), transparent),
+              radial-gradient(1px 1px at 175px 175px, rgba(255, 255, 255, 0.4), transparent),
+              radial-gradient(1px 1px at 200px 200px, rgba(255, 255, 255, 0.7), transparent);
+            background-repeat: repeat;
+            background-size: 200px 200px;
+            animation: cosmic-float 30s linear infinite;
+          }
+
+  .cosmic-starfield-dark {
+    background-image:
+      radial-gradient(1px 1px at 25px 25px, rgba(59, 130, 246, 0.9), transparent),
+      radial-gradient(1px 1px at 50px 50px, rgba(37, 99, 235, 0.7), transparent),
+      radial-gradient(1px 1px at 75px 75px, rgba(29, 78, 216, 0.8), transparent),
+      radial-gradient(1px 1px at 100px 100px, rgba(30, 64, 175, 0.6), transparent),
+      radial-gradient(1px 1px at 125px 125px, rgba(30, 58, 138, 0.7), transparent),
+      radial-gradient(1px 1px at 150px 150px, rgba(59, 130, 246, 0.8), transparent),
+      radial-gradient(1px 1px at 175px 175px, rgba(37, 99, 235, 0.5), transparent),
+      radial-gradient(1px 1px at 200px 200px, rgba(29, 78, 216, 0.9), transparent);
+    background-repeat: repeat;
+    background-size: 200px 200px;
+    animation: cosmic-float 35s linear infinite;
+    opacity: 0.4;
+  }
+
+  /* VSCode-Inspired Glow Effects */
+  .cosmic-glow {
+    box-shadow: 
+      0 0 20px var(--vscode-shadow),
+      0 0 40px var(--vscode-shadow),
+      0 0 60px var(--vscode-shadow);
+  }
+
+  .cosmic-glow-purple {
+    box-shadow: 
+      0 0 20px rgba(139, 92, 246, 0.4),
+      0 0 40px rgba(139, 92, 246, 0.2),
+      0 0 60px rgba(139, 92, 246, 0.1);
+  }
+
+  .cosmic-glow-blue {
+    box-shadow: 
+      0 0 20px rgba(59, 130, 246, 0.4),
+      0 0 40px rgba(59, 130, 246, 0.2),
+      0 0 60px rgba(59, 130, 246, 0.1);
+  }
+
+  .cosmic-glow-green {
+    box-shadow: 
+      0 0 20px rgba(16, 185, 129, 0.4),
+      0 0 40px rgba(16, 185, 129, 0.2),
+      0 0 60px rgba(16, 185, 129, 0.1);
+  }
+
+  .cosmic-glow-orange {
+    box-shadow: 
+      0 0 20px rgba(249, 115, 22, 0.4),
+      0 0 40px rgba(249, 115, 22, 0.2),
+      0 0 60px rgba(249, 115, 22, 0.1);
+  }
+
+  .cosmic-glow-red {
+    box-shadow: 
+      0 0 20px rgba(239, 68, 68, 0.4),
+      0 0 40px rgba(239, 68, 68, 0.2),
+      0 0 60px rgba(239, 68, 68, 0.1);
+  }
+
+  /* VSCode-Inspired Text Gradients */
+  .cosmic-text-gradient {
+    background: linear-gradient(135deg, var(--vscode-accent-purple) 0%, var(--vscode-accent-blue) 50%, var(--vscode-accent-purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .cosmic-text-gradient-dark {
+    background: linear-gradient(135deg, var(--vscode-accent-purple) 0%, var(--vscode-accent-blue) 50%, var(--vscode-accent-purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .cosmic-text-blue {
+    color: var(--vscode-accent-blue);
+  }
+
+  .cosmic-text-purple {
+    color: var(--vscode-accent-purple);
+  }
+
+  .cosmic-text-green {
+    color: var(--vscode-accent-green);
+  }
+
+  .cosmic-text-orange {
+    color: var(--vscode-accent-orange);
+  }
+
+  .cosmic-text-red {
+    color: var(--vscode-accent-red);
+  }
+
+  .cosmic-border {
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    background: rgba(139, 92, 246, 0.05);
+    backdrop-filter: blur(10px);
+  }
+
+  .cosmic-border-dark {
+    border: 1px solid rgba(147, 51, 234, 0.2);
+    background: rgba(147, 51, 234, 0.05);
+    backdrop-filter: blur(10px);
+  }
+
+  /* Cosmic Animations */
+  @keyframes cosmic-float {
+    0% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+    100% {
+      transform: translateY(0px);
+    }
+  }
+
+  @keyframes cosmic-pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  @keyframes cosmic-spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .cosmic-pulse {
+    animation: cosmic-pulse 2s ease-in-out infinite;
+  }
+
+  .cosmic-spin {
+    animation: cosmic-spin 3s linear infinite;
+  }
+
+  /* Responsive Cosmic Theme */
+  @media (prefers-color-scheme: dark) {
+    .cosmic-bg {
+      background: linear-gradient(135deg, #020617 0%, #1e1b4b 50%, #020617 100%);
+    }
+    
+    .cosmic-starfield {
+      opacity: 0.3;
+    }
+  }
+
+  /* High Contrast Mode Support */
+  @media (prefers-contrast: high) {
+    .cosmic-bg {
+      background: #000000;
+    }
+    
+    .cosmic-border {
+      border-color: #ffffff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+  }
+
+  /* Reduced Motion Support */
+  @media (prefers-reduced-motion: reduce) {
+    .cosmic-starfield,
+    .cosmic-starfield-dark {
+      animation: none;
+    }
+    
+    .cosmic-pulse {
+      animation: none;
+    }
+    
+    .cosmic-spin {
+      animation: none;
+    }
+  }
+}
+
+/* Cosmic Theme Base Styles */
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--cosmos-bg);
+  color: var(--cosmos-fg);
+}
+
+a {
+  color: var(--cosmos-accent);
+}
+
+/* Starfield Background */
+.cosmic {
+  background: 
+    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.8) 0, transparent 40%),
+    radial-gradient(1px 1px at 80% 20%, rgba(255,255,255,0.5) 0, transparent 40%),
+    radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.3) 0, transparent 40%),
+    radial-gradient(1px 1px at 90% 90%, rgba(255,255,255,0.4) 0, transparent 40%);
+  background-size: 200px 200px, 300px 300px, 150px 150px, 250px 250px;
+  animation: starfield 20s linear infinite;
+}
+
+@keyframes starfield {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
   }
 }
 
@@ -151,6 +557,15 @@
   }
 }
 
+@keyframes spin-slow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes pulse {
   0%,
   100% {
@@ -184,31 +599,35 @@
 
 /* Animation classes */
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out;
+  animation: fade-in 0.5s ease-out;
 }
 
 .animate-slide-in-from-top {
-  animation: slide-in-from-top 0.3s ease-out;
+  animation: slide-in-from-top 0.5s ease-out;
 }
 
 .animate-slide-in-from-bottom {
-  animation: slide-in-from-bottom 0.3s ease-out;
+  animation: slide-in-from-bottom 0.5s ease-out;
 }
 
 .animate-slide-in-from-left {
-  animation: slide-in-from-left 0.3s ease-out;
+  animation: slide-in-from-left 0.5s ease-out;
 }
 
 .animate-slide-in-from-right {
-  animation: slide-in-from-right 0.3s ease-out;
+  animation: slide-in-from-right 0.5s ease-out;
 }
 
 .animate-scale-in {
-  animation: scale-in 0.2s ease-out;
+  animation: scale-in 0.3s ease-out;
 }
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 120s linear infinite;
 }
 
 .animate-pulse {
@@ -221,78 +640,58 @@
 
 .animate-shimmer {
   animation: shimmer 2s linear infinite;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.4),
-    transparent
-  );
-  background-size: 200px 100%;
 }
 
-/* Loading skeleton */
-.skeleton {
-  @apply bg-muted animate-pulse rounded;
+/* Cosmic theme specific utilities */
+.cosmic-bg {
+  background-color: var(--cosmos-bg);
 }
 
-/* Focus styles */
-.focus-ring {
-  @apply focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+.cosmic-fg {
+  color: var(--cosmos-fg);
 }
 
-/* Custom scrollbar */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: hsl(var(--muted-foreground)) transparent;
+.cosmic-card {
+  background-color: var(--cosmos-card);
 }
 
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.cosmic-accent {
+  color: var(--cosmos-accent);
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+.cosmic-border {
+  border-color: var(--cosmos-border);
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--muted-foreground));
-  border-radius: 3px;
+.cosmic-muted {
+  color: var(--cosmos-muted);
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--muted-foreground) / 0.8);
-}
-
-/* Glass morphism effect */
+/* Glass morphism effects */
 .glass {
-  @apply bg-background/80 backdrop-blur-sm border border-border/50;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Gradient backgrounds */
-.gradient-primary {
-  background: linear-gradient(
-    135deg,
-    hsl(var(--primary)) 0%,
-    hsl(var(--primary) / 0.8) 100%
-  );
+.gradient-cosmic {
+  background: linear-gradient(135deg, var(--cosmos-bg) 0%, var(--cosmos-card) 100%);
 }
 
-.gradient-secondary {
-  background: linear-gradient(
-    135deg,
-    hsl(var(--secondary)) 0%,
-    hsl(var(--secondary) / 0.8) 100%
-  );
+.gradient-accent {
+  background: linear-gradient(135deg, var(--cosmos-accent) 0%, var(--cosmos-accent-hover) 100%);
 }
 
 /* Text gradients */
-.text-gradient {
-  background: linear-gradient(
-    135deg,
-    hsl(var(--primary)) 0%,
-    hsl(var(--primary) / 0.8) 100%
-  );
+.text-gradient-cosmic {
+  background: linear-gradient(135deg, var(--cosmos-fg) 0%, var(--cosmos-accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -300,135 +699,49 @@
 
 /* Hover effects */
 .hover-lift {
-  @apply transition-transform duration-200 hover:-translate-y-1;
+  transition: transform 0.2s ease-in-out;
 }
 
-.hover-scale {
-  @apply transition-transform duration-200 hover:scale-105;
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+.hover-glow {
+  transition: box-shadow 0.2s ease-in-out;
+}
+
+.hover-glow:hover {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+/* Focus states */
+.focus-cosmic:focus {
+  outline: 2px solid var(--cosmos-accent);
+  outline-offset: 2px;
+}
+
+/* Loading states */
+.loading-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }
 
 /* Responsive utilities */
-.container-responsive {
-  @apply container mx-auto px-4 sm:px-6 lg:px-8;
-}
-
-/* Grid layouts */
-.grid-auto-fit {
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-}
-
-.grid-auto-fill {
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-}
-
-/* Aspect ratios */
-.aspect-square {
-  aspect-ratio: 1 / 1;
-}
-
-.aspect-video {
-  aspect-ratio: 16 / 9;
-}
-
-.aspect-photo {
-  aspect-ratio: 4 / 3;
-}
-
-/* Print styles */
-@media print {
-  .no-print {
-    display: none !important;
-  }
-
-  .print-break {
-    page-break-before: always;
-  }
-
-  .print-break-avoid {
-    page-break-inside: avoid;
+@media (max-width: 640px) {
+  .cosmic-responsive {
+    padding: 1rem;
   }
 }
 
-/* High contrast mode */
-@media (prefers-contrast: high) {
-  :root {
-    --border: 0 0% 0%;
-    --input: 0 0% 0%;
+@media (min-width: 641px) and (max-width: 1024px) {
+  .cosmic-responsive {
+    padding: 1.5rem;
   }
 }
 
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+@media (min-width: 1025px) {
+  .cosmic-responsive {
+    padding: 2rem;
   }
-}
-
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-  }
-}
-
-/* Custom properties for spacing */
-:root {
-  --space-xs: 0.25rem;
-  --space-sm: 0.5rem;
-  --space-md: 1rem;
-  --space-lg: 1.5rem;
-  --space-xl: 2rem;
-  --space-2xl: 3rem;
-  --space-3xl: 4rem;
-}
-
-/* Custom properties for typography */
-:root {
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.25rem;
-  --font-size-2xl: 1.5rem;
-  --font-size-3xl: 1.875rem;
-  --font-size-4xl: 2.25rem;
-}
-
-/* Custom properties for shadows */
-:root {
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg:
-    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl:
-    0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-}
-
-/* SarvanOM Loader Animations */
-@keyframes sarvanom-spin {
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes sarvanom-orbit1 {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg);}
-}
-
-@keyframes sarvanom-orbit2 {
-  0% { transform: rotate(120deg);}
-  100% { transform: rotate(480deg);}
-}
-
-@keyframes sarvanom-orbit3 {
-  0% { transform: rotate(240deg);}
-  100% { transform: rotate(600deg);}
-}
-
-@keyframes sarvanom-pulse {
-  0%,100% { r: 2px; opacity: 1; }
-  50% { r: 4px; opacity: 0.65;}
 }

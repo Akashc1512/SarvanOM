@@ -2,9 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/providers/app-provider";
-import { MainNav } from "@/ui/navigation/MainNav";
-import { Breadcrumbs } from "@/ui/navigation/breadcrumbs";
-import { RouteGuard } from "@/ui/auth/RouteGuard";
+import { CosmicNavigation } from "@/components/navigation/CosmicNavigation";
+import { CosmicLayout } from "@/components/layout/CosmicLayout";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -14,23 +13,23 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Universal Knowledge Hub",
-    template: "%s | UKH",
+    default: "SarvanOM - Universal Knowledge Platform",
+    template: "%s | SarvanOM",
   },
   description:
-    "The next-generation knowledge platform that combines AI-powered insights with collaborative document management for enterprise teams.",
+    "The next-generation universal knowledge platform powered by advanced AI and cosmic intelligence.",
   keywords: [
     "knowledge platform",
     "AI-powered",
-    "collaboration",
-    "document management",
-    "enterprise",
+    "cosmic intelligence",
+    "universal knowledge",
     "search",
     "analytics",
+    "collaboration",
   ],
-  authors: [{ name: "Universal Knowledge Hub Team" }],
-  creator: "Universal Knowledge Hub",
-  publisher: "Universal Knowledge Hub",
+  authors: [{ name: "SarvanOM Team" }],
+  creator: "SarvanOM",
+  publisher: "SarvanOM",
   formatDetection: {
     email: false,
     address: false,
@@ -46,24 +45,24 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "/",
-    title: "Universal Knowledge Hub",
+    title: "SarvanOM - Universal Knowledge Platform",
     description:
-      "The next-generation knowledge platform that combines AI-powered insights with collaborative document management for enterprise teams.",
-    siteName: "Universal Knowledge Hub",
+      "The next-generation universal knowledge platform powered by advanced AI and cosmic intelligence.",
+    siteName: "SarvanOM",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Universal Knowledge Hub",
+        alt: "SarvanOM",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Universal Knowledge Hub",
+    title: "SarvanOM - Universal Knowledge Platform",
     description:
-      "The next-generation knowledge platform that combines AI-powered insights with collaborative document management for enterprise teams.",
+      "The next-generation universal knowledge platform powered by advanced AI and cosmic intelligence.",
     images: ["/og-image.png"],
   },
   robots: {
@@ -101,7 +100,7 @@ export default function RootLayout({
         <link rel="icon" href="/favicon-new.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#000000" />
+        <meta name="theme-color" content="#0b1020" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="color-scheme" content="light dark" />
 
@@ -119,15 +118,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} antialiased`}>
         <AppProvider>
-          <RouteGuard>
-            <div className="min-h-screen bg-gray-50">
-              <MainNav />
-              <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <Breadcrumbs />
-                {children}
-              </main>
-            </div>
-          </RouteGuard>
+          {children}
         </AppProvider>
       </body>
     </html>
