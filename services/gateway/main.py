@@ -418,6 +418,7 @@ class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=1000)
     user_id: Optional[str] = None
     filters: Optional[Dict[str, Any]] = None
+    max_results: Optional[int] = Field(default=10, ge=1, le=100)
     
     @field_validator("query")
     @classmethod
@@ -1004,12 +1005,40 @@ async def search_post(request: SearchRequest):
             cache_type="redis"
         )
         
-        # First, use zero-budget retrieval to get free search results
-        logger.info(f"Starting zero-budget retrieval for query: {request.query}")
-        retrieval_response = await combined_search(
-            query=request.query,
-            k=min(request.max_results or 10, 10)
+        # Run zero-budget retrieval and LLM processing in parallel for better performance
+        logger.info(f"Starting parallel search processing for query: {request.query}")
+        
+        # Create tasks for parallel execution
+        retrieval_task = asyncio.create_task(
+            combined_search(
+                query=request.query,
+                k=min(request.max_results or 10, 10)
+            )
         )
+        
+        llm_task = asyncio.create_task(
+            llm_processor.search_with_ai(
+                query=request.query,
+                user_id=request.user_id,
+                max_results=10
+            )
+        )
+        
+        # Wait for both tasks to complete with timeout
+        try:
+            retrieval_response, llm_result = await asyncio.wait_for(
+                asyncio.gather(retrieval_task, llm_task),
+                timeout=30.0  # 30 second timeout
+            )
+        except asyncio.TimeoutError:
+            logger.warning(f"Search timeout for query: {request.query}")
+            # Cancel remaining tasks
+            retrieval_task.cancel()
+            llm_task.cancel()
+            raise HTTPException(
+                status_code=408, 
+                detail="Search request timed out. Please try a simpler query or try again later."
+            )
         
         # Convert retrieval results to the format expected by LLM processor
         retrieval_results = []
@@ -1025,13 +1054,6 @@ async def search_post(request: SearchRequest):
                 "author": "Zero-Budget Retrieval",
                 "citations": 0
             })
-        
-        # Use real LLM to enhance the search results
-        llm_result = await llm_processor.search_with_ai(
-            query=request.query,
-            user_id=request.user_id,
-            max_results=10
-        )
         
         # Merge zero-budget retrieval results with LLM results
         if retrieval_results:

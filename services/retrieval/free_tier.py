@@ -41,8 +41,8 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 CACHE_TTL_MIN = int(os.getenv("CACHE_TTL_MIN", "10"))
 CACHE_TTL_MAX = int(os.getenv("CACHE_TTL_MAX", "60"))
-MAX_RETRIES = int(os.getenv("MAX_RETRIES", "3"))
-BASE_TIMEOUT = int(os.getenv("BASE_TIMEOUT", "10"))
+MAX_RETRIES = int(os.getenv("MAX_RETRIES", "2"))
+BASE_TIMEOUT = int(os.getenv("BASE_TIMEOUT", "5"))
 BACKOFF_BASE = float(os.getenv("BACKOFF_BASE", "2.0"))
 BACKOFF_MAX = float(os.getenv("BACKOFF_MAX", "30.0"))
 
@@ -282,8 +282,8 @@ class ZeroBudgetRetrieval:
                         result.relevance_score = self._calculate_relevance_score(result, query)
                         results.append(result)
                         
-                        # Polite delay
-                        await asyncio.sleep(0.1)
+                        # Reduced delay for better performance
+                        await asyncio.sleep(0.01)
                         
                 except Exception as e:
                     logger.warning(f"Error processing Wikipedia result: {e}")
@@ -842,83 +842,69 @@ class ZeroBudgetRetrieval:
                 trace_id=trace_id
             )
         
-        # Perform fresh search
+        # Perform fresh search with parallel execution
         all_results = []
         providers_used = []
         
+        # Create tasks for parallel execution
+        tasks = []
+        
         # Wikipedia search
         if use_wiki:
-            try:
-                wiki_results = await self.wiki_search(query, k=min(k, 3))
-                all_results.extend(wiki_results)
-                providers_used.append(SearchProvider.MEDIAWIKI)
-                logger.info(f"Wikipedia search returned {len(wiki_results)} results")
-            except Exception as e:
-                logger.error(f"Wikipedia search failed: {e}")
+            tasks.append(("wiki", self.wiki_search(query, k=min(k, 3))))
         
         # StackExchange search
-        try:
-            stack_results = await self.stackexchange_search(query, k=min(k, 2))
-            all_results.extend(stack_results)
-            providers_used.append(SearchProvider.STACKEXCHANGE)
-            logger.info(f"StackExchange search returned {len(stack_results)} results")
-        except Exception as e:
-            logger.error(f"StackExchange search failed: {e}")
+        tasks.append(("stackexchange", self.stackexchange_search(query, k=min(k, 2))))
         
         # MDN search
-        try:
-            mdn_results = await self.mdn_search(query, k=min(k, 2))
-            all_results.extend(mdn_results)
-            providers_used.append(SearchProvider.MDN)
-            logger.info(f"MDN search returned {len(mdn_results)} results")
-        except Exception as e:
-            logger.error(f"MDN search failed: {e}")
+        tasks.append(("mdn", self.mdn_search(query, k=min(k, 2))))
         
         # GitHub search
-        try:
-            github_results = await self.github_search(query, k=min(k, 2))
-            all_results.extend(github_results)
-            providers_used.append(SearchProvider.GITHUB)
-            logger.info(f"GitHub search returned {len(github_results)} results")
-        except Exception as e:
-            logger.error(f"GitHub search failed: {e}")
+        tasks.append(("github", self.github_search(query, k=min(k, 2))))
         
         # OpenAlex search
-        try:
-            openalex_results = await self.openalex_search(query, k=min(k, 2))
-            all_results.extend(openalex_results)
-            providers_used.append(SearchProvider.OPENALEX)
-            logger.info(f"OpenAlex search returned {len(openalex_results)} results")
-        except Exception as e:
-            logger.error(f"OpenAlex search failed: {e}")
+        tasks.append(("openalex", self.openalex_search(query, k=min(k, 2))))
         
         # arXiv search
-        try:
-            arxiv_results = await self.arxiv_search(query, k=min(k, 2))
-            all_results.extend(arxiv_results)
-            providers_used.append(SearchProvider.ARXIV)
-            logger.info(f"arXiv search returned {len(arxiv_results)} results")
-        except Exception as e:
-            logger.error(f"arXiv search failed: {e}")
+        tasks.append(("arxiv", self.arxiv_search(query, k=min(k, 2))))
         
         # YouTube search
-        try:
-            youtube_results = await self.youtube_search(query, k=min(k, 2))
-            all_results.extend(youtube_results)
-            providers_used.append(SearchProvider.YOUTUBE)
-            logger.info(f"YouTube search returned {len(youtube_results)} results")
-        except Exception as e:
-            logger.error(f"YouTube search failed: {e}")
+        tasks.append(("youtube", self.youtube_search(query, k=min(k, 2))))
         
         # Web search (fallback)
         if use_web:
-            try:
-                web_results = await self.free_web_search(query, k=min(k, 3))
-                all_results.extend(web_results)
-                providers_used.extend([r.provider for r in web_results])
-                logger.info(f"Web search returned {len(web_results)} results")
-            except Exception as e:
-                logger.error(f"Web search failed: {e}")
+            tasks.append(("web", self.free_web_search(query, k=min(k, 3))))
+        
+        # Execute all tasks in parallel
+        logger.info(f"Executing {len(tasks)} search tasks in parallel")
+        results = await asyncio.gather(*[task[1] for task in tasks], return_exceptions=True)
+        
+        # Process results
+        for i, (provider_name, result) in enumerate(zip([task[0] for task in tasks], results)):
+            if isinstance(result, Exception):
+                logger.error(f"{provider_name} search failed: {result}")
+                continue
+            
+            if result:
+                all_results.extend(result)
+                if provider_name == "wiki":
+                    providers_used.append(SearchProvider.MEDIAWIKI)
+                elif provider_name == "stackexchange":
+                    providers_used.append(SearchProvider.STACKEXCHANGE)
+                elif provider_name == "mdn":
+                    providers_used.append(SearchProvider.MDN)
+                elif provider_name == "github":
+                    providers_used.append(SearchProvider.GITHUB)
+                elif provider_name == "openalex":
+                    providers_used.append(SearchProvider.OPENALEX)
+                elif provider_name == "arxiv":
+                    providers_used.append(SearchProvider.ARXIV)
+                elif provider_name == "youtube":
+                    providers_used.append(SearchProvider.YOUTUBE)
+                elif provider_name == "web":
+                    providers_used.extend([r.provider for r in result])
+                
+                logger.info(f"{provider_name} search returned {len(result)} results")
         
         # Deduplicate and rank results
         deduplicated = self._deduplicate_results(all_results)
