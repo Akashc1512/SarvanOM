@@ -242,7 +242,15 @@ class ProviderModelRegistry:
                     is_free=False,
                     context_window=128000,
                     reasoning_capability=0.8,
-                    tool_capability=0.9
+                    tool_capability=0.9,
+                    supports_vision=True,
+                    supports_json_mode=True,
+                    supports_function_calling=True,
+                    max_rpm=500,
+                    max_tpm=10000,
+                    cost_tier="standard",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ],
             LLMRole.QUALITY: [
@@ -258,7 +266,15 @@ class ProviderModelRegistry:
                     is_free=False,
                     context_window=128000,
                     reasoning_capability=0.95,
-                    tool_capability=0.95
+                    tool_capability=0.95,
+                    supports_vision=True,
+                    supports_json_mode=True,
+                    supports_function_calling=True,
+                    max_rpm=500,
+                    max_tpm=10000,
+                    cost_tier="standard",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ],
             LLMRole.LONG: [
@@ -274,7 +290,15 @@ class ProviderModelRegistry:
                     is_free=False,
                     context_window=128000,
                     reasoning_capability=0.95,
-                    tool_capability=0.95
+                    tool_capability=0.95,
+                    supports_vision=True,
+                    supports_json_mode=True,
+                    supports_function_calling=True,
+                    max_rpm=500,
+                    max_tpm=10000,
+                    cost_tier="standard",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ],
             LLMRole.REASONING: [
@@ -290,7 +314,15 @@ class ProviderModelRegistry:
                     is_free=False,
                     context_window=128000,
                     reasoning_capability=0.98,
-                    tool_capability=0.9
+                    tool_capability=0.9,
+                    supports_vision=False,
+                    supports_json_mode=True,
+                    supports_function_calling=True,
+                    max_rpm=200,
+                    max_tpm=5000,
+                    cost_tier="premium",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ],
             LLMRole.TOOL: [
@@ -306,7 +338,15 @@ class ProviderModelRegistry:
                     is_free=False,
                     context_window=128000,
                     reasoning_capability=0.95,
-                    tool_capability=0.95
+                    tool_capability=0.95,
+                    supports_vision=True,
+                    supports_json_mode=True,
+                    supports_function_calling=True,
+                    max_rpm=500,
+                    max_tpm=10000,
+                    cost_tier="standard",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ]
         }
@@ -326,7 +366,15 @@ class ProviderModelRegistry:
                     is_free=False,
                     context_window=200000,
                     reasoning_capability=0.9,
-                    tool_capability=0.9
+                    tool_capability=0.9,
+                    supports_vision=True,
+                    supports_json_mode=True,
+                    supports_function_calling=True,
+                    max_rpm=200,
+                    max_tpm=8000,
+                    cost_tier="standard",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ],
             LLMRole.LONG: [
@@ -342,7 +390,15 @@ class ProviderModelRegistry:
                     is_free=False,
                     context_window=200000,
                     reasoning_capability=0.95,
-                    tool_capability=0.95
+                    tool_capability=0.95,
+                    supports_vision=True,
+                    supports_json_mode=True,
+                    supports_function_calling=True,
+                    max_rpm=100,
+                    max_tpm=4000,
+                    cost_tier="premium",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ],
             LLMRole.REASONING: [
@@ -358,7 +414,15 @@ class ProviderModelRegistry:
                     is_free=False,
                     context_window=200000,
                     reasoning_capability=0.95,
-                    tool_capability=0.95
+                    tool_capability=0.95,
+                    supports_vision=True,
+                    supports_json_mode=True,
+                    supports_function_calling=True,
+                    max_rpm=100,
+                    max_tpm=4000,
+                    cost_tier="premium",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ],
             LLMRole.TOOL: [
@@ -374,7 +438,15 @@ class ProviderModelRegistry:
                     is_free=False,
                     context_window=200000,
                     reasoning_capability=0.9,
-                    tool_capability=0.9
+                    tool_capability=0.9,
+                    supports_vision=True,
+                    supports_json_mode=True,
+                    supports_function_calling=True,
+                    max_rpm=200,
+                    max_tpm=8000,
+                    cost_tier="standard",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ]
         }
@@ -394,7 +466,15 @@ class ProviderModelRegistry:
                     is_free=True,
                     context_window=4096,
                     reasoning_capability=0.1,
-                    tool_capability=0.0
+                    tool_capability=0.0,
+                    supports_vision=False,
+                    supports_json_mode=True,
+                    supports_function_calling=False,
+                    max_rpm=1000,
+                    max_tpm=10000,
+                    cost_tier="free",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ],
             LLMRole.QUALITY: [
@@ -410,7 +490,15 @@ class ProviderModelRegistry:
                     is_free=True,
                     context_window=4096,
                     reasoning_capability=0.1,
-                    tool_capability=0.0
+                    tool_capability=0.0,
+                    supports_vision=False,
+                    supports_json_mode=True,
+                    supports_function_calling=False,
+                    max_rpm=1000,
+                    max_tpm=10000,
+                    cost_tier="free",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ]
         }
@@ -511,197 +599,7 @@ class RoleMapping:
         """Get all role mappings."""
         return self._role_mappings.copy()
 
-# Duplicate class content removed
-        
-        # OpenAI Models
-        models[LLMProvider.OPENAI] = {
-            LLMRole.FAST: [
-                ModelConfig(
-                    name="gpt-4o-mini",
-                    provider=LLMProvider.OPENAI,
-                    role=LLMRole.FAST,
-                    max_tokens=128000,
-                    avg_latency_ms=600,
-                    cost_per_1k_tokens=0.00015,
-                    supports_streaming=True,
-                    supports_tools=True,
-                    is_free=False,
-                    context_window=128000,
-                    reasoning_capability=0.8,
-                    tool_capability=0.9
-                )
-            ],
-            LLMRole.QUALITY: [
-                ModelConfig(
-                    name="gpt-4o",
-                    provider=LLMProvider.OPENAI,
-                    role=LLMRole.QUALITY,
-                    max_tokens=128000,
-                    avg_latency_ms=800,
-                    cost_per_1k_tokens=0.005,
-                    supports_streaming=True,
-                    supports_tools=True,
-                    is_free=False,
-                    context_window=128000,
-                    reasoning_capability=0.95,
-                    tool_capability=0.95
-                )
-            ],
-            LLMRole.LONG: [
-                ModelConfig(
-                    name="gpt-4o",
-                    provider=LLMProvider.OPENAI,
-                    role=LLMRole.LONG,
-                    max_tokens=128000,
-                    avg_latency_ms=800,
-                    cost_per_1k_tokens=0.005,
-                    supports_streaming=True,
-                    supports_tools=True,
-                    is_free=False,
-                    context_window=128000,
-                    reasoning_capability=0.95,
-                    tool_capability=0.95
-                )
-            ],
-            LLMRole.REASONING: [
-                ModelConfig(
-                    name="o1-preview",
-                    provider=LLMProvider.OPENAI,
-                    role=LLMRole.REASONING,
-                    max_tokens=128000,
-                    avg_latency_ms=1200,
-                    cost_per_1k_tokens=0.015,
-                    supports_streaming=True,
-                    supports_tools=True,
-                    is_free=False,
-                    context_window=128000,
-                    reasoning_capability=0.98,
-                    tool_capability=0.9
-                )
-            ],
-            LLMRole.TOOL: [
-                ModelConfig(
-                    name="gpt-4o",
-                    provider=LLMProvider.OPENAI,
-                    role=LLMRole.TOOL,
-                    max_tokens=128000,
-                    avg_latency_ms=800,
-                    cost_per_1k_tokens=0.005,
-                    supports_streaming=True,
-                    supports_tools=True,
-                    is_free=False,
-                    context_window=128000,
-                    reasoning_capability=0.95,
-                    tool_capability=0.95
-                )
-            ]
-        }
-        
-        # Anthropic Models
-        models[LLMProvider.ANTHROPIC] = {
-            LLMRole.QUALITY: [
-                ModelConfig(
-                    name="claude-3-5-sonnet-20241022",
-                    provider=LLMProvider.ANTHROPIC,
-                    role=LLMRole.QUALITY,
-                    max_tokens=200000,
-                    avg_latency_ms=1000,
-                    cost_per_1k_tokens=0.003,
-                    supports_streaming=True,
-                    supports_tools=True,
-                    is_free=False,
-                    context_window=200000,
-                    reasoning_capability=0.9,
-                    tool_capability=0.9
-                )
-            ],
-            LLMRole.LONG: [
-                ModelConfig(
-                    name="claude-3-opus-20240229",
-                    provider=LLMProvider.ANTHROPIC,
-                    role=LLMRole.LONG,
-                    max_tokens=200000,
-                    avg_latency_ms=1500,
-                    cost_per_1k_tokens=0.015,
-                    supports_streaming=True,
-                    supports_tools=True,
-                    is_free=False,
-                    context_window=200000,
-                    reasoning_capability=0.95,
-                    tool_capability=0.95
-                )
-            ],
-            LLMRole.REASONING: [
-                ModelConfig(
-                    name="claude-3-opus-20240229",
-                    provider=LLMProvider.ANTHROPIC,
-                    role=LLMRole.REASONING,
-                    max_tokens=200000,
-                    avg_latency_ms=1500,
-                    cost_per_1k_tokens=0.015,
-                    supports_streaming=True,
-                    supports_tools=True,
-                    is_free=False,
-                    context_window=200000,
-                    reasoning_capability=0.95,
-                    tool_capability=0.95
-                )
-            ],
-            LLMRole.TOOL: [
-                ModelConfig(
-                    name="claude-3-5-sonnet-20241022",
-                    provider=LLMProvider.ANTHROPIC,
-                    role=LLMRole.TOOL,
-                    max_tokens=200000,
-                    avg_latency_ms=1000,
-                    cost_per_1k_tokens=0.003,
-                    supports_streaming=True,
-                    supports_tools=True,
-                    is_free=False,
-                    context_window=200000,
-                    reasoning_capability=0.9,
-                    tool_capability=0.9
-                )
-            ]
-        }
-        
-        # Local Stub (Fallback)
-        models[LLMProvider.LOCAL_STUB] = {
-            LLMRole.FAST: [
-                ModelConfig(
-                    name="local_stub",
-                    provider=LLMProvider.LOCAL_STUB,
-                    role=LLMRole.FAST,
-                    max_tokens=4096,
-                    avg_latency_ms=100,
-                    cost_per_1k_tokens=0.0,
-                    supports_streaming=False,
-                    supports_tools=False,
-                    is_free=True,
-                    context_window=4096,
-                    reasoning_capability=0.1,
-                    tool_capability=0.0
-                )
-            ],
-            LLMRole.QUALITY: [
-                ModelConfig(
-                    name="local_stub",
-                    provider=LLMProvider.LOCAL_STUB,
-                    role=LLMRole.QUALITY,
-                    max_tokens=4096,
-                    avg_latency_ms=100,
-                    cost_per_1k_tokens=0.0,
-                    supports_streaming=False,
-                    supports_tools=False,
-                    is_free=True,
-                    context_window=4096,
-                    reasoning_capability=0.1,
-                    tool_capability=0.0
-                )
-            ]
-        }
-        
-        return models
+# All duplicate content removed
     
     def get_models_for_provider_role(self, provider: LLMProvider, role: LLMRole) -> List[ModelConfig]:
         """Get available models for a specific provider and role."""
