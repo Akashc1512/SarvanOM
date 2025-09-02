@@ -116,7 +116,15 @@ class ProviderModelRegistry:
                     is_free=True,
                     context_window=8192,
                     reasoning_capability=0.6,
-                    tool_capability=0.0
+                    tool_capability=0.0,
+                    supports_vision=False,
+                    supports_json_mode=True,
+                    supports_function_calling=False,
+                    max_rpm=1000,
+                    max_tpm=10000,
+                    cost_tier="free",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 ),
                 ModelConfig(
                     name="llama3:3b",
@@ -130,14 +138,22 @@ class ProviderModelRegistry:
                     is_free=True,
                     context_window=4096,
                     reasoning_capability=0.4,
-                    tool_capability=0.0
+                    tool_capability=0.0,
+                    supports_vision=False,
+                    supports_json_mode=True,
+                    supports_function_calling=False,
+                    max_rpm=1000,
+                    max_tpm=10000,
+                    cost_tier="free",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ],
-            LLMRole.STANDARD: [
+            LLMRole.QUALITY: [
                 ModelConfig(
                     name="llama3:70b",
                     provider=LLMProvider.OLLAMA,
-                    role=LLMRole.STANDARD,
+                    role=LLMRole.QUALITY,
                     max_tokens=8192,
                     avg_latency_ms=4000,
                     cost_per_1k_tokens=0.0,
@@ -146,7 +162,15 @@ class ProviderModelRegistry:
                     is_free=True,
                     context_window=8192,
                     reasoning_capability=0.8,
-                    tool_capability=0.0
+                    tool_capability=0.0,
+                    supports_vision=False,
+                    supports_json_mode=True,
+                    supports_function_calling=False,
+                    max_rpm=1000,
+                    max_tpm=10000,
+                    cost_tier="free",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ]
         }
@@ -166,14 +190,22 @@ class ProviderModelRegistry:
                     is_free=True,
                     context_window=2048,
                     reasoning_capability=0.5,
-                    tool_capability=0.0
+                    tool_capability=0.0,
+                    supports_vision=False,
+                    supports_json_mode=True,
+                    supports_function_calling=False,
+                    max_rpm=100,
+                    max_tpm=5000,
+                    cost_tier="free",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ],
-            LLMRole.STANDARD: [
+            LLMRole.QUALITY: [
                 ModelConfig(
                     name="meta-llama/Llama-2-7b-chat-hf",
                     provider=LLMProvider.HUGGINGFACE,
-                    role=LLMRole.STANDARD,
+                    role=LLMRole.QUALITY,
                     max_tokens=4096,
                     avg_latency_ms=3000,
                     cost_per_1k_tokens=0.0,
@@ -182,7 +214,15 @@ class ProviderModelRegistry:
                     is_free=True,
                     context_window=4096,
                     reasoning_capability=0.7,
-                    tool_capability=0.0
+                    tool_capability=0.0,
+                    supports_vision=False,
+                    supports_json_mode=True,
+                    supports_function_calling=False,
+                    max_rpm=100,
+                    max_tpm=5000,
+                    cost_tier="free",
+                    failure_threshold=5,
+                    circuit_timeout=60
                 )
             ]
         }
@@ -357,11 +397,11 @@ class ProviderModelRegistry:
                     tool_capability=0.0
                 )
             ],
-            LLMRole.STANDARD: [
+            LLMRole.QUALITY: [
                 ModelConfig(
                     name="local_stub",
                     provider=LLMProvider.LOCAL_STUB,
-                    role=LLMRole.STANDARD,
+                    role=LLMRole.QUALITY,
                     max_tokens=4096,
                     avg_latency_ms=100,
                     cost_per_1k_tokens=0.0,
@@ -387,12 +427,12 @@ class ProviderModelRegistry:
         # Map complexity to roles
         complexity_role_mapping = {
             QueryComplexity.SIMPLE: LLMRole.FAST,
-            QueryComplexity.STANDARD: LLMRole.STANDARD,
+            QueryComplexity.STANDARD: LLMRole.QUALITY,
             QueryComplexity.COMPLEX: LLMRole.REASONING,
             QueryComplexity.EXPERT: LLMRole.TOOL
         }
         
-        target_role = complexity_role_mapping.get(complexity, LLMRole.STANDARD)
+        target_role = complexity_role_mapping.get(complexity, LLMRole.QUALITY)
         available_models = self.get_models_for_provider_role(provider, target_role)
         
         if not available_models:
@@ -471,101 +511,7 @@ class RoleMapping:
         """Get all role mappings."""
         return self._role_mappings.copy()
 
-class ProviderModelRegistry:
-    """Registry for provider-specific models organized by role."""
-    
-    def __init__(self):
-        self._initialize_provider_models()
-    
-    def _initialize_provider_models(self) -> Dict[LLMProvider, Dict[LLMRole, List[ModelConfig]]]:
-        """Initialize provider-specific model configurations."""
-        models = {}
-        
-        # Ollama Models
-        models[LLMProvider.OLLAMA] = {
-            LLMRole.FAST: [
-                ModelConfig(
-                    name="llama3:8b",
-                    provider=LLMProvider.OLLAMA,
-                    role=LLMRole.FAST,
-                    max_tokens=8192,
-                    avg_latency_ms=1500,
-                    cost_per_1k_tokens=0.0,
-                    supports_streaming=True,
-                    supports_tools=False,
-                    is_free=True,
-                    context_window=8192,
-                    reasoning_capability=0.6,
-                    tool_capability=0.0
-                ),
-                ModelConfig(
-                    name="llama3:3b",
-                    provider=LLMProvider.OLLAMA,
-                    role=LLMRole.FAST,
-                    max_tokens=4096,
-                    avg_latency_ms=800,
-                    cost_per_1k_tokens=0.0,
-                    supports_streaming=True,
-                    supports_tools=False,
-                    is_free=True,
-                    context_window=4096,
-                    reasoning_capability=0.4,
-                    tool_capability=0.0
-                )
-            ],
-            LLMRole.STANDARD: [
-                ModelConfig(
-                    name="llama3:70b",
-                    provider=LLMProvider.OLLAMA,
-                    role=LLMRole.STANDARD,
-                    max_tokens=8192,
-                    avg_latency_ms=4000,
-                    cost_per_1k_tokens=0.0,
-                    supports_streaming=True,
-                    supports_tools=False,
-                    is_free=True,
-                    context_window=8192,
-                    reasoning_capability=0.8,
-                    tool_capability=0.0
-                )
-            ]
-        }
-        
-        # HuggingFace Models
-        models[LLMProvider.HUGGINGFACE] = {
-            LLMRole.FAST: [
-                ModelConfig(
-                    name="microsoft/DialoGPT-medium",
-                    provider=LLMProvider.HUGGINGFACE,
-                    role=LLMRole.FAST,
-                    max_tokens=2048,
-                    avg_latency_ms=2000,
-                    cost_per_1k_tokens=0.0,
-                    supports_streaming=True,
-                    supports_tools=False,
-                    is_free=True,
-                    context_window=2048,
-                    reasoning_capability=0.5,
-                    tool_capability=0.0
-                )
-            ],
-            LLMRole.STANDARD: [
-                ModelConfig(
-                    name="meta-llama/Llama-2-7b-chat-hf",
-                    provider=LLMProvider.HUGGINGFACE,
-                    role=LLMRole.STANDARD,
-                    max_tokens=4096,
-                    avg_latency_ms=3000,
-                    cost_per_1k_tokens=0.0,
-                    supports_streaming=True,
-                    supports_tools=False,
-                    is_free=True,
-                    context_window=4096,
-                    reasoning_capability=0.7,
-                    tool_capability=0.0
-                )
-            ]
-        }
+# Duplicate class content removed
         
         # OpenAI Models
         models[LLMProvider.OPENAI] = {
@@ -737,11 +683,11 @@ class ProviderModelRegistry:
                     tool_capability=0.0
                 )
             ],
-            LLMRole.STANDARD: [
+            LLMRole.QUALITY: [
                 ModelConfig(
                     name="local_stub",
                     provider=LLMProvider.LOCAL_STUB,
-                    role=LLMRole.STANDARD,
+                    role=LLMRole.QUALITY,
                     max_tokens=4096,
                     avg_latency_ms=100,
                     cost_per_1k_tokens=0.0,
@@ -767,12 +713,12 @@ class ProviderModelRegistry:
         # Map complexity to roles
         complexity_role_mapping = {
             QueryComplexity.SIMPLE: LLMRole.FAST,
-            QueryComplexity.STANDARD: LLMRole.STANDARD,
+            QueryComplexity.STANDARD: LLMRole.QUALITY,
             QueryComplexity.COMPLEX: LLMRole.REASONING,
             QueryComplexity.EXPERT: LLMRole.TOOL
         }
         
-        target_role = complexity_role_mapping.get(complexity, LLMRole.STANDARD)
+        target_role = complexity_role_mapping.get(complexity, LLMRole.QUALITY)
         available_models = self.get_models_for_provider_role(provider, target_role)
         
         if not available_models:
@@ -836,7 +782,7 @@ class ProviderRegistry:
                 supports_tools=False,
                 avg_latency_ms=2000,
                 cost_per_1k_tokens=0.0,
-                capabilities=[LLMRole.FAST, LLMRole.STANDARD],
+                capabilities=[LLMRole.FAST, LLMRole.QUALITY],
                 models={}  # Will be populated by model registry
             ),
             LLMProvider.HUGGINGFACE: ProviderConfig(
@@ -848,7 +794,7 @@ class ProviderRegistry:
                 supports_tools=False,
                 avg_latency_ms=3000,
                 cost_per_1k_tokens=0.0,
-                capabilities=[LLMRole.FAST, LLMRole.STANDARD],
+                capabilities=[LLMRole.FAST, LLMRole.QUALITY],
                 models={}  # Will be populated by model registry
             ),
             LLMProvider.OPENAI: ProviderConfig(
@@ -884,7 +830,7 @@ class ProviderRegistry:
                 supports_tools=False,
                 avg_latency_ms=100,
                 cost_per_1k_tokens=0.0,
-                capabilities=[LLMRole.FAST, LLMRole.STANDARD],
+                capabilities=[LLMRole.FAST, LLMRole.QUALITY],
                 models={}  # Will be populated by model registry
             )
         }
