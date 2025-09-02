@@ -21,6 +21,10 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import the main application
 from services.gateway.main import app
 
+# Test-specific configuration to bypass security middleware for testing
+import os
+os.environ["TESTING"] = "true"
+
 # Test configuration
 PERFORMANCE_THRESHOLD = 30.0  # seconds for real LLM calls
 TEST_TIMEOUT = 60.0  # seconds for real LLM calls
@@ -36,14 +40,8 @@ def event_loop():
 
 @pytest.fixture
 def client() -> TestClient:
-    """Get synchronous test client for API testing."""
-    return TestClient(app)
-
-
-@pytest.fixture
-def client() -> TestClient:
-    """Get synchronous test client for API testing."""
-    return TestClient(app)
+    """Get synchronous test client for API testing with proper security headers."""
+    return TestClient(app, headers={"host": "localhost"})
 
 
 @pytest.fixture

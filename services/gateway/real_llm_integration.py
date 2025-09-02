@@ -69,6 +69,15 @@ import requests
 # Central registry import
 from services.gateway.providers import register, get_ordered_providers
 
+# Centralized provider order system
+from shared.llm.provider_order import (
+    get_provider_order, 
+    get_available_providers,
+    LLMProvider,
+    QueryComplexity,
+    select_provider_for_complexity
+)
+
 # GPU Provider Orchestration
 from services.gateway.providers.gpu_providers import (
     gpu_orchestrator, 
@@ -117,21 +126,7 @@ LLM_EXPONENTIAL_BACKOFF_MAX = float(os.getenv("LLM_EXPONENTIAL_BACKOFF_MAX", "30
 logger = logging.getLogger(__name__)
 
 
-class LLMProvider(str, Enum):
-    """Supported LLM providers with zero-budget optimization."""
-    OLLAMA = "ollama"      # Local models (free)
-    HUGGINGFACE = "huggingface"  # Free tier API
-    OPENAI = "openai"      # Paid (fallback)
-    ANTHROPIC = "anthropic"  # Paid (fallback)
-    LOCAL_STUB = "local_stub"  # Stub response when no providers available
-    MOCK = "mock"          # Testing fallback
-
-
-class QueryComplexity(str, Enum):
-    """Query complexity levels for dynamic routing."""
-    SIMPLE_FACTUAL = "simple_factual"
-    RESEARCH_SYNTHESIS = "research_synthesis"
-    COMPLEX_REASONING = "complex_reasoning"
+# LLMProvider and QueryComplexity now imported from shared.llm.provider_order
 
 
 class LLMModel(str, Enum):
@@ -187,7 +182,7 @@ class LLMRequest:
     system_message: Optional[str] = None
     max_tokens: int = 1000
     temperature: float = 0.2
-    complexity: QueryComplexity = QueryComplexity.RESEARCH_SYNTHESIS
+    complexity: QueryComplexity = QueryComplexity.STANDARD
     prefer_free: bool = True
     timeout: int = 15
     trace_id: Optional[str] = None
