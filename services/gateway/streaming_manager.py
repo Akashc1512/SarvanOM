@@ -30,7 +30,9 @@ from fastapi.responses import StreamingResponse
 from services.gateway.middleware.observability import (
     log_stream_event,
     log_error,
-    monitor_performance
+    monitor_performance,
+    log_sse_metrics,
+    get_metrics_collector
 )
 
 # Configure logging
@@ -38,8 +40,9 @@ logger = logging.getLogger(__name__)
 
 # Environment variables
 STREAM_MAX_SECONDS = int(os.getenv("STREAM_MAX_SECONDS", "60"))
-HEARTBEAT_INTERVAL = int(os.getenv("HEARTBEAT_INTERVAL", "10"))
+HEARTBEAT_INTERVAL = int(os.getenv("HEARTBEAT_INTERVAL", "5"))  # Reduced to 5 seconds for better responsiveness
 CHUNK_DELAY_MS = int(os.getenv("CHUNK_DELAY_MS", "50"))
+SILENCE_THRESHOLD = int(os.getenv("SILENCE_THRESHOLD", "15"))  # 15 seconds of silence triggers reconnect
 
 
 class StreamEventType(str, Enum):
@@ -70,6 +73,9 @@ class StreamContext:
     total_chunks: int = 0
     total_tokens: int = 0
     last_heartbeat: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    last_activity: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    heartbeat_count: int = 0
+    max_duration_reached: bool = False
     metadata: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -126,21 +132,60 @@ class StreamingManager:
         return "\n".join(lines)
     
     async def _heartbeat_monitor(self):
-        """Monitor and send heartbeats to active streams."""
+        """Monitor and send heartbeats to active streams with duration caps."""
         while not self._shutdown:
             try:
                 current_time = datetime.now(timezone.utc)
+                streams_to_close = []
                 
-                # Send heartbeats to active streams
+                # Check all active streams
                 for stream_id, context in list(self.active_streams.items()):
                     if not context.client_connected:
                         continue
                     
-                    time_since_heartbeat = (current_time - context.last_heartbeat).total_seconds()
+                    # Check if stream has exceeded max duration
+                    duration = (current_time - context.start_time).total_seconds()
+                    if duration > STREAM_MAX_SECONDS and not context.max_duration_reached:
+                        logger.info(f"Stream {stream_id} exceeded max duration ({STREAM_MAX_SECONDS}s), sending complete event")
+                        context.max_duration_reached = True
+                        
+                        # Send complete event due to duration cap
+                        complete_event = StreamEvent(
+                            event_type=StreamEventType.COMPLETE,
+                            data={
+                                "stream_id": stream_id,
+                                "reason": "duration_cap",
+                                "duration": duration,
+                                "chunks": context.total_chunks,
+                                "tokens": context.total_tokens,
+                                "timestamp": current_time.isoformat()
+                            },
+                            trace_id=context.trace_id
+                        )
+                        
+                        # Log completion due to duration cap
+                        log_stream_event("complete_duration_cap", stream_id, {
+                            "trace_id": context.trace_id,
+                            "duration": duration,
+                            "chunks": context.total_chunks,
+                            "tokens": context.total_tokens
+                        })
+                        
+                        streams_to_close.append(stream_id)
+                        continue
                     
-                    if time_since_heartbeat >= HEARTBEAT_INTERVAL:
-                        await self._send_heartbeat(stream_id, context)
-                        context.last_heartbeat = current_time
+                    # Send heartbeat if stream is active and not at duration cap
+                    if not context.max_duration_reached:
+                        time_since_heartbeat = (current_time - context.last_heartbeat).total_seconds()
+                        
+                        if time_since_heartbeat >= HEARTBEAT_INTERVAL:
+                            await self._send_heartbeat(stream_id, context)
+                            context.last_heartbeat = current_time
+                            context.heartbeat_count += 1
+                
+                # Close streams that exceeded duration
+                for stream_id in streams_to_close:
+                    await self._close_stream(stream_id)
                 
                 await asyncio.sleep(1)  # Check every second
                 
@@ -154,25 +199,37 @@ class StreamingManager:
     async def _send_heartbeat(self, stream_id: str, context: StreamContext):
         """Send heartbeat event to stream."""
         try:
+            current_time = datetime.now(timezone.utc)
+            duration = (current_time - context.start_time).total_seconds()
+            
             heartbeat_event = StreamEvent(
                 event_type=StreamEventType.HEARTBEAT,
                 data={
                     "stream_id": stream_id,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "uptime_seconds": (datetime.now(timezone.utc) - context.start_time).total_seconds(),
+                    "timestamp": current_time.isoformat(),
+                    "uptime_seconds": duration,
                     "total_chunks": context.total_chunks,
-                    "total_tokens": context.total_tokens
+                    "total_tokens": context.total_tokens,
+                    "heartbeat_count": context.heartbeat_count,
+                    "remaining_seconds": max(0, STREAM_MAX_SECONDS - duration),
+                    "max_duration": STREAM_MAX_SECONDS
                 },
                 trace_id=context.trace_id
             )
+            
+            # Record heartbeat metrics
+            metrics_collector = get_metrics_collector()
+            metrics_collector.increment_sse_heartbeats("search")
             
             # Log heartbeat with observability
             log_stream_event("heartbeat", stream_id, {
                 "trace_id": context.trace_id,
                 "query": context.query[:100],  # Truncate for logging
-                "uptime_seconds": (datetime.now(timezone.utc) - context.start_time).total_seconds(),
+                "uptime_seconds": duration,
                 "total_chunks": context.total_chunks,
-                "total_tokens": context.total_tokens
+                "total_tokens": context.total_tokens,
+                "heartbeat_count": context.heartbeat_count,
+                "remaining_seconds": max(0, STREAM_MAX_SECONDS - duration)
             })
             
         except Exception as e:
@@ -188,6 +245,21 @@ class StreamingManager:
             context.client_connected = False
             
             duration = (datetime.now(timezone.utc) - context.start_time).total_seconds()
+            duration_ms = duration * 1000
+            
+            # Record SSE metrics
+            metrics_collector = get_metrics_collector()
+            metrics_collector.record_sse_duration("search", duration_ms)
+            
+            # Log SSE metrics
+            log_sse_metrics(
+                trace_id=context.trace_id,
+                endpoint="search",
+                duration_ms=duration_ms,
+                heartbeats=context.heartbeat_count,
+                chunks=context.total_chunks,
+                tokens=context.total_tokens
+            )
             
             logger.info(f"Stream closed: {stream_id}", extra={
                 "stream_id": stream_id,
@@ -204,7 +276,8 @@ class StreamingManager:
         self, 
         query: str, 
         max_tokens: int = 1000,
-        temperature: float = 0.2
+        temperature: float = 0.2,
+        trace_id: Optional[str] = None
     ) -> AsyncGenerator[str, None]:
         """
         Create a streaming search response with comprehensive lifecycle management.
@@ -218,7 +291,8 @@ class StreamingManager:
             SSE formatted events
         """
         stream_id = self._generate_stream_id()
-        trace_id = self._generate_trace_id()
+        if not trace_id:
+            trace_id = self._generate_trace_id()
         start_time = datetime.now(timezone.utc)
         
         # Create stream context
@@ -234,6 +308,10 @@ class StreamingManager:
         )
         
         self.active_streams[stream_id] = context
+        
+        # Record SSE connection metrics
+        metrics_collector = get_metrics_collector()
+        metrics_collector.increment_sse_connections("search")
         
         logger.info(f"Stream started: {stream_id}", extra={
             "stream_id": stream_id,
@@ -509,24 +587,31 @@ streaming_manager = StreamingManager()
 async def create_sse_response(
     query: str,
     max_tokens: int = 1000,
-    temperature: float = 0.2
+    temperature: float = 0.2,
+    trace_id: Optional[str] = None
 ) -> StreamingResponse:
     """
-    Create SSE streaming response for search.
+    Create SSE streaming response for search with enhanced trace ID propagation.
     
     Args:
         query: Search query
         max_tokens: Maximum tokens to generate
         temperature: Generation temperature
+        trace_id: Optional trace ID for request tracking
         
     Returns:
-        StreamingResponse with SSE headers
+        StreamingResponse with SSE headers and trace ID
     """
+    # Generate trace ID if not provided
+    if not trace_id:
+        trace_id = f"trace_{uuid.uuid4().hex[:16]}"
+    
     async def event_generator():
         async for event in streaming_manager.create_search_stream(
             query=query,
             max_tokens=max_tokens,
-            temperature=temperature
+            temperature=temperature,
+            trace_id=trace_id
         ):
             yield event
     
@@ -542,6 +627,8 @@ async def create_sse_response(
             "Access-Control-Allow-Headers": "Cache-Control",
             "X-Stream-Type": "search",
             "X-Stream-Max-Seconds": str(STREAM_MAX_SECONDS),
-            "X-Heartbeat-Interval": str(HEARTBEAT_INTERVAL)
+            "X-Heartbeat-Interval": str(HEARTBEAT_INTERVAL),
+            "X-Silence-Threshold": str(SILENCE_THRESHOLD),
+            "X-Trace-ID": trace_id
         }
     )

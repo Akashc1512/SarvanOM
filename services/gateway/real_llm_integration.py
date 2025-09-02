@@ -35,6 +35,16 @@ from datetime import datetime
 from dataclasses import dataclass, field
 from enum import Enum
 
+# Import observability functions
+try:
+    from services.gateway.middleware.observability import (
+        log_provider_metrics,
+        get_metrics_collector
+    )
+    OBSERVABILITY_AVAILABLE = True
+except ImportError:
+    OBSERVABILITY_AVAILABLE = False
+
 # LLM Integration with fallback imports
 try:
     import openai
@@ -875,6 +885,17 @@ If the problem persists, please contact support."""
         
         try:
             gpu_response = await self.gpu_orchestrator.complete_request(gpu_request)
+            
+            # Record provider metrics
+            if OBSERVABILITY_AVAILABLE:
+                log_provider_metrics(
+                    trace_id=gpu_response.trace_id or "unknown",
+                    provider=gpu_response.provider.value,
+                    latency_ms=gpu_response.latency_ms,
+                    success=gpu_response.success,
+                    tokens=len(gpu_response.content.split()) if gpu_response.content else 0,
+                    cost=0.0  # GPU calls are free
+                )
             
             # Convert GPU response to legacy format
             return LLMResponse(

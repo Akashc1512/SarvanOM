@@ -23,13 +23,11 @@ from shared.core.agents.base_agent import (
     AgentResult,
     QueryContext,
 )
-from shared.core.agents.data_models import RetrievalResult, DocumentModel
-from shared.core.agents.agent_utilities import (
-    AgentTaskProcessor,
-    ResponseFormatter,
-    time_agent_function,
-)
-from shared.core.agents.validation_utilities import CommonValidators
+# Import utilities from local modules
+from .task_processor import AgentTaskProcessor
+from shared.core.utilities.response_utilities import ResponseFormatter
+from .agent_decorators import time_agent_function
+from .common_validators import CommonValidators
 
 # Configure logging
 from shared.core.unified_logging import get_logger
@@ -98,9 +96,9 @@ class EntityExtractor:
         """Extract entities from query using LLM or fallback."""
         try:
             # Try LLM-based extraction first
-            from shared.core.llm_client_v3 import EnhancedLLMClientV3
+            from services.gateway.real_llm_integration import RealLLMProcessor
 
-            llm_client = EnhancedLLMClientV3()
+            llm_client = RealLLMProcessor()
             prompt = f"""
             Extract named entities from the following query. Return only the entity names, one per line:
             

@@ -23,13 +23,11 @@ from shared.core.agents.base_agent import (
     AgentResult,
     QueryContext,
 )
-from shared.core.agents.data_models import CitationResult, CitationModel
-from shared.core.agents.agent_utilities import (
-    AgentTaskProcessor,
-    ResponseFormatter,
-    time_agent_function,
-)
-from shared.core.agents.validation_utilities import CommonValidators
+# Import utilities from local modules
+from .task_processor import AgentTaskProcessor
+from shared.core.utilities.response_utilities import ResponseFormatter
+from .agent_decorators import time_agent_function
+from .common_validators import CommonValidators
 
 # Configure logging
 from shared.core.unified_logging import get_logger
@@ -175,10 +173,9 @@ class CitationAgent(BaseAgent):
         )
 
         # Use LLM for citation processing with dynamic model selection
-        from shared.core.agents.llm_client import LLMClient
-        from shared.core.llm_client_v3 import LLMRequest
+        from services.gateway.real_llm_integration import RealLLMProcessor
 
-        llm_client = LLMClient()
+        llm_client = RealLLMProcessor()
 
         # Create LLMRequest with system message for citation processing
         system_message = """You are an expert citation agent specializing in academic and professional citation formatting. Your role is to process answers containing citation placeholders and generate proper, formatted citations.

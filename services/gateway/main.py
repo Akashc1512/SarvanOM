@@ -48,13 +48,13 @@ from shared.core.unified_logging import setup_logging, get_logger, setup_fastapi
 
 # Import observability middleware
 from services.gateway.middleware.observability import (
-    ObservabilityMiddleware, 
-    MetricsMiddleware,
-    log_llm_call,
-    log_cache_event,
+    ObservabilityMiddleware,
     log_stream_event,
     log_error,
-    monitor_performance
+    monitor_performance,
+    get_request_id,
+    get_user_id,
+    log_llm_call
 )
 
 # Import security middleware
@@ -63,6 +63,12 @@ from services.gateway.middleware.security import (
     InputValidationMiddleware,
     SecurityConfig,
     RateLimitConfig
+)
+
+# Import enhanced security hardening
+from services.gateway.middleware.security_hardening import (
+    SecurityHardeningMiddleware,
+    SecurityHardeningConfig
 )
 
 # Import resilience components
@@ -105,6 +111,13 @@ from services.gateway.routes import (
     auth_router,
     vector_router
 )
+
+# Import new centralized components
+from services.gateway.model_router import get_model_router
+from services.gateway.metrics_router import metrics_router
+from services.gateway.scoring_router import get_scoring_router, select_model_with_scoring
+from services.gateway.middleware.observability import ObservabilityMiddleware
+from services.gateway.metrics_endpoint import metrics_router as prometheus_metrics_router
 
 # Import advanced features router
 try:
@@ -256,7 +269,53 @@ ALLOWED_ORIGINS = [
     "https://www.sarvanom.com"
 ]
 
-# Security configuration
+# Enhanced security configuration
+security_hardening_config = SecurityHardeningConfig(
+    rate_limit={
+        "requests_per_minute": 60,
+        "burst_limit": 10,
+        "window_size": 60,
+        "block_duration": 300,
+        "warning_threshold": 45
+    },
+    sanitization={
+        "allowed_tags": ["p", "br", "strong", "em", "u", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote", "code", "pre", "a", "img"],
+        "allowed_attributes": {"a": ["href", "title"], "img": ["src", "alt", "title"]},
+        "allowed_protocols": ["http", "https", "mailto"],
+        "strip_unknown_tags": True,
+        "strip_comments": True
+    },
+    security_headers={
+        "csp_policy": (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: https:; "
+            "connect-src 'self' https://api.openai.com https://api.anthropic.com; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
+            "object-src 'none'; "
+            "media-src 'self'"
+        ),
+        "hsts_max_age": 31536000,  # 1 year
+        "hsts_include_subdomains": True,
+        "hsts_preload": True
+    },
+    request_limits={
+        "max_request_size": 10 * 1024 * 1024,  # 10MB
+        "max_query_length": 1000,
+        "max_headers_size": 8192,
+        "max_url_length": 2048
+    },
+    trusted_hosts={
+        "localhost", "127.0.0.1", "::1", "sarvanom.local",
+        "*.sarvanom.com", "*.sarvanom.org"
+    }
+)
+
+# Legacy security configuration (for backward compatibility)
 security_config = SecurityConfig(
     rate_limit=RateLimitConfig(
         requests_per_minute=60,
@@ -288,12 +347,12 @@ security_config = SecurityConfig(
 setup_fastapi_logging(app, service_name="sarvanom-gateway-service")
 
 # Add observability middleware (first - to capture all requests)
-app.add_middleware(ObservabilityMiddleware, service_name="sarvanom-gateway")
+app.add_middleware(ObservabilityMiddleware)
 
-# Add metrics middleware for Prometheus metrics
-app.add_middleware(MetricsMiddleware)
+# Add enhanced security hardening middleware
+app.add_middleware(SecurityHardeningMiddleware, config=security_hardening_config)
 
-# Add security middleware
+# Add legacy security middleware (for backward compatibility)
 app.add_middleware(SecurityMiddleware, config=security_config)
 
 # Add input validation middleware
@@ -317,6 +376,10 @@ app.add_middleware(
 # Include routers
 app.include_router(free_tier_router, prefix="/retrieval")
 app.include_router(analytics_router, prefix="/analytics")
+
+# Include new centralized components
+app.include_router(metrics_router)
+app.include_router(prometheus_metrics_router)
 
 # Resilience endpoints
 @app.get("/health/resilience")
@@ -674,6 +737,138 @@ class GraphContextRequest(BaseModel):
             raise ValueError("Topic contains potentially malicious content")
         
         return v.strip()
+
+# Model selection endpoints using centralized model router
+@app.post("/model/select")
+async def select_model_endpoint(request: SearchRequest):
+    """Select optimal model using centralized model router."""
+    try:
+        model_router = get_model_router()
+        selection = model_router.select_model_for_query(
+            query=request.query,
+            user_id=request.user_id,
+            max_cost=0.20  # $0.20 max cost per query
+        )
+        
+        return {
+            "status": "success",
+            "model_selection": {
+                "model_name": selection.model_name,
+                "provider": selection.provider,
+                "tier": selection.tier.value,
+                "estimated_cost": selection.estimated_cost,
+                "selection_reason": selection.selection_reason,
+                "confidence_score": selection.confidence_score
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Model selection failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Model selection failed: {str(e)}")
+
+@app.get("/model/stats")
+async def get_model_stats():
+    """Get model selection statistics."""
+    try:
+        model_router = get_model_router()
+        stats = model_router.get_selection_stats()
+        available_models = model_router.get_available_models()
+        
+        return {
+            "status": "success",
+            "selection_stats": stats,
+            "available_models": available_models,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Model stats failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Model stats failed: {str(e)}")
+
+# Scoring-based model selection endpoints
+@app.post("/model/select-scoring")
+async def select_model_with_scoring_endpoint(request: SearchRequest):
+    """Select optimal model using intelligent scoring system."""
+    try:
+        decision = select_model_with_scoring(
+            query=request.query,
+            user_id=request.user_id,
+            trace_id=str(uuid.uuid4())
+        )
+        
+        return {
+            "status": "success",
+            "routing_decision": {
+                "provider": decision.provider,
+                "model": decision.model,
+                "score": decision.score,
+                "reasoning": decision.reasoning,
+                "trace_id": decision.trace_id,
+                "alternatives": decision.alternatives
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Scoring-based model selection failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Scoring-based model selection failed: {str(e)}")
+
+@app.get("/model/available")
+async def get_available_models():
+    """Get summary of available models by provider."""
+    try:
+        scoring_router = get_scoring_router()
+        summary = scoring_router.get_available_models_summary()
+        
+        return {
+            "status": "success",
+            "available_models": summary,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Available models check failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Available models check failed: {str(e)}")
+
+@app.post("/model/select-advanced")
+async def select_model_advanced_endpoint(
+    query: str,
+    task_complexity: Optional[float] = None,
+    context_requirement: Optional[int] = None,
+    latency_budget_ms: Optional[int] = None,
+    max_cost: Optional[float] = None,
+    user_id: Optional[str] = None
+):
+    """Advanced model selection with custom parameters."""
+    try:
+        decision = select_model_with_scoring(
+            query=query,
+            task_complexity=task_complexity,
+            context_requirement=context_requirement,
+            latency_budget_ms=latency_budget_ms,
+            max_cost=max_cost,
+            user_id=user_id,
+            trace_id=str(uuid.uuid4())
+        )
+        
+        return {
+            "status": "success",
+            "routing_decision": {
+                "provider": decision.provider,
+                "model": decision.model,
+                "score": decision.score,
+                "reasoning": decision.reasoning,
+                "trace_id": decision.trace_id,
+                "alternatives": decision.alternatives,
+                "request_params": {
+                    "task_complexity": task_complexity,
+                    "context_requirement": context_requirement,
+                    "latency_budget_ms": latency_budget_ms,
+                    "max_cost": max_cost
+                }
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Advanced model selection failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Advanced model selection failed: {str(e)}")
 
 # Health and Readiness Models
 class DependencyStatus(BaseModel):
@@ -1318,16 +1513,16 @@ async def stream_search_endpoint(
             "temperature": temperature
         })
         
-        # Create SSE response
+        # Generate trace ID for request tracking
+        trace_id = str(uuid.uuid4())
+        
+        # Create SSE response with trace ID
         response = await create_sse_response(
             query=query,
             max_tokens=max_tokens,
-            temperature=temperature
+            temperature=temperature,
+            trace_id=trace_id
         )
-        
-        # Add trace ID to headers
-        trace_id = str(uuid.uuid4())
-        response.headers["X-Trace-ID"] = trace_id
         
         return response
         

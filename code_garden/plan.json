@@ -1,1394 +1,922 @@
 {
   "generated_at": 1755695528.1763413,
-  "cycles": [],
-  "actions": [
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/api/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/api/dependencies.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/api/middleware/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/api/middleware/error_handling.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/api/middleware/logging_middleware.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/api/middleware/monitoring.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/api/routers/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/api/routers/admin_router.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/api/routers/agent_router.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/api/routers/auth_router.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/api/routers/database_router.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/api/routers/health_router.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/api/routers/query_router.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/domain/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/domain/agent.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/domain/database.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/domain/enums.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/domain/query.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/domain/user.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/requests/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/requests/agent_requests.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/requests/auth_requests.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/requests/database_requests.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/requests/query_requests.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/responses/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/responses/agent_responses.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/responses/auth_responses.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/responses/database_responses.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/models/responses/query_responses.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/repositories/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/repositories/agent_repository.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/repositories/base_repository.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/repositories/database/query_repository.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/repositories/database/user_repository.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/repositories/query_repository.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/repositories/user_repository.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/agents/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/agents/agent_coordinator.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/agents/agent_factory.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/agents/agent_service.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/core/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/core/cache_service.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/core/database_service.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/core/metrics_service.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/core/redis_cache_service.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/core/vector_store_service.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/health/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/health/health_service.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/query/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/query/query_orchestrator.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/query/query_processor.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/services/query/query_validator.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/backend/utils/logging.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/check_all_dependencies_versions.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/check_env_status.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/check_huggingface_versions.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/check_ollama.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/check_real_env_direct.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/check_vector_backends_BackendStatus.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/check_vector_backends_CircuitBreaker.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/check_vector_backends_RetryManager.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/check_vector_backends_VectorBackendChecker.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/check_vector_backends__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/comprehensive_api_health_check_APIHealthChecker.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/comprehensive_api_health_check_TestResult.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/comprehensive_api_health_check__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/final_logging_verification__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/final_logging_verification_helpers.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/fix_critical_issues__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/fix_critical_issues_helpers.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_health_monitor_Alert.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_health_monitor_AlertSeverity.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_health_monitor_AlertType.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_health_monitor_HealthMetric.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_health_monitor_MAANGHealthMonitor.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_health_monitor__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_incident_response_Incident.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_incident_response_IncidentSeverity.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_incident_response_IncidentStatus.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_incident_response_IncidentType.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_incident_response_MAANGIncidentResponse.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_incident_response_ResponseTeam.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_incident_response__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_standards_compliance_MAANGComplianceChecker.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_standards_compliance__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/maang_standards_compliance_helpers.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/setup_ollama_huggingface_OllamaHuggingFaceSetup.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/setup_ollama_huggingface__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/setup_sarvanom_SarvanOMSetupValidator.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/setup_sarvanom_ValidationResult.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/setup_sarvanom__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/test_cache_performance_CachePerformanceTester.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/test_cache_performance__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/test_config_environments_ConfigurationTester.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/test_config_environments__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/test_config_environments_helpers.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/validate_database_models_DatabaseModelValidator.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/validate_database_models_ModelValidationReport.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/validate_database_models_ValidationResult.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/validate_database_models__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/validate_database_models_helpers.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/validate_maang_system_MAANGSystemValidator.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/validate_maang_system_ValidationResult.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/validate_maang_system__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/validate_requirements__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/validate_requirements_helpers.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/validate_week1_components_Week1ComponentValidator.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/code_garden/refactor_preview/scripts/validate_week1_components__index.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/config/huggingface_config.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/config/production/logging.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/config/production/monitoring.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/config/production/security.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/debug_env_and_api.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/debug_env_real_keys.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/debug_hf_simple.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/debug_llm_providers_2025.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/diagnose_env_loading_issues.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/final_test_enhanced_system.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/check_env_vars.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/check_hardcoded_values.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/check_vector_backends.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/code_garden/apply_plan.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/code_garden/apply_refactor.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/code_garden/find_unwired_fastapi_routes.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/code_garden/find_unwired_providers.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/code_garden/parse_reports.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/code_garden/split_large_modules.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/complete_env_setup.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/comprehensive_api_health_check.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/comprehensive_duplicate_analysis.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/comprehensive_logging_test.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/configure_available_services.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/create_env_example.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/create_frontend_states_table.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/demo_logging.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/demo_standardized_pipeline.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/dev_check.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/final_logging_verification.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/fix_code_quality_issues.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/fix_critical_issues.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/fix_service_urls.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/generate_env_config.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/generate_secure_keys.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/initialize_users.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/maang_dashboard.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/maang_health_monitor.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/maang_incident_response.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/maang_standards_compliance.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/manage_zero_budget_llm.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/refactor_hardcoded_config.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/run_backend_tests.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/run_production_tests.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/setup_dev_credentials.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/setup_environment.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/setup_logging_deployment.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/setup_monitoring.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/setup_ollama_huggingface.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/setup_sarvanom.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/setup_venv_config.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/setup_zero_budget_llm.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/simple_config_test.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/simple_health_check.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/simple_logging_test.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/start_development.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/start_maang_system.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/startup_config_integration.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/test_cache_performance.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/test_config_environments.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/test_configuration_management.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/test_pipeline_core.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/test_pipeline_structure.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/test_production_logging.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/test_refined_pipeline.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/test_unified_logging.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/update_env_file.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/update_logging_imports.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/validate_configuration.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/validate_database_models.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/validate_imports.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/validate_maang_system.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/validate_requirements.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/validate_week1_components.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/verify_cache_implementation.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/verify_configuration.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/verify_env_config.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/verify_env_loading.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/verify_legacy_cleanup.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/scripts/verify_setup.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/analytics/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/analytics/analytics.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/analytics/feedback_storage.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/analytics/health_checks.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/analytics/integration_monitor.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/analytics/metrics.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/analytics/metrics/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/analytics/metrics/knowledge_platform_metrics.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/analytics/monitoring.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/analytics/unified_analytics.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/auth/main.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/auth/routes.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/crud/main.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/fact_check/main.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/fact_check/routes.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/gateway/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/gateway/agent_orchestrator.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/gateway/analytics_collector.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/gateway/background_processor.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/gateway/cache_manager.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/gateway/gateway_app.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/gateway/huggingface_integration.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/gateway/main.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/gateway/prompt_optimizer.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/gateway/real_llm_integration.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/gateway/routes.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/gateway/security_middleware.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/gateway/streaming_manager.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/monitoring/health.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/monitoring/metrics.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/retrieval/free_tier.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/retrieval/main.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/retrieval/routers/free_tier_router.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/retrieval/wiki.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/search/main.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/services/synthesis/main.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/setup_huggingface_env.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/clients/microservices.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/clients/service_client.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/contracts/query.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/contracts/service_contracts.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agent_pattern.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/agent_utilities.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/arangodb_knowledge_graph_agent.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/base_agent.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/citation_agent.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/common_patterns.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/data_models.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/execution_utilities.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/factcheck_agent.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/graph_db_client.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/knowledge_graph_agent.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/knowledge_graph_service.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/lead_orchestrator.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/llm_client.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/orchestration_utilities.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/retrieval_agent.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/retrieval_utilities.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/reviewer_agent.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/synthesis_agent.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/agents/validation_utilities.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/api/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/api/api_models.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/api/api_responses.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/api/config.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/api/exceptions.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/api/exceptions_backup.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/api/monitoring.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/app_factory.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/auth/password_hasher.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/base_agent.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/cache.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/cache/__init__.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/cache/cache_config.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/cache/cache_invalidation.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/cache/cache_manager.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/cache/cache_metrics.py",
-      "action": "adopt"
-    },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/cache/cached_agents.py",
-      "action": "adopt"
+  "analysis_summary": {
+    "total_files_analyzed": 150,
+    "files_to_adopt": 45,
+    "files_to_merge": 25,
+    "files_to_rewrite": 15,
+    "files_to_archive": 50,
+    "files_to_delete": 15,
+    "major_duplications_found": [
+      "LLM client implementations (5 duplicates)",
+      "API Gateway services (3 duplicates)", 
+      "Agent implementations (20+ duplicates)",
+      "Configuration systems (3 duplicates)",
+      "Analytics services (3 duplicates)"
+    ],
+    "unused_modules_found": [
+      "services/api_gateway/ (entire directory)",
+      "shared/core/llm_client*.py (5 files)",
+      "shared/core/config/environment_manager*.py (2 files)",
+      "services/analytics/analytics_v*.py (2 files)"
+    ],
+    "architectural_issues": [
+      "Duplicate microservice entry points",
+      "Inconsistent import patterns",
+      "Mixed old and new architectures",
+      "Unused legacy code in production paths"
+    ]
+  },
+  "file_analysis": [
+    {
+      "file": "__init__.py",
+      "status": "adopt",
+      "reason": "Core package initialization file with proper version and metadata",
+      "impact": "low",
+      "dependents": ["all_python_modules"],
+      "tests_to_update": []
+    },
+    {
+      "file": "README.md",
+      "status": "adopt",
+      "reason": "Essential project documentation with setup instructions",
+      "impact": "high",
+      "dependents": ["all_developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "requirements.txt",
+      "status": "adopt",
+      "reason": "Core Python dependencies for the project",
+      "impact": "high",
+      "dependents": ["all_python_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "package.json",
+      "status": "adopt",
+      "reason": "Frontend dependencies and scripts",
+      "impact": "high",
+      "dependents": ["frontend"],
+      "tests_to_update": []
+    },
+    {
+      "file": "docker-compose.yml",
+      "status": "adopt",
+      "reason": "Main Docker Compose configuration",
+      "impact": "high",
+      "dependents": ["all_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/gateway/main.py",
+      "status": "adopt",
+      "reason": "Primary API Gateway with comprehensive features and proper architecture",
+      "impact": "high",
+      "dependents": ["all_frontend_clients", "all_microservices"],
+      "tests_to_update": ["tests/integration/test_gateway.py"]
+    },
+    {
+      "file": "services/gateway/real_llm_integration.py",
+      "status": "adopt",
+      "reason": "Unified LLM processor with multi-provider support and fallback chains",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py", "shared/core/llm/"],
+      "tests_to_update": ["tests/unit/test_llm_integration.py"]
+    },
+    {
+      "file": "shared/core/agents/base_agent.py",
+      "status": "adopt",
+      "reason": "Core agent base class with proper patterns and interfaces",
+      "impact": "high",
+      "dependents": ["all_agent_implementations"],
+      "tests_to_update": ["tests/unit/test_agents.py"]
+    },
+    {
+      "file": "shared/core/agents/retrieval_agent.py",
+      "status": "adopt",
+      "reason": "Working retrieval agent with proper implementation",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_retrieval_agent.py"]
+    },
+    {
+      "file": "shared/core/agents/synthesis_agent.py",
+      "status": "adopt",
+      "reason": "Working synthesis agent with proper implementation",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_synthesis_agent.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/cache/cached_retrieval_agent.py",
-      "action": "adopt"
+      "file": "shared/core/agents/factcheck_agent.py",
+      "status": "adopt",
+      "reason": "Working fact-check agent with proper implementation",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_factcheck_agent.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/cache_manager_postgres.py",
-      "action": "adopt"
+      "file": "shared/core/agents/citation_agent.py",
+      "status": "adopt",
+      "reason": "Working citation agent with proper implementation",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_citation_agent.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/config/__init__.py",
-      "action": "adopt"
+      "file": "backend/api/routers/query_router.py",
+      "status": "adopt",
+      "reason": "Clean architecture query router with proper separation of concerns",
+      "impact": "medium",
+      "dependents": ["backend/main.py"],
+      "tests_to_update": ["backend/tests/test_api_endpoints.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/config/central_config.py",
-      "action": "adopt"
+      "file": "backend/api/routers/auth_router.py",
+      "status": "adopt",
+      "reason": "Clean architecture auth router with proper separation of concerns",
+      "impact": "medium",
+      "dependents": ["backend/main.py"],
+      "tests_to_update": ["backend/tests/test_api_endpoints.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/connection_pool.py",
-      "action": "adopt"
+      "file": "backend/api/routers/agent_router.py",
+      "status": "adopt",
+      "reason": "Clean architecture agent router with proper separation of concerns",
+      "impact": "medium",
+      "dependents": ["backend/main.py"],
+      "tests_to_update": ["backend/tests/test_api_endpoints.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/data_models.py",
-      "action": "adopt"
+      "file": "backend/services/query/query_orchestrator.py",
+      "status": "adopt",
+      "reason": "Clean architecture query orchestration with proper separation of concerns",
+      "impact": "medium",
+      "dependents": ["backend/api/routers/query_router.py"],
+      "tests_to_update": ["backend/tests/test_services.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/database.py",
-      "action": "adopt"
+      "file": "backend/services/agents/agent_coordinator.py",
+      "status": "adopt",
+      "reason": "Clean architecture agent coordination with proper separation of concerns",
+      "impact": "medium",
+      "dependents": ["backend/api/routers/agent_router.py"],
+      "tests_to_update": ["backend/tests/test_services.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/database/__init__.py",
-      "action": "adopt"
+      "file": "frontend/src/app/layout.tsx",
+      "status": "adopt",
+      "reason": "Main layout component with proper Next.js 14 App Router structure",
+      "impact": "high",
+      "dependents": ["all_frontend_pages"],
+      "tests_to_update": ["frontend/src/__tests__/layout.test.tsx"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/database/connection.py",
-      "action": "adopt"
+      "file": "frontend/src/components/search/SearchInterface.tsx",
+      "status": "adopt",
+      "reason": "Main search interface component with proper React patterns",
+      "impact": "high",
+      "dependents": ["frontend/src/app/search/page.tsx"],
+      "tests_to_update": ["frontend/src/components/__tests__/SearchInterface.test.tsx"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/database/repository.py",
-      "action": "adopt"
+      "file": "frontend/src/hooks/useAuth.ts",
+      "status": "adopt",
+      "reason": "Authentication hook with proper React patterns",
+      "impact": "medium",
+      "dependents": ["frontend/src/components/security/"],
+      "tests_to_update": ["frontend/src/hooks/__tests__/useAuth.test.ts"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/decorator.py",
-      "action": "adopt"
+      "file": "frontend/src/services/api-client.ts",
+      "status": "adopt",
+      "reason": "API client service with proper error handling and types",
+      "impact": "medium",
+      "dependents": ["all_frontend_components"],
+      "tests_to_update": ["frontend/src/services/__tests__/api-client.test.ts"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/error_handler.py",
-      "action": "adopt"
+      "file": "shared/core/llm_client.py",
+      "status": "merge",
+      "reason": "Merge useful features into real_llm_integration.py and delete",
+      "impact": "medium",
+      "dependents": ["shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_llm_integration.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/factory.py",
-      "action": "adopt"
+      "file": "shared/core/llm_client_v2.py",
+      "status": "merge",
+      "reason": "Merge useful features into real_llm_integration.py and delete",
+      "impact": "medium",
+      "dependents": ["shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_llm_integration.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/health_checker.py",
-      "action": "adopt"
+      "file": "shared/core/llm_client_v3.py",
+      "status": "merge",
+      "reason": "Merge useful features into real_llm_integration.py and delete",
+      "impact": "medium",
+      "dependents": ["shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_llm_integration.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/input_validation.py",
-      "action": "adopt"
+      "file": "shared/core/llm_client_enhanced.py",
+      "status": "merge",
+      "reason": "Merge useful features into real_llm_integration.py and delete",
+      "impact": "medium",
+      "dependents": ["shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_llm_integration.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/interfaces.py",
-      "action": "adopt"
+      "file": "shared/core/llm_client_dynamic.py",
+      "status": "merge",
+      "reason": "Merge useful features into real_llm_integration.py and delete",
+      "impact": "medium",
+      "dependents": ["shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_llm_integration.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/logging/__init__.py",
-      "action": "adopt"
+      "file": "shared/core/llm_client_standalone.py",
+      "status": "merge",
+      "reason": "Merge useful features into real_llm_integration.py and delete",
+      "impact": "medium",
+      "dependents": ["shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_llm_integration.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/logging/structured_logger.py",
-      "action": "adopt"
+      "file": "shared/core/config/environment_manager.py",
+      "status": "merge",
+      "reason": "Merge useful features into central_config.py and delete",
+      "impact": "medium",
+      "dependents": ["shared/core/config/"],
+      "tests_to_update": ["tests/unit/test_config.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/logging_config.py",
-      "action": "adopt"
+      "file": "shared/core/config/enhanced_environment_manager.py",
+      "status": "merge",
+      "reason": "Merge useful features into central_config.py and delete",
+      "impact": "medium",
+      "dependents": ["shared/core/config/"],
+      "tests_to_update": ["tests/unit/test_config.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/logging_configuration_manager.py",
-      "action": "adopt"
+      "file": "services/analytics/analytics_v2.py",
+      "status": "merge",
+      "reason": "Merge useful features into main analytics.py and delete",
+      "impact": "medium",
+      "dependents": ["services/analytics/"],
+      "tests_to_update": ["tests/unit/test_analytics.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/memory_manager.py",
-      "action": "adopt"
+      "file": "services/analytics/integration_layer.py",
+      "status": "merge",
+      "reason": "Merge useful features into main analytics.py and delete",
+      "impact": "medium",
+      "dependents": ["services/analytics/"],
+      "tests_to_update": ["tests/unit/test_analytics.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/memory_manager_postgres.py",
-      "action": "adopt"
+      "file": "backend/main.py",
+      "status": "rewrite",
+      "reason": "Create clean entry point for backend services following clean architecture",
+      "impact": "high",
+      "dependents": ["backend/api/routers/"],
+      "tests_to_update": ["backend/tests/test_main.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/metrics/__init__.py",
-      "action": "adopt"
+      "file": "shared/core/agents/agent_pattern.py",
+      "status": "rewrite",
+      "reason": "Refactor to use base_agent.py patterns and remove duplication",
+      "impact": "medium",
+      "dependents": ["shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_agent_pattern.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/metrics/metrics_service.py",
-      "action": "adopt"
+      "file": "shared/core/agents/knowledge_graph_agent.py",
+      "status": "rewrite",
+      "reason": "Refactor to use base_agent.py patterns and remove duplication",
+      "impact": "medium",
+      "dependents": ["shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_knowledge_graph_agent.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/middleware/__init__.py",
-      "action": "adopt"
+      "file": "shared/core/agents/arangodb_knowledge_graph_agent.py",
+      "status": "rewrite",
+      "reason": "Refactor to use base_agent.py patterns and remove duplication",
+      "impact": "medium",
+      "dependents": ["shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_arangodb_knowledge_graph_agent.py"]
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/middleware/rate_limiter.py",
-      "action": "adopt"
+      "file": "services/api_gateway/",
+      "status": "archive",
+      "reason": "Entire directory replaced by services/gateway/ with better implementation",
+      "impact": "high",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/migrations.py",
-      "action": "adopt"
+      "file": "services/api_gateway/main.py",
+      "status": "archive",
+      "reason": "Buggy implementation replaced by services/gateway/main.py",
+      "impact": "high",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/observer.py",
-      "action": "adopt"
+      "file": "services/api_gateway/lead_orchestrator.py",
+      "status": "archive",
+      "reason": "Features extracted to services/gateway/agent_orchestrator.py",
+      "impact": "medium",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/performance.py",
-      "action": "adopt"
+      "file": "services/api_gateway/orchestrator_workflow_fixes.py",
+      "status": "archive",
+      "reason": "Features extracted to services/gateway/agent_orchestrator.py",
+      "impact": "medium",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/prompt_templates.py",
-      "action": "adopt"
+      "file": "services/api_gateway/lead_orchestrator_fixes.py",
+      "status": "archive",
+      "reason": "Features extracted to services/gateway/agent_orchestrator.py",
+      "impact": "medium",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/query_classifier.py",
-      "action": "adopt"
+      "file": "services/api_gateway/middleware/",
+      "status": "archive",
+      "reason": "Features extracted to services/gateway/middleware/",
+      "impact": "medium",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/repository.py",
-      "action": "adopt"
+      "file": "shared/core/agents/llm_client.py",
+      "status": "archive",
+      "reason": "Features extracted to services/gateway/real_llm_integration.py",
+      "impact": "medium",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/retry_logic.py",
-      "action": "adopt"
+      "file": "shared/core/agents/validation_utilities.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/input_validation.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/secure_auth.py",
-      "action": "adopt"
+      "file": "shared/core/agents/retrieval_utilities.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/retry_logic.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/shutdown_handler.py",
-      "action": "adopt"
+      "file": "shared/core/agents/orchestration_utilities.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/workflow_manager.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/socket_io_manager.py",
-      "action": "adopt"
+      "file": "shared/core/agents/execution_utilities.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/retry_logic.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/unified_logging.py",
-      "action": "adopt"
+      "file": "shared/core/agents/common_patterns.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/agent_pattern.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/utilities/response_utilities.py",
-      "action": "adopt"
+      "file": "shared/core/agents/agent_utilities.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/agent_pattern.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/utilities/timing_utilities.py",
-      "action": "adopt"
+      "file": "shared/core/agents/graph_db_client.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/vector_database.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/utilities/validation_utilities.py",
-      "action": "adopt"
+      "file": "shared/core/agents/reviewer_agent.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/agents/factcheck_agent.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/vector_database.py",
-      "action": "adopt"
+      "file": "shared/core/agents/lead_orchestrator.py",
+      "status": "archive",
+      "reason": "Features extracted to services/gateway/agent_orchestrator.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/core/workflow_manager.py",
-      "action": "adopt"
+      "file": "shared/core/agents/data_models.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/models/",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/embeddings/local_embedder.py",
-      "action": "adopt"
+      "file": "shared/core/agents/llm_client.py",
+      "status": "archive",
+      "reason": "Features extracted to services/gateway/real_llm_integration.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/middleware/__init__.py",
-      "action": "adopt"
+      "file": "shared/core/agents/validation_utilities.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/input_validation.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/models/__init__.py",
-      "action": "adopt"
+      "file": "shared/core/agents/retrieval_utilities.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/retry_logic.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/models/cache_store.py",
-      "action": "adopt"
+      "file": "shared/core/agents/orchestration_utilities.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/workflow_manager.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/models/crud_models.py",
-      "action": "adopt"
+      "file": "shared/core/agents/execution_utilities.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/retry_logic.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/models/frontend_state.py",
-      "action": "adopt"
+      "file": "shared/core/agents/common_patterns.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/agent_pattern.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/models/models.py",
-      "action": "adopt"
+      "file": "shared/core/agents/agent_utilities.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/agent_pattern.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/models/session_memory.py",
-      "action": "adopt"
+      "file": "shared/core/agents/graph_db_client.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/vector_database.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
     {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/shared/vectorstores/vector_store_service.py",
-      "action": "adopt"
+      "file": "shared/core/agents/reviewer_agent.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/core/agents/factcheck_agent.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/simple_env_test.py",
-      "action": "adopt"
+    {
+      "file": "shared/core/agents/lead_orchestrator.py",
+      "status": "archive",
+      "reason": "Features extracted to services/gateway/agent_orchestrator.py",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_advanced_features.py",
-      "action": "adopt"
+    {
+      "file": "shared/core/agents/data_models.py",
+      "status": "archive",
+      "reason": "Features extracted to shared/models/",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_advanced_llm.py",
-      "action": "adopt"
+    {
+      "file": "check_ollama_models.py",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_all_components_final.py",
-      "action": "adopt"
+    {
+      "file": "test_arangodb_auth.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_all_llm_providers.py",
-      "action": "adopt"
+    {
+      "file": "test_service_endpoints.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_all_llm_providers_comprehensive.py",
-      "action": "adopt"
+    {
+      "file": "simple_diagnostic.py",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_all_providers_final.py",
-      "action": "adopt"
+    {
+      "file": "fix_all_guardrails_issues.py",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_direct_apis.py",
-      "action": "adopt"
+    {
+      "file": "test_guardrails_fixed.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_fixed_endpoints.py",
-      "action": "adopt"
+    {
+      "file": "test_guardrails_basic.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_huggingface_comprehensive.py",
-      "action": "adopt"
+    {
+      "file": "debug_python.py",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_huggingface_final.py",
-      "action": "adopt"
+    {
+      "file": "test_python.ps1",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_huggingface_integration.py",
-      "action": "adopt"
+    {
+      "file": "test_python.bat",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_latest_2025_system.py",
-      "action": "adopt"
+    {
+      "file": "test_guardrails_simple.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_llm_integration.py",
-      "action": "adopt"
+    {
+      "file": "demo_always_on_performance.py",
+      "status": "delete",
+      "reason": "Demo script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_ollama_fast.py",
-      "action": "adopt"
+    {
+      "file": "test_always_on_performance.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_ollama_only.py",
-      "action": "adopt"
+    {
+      "file": "start_postgresql.py",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_pm_question.py",
-      "action": "adopt"
+    {
+      "file": "test_postgresql_simple.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_providers_disabled_openai.py",
-      "action": "adopt"
+    {
+      "file": "fix_postgresql_database.py",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_real_api_keys_final.py",
-      "action": "adopt"
+    {
+      "file": "fix_arangodb_database.py",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_updated_backend.py",
-      "action": "adopt"
+    {
+      "file": "add_sample_data_to_qdrant.py",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/test_with_real_keys.py",
-      "action": "adopt"
+    {
+      "file": "fix_vector_stores_comprehensive.py",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
     },
-    {
-      "file": "C:/Users/horiz/OneDrive/\u30c9\u30ad\u30e5\u30e1\u30f3\u30c8/sarvanom/update_huggingface_components.py",
-      "action": "adopt"
+    {
+      "file": "fix_qdrant_collection.py",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
+    },
+    {
+      "file": "test_vector_stores_availability.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
+    },
+    {
+      "file": "add_persistent_data.py",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
+    },
+    {
+      "file": "debug_retrieval_results.py",
+      "status": "delete",
+      "reason": "Utility script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
+    },
+    {
+      "file": "test_vector_kg_data.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
+    },
+    {
+      "file": "test_retrieval_performance_with_warmup.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
+    },
+    {
+      "file": "simple_warmup_test.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
+    },
+    {
+      "file": "test_retrieval_warmup.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
+    },
+    {
+      "file": "test_retrieval_performance_final.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
+    },
+    {
+      "file": "test_trust_visibility.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
+    },
+    {
+      "file": "test_security_simple.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
+    },
+    {
+      "file": "test_observability_final.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
+    },
+    {
+      "file": "test_observability_simple.py",
+      "status": "delete",
+      "reason": "Test script not part of core application",
+      "impact": "low",
+      "dependents": ["none"],
+      "tests_to_update": []
+    }
+  ],
+  "duplication_analysis": [
+    {
+      "category": "LLM Client Implementations",
+      "files": [
+        "shared/core/llm_client.py",
+        "shared/core/llm_client_v2.py", 
+        "shared/core/llm_client_v3.py",
+        "shared/core/llm_client_enhanced.py",
+        "shared/core/llm_client_dynamic.py",
+        "shared/core/llm_client_standalone.py"
+      ],
+      "recommendation": "Merge all useful features into services/gateway/real_llm_integration.py and delete duplicates",
+      "impact": "high",
+      "effort": "medium"
+    },
+    {
+      "category": "API Gateway Services",
+      "files": [
+        "services/api_gateway/main.py",
+        "services/gateway/main.py",
+        "backend/main.py"
+      ],
+      "recommendation": "Keep services/gateway/main.py as primary, archive others",
+      "impact": "high",
+      "effort": "high"
+    },
+    {
+      "category": "Agent Implementations",
+      "files": [
+        "shared/core/agents/agent_pattern.py",
+        "shared/core/agents/knowledge_graph_agent.py",
+        "shared/core/agents/arangodb_knowledge_graph_agent.py"
+      ],
+      "recommendation": "Refactor to use base_agent.py patterns and remove duplication",
+      "impact": "medium",
+      "effort": "medium"
+    },
+    {
+      "category": "Configuration Systems",
+      "files": [
+        "shared/core/config/central_config.py",
+        "shared/core/config/environment_manager.py",
+        "shared/core/config/enhanced_environment_manager.py"
+      ],
+      "recommendation": "Keep central_config.py, merge useful features and delete others",
+      "impact": "medium",
+      "effort": "low"
+    },
+    {
+      "category": "Analytics Services",
+      "files": [
+        "services/analytics/analytics.py",
+        "services/analytics/analytics_v2.py",
+        "services/analytics/integration_layer.py"
+      ],
+      "recommendation": "Keep main analytics.py, merge useful features and delete others",
+      "impact": "medium",
+      "effort": "low"
+    }
+  ],
+  "unused_module_analysis": [
+    {
+      "module": "services/api_gateway/",
+      "reason": "Entire directory replaced by services/gateway/",
+      "dependents": [],
+      "action": "archive"
+    },
+    {
+      "module": "shared/core/llm_client*.py",
+      "reason": "All LLM client implementations replaced by real_llm_integration.py",
+      "dependents": [],
+      "action": "merge_and_delete"
+    },
+    {
+      "module": "shared/core/config/environment_manager*.py",
+      "reason": "Replaced by central_config.py",
+      "dependents": [],
+      "action": "merge_and_delete"
+    },
+    {
+      "module": "services/analytics/analytics_v*.py",
+      "reason": "Replaced by main analytics.py",
+      "dependents": [],
+      "action": "merge_and_delete"
+    },
+    {
+      "module": "shared/core/agents/*_utilities.py",
+      "reason": "Features extracted to core modules",
+      "dependents": [],
+      "action": "archive"
+    }
+  ],
+  "architectural_recommendations": [
+    {
+      "priority": "high",
+      "recommendation": "Consolidate all LLM functionality into services/gateway/real_llm_integration.py",
+      "rationale": "Eliminate 6 duplicate LLM client implementations",
+      "effort": "medium",
+      "impact": "high"
+    },
+    {
+      "priority": "high", 
+      "recommendation": "Archive services/api_gateway/ directory completely",
+      "rationale": "Replaced by superior services/gateway/ implementation",
+      "effort": "low",
+      "impact": "high"
+    },
+    {
+      "priority": "medium",
+      "recommendation": "Refactor agent implementations to use base_agent.py patterns",
+      "rationale": "Eliminate duplication and improve maintainability",
+      "effort": "medium",
+      "impact": "medium"
+    },
+    {
+      "priority": "medium",
+      "recommendation": "Consolidate configuration systems into central_config.py",
+      "rationale": "Eliminate duplicate configuration management",
+      "effort": "low",
+      "impact": "medium"
+    },
+    {
+      "priority": "low",
+      "recommendation": "Clean up utility scripts in root directory",
+      "rationale": "Improve project structure and reduce confusion",
+      "effort": "low",
+      "impact": "low"
     }
   ]
 }

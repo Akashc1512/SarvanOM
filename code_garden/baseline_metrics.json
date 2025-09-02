@@ -1,0 +1,27 @@
+{
+  "golden_tests": {
+    "total_tests": 0,
+    "passed_tests": 0,
+    "failed_tests": 0,
+    "avg_latency_ms": 0.0,
+    "avg_citation_coverage": 0.0,
+    "avg_uncertainty_score": 0.0,
+    "build_should_fail": false
+  },
+  "failure_scenarios": {
+    "total_scenarios": 0,
+    "passed_scenarios": 0,
+    "failed_scenarios": 0,
+    "graceful_degradation_rate": 0.0,
+    "quality_maintenance_rate": 0.0,
+    "overall_success": false
+  },
+  "regression_analysis": {
+    "latency_regression_pct": 0.0,
+    "citation_regression_pct": 0.0,
+    "uncertainty_regression_pct": 0.0,
+    "build_should_fail": false
+  },
+  "timestamp": "2025-09-02T11:20:00",
+  "version": "1.0.0"
+} 

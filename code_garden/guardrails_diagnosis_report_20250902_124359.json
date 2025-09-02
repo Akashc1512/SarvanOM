@@ -1,0 +1,73 @@
+{
+  "total_issues": 4,
+  "critical_issues": 0,
+  "high_issues": 4,
+  "medium_issues": 0,
+  "low_issues": 0,
+  "service_status": {
+    "postgres": {
+      "status": "error",
+      "response_time_ms": 4148.366451263428,
+      "error_message": "connection to server at \"localhost\" (::1), port 5433 failed: Connection refused (0x0000274D/10061)\n\tIs the server running on that host and accepting TCP/IP connections?\nconnection to server at \"localhost\" (127.0.0.1), port 5433 failed: Connection refused (0x0000274D/10061)\n\tIs the server running on that host and accepting TCP/IP connections?\n"
+    },
+    "qdrant": {
+      "status": "unhealthy",
+      "response_time_ms": 31.90302848815918,
+      "error_message": "HTTP 404"
+    },
+    "meilisearch": {
+      "status": "healthy",
+      "response_time_ms": 31.91828727722168,
+      "error_message": null
+    },
+    "arangodb": {
+      "status": "healthy",
+      "response_time_ms": 28.32508087158203,
+      "error_message": null
+    },
+    "ollama": {
+      "status": "unhealthy",
+      "response_time_ms": 17.31729507446289,
+      "error_message": "HTTP 404"
+    },
+    "redis": {
+      "status": "healthy",
+      "response_time_ms": 141.204833984375,
+      "error_message": null
+    }
+  },
+  "issues": [
+    {
+      "severity": "high",
+      "category": "service_connectivity",
+      "description": "Service postgres is error",
+      "impact": "Retrieval lane postgres unavailable",
+      "solution": "Check postgres service and restart if needed",
+      "status": "identified"
+    },
+    {
+      "severity": "high",
+      "category": "service_connectivity",
+      "description": "Service qdrant is unhealthy",
+      "impact": "Retrieval lane qdrant unavailable",
+      "solution": "Check qdrant service and restart if needed",
+      "status": "identified"
+    },
+    {
+      "severity": "high",
+      "category": "service_connectivity",
+      "description": "Service ollama is unhealthy",
+      "impact": "Retrieval lane ollama unavailable",
+      "solution": "Check ollama service and restart if needed",
+      "status": "identified"
+    },
+    {
+      "severity": "high",
+      "category": "performance",
+      "description": "Service postgres response time: 4148.4ms",
+      "impact": "System latency exceeds 3-second requirement",
+      "solution": "Optimize postgres configuration and check resource usage",
+      "status": "identified"
+    }
+  ]
+}

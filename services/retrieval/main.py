@@ -28,6 +28,7 @@ from shared.contracts.query import (
     VectorSearchRequest,
     VectorSearchResponse,
 )
+from services.retrieval.orchestrator import get_orchestrator
 
 logger = get_logger(__name__)
 
@@ -265,6 +266,59 @@ def add_retrieval_routes(app: FastAPI):
                 total_results=0,
                 top_k=payload.top_k,
             )
+
+    @app.post("/orchestrated-search", response_model=RetrievalSearchResponse)
+    @with_request_metrics("retrieval")
+    async def orchestrated_search(payload: RetrievalSearchRequest) -> RetrievalSearchResponse:
+        """Orchestrated hybrid retrieval across all lanes (web, vector, KG)."""
+        try:
+            # Get the orchestrator
+            orchestrator = get_orchestrator()
+            
+            # Perform orchestrated retrieval
+            response = await orchestrator.orchestrate_retrieval(payload)
+            
+            logger.info(
+                "Orchestrated search completed",
+                query=payload.query[:100],
+                results_count=len(response.sources),
+                method=response.method,
+            )
+            
+            return response
+            
+        except Exception as e:
+            logger.error("Orchestrated search failed", error=str(e), query=payload.query[:100])
+            # Fallback to empty results
+            return RetrievalSearchResponse(
+                sources=[],
+                method="orchestrated_search_fallback",
+                total_results=0,
+                relevance_scores=[],
+                limit=payload.max_results,
+            )
+
+    @app.post("/warmup")
+    @with_request_metrics("retrieval")
+    async def warmup_services():
+        """Warmup all retrieval services to reduce first-query latency."""
+        try:
+            from services.retrieval.warmup import warmup_retrieval_services
+            
+            logger.info("Starting retrieval services warmup...")
+            warmup_results = await warmup_retrieval_services()
+            
+            logger.info(
+                "Retrieval services warmup completed",
+                duration_ms=warmup_results.get("duration_ms", 0),
+                status=warmup_results.get("status", "unknown")
+            )
+            
+            return warmup_results
+            
+        except Exception as e:
+            logger.error("Retrieval services warmup failed", error=str(e))
+            return {"status": "failed", "error": str(e)}
 
 
 # Create the FastAPI app using the shared factory

@@ -1,5 +1,6 @@
 import { CosmicNavigation } from "@/components/navigation/CosmicNavigation";
 import { CosmicLayout } from "@/components/layout/CosmicLayout";
+import { SecurityFooter } from "@/components/security/SecurityFooter";
 
 export default function MainLayout({
   children,
@@ -8,11 +9,12 @@ export default function MainLayout({
 }) {
   return (
     <CosmicLayout>
-      <div>
+      <div className="min-h-screen flex flex-col">
         <CosmicNavigation />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
         </main>
+        <SecurityFooter variant="default" />
       </div>
     </CosmicLayout>
   );

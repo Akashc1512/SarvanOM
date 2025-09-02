@@ -238,6 +238,8 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
                   error={searchError}
                   confidence={0.95}
                   processingTime={3.2}
+                  citations={citations}
+                  traceId={searchError ? undefined : `trace_${Date.now()}`}
                 />
               </section>
 

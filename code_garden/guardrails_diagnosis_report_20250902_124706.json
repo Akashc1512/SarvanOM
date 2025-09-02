@@ -1,0 +1,65 @@
+{
+  "total_issues": 3,
+  "critical_issues": 0,
+  "high_issues": 3,
+  "medium_issues": 0,
+  "low_issues": 0,
+  "service_status": {
+    "postgres": {
+      "status": "error",
+      "response_time_ms": 140.46859741210938,
+      "error_message": "connection to server at \"localhost\" (::1), port 5432 failed: FATAL:  password authentication failed for user \"sarvanom\"\n"
+    },
+    "qdrant": {
+      "status": "unhealthy",
+      "response_time_ms": 36.01527214050293,
+      "error_message": "HTTP 404"
+    },
+    "meilisearch": {
+      "status": "healthy",
+      "response_time_ms": 26.787996292114258,
+      "error_message": null
+    },
+    "arangodb": {
+      "status": "healthy",
+      "response_time_ms": 34.03878211975098,
+      "error_message": null
+    },
+    "ollama": {
+      "status": "unhealthy",
+      "response_time_ms": 24.413108825683594,
+      "error_message": "HTTP 404"
+    },
+    "redis": {
+      "status": "healthy",
+      "response_time_ms": 141.18123054504395,
+      "error_message": null
+    }
+  },
+  "issues": [
+    {
+      "severity": "high",
+      "category": "service_connectivity",
+      "description": "Service postgres is error",
+      "impact": "Retrieval lane postgres unavailable",
+      "solution": "Check postgres service and restart if needed",
+      "status": "identified"
+    },
+    {
+      "severity": "high",
+      "category": "service_connectivity",
+      "description": "Service qdrant is unhealthy",
+      "impact": "Retrieval lane qdrant unavailable",
+      "solution": "Check qdrant service and restart if needed",
+      "status": "identified"
+    },
+    {
+      "severity": "high",
+      "category": "service_connectivity",
+      "description": "Service ollama is unhealthy",
+      "impact": "Retrieval lane ollama unavailable",
+      "solution": "Check ollama service and restart if needed",
+      "status": "identified"
+    }
+  ]
+}

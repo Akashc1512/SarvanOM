@@ -186,3 +186,26 @@ cg-restore:
 
 cg-syntax:
 	@python scripts/code_garden/check_syntax.py 
+
+# Automated Guardrails
+guardrails: ## Run automated guardrails for quality assurance
+	@echo "🚀 Running Automated Guardrails..."
+	@python tests/run_guardrails_ci.py
+
+guardrails-local: ## Run guardrails locally (non-CI mode)
+	@echo "🔍 Running Guardrails Locally..."
+	@python tests/golden_test_suite.py
+
+guardrails-report: ## Generate guardrails report from latest results
+	@echo "📊 Generating Guardrails Report..."
+	@if [ -d "code_garden/golden_test_results" ]; then \
+		latest_json=$$(ls -t code_garden/golden_test_results/golden_test_results_*.json | head -1); \
+		if [ -n "$$latest_json" ]; then \
+			echo "Latest results: $$latest_json"; \
+			python -c "import json; data=json.load(open('$$latest_json')); print(f'Success Rate: {data[\"overall_metrics\"][\"success_rate\"]:.1%}'); print(f'Total Tests: {data[\"overall_metrics\"][\"total_tests\"]}'); print(f'Passed: {data[\"overall_metrics\"][\"total_passed\"]}'); print(f'Failed: {data[\"overall_metrics\"][\"total_failed\"]}')"; \
+		else \
+			echo "No results found"; \
+		fi; \
+	else \
+		echo "No results directory found"; \
+	fi 

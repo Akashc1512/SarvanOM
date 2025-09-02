@@ -461,11 +461,15 @@ class QdrantVectorStore(VectorStoreService):
         logger.info("Searching Qdrant", top_k=top_k, collection=self.collection)
 
         try:
-            # Perform search
-            results = self.client.search(
-                collection_name=self.collection,
-                query_vector=query_embedding,
-                limit=top_k,
+            # Perform search in executor to avoid blocking
+            import asyncio
+            loop = asyncio.get_event_loop()
+            results = await loop.run_in_executor(
+                None,
+                self.client.search,
+                self.collection,
+                query_embedding,
+                top_k
             )
 
             # Format results

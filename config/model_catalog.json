@@ -1,0 +1,262 @@
+{
+  "model_catalog": {
+    "version": "1.0.0",
+    "last_updated": "2025-01-01",
+    "models": {
+      "ollama": {
+        "llama3.2:3b": {
+          "name": "llama3.2:3b",
+          "provider": "ollama",
+          "quality": 0.6,
+          "speed": 0.9,
+          "cost_normalized": 0.0,
+          "max_context": 4096,
+          "tier": "fast",
+          "capabilities": ["general", "fast", "cost-effective"],
+          "requires_key": false,
+          "enabled": true
+        },
+        "llama3.2:8b": {
+          "name": "llama3.2:8b",
+          "provider": "ollama",
+          "quality": 0.75,
+          "speed": 0.7,
+          "cost_normalized": 0.0,
+          "max_context": 8192,
+          "tier": "balanced",
+          "capabilities": ["general", "reasoning", "analysis"],
+          "requires_key": false,
+          "enabled": true
+        },
+        "llama3.2:70b": {
+          "name": "llama3.2:70b",
+          "provider": "ollama",
+          "quality": 0.9,
+          "speed": 0.4,
+          "cost_normalized": 0.0,
+          "max_context": 16384,
+          "tier": "powerful",
+          "capabilities": ["general", "advanced-reasoning", "complex-analysis"],
+          "requires_key": false,
+          "enabled": true
+        },
+        "codellama:7b": {
+          "name": "codellama:7b",
+          "provider": "ollama",
+          "quality": 0.8,
+          "speed": 0.6,
+          "cost_normalized": 0.0,
+          "max_context": 8192,
+          "tier": "balanced",
+          "capabilities": ["code", "reasoning", "analysis"],
+          "requires_key": false,
+          "enabled": true
+        },
+        "phi3:mini": {
+          "name": "phi3:mini",
+          "provider": "ollama",
+          "quality": 0.5,
+          "speed": 0.95,
+          "cost_normalized": 0.0,
+          "max_context": 2048,
+          "tier": "fast",
+          "capabilities": ["general", "fast", "very-cost-effective"],
+          "requires_key": false,
+          "enabled": true
+        },
+        "mixtral:8x7b": {
+          "name": "mixtral:8x7b",
+          "provider": "ollama",
+          "quality": 0.85,
+          "speed": 0.5,
+          "cost_normalized": 0.0,
+          "max_context": 16384,
+          "tier": "powerful",
+          "capabilities": ["general", "advanced-reasoning", "complex-analysis"],
+          "requires_key": false,
+          "enabled": true
+        }
+      },
+      "huggingface": {
+        "microsoft/DialoGPT-medium": {
+          "name": "microsoft/DialoGPT-medium",
+          "provider": "huggingface",
+          "quality": 0.6,
+          "speed": 0.8,
+          "cost_normalized": 0.0,
+          "max_context": 1024,
+          "tier": "fast",
+          "capabilities": ["general", "fast", "conversation"],
+          "requires_key": false,
+          "enabled": true
+        },
+        "microsoft/DialoGPT-large": {
+          "name": "microsoft/DialoGPT-large",
+          "provider": "huggingface",
+          "quality": 0.7,
+          "speed": 0.6,
+          "cost_normalized": 0.0,
+          "max_context": 2048,
+          "tier": "balanced",
+          "capabilities": ["general", "reasoning", "conversation"],
+          "requires_key": false,
+          "enabled": true
+        },
+        "distilgpt2": {
+          "name": "distilgpt2",
+          "provider": "huggingface",
+          "quality": 0.5,
+          "speed": 0.9,
+          "cost_normalized": 0.0,
+          "max_context": 1024,
+          "tier": "fast",
+          "capabilities": ["general", "fast", "text-generation"],
+          "requires_key": false,
+          "enabled": true
+        },
+        "EleutherAI/gpt-neo-125M": {
+          "name": "EleutherAI/gpt-neo-125M",
+          "provider": "huggingface",
+          "quality": 0.6,
+          "speed": 0.7,
+          "cost_normalized": 0.0,
+          "max_context": 2048,
+          "tier": "balanced",
+          "capabilities": ["general", "reasoning", "text-generation"],
+          "requires_key": false,
+          "enabled": true
+        },
+        "Salesforce/codegen-350M-mono": {
+          "name": "Salesforce/codegen-350M-mono",
+          "provider": "huggingface",
+          "quality": 0.7,
+          "speed": 0.6,
+          "cost_normalized": 0.0,
+          "max_context": 2048,
+          "tier": "balanced",
+          "capabilities": ["code", "programming", "generation"],
+          "requires_key": false,
+          "enabled": true
+        }
+      },
+      "openai": {
+        "gpt-3.5-turbo": {
+          "name": "gpt-3.5-turbo",
+          "provider": "openai",
+          "quality": 0.75,
+          "speed": 0.8,
+          "cost_normalized": 0.3,
+          "max_context": 4096,
+          "tier": "fast",
+          "capabilities": ["general", "fast", "cost-effective"],
+          "requires_key": true,
+          "enabled": true
+        },
+        "gpt-4o-mini": {
+          "name": "gpt-4o-mini",
+          "provider": "openai",
+          "quality": 0.8,
+          "speed": 0.85,
+          "cost_normalized": 0.1,
+          "max_context": 128000,
+          "tier": "fast",
+          "capabilities": ["general", "fast", "very-cost-effective"],
+          "requires_key": true,
+          "enabled": true
+        },
+        "gpt-4": {
+          "name": "gpt-4",
+          "provider": "openai",
+          "quality": 0.9,
+          "speed": 0.6,
+          "cost_normalized": 0.8,
+          "max_context": 8192,
+          "tier": "balanced",
+          "capabilities": ["general", "reasoning", "analysis"],
+          "requires_key": true,
+          "enabled": true
+        },
+        "gpt-4o": {
+          "name": "gpt-4o",
+          "provider": "openai",
+          "quality": 0.95,
+          "speed": 0.7,
+          "cost_normalized": 0.6,
+          "max_context": 128000,
+          "tier": "balanced",
+          "capabilities": ["general", "reasoning", "analysis", "vision"],
+          "requires_key": true,
+          "enabled": true
+        },
+        "gpt-4-turbo": {
+          "name": "gpt-4-turbo",
+          "provider": "openai",
+          "quality": 0.95,
+          "speed": 0.5,
+          "cost_normalized": 0.7,
+          "max_context": 128000,
+          "tier": "powerful",
+          "capabilities": ["general", "advanced-reasoning", "complex-analysis"],
+          "requires_key": true,
+          "enabled": true
+        }
+      },
+      "anthropic": {
+        "claude-3-haiku": {
+          "name": "claude-3-haiku",
+          "provider": "anthropic",
+          "quality": 0.8,
+          "speed": 0.85,
+          "cost_normalized": 0.2,
+          "max_context": 200000,
+          "tier": "fast",
+          "capabilities": ["general", "fast", "cost-effective"],
+          "requires_key": true,
+          "enabled": true
+        },
+        "claude-3-sonnet": {
+          "name": "claude-3-sonnet",
+          "provider": "anthropic",
+          "quality": 0.9,
+          "speed": 0.7,
+          "cost_normalized": 0.5,
+          "max_context": 200000,
+          "tier": "balanced",
+          "capabilities": ["general", "reasoning", "analysis"],
+          "requires_key": true,
+          "enabled": true
+        },
+        "claude-3-opus": {
+          "name": "claude-3-opus",
+          "provider": "anthropic",
+          "quality": 0.95,
+          "speed": 0.5,
+          "cost_normalized": 0.9,
+          "max_context": 200000,
+          "tier": "powerful",
+          "capabilities": ["general", "advanced-reasoning", "complex-analysis"],
+          "requires_key": true,
+          "enabled": true
+        }
+      }
+    },
+    "scoring_weights": {
+      "quality": 0.4,
+      "speed": 0.2,
+      "cost": 0.3,
+      "context_adequacy": 0.1
+    },
+    "provider_order": {
+      "default": ["ollama", "huggingface", "openai", "anthropic"],
+      "cost_sensitive": ["ollama", "huggingface", "openai", "anthropic"],
+      "quality_focused": ["anthropic", "openai", "ollama", "huggingface"],
+      "speed_focused": ["ollama", "huggingface", "openai", "anthropic"]
+    },
+    "context_thresholds": {
+      "short": 2048,
+      "medium": 8192,
+      "long": 32000,
+      "very_long": 100000
+    }
+  }
+}

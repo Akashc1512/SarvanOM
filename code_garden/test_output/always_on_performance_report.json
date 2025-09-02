@@ -1,0 +1,71 @@
+{
+  "summary": {
+    "total_tests": 4,
+    "passed_tests": 2,
+    "failed_tests": 1,
+    "timeout_tests": 1,
+    "success_rate": 50.0
+  },
+  "performance_metrics": {
+    "p95_latency_ms": 1024.31058883667,
+    "vector_search_compliant": false,
+    "knowledge_graph_compliant": true,
+    "end_to_end_compliant": true
+  },
+  "requirements_compliance": {
+    "p95_latency_3s": true,
+    "vector_2s": false,
+    "kg_1_5s": true,
+    "non_blocking": false
+  },
+  "detailed_results": [
+    {
+      "test_name": "Vector Search Performance",
+      "lane": "vector_search",
+      "latency_ms": 23155.133485794067,
+      "status": "timeout",
+      "results_count": 0,
+      "error": "Timeout exceeded 2.0s limit",
+      "metadata": {
+        "timeout_ms": 2000.0,
+        "max_results": 5
+      }
+    },
+    {
+      "test_name": "Knowledge Graph Performance",
+      "lane": "knowledge_graph",
+      "latency_ms": 1016.0770416259766,
+      "status": "pass",
+      "results_count": 0,
+      "error": null,
+      "metadata": {
+        "timeout_ms": 1500.0,
+        "max_results": 6
+      }
+    },
+    {
+      "test_name": "End-to-End Performance",
+      "lane": "hybrid",
+      "latency_ms": 1024.31058883667,
+      "status": "pass",
+      "results_count": 0,
+      "error": null,
+      "metadata": {
+        "timeout_ms": 3000.0,
+        "max_results": 10
+      }
+    },
+    {
+      "test_name": "Non-Blocking Behavior",
+      "lane": "fallback",
+      "latency_ms": 1265.077829360962,
+      "status": "fail",
+      "results_count": 0,
+      "error": null,
+      "metadata": {
+        "timeout_ms": 3000.0,
+        "max_results": 5
+      }
+    }
+  ]
+}

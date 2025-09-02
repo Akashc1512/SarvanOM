@@ -13,18 +13,8 @@ import {
   StarIcon
 } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
-
-interface Citation {
-  id: string;
-  title: string;
-  url?: string;
-  source: string;
-  author?: string;
-  date?: string;
-  relevance: number;
-  excerpt?: string;
-  type: "article" | "paper" | "book" | "website" | "document";
-}
+import { CitationNumber } from "./CitationTooltip";
+import type { Citation } from "@/lib/api";
 
 interface CitationsPanelProps {
   citations?: Citation[];
@@ -162,7 +152,14 @@ export function CitationsPanel({
                     {/* Citation Header */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3 flex-1">
-                        <span className="text-2xl">{getTypeIcon(citation.type)}</span>
+                        <div className="flex items-center gap-2">
+                          <CitationNumber
+                            citation={citation}
+                            number={index + 1}
+                            className="flex-shrink-0"
+                          />
+                          <span className="text-2xl">{getTypeIcon(citation.type)}</span>
+                        </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-medium text-cosmos-fg truncate">
                             {citation.title}

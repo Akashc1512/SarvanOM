@@ -12,6 +12,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
 import { useSearchSessionStore } from "@/lib/store";
+import { CitationNumber, CitationLink } from "./CitationTooltip";
+import { ShareButton } from "./ShareButton";
+import type { Citation } from "@/lib/api";
 
 interface AnswerDisplayProps {
   answer?: string;
@@ -19,6 +22,8 @@ interface AnswerDisplayProps {
   error?: string;
   confidence?: number;
   processingTime?: number;
+  citations?: Citation[];
+  traceId?: string;
   className?: string;
 }
 
@@ -28,12 +33,83 @@ export function AnswerDisplay({
   error, 
   confidence = 0.95,
   processingTime,
+  citations = [],
+  traceId,
   className 
 }: AnswerDisplayProps) {
   const storeAnswer = useSearchSessionStore((s) => s.answerContent);
   const storeLoading = useSearchSessionStore((s) => s.isLoading);
+  const storeQuery = useSearchSessionStore((s) => s.queryText);
+  const storeCitations = useSearchSessionStore((s) => s.citations);
+  
   const effectiveAnswer = answer ?? storeAnswer;
   const effectiveIsLoading = isLoading ?? storeLoading;
+  const effectiveCitations = citations.length > 0 ? citations : storeCitations;
+  const effectiveQuery = storeQuery;
+
+  // Parse citations from answer text and render with tooltips
+  const parseAnswerWithCitations = (text: string) => {
+    if (!text || effectiveCitations.length === 0) {
+      return text.split('\n').map((paragraph, index) => (
+        <p key={index} className="text-base text-cosmos-fg/90">
+          {paragraph}
+        </p>
+      ));
+    }
+
+    // Split by paragraphs and process each one
+    return text.split('\n').map((paragraph, paragraphIndex) => {
+      // Look for citation patterns like [1], [2], etc.
+      const citationPattern = /\[(\d+)\]/g;
+      const parts = [];
+      let lastIndex = 0;
+      let match;
+
+      while ((match = citationPattern.exec(paragraph)) !== null) {
+        // Add text before citation
+        if (match.index > lastIndex) {
+          parts.push(paragraph.slice(lastIndex, match.index));
+        }
+
+        // Add citation
+        const citationNumber = parseInt(match[1]);
+        const citation = effectiveCitations[citationNumber - 1];
+        
+        if (citation) {
+          parts.push(
+            <CitationNumber
+              key={`${paragraphIndex}-${match.index}`}
+              citation={citation}
+              number={citationNumber}
+            />
+          );
+        } else {
+          // Fallback if citation not found
+          parts.push(
+            <span
+              key={`${paragraphIndex}-${match.index}`}
+              className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium bg-muted text-muted-foreground border border-muted-foreground/30 rounded-full"
+            >
+              {citationNumber}
+            </span>
+          );
+        }
+
+        lastIndex = match.index + match[0].length;
+      }
+
+      // Add remaining text
+      if (lastIndex < paragraph.length) {
+        parts.push(paragraph.slice(lastIndex));
+      }
+
+      return (
+        <p key={paragraphIndex} className="text-base text-cosmos-fg/90 leading-relaxed">
+          {parts}
+        </p>
+      );
+    });
+  };
   if (effectiveIsLoading) {
     return (
       <motion.div
@@ -165,11 +241,7 @@ export function AnswerDisplay({
             aria-live="polite"
             aria-label="AI generated answer"
           >
-            {effectiveAnswer.split('\n').map((paragraph, index) => (
-              <p key={index} className="text-base text-cosmos-fg/90">
-                {paragraph}
-              </p>
-            ))}
+            {parseAnswerWithCitations(effectiveAnswer)}
           </div>
         </div>
 
@@ -177,16 +249,20 @@ export function AnswerDisplay({
         <div className="mt-8 pt-6 border-t border-cosmos-accent/20 flex items-center justify-between">
           <div className="flex items-center gap-4 text-sm text-cosmos-fg/60">
             <button className="flex items-center gap-2 hover:text-cosmos-accent transition-colors">
-              <LinkIcon className="w-4 h-4" />
-              <span>Copy Link</span>
-            </button>
-            <button className="flex items-center gap-2 hover:text-cosmos-accent transition-colors">
               <DocumentTextIcon className="w-4 h-4" />
               <span>Export</span>
             </button>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <ShareButton
+              query={effectiveQuery}
+              answer={effectiveAnswer}
+              citations={effectiveCitations}
+              traceId={traceId}
+              variant="minimal"
+              size="sm"
+            />
             <button className="px-4 py-2 bg-cosmos-accent/10 hover:bg-cosmos-accent/20 text-cosmos-accent rounded-lg transition-all">
               Follow Up
             </button>

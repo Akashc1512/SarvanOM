@@ -1,0 +1,57 @@
+{
+  "total_issues": 2,
+  "critical_issues": 0,
+  "high_issues": 2,
+  "medium_issues": 0,
+  "low_issues": 0,
+  "service_status": {
+    "postgres": {
+      "status": "error",
+      "response_time_ms": 85.7551097869873,
+      "error_message": "connection to server at \"localhost\" (::1), port 5432 failed: FATAL:  password authentication failed for user \"sarvanom\"\n"
+    },
+    "qdrant": {
+      "status": "healthy",
+      "response_time_ms": 31.296491622924805,
+      "error_message": null
+    },
+    "meilisearch": {
+      "status": "healthy",
+      "response_time_ms": 11.34181022644043,
+      "error_message": null
+    },
+    "arangodb": {
+      "status": "healthy",
+      "response_time_ms": 22.42755889892578,
+      "error_message": null
+    },
+    "ollama": {
+      "status": "unhealthy",
+      "response_time_ms": 29.181957244873047,
+      "error_message": "HTTP 404"
+    },
+    "redis": {
+      "status": "healthy",
+      "response_time_ms": 124.07445907592773,
+      "error_message": null
+    }
+  },
+  "issues": [
+    {
+      "severity": "high",
+      "category": "service_connectivity",
+      "description": "Service postgres is error",
+      "impact": "Retrieval lane postgres unavailable",
+      "solution": "Check postgres service and restart if needed",
+      "status": "identified"
+    },
+    {
+      "severity": "high",
+      "category": "service_connectivity",
+      "description": "Service ollama is unhealthy",
+      "impact": "Retrieval lane ollama unavailable",
+      "solution": "Check ollama service and restart if needed",
+      "status": "identified"
+    }
+  ]
+}

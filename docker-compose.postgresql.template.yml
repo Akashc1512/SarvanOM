@@ -1,0 +1,37 @@
+# PostgreSQL Service Template for docker-compose.yml
+# Replace the hardcoded values with environment variables
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: sarvanom-postgres
+    ports:
+      - "${PGPORT:-5433}:5432"  # Use PGPORT from .env or default to 5433
+    environment:
+      - POSTGRES_DB=${PGDATABASE}
+      - POSTGRES_USER=${PGUSER}
+      - POSTGRES_PASSWORD=${PGPASSWORD}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    networks:
+      - sarvanom-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER} -d ${PGDATABASE}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# Note: Make sure these environment variables are set in your .env file:
+# PGPORT=5433
+# PGDATABASE=sarvanom_db
+# PGUSER=sarvanom
+# PGPASSWORD=secret123
