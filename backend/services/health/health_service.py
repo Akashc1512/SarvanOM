@@ -325,6 +325,17 @@ class HealthService:
                 details=agent_details,
             )
 
+            # Check ArangoDB (Knowledge Graph)
+            arangodb_status, arangodb_details = await self._check_arangodb()
+            services["arangodb"] = ServiceHealth(
+                service_name="ArangoDB",
+                status=arangodb_status,
+                response_time=arangodb_details.get("response_time_ms", 0),
+                last_check=datetime.now(),
+                error_count=arangodb_details.get("error_count", 0),
+                details=arangodb_details,
+            )
+
             return services
 
         except Exception as e:
@@ -391,6 +402,33 @@ class HealthService:
         except Exception as e:
             return "unhealthy", {"response_time": 0, "error_count": 1, "error": str(e)}
 
+    async def _check_arangodb(self) -> tuple[str, Dict[str, Any]]:
+        """Check ArangoDB knowledge graph health."""
+        try:
+            from shared.core.services.arangodb_service import get_arangodb_health
+            
+            health_data = await get_arangodb_health()
+            
+            if health_data.get("available", False):
+                return "healthy", health_data
+            else:
+                return "unhealthy", health_data
+                
+        except ImportError:
+            return "unhealthy", {
+                "response_time_ms": 0,
+                "error_count": 1,
+                "error": "ArangoDB service not available - missing python-arango package",
+                "available": False
+            }
+        except Exception as e:
+            return "unhealthy", {
+                "response_time_ms": 0,
+                "error_count": 1,
+                "error": str(e),
+                "available": False
+            }
+
     def _determine_overall_health(
         self, metrics: SystemMetrics, service_health: Dict[str, ServiceHealth]
     ) -> str:
@@ -444,11 +482,21 @@ class HealthService:
     async def _check_dependencies(self) -> Dict[str, str]:
         """Check external dependencies."""
         try:
+            # Check ArangoDB
+            arangodb_status = "disconnected"
+            try:
+                from shared.core.services.arangodb_service import get_arangodb_health
+                health_data = await get_arangodb_health()
+                arangodb_status = "connected" if health_data.get("available", False) else "disconnected"
+            except Exception:
+                arangodb_status = "disconnected"
+            
             return {
                 "database": "connected",
-                "cache": "connected",
+                "cache": "connected", 
                 "search_engine": "connected",
                 "llm_service": "connected",
+                "arangodb": arangodb_status,
             }
 
         except Exception as e:
