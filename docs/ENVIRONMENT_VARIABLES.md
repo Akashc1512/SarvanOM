@@ -52,6 +52,30 @@ LLM_REASONING=anthropic:claude-3-opus,openai:o1-preview
 LLM_TOOL=openai:gpt-4o,anthropic:claude-3-5-sonnet
 ```
 
+### **Enhanced Router Configuration (Phase I3)**
+```bash
+# Policy-based routing
+PRIORITIZE_FREE_MODELS=true
+AUTO_ESCALATE_COMPLEXITY=true
+CIRCUIT_BREAKER_ENABLED=true
+
+# Budget caps and rate limiting
+OPENAI_MAX_RPM=500              # Requests per minute
+OPENAI_MAX_TPM=10000           # Tokens per minute
+ANTHROPIC_MAX_RPM=200          # Requests per minute  
+ANTHROPIC_MAX_TPM=8000         # Tokens per minute
+HUGGINGFACE_MAX_RPM=100        # Free tier limit
+OLLAMA_MAX_RPM=1000            # Local - no real limit
+
+# Circuit breaker settings
+CIRCUIT_BREAKER_FAILURE_THRESHOLD=5
+CIRCUIT_BREAKER_TIMEOUT_SECONDS=60
+
+# Router telemetry
+ROUTING_TELEMETRY_ENABLED=true
+TELEMETRY_BUFFER_SIZE=1000
+```
+
 ### **LLM Provider Credentials**
 ```bash
 # Free/Local Providers (Recommended)

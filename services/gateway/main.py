@@ -1211,6 +1211,29 @@ async def warmup_status():
         }
 
 
+@app.get("/metrics/router")
+async def router_metrics():
+    """Get enhanced router metrics (Phase I3)."""
+    try:
+        from shared.core.services.enhanced_router_service import get_enhanced_router_service
+        
+        router_service = get_enhanced_router_service()
+        metrics = router_service.get_routing_metrics()
+        
+        return {
+            "status": "available",
+            "metrics": metrics,
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        logger.error(f"Router metrics failed: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": time.time()
+        }
+
+
 # Search/Retrieval service endpoint
 @app.get("/search")
 async def search_endpoint():

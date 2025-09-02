@@ -64,22 +64,18 @@ class ModelConfig:
     context_window: int
     reasoning_capability: float  # 0.0 to 1.0
     tool_capability: float      # 0.0 to 1.0
-
-@dataclass
-class ModelConfig:
-    """Configuration for a specific model within a provider."""
-    name: str
-    provider: LLMProvider
-    role: LLMRole
-    max_tokens: int
-    avg_latency_ms: int
-    cost_per_1k_tokens: float
-    supports_streaming: bool
-    supports_tools: bool
-    is_free: bool
-    context_window: int
-    reasoning_capability: float  # 0.0 to 1.0
-    tool_capability: float      # 0.0 to 1.0
+    
+    # Phase I3 enhancements
+    supports_vision: bool = False          # Vision/image processing capability
+    supports_json_mode: bool = False       # Structured JSON output mode
+    supports_function_calling: bool = False  # Function/tool calling
+    max_rpm: Optional[int] = None          # Requests per minute limit
+    max_tpm: Optional[int] = None          # Tokens per minute limit
+    cost_tier: str = "standard"           # "free", "standard", "premium"
+    
+    # Circuit breaker settings
+    failure_threshold: int = 5             # Failures before circuit opens
+    circuit_timeout: int = 60              # Seconds before trying again
 
 @dataclass
 class ProviderConfig:
