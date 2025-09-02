@@ -305,113 +305,83 @@ Complete task list integrating comprehensive codebase analysis with industry-sta
 
 ---
 
-## 🎨 **PHASE F: Frontend Redesign (Next.js) Using Astro-Theme Patterns**
+## 🎨 **PHASE F: Cosmic UI v2 (Next.js) with Astro-Inspired System**
 
-### **F1: Visual System Refresh (No Framework Switch)**
-**Priority**: 🟢 LOW  
-**Estimated Time**: 8-10 hours
+### **F1: Cosmic UI v2 - Visual System Refresh**
+**Priority**: 🟡 MEDIUM  
+**Estimated Time**: 10-12 hours
 **Status**: 📋 TODO
 **Owner**: TBD
+**Maps to**: Prompt 11
 
 #### **TODOs:**
-- [ ] Keep Next.js 15
-- [ ] Create design tokens file (colors, spacing, radii, typography) inspired by best free Astro AI themes
-- [ ] Implement in Tailwind + CSS vars
-- [ ] Introduce standard component sizing (8-pt grid), consistent paddings, accessible contrast
-- [ ] Add responsive breakpoints (xs→2xl)
-- [ ] Create starfield/nebula cosmic theme with toggleable light/dark variants
+- [ ] Keep Next.js 15 (realtime, SSE, app router), upgrade look to premium cosmic design
+- [ ] Install design token layer: spacing (8px scale), typography (2–3 sizes per breakpoint), color roles (primary/secondary/surface/overlay), elevation
+- [ ] Add cosmic background system (GPU-cheap starfield, parallax nebula, no heavy canvas on mobile)
+- [ ] Standardize card/list/table dimensions; consistent paddings; responsive grid
+- [ ] Rework Search → Answer → Sources layout with sticky source panel, live citations, keyboard navigation
+- [ ] Add theme toggle (light/dark cosmic) with identical layout metrics
 
-**DoD**: Global style refresh; lighthouse ≥ 90 (Perf/Access/Best/SEO) on landing, search, docs
+**DoD**: Lighthouse Performance ≥90, Accessibility ≥95, Best Practices ≥95, SEO ≥90; UI looks premium across mobile/tablet/desktop with no jank
 
----
+## 🧾 **PHASE G: Repository Hygiene & Documentation**
 
-### **F2: Page-by-Page UX**
-**Priority**: 🟢 LOW  
-**Estimated Time**: 12-16 hours
-**Status**: 📋 TODO
-**Owner**: TBD
-
-#### **TODOs:**
-- [ ] For landing, search, analytics, blog, portfolio, hub:
-  - [ ] "Above-the-fold" clarity: headline, subhead, primary action
-  - [ ] Streaming answer area with inline citations + side source cards
-  - [ ] Export buttons (Markdown/Notion)
-  - [ ] Mobile-first layouts, keyboard nav, focus traps
-- [ ] Implement responsive design system
-
-**DoD**: Each page renders cleanly on 360px→4k; visual regression screenshots stored
-
----
-
-### **F3: Optional Hybrid: Astro for Marketing Only**
-**Priority**: 🟢 LOW  
-**Estimated Time**: 6-8 hours
-**Status**: 📋 TODO
-**Owner**: TBD
-
-#### **TODOs:**
-- [ ] If desired, create separate frontend-marketing Astro site (no backend coupling)
-- [ ] Use for static pages and proxy under `/mkt/*` via Nginx
-- [ ] Share design tokens to keep aesthetic parity
-
-**DoD**: Marketing pages served under /mkt/..., product app remains Next.js
-
----
-
-## 🔗 **PHASE G: End-to-End Integration & Tests**
-
-### **G1: Wire Everything & Prove the Happy Path**
-**Priority**: 🔴 HIGH  
-**Estimated Time**: 8-10 hours
-**Status**: 📋 TODO
-**Owner**: TBD
-
-#### **TODOs:**
-- [ ] Connect Frontend search → Gateway /search → Lanes → Synthesis → Streaming with citations + source cards
-- [ ] Verify exports (Markdown/Notion)
-- [ ] Add e2e tests: no keys, some keys, all keys
-- [ ] Implement end-to-end error handling
-
-**DoD**: E2E suite green; time to first token < 1s; responses < 3s typical (post-warm); sources clickable
-
----
-
-### **G2: "Always-On" Performance Gates**
-**Priority**: 🔴 HIGH  
-**Estimated Time**: 6-8 hours
-**Status**: 📋 TODO
-**Owner**: TBD
-
-#### **TODOs:**
-- [ ] Add perf tests enforcing budgets: P95 E2E ≤ 3s, Vector ≤ 2.0s after warm, KG ≤ 1.5s
-- [ ] Implement non-blocking orchestration
-- [ ] Fail CI if performance violated
-- [ ] Add performance regression detection
-
-**DoD**: CI fails on regression; perf report artifact uploaded
-
----
-
-### **G3: Documentation Refresh**
+### **G1: Repo Hygiene - Unused/Duplicate Purge (Safe)**
 **Priority**: 🟡 MEDIUM  
 **Estimated Time**: 4-6 hours
-**Status**: 📋 TODO
-**Owner**: TBD
+**Status**: ✅ PARTIALLY COMPLETED (Phase A)
+**Owner**: AI Assistant
+**Maps to**: Prompt 12
 
 #### **TODOs:**
-- [ ] Update README (1-minute quickstart)
-- [ ] Update SETUP.md, DEPLOYMENT.md
-- [ ] Add "Troubleshooting," "Performance Tuning"
-- [ ] Keep Problem Definition and Market Analysis
-- [ ] Remove stale docs per A1
+- [x] Scan all files; list unused/duplicate/unwired modules (COMPLETED in Phase A)
+- [x] Extract reusable logic into current flow (COMPLETED)
+- [x] Move questionable files to /archive/DATE/ (COMPLETED)
+- [x] Produce code_garden/plan.json with delete/adopt/merge actions (COMPLETED)
+- [ ] Final cleanup pass for any remaining duplicates identified
 
-**DoD**: Docs up-to-date, concise, aligned to current architecture and value props
+**DoD**: ✅ Working tree is smaller; ✅ tests still green; ✅ plan.json exists
+
+### **G2: Docs Pack & README Index**
+**Priority**: 🟡 MEDIUM  
+**Estimated Time**: 4-6 hours
+**Status**: ✅ PARTIALLY COMPLETED (Phase A)
+**Owner**: AI Assistant
+**Maps to**: Prompt 13
+
+#### **TODOs:**
+- [x] Add Problem Definition, Market Analysis to docs/ (COMPLETED)
+- [ ] Link them from README with "How this repo maps to the Solution" section
+- [ ] Add "Quick Start" with Docker Compose + .env keys list
+- [ ] Ensure in-repo indexing of core docs
+
+**DoD**: Opening README gives clean docs index and one-command start
 
 ---
 
-## 🗄️ **PHASE H: Datastore-Specific Fixes**
+## 🔗 **PHASE H: End-to-End Integration & Testing**
 
-### **H1: Meilisearch**
+### **H1: End-to-End Wire-Up Smoke Test**
+**Priority**: 🔴 HIGH  
+**Estimated Time**: 8-10 hours
+**Status**: 📋 TODO
+**Owner**: TBD
+**Maps to**: Prompt 14
+
+#### **TODOs:**
+- [ ] Implement smoke test that calls /search with 3 sample queries
+- [ ] Verify streaming events, citations present, sources resolve
+- [ ] Assert budgets: E2E ≤3s, vector ≤2s (after warmup), KG ≤1.5s
+- [ ] Open /search page headless; check UI tokens & citation hovers
+- [ ] Validate whole chain: Query → Retrieval → Synthesis → Citations → Stream → UI
+
+**DoD**: All assertions pass locally; complete end-to-end validation
+
+---
+
+## 🗄️ **PHASE J: Datastore-Specific Optimizations**
+
+### **J1: Meilisearch Tuning**
 **Priority**: 🟡 MEDIUM  
 **Estimated Time**: 4-6 hours
 **Status**: 📋 TODO
@@ -419,58 +389,34 @@ Complete task list integrating comprehensive codebase analysis with industry-sta
 
 #### **TODOs:**
 - [ ] Tune index settings (stop-words, synonyms, searchable/sortable attrs) for domains (docs/code/QA)
-- [ ] Batch updates with small chunk sizes
-- [ ] Enable auto-refresh post-bulk
+- [ ] Batch updates with small chunk sizes; enable auto-refresh post-bulk
 - [ ] Add `/status/search` reporting index sizes and last update
 
 **DoD**: Fast keyword results; status endpoint green; ingestion metrics visible
 
----
-
-### **H2: Qdrant**
+### **J2: Qdrant Production Optimization**
 **Priority**: 🔴 HIGH  
 **Estimated Time**: 4-6 hours
 **Status**: 📋 TODO
 **Owner**: TBD
 
 #### **TODOs:**
-- [ ] Ensure single client, HTTP keep-alive, batch upserts
-- [ ] Add warmup at boot
+- [ ] Ensure single client, HTTP keep-alive, batch upserts, warmup at boot
 - [ ] Verify collection params (vector size matches embedder)
 - [ ] Add small cache for frequent queries
 
 **DoD**: Warm vector queries < 1s; collection schema correct; status endpoint shows healthy collections
 
----
-
-### **H3: Chroma (Dev-Only)**
+### **J3: Chroma Dev Environment**
 **Priority**: 🟢 LOW  
 **Estimated Time**: 2-4 hours
 **Status**: 📋 TODO
 **Owner**: TBD
 
 #### **TODOs:**
-- [ ] Use Chroma for ephemeral/dev with clear toggle
-- [ ] Mirror the VectorStore interface
-- [ ] Add dev/prod environment switching
+- [ ] Use Chroma for ephemeral/dev with clear toggle; mirror VectorStore interface
 
 **DoD**: Dev works without Qdrant; prod path remains Qdrant
-
----
-
-### **H4: ArangoDB**
-**Priority**: 🟡 MEDIUM  
-**Estimated Time**: 4-6 hours
-**Status**: 📋 TODO
-**Owner**: TBD
-
-#### **TODOs:**
-- [ ] Fix auth & health checks
-- [ ] Add short-path entity/edge walk with timebox
-- [ ] Implement nightly compaction
-- [ ] Add KG performance monitoring
-
-**DoD**: KG lane returns context under 1.5s; /status/kg shows counts + compaction timestamp
 
 ---
 
@@ -490,58 +436,190 @@ Complete task list integrating comprehensive codebase analysis with industry-sta
 
 ---
 
-## 🎯 **IMPLEMENTATION PRIORITY ORDER**
+## 🎯 **IMPLEMENTATION PRIORITY ORDER (Updated with 14 Prompts)**
 
-### **🔴 HIGH PRIORITY (Weeks 1-2)**: 
-- B1: Centralize Provider Order + Free-First Fallback
-- B2: Best-LLM-per-Role Policy
+### **🔴 CRITICAL PATH (Weeks 1-2) - Foundation + Infrastructure**: 
+- ✅ A: Repository Hygiene (COMPLETED)
+- ✅ B1: Centralize Provider Order + Free-First Fallback (COMPLETED)
+- ✅ B2: Best-LLM-per-Role Policy (COMPLETED)
+- I1: ArangoDB 401 + Graph Warm Path (Prompt 1)
+- I2: Vector Lane Cold-Start Killer + Service Singletons (Prompt 2)
+- I3: Provider Router Enhancement (Prompt 3) - PARTIALLY DONE
 - B3: Always-On Multi-Lane Orchestration
-- D1: Unify Vector Backends + Hot Path Performance
-- E1: SSE Streaming with Heartbeats + Trace IDs
-- E3: Security Hardening
-- G1: Wire Everything & Prove the Happy Path
-- G2: "Always-On" Performance Gates
-- H2: Qdrant
+- J2: Qdrant Production Optimization
 
-### **🟡 MEDIUM PRIORITY (Weeks 3-4)**: 
-- C1: Expand Free Sources & Unify /search
-- C2: Sentence-Level Citation Alignment + Bibliography
-- D2: Meilisearch Hybrid Fusion
-- D3: ArangoDB KG Pathfinding on Every Query
-- D4: Data Ingestion & Status Visibility
-- E2: Metrics + Logs (Prometheus/Grafana)
-- G3: Documentation Refresh
-- H1: Meilisearch
-- H4: ArangoDB
+### **🔴 HIGH PRIORITY (Weeks 2-3) - Core Features**: 
+- C1: Retrieval Aggregator - Free Sources at Scale (Prompt 5)
+- D1: Index Fabric - Meilisearch + Qdrant + Chroma + KG (Prompt 6)
+- C2: Citations Pass - Sentence→Source Alignment (Prompt 4)
+- E1: SSE Streaming Done Right + Heartbeats (Prompt 7)
+- E2: Always-On Performance Suite (Prompt 8)
+- E3: Security & Legal Hardening (Prompt 9)
 
-### **🟢 LOW PRIORITY (Weeks 5-6)**: 
-- F1: Visual System Refresh
-- F2: Page-by-Page UX
-- F3: Optional Hybrid: Astro for Marketing Only
-- H3: Chroma (Dev-Only)
+### **🟡 MEDIUM PRIORITY (Weeks 3-4) - Polish & Quality**: 
+- E4: Audit & Provenance (Prompt 10)
+- F1: Cosmic UI v2 - Visual System Refresh (Prompt 11)
+- H1: End-to-End Wire-Up Smoke Test (Prompt 14)
+- D2: Data Ingestion & Status Visibility
+- J1: Meilisearch Tuning
+- G2: Docs Pack & README Index (Prompt 13)
+
+### **🟢 LOW PRIORITY (Weeks 4-5) - Final Polish**: 
+- G1: Final Repo Hygiene Pass (Prompt 12)
+- J3: Chroma Dev Environment
 
 ---
 
+## 🧭 **RECOMMENDED RUN ORDER (Following Prompt Guidelines)**
+
+**Phase 1**: Foundation + Infrastructure (Prompts 1, 2, 3)
+- I1: ArangoDB auth fix
+- I2: Vector cold-start killer  
+- I3: Provider router enhancement
+
+**Phase 2**: Retrieval + Index Fabric (Prompts 5, 6)
+- C1: Free sources aggregator
+- D1: Index fabric parallel lanes
+
+**Phase 3**: Citations + Streaming UX (Prompts 4, 7)
+- C2: Citation alignment
+- E1: SSE streaming with heartbeats
+
+**Phase 4**: Performance, Security, Audit (Prompts 8, 9, 10)
+- E2: Performance budgets
+- E3: Security hardening
+- E4: Audit & provenance
+
+**Phase 5**: UI + Documentation (Prompts 11, 12, 13, 14)
+- F1: Cosmic UI v2
+- G1-G2: Cleanup + docs
+- H1: End-to-end smoke test
+
+---
+### after evry phase check that we are getting output using real env variables and  are not giving mock results ,
+### NOTE: .env file exists in root dir with all variables, keys, values etc loaded. but cursor dont have permission to access it, just cross verify the key:value pairs key variables are being used in code to call the api keys or key:value pair from .env file.
+
+#### if some api keys or values are wrong in .env file and the cursor cannot resolve it automatically, make a note to inform me to add in this implementation_tasks.md file itself at end.
+
+### Always follow proper files and folders structure, keep microservices based structure
+
 ## 📈 **PROJECT SUMMARY**
 
-**Total Tasks**: 23 phases
+**Total Tasks**: 25 phases (integrated with 14 prompts)
 **Completed**: 3 phases (A, B1, B2)
-**In Progress**: 0 phases
-**Remaining**: 20 phases
+**In Progress**: 1 phase (I3 - partially done via B1/B2)
+**Remaining**: 21 phases
 
-**Estimated Total Time**: 116-154 hours (8-12 hours saved)
+**Estimated Total Time**: 130-170 hours 
 **Estimated Completion**: 5-7 weeks with dedicated development
+**MAANG Standard**: Production-ready with observability, security, and performance at scale
 
-**Current Focus**: Ready for Phase B3 - Always-On Multi-Lane Orchestration
-**Next Up**: Phase B3 - Always-On Multi-Lane Orchestration
+**Current Focus**: Ready for Phase I1 - ArangoDB 401 + Graph Warm Path
+**Next Up**: Infrastructure Layer (I1, I2, I3) - Foundation for all other features
 
 ---
 
 ## 🔄 **UPDATE HISTORY**
 
+### **Latest Update - Integration with 14 MAANG-Level Prompts**
+- **Date**: Current
+- **Action**: Comprehensive integration of 14 production-grade prompts with existing implementation
+- **Major Changes**:
+  - ✅ **Phase A**: Repository hygiene and baseline (COMPLETED)
+  - ✅ **Phase B1**: Centralized provider order system (COMPLETED)
+  - ✅ **Phase B2**: Role-based model selection with dynamic complexity routing (COMPLETED)
+  - 🔄 **Restructured**: All remaining phases to align with MAANG/OpenAI/Perplexity standards
+  - 🆕 **Added**: Infrastructure layer (I1-I3) for production foundations
+  - 🆕 **Enhanced**: Citations, streaming, security, and performance with industry standards
+  - 🆕 **Integrated**: 14 specific prompts mapped to implementation phases
 
-- **Date**: Current : 02 AUGUST 2025 21:58 IST
-- **Action**: Created comprehensive implementation tasks list
+### **Previous Updates**
 - **Phase A**: Completed repository hygiene and baseline
-- **Phase B1**: Started centralized provider order system (25% complete)
-- **Status**: Ready for continued Phase B1 implementation
+- **Phase B1-B2**: Implemented comprehensive LLM provider system with role-based model selection
+- **Status**: Ready for Infrastructure Layer (Phase I1) - ArangoDB auth + graph warm path
+
+### **Key Accomplishments**
+- ✅ Comprehensive codebase cleanup and organization
+- ✅ Centralized LLM provider order system with free-first fallback
+- ✅ Advanced role-based model selection (FAST/QUALITY/LONG/REASONING/TOOL)
+- ✅ Dynamic model selection based on query complexity
+- ✅ Industry-standard task organization aligned with MAANG practices
+
+---
+
+## 🎯 **TECHNICAL EXCELLENCE STANDARDS**
+
+**Why this matches MAANG/OpenAI/Perplexity standards:**
+
+1. **Free-first with capability-aware routing** → Best $/quality trade-off
+2. **Non-blocking lanes + budgets** → Responsiveness under failure  
+3. **Evidence-first citations & provenance** → Trust (core differentiator)
+4. **Observability (metrics, trace IDs) + security headers** → Production table stakes
+5. **Astro-inspired UI without switching frameworks** → Preserves SSE/React ecosystem strengths while hitting design bar
+6. **Zero-budget optimization** → Sustainable scaling with graceful premium upgrades
+
+**Next milestone**: Infrastructure foundation (I1-I3) enabling all downstream features.
+
+To be super clear, here’s what still stands between you and “fixed all”:
+
+Must-close blockers (in order)
+
+I1 ArangoDB auth + warm path – unblocks KG lane and removes 401s.
+
+I2 Vector cold-start + singletons – drops vector P95 to ≤2s after warm.
+
+B3 Always-on multi-lane orchestration – ensures non-blocking returns when any lane is slow/down.
+
+C1 Free-source aggregator – makes zero-budget retrieval actually strong/fast.
+
+C2 Citations pass – evidence-first UX (inline markers + bibliography).
+
+D1 Index fabric (Meilisearch+Qdrant+Chroma+KG) – parallel enrichment without delaying the 3s budget.
+
+E1/E2 Streaming + budgets – reliable SSE (heartbeats) and enforced timeboxes.
+
+J2 Qdrant tuning – validates schema/params and locks in sub-second warm searches.
+
+H1 End-to-end smoke test – proves the full chain works under budgets.
+
+“Don’t forget” items that often bite late
+
+Router telemetry & budget caps exposed at /metrics.
+
+Security headers + rate limiting + circuit breakers actually verified in browser and logs.
+
+Secrets & config hygiene: single source of truth in .env + .env.example (no secrets in logs).
+
+Backups & rollbacks for Qdrant/Meilisearch/Arango (snapshot/restore steps documented).
+
+Scraper etiquette (per-source backoff, ToS awareness) in the free aggregator.
+
+CI gates that fail on perf regressions (>10%), lint/test failures, or Lighthouse dips.
+
+Accessibility pass (ARIA, contrast, keyboard nav) for the Cosmic UI v2.
+
+How you’ll know you’ve truly “fixed all”
+
+Use these go/no-go gates (all must pass):
+
+Gate 1 · Health: /health returns 200 with { arangodb:"ok", vector:"ok", meili:"ok" }.
+
+Gate 2 · Performance: P95 E2E ≤3s, Vector lane ≤2s (warm), KG lane ≤1.5s; non-blocking with partials when a lane times out.
+
+Gate 3 · Evidence: Every nontrivial sentence renders with [n] markers; bibliography preserved on export; “Disagreement” badge appears on conflicts.
+
+Gate 4 · Streaming: Time-to-first-token <1s locally; heartbeats every 10s; graceful close; X-Trace-ID visible in each SSE event.
+
+Gate 5 · Security: CSP/HSTS/XFO/Referrer-Policy present; 60 rpm/IP rate limit; input sanitization verified; external calls wrapped with circuit breakers.
+
+Gate 6 · Observability: Prometheus metrics show per-lane p50/p95 + errors/timeouts; /audit/{trace_id} returns provenance JSON.
+
+Gate 7 · UI: Lighthouse Perf ≥90 / A11y ≥95 / BP ≥95 / SEO ≥90 across mobile/desktop; visual QA on search→answer→sources flow.
+
+Gate 8 · Docs: README indexes Problem Definition, Market Analysis, Solution; Quick Start (Docker Compose + .env); runbooks for ingest/backups.
+
+Bottom line
+
+If you finish I1, I2, B3, C1, C2, D1, E1–E3, H1, J2 to spec and pass the gates above, you’ll have closed all known issues and hit a MAANG/OpenAI/Perplexity-grade v1.
+
+Anything beyond that (“best-in-class at scale”) becomes scaling work (multi-tenant isolation, quotas/billing, abuse detection, GPU/queueing, disaster recovery). Not required to declare “fixed all,” but worth scheduling after v1 passes the gates.

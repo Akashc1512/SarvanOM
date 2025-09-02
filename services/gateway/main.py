@@ -170,6 +170,16 @@ except Exception as e:
     print(f"Warning: Could not import backend health router: {e}")
     backend_health_router = None
 
+# Phase I2: Startup warmup service
+try:
+    from shared.core.services.startup_warmup_service import start_application_warmup, get_warmup_status
+    STARTUP_WARMUP_AVAILABLE = True
+except Exception as e:
+    print(f"Warning: Could not import startup warmup service: {e}")
+    start_application_warmup = None
+    get_warmup_status = None
+    STARTUP_WARMUP_AVAILABLE = False
+
 try:
     from backend.api.routers.query_router import router as query_router
 except Exception as e:
@@ -1176,6 +1186,30 @@ async def detailed_health_check():
             "recommendations": ["Health check system is experiencing issues. Contact system administrator."]
         }
         )
+
+
+@app.get("/health/warmup")
+async def warmup_status():
+    """Get startup warmup status (Phase I2)."""
+    try:
+        if STARTUP_WARMUP_AVAILABLE and get_warmup_status:
+            status = get_warmup_status()
+            return {
+                "status": "available",
+                "warmup": status
+            }
+        else:
+            return {
+                "status": "unavailable",
+                "message": "Startup warmup service not available"
+            }
+    except Exception as e:
+        logger.error(f"Warmup status check failed: {e}")
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
 
 # Search/Retrieval service endpoint
 @app.get("/search")
@@ -2603,6 +2637,16 @@ crud_client = ServiceClientFactory.create_crud_client()
 async def startup_event():
     """Initialize services on startup."""
     await streaming_manager.initialize()
+    
+    # Phase I2: Start background warmup
+    if STARTUP_WARMUP_AVAILABLE and start_application_warmup:
+        try:
+            await start_application_warmup()
+            logger.info("Background warmup started successfully")
+        except Exception as e:
+            logger.error(f"Failed to start background warmup: {e}")
+    else:
+        logger.warning("Startup warmup not available - services will be initialized on-demand")
 
 @app.on_event("shutdown")
 async def shutdown_event():

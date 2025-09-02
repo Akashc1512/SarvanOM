@@ -336,6 +336,17 @@ class HealthService:
                 details=arangodb_details,
             )
 
+            # Check Vector Singleton Service (Phase I2)
+            vector_status, vector_details = await self._check_vector_singleton()
+            services["vector_singleton"] = ServiceHealth(
+                service_name="Vector Singleton",
+                status=vector_status,
+                response_time=vector_details.get("response_time_ms", 0),
+                last_check=datetime.now(),
+                error_count=vector_details.get("error_count", 0),
+                details=vector_details,
+            )
+
             return services
 
         except Exception as e:
@@ -427,6 +438,38 @@ class HealthService:
                 "error_count": 1,
                 "error": str(e),
                 "available": False
+            }
+
+    async def _check_vector_singleton(self) -> tuple[str, Dict[str, Any]]:
+        """Check Vector Singleton service health (Phase I2)."""
+        try:
+            from shared.core.services.vector_singleton_service import get_vector_singleton_health
+            
+            health_data = await get_vector_singleton_health()
+            
+            # Check if service is properly initialized
+            initialized = health_data.get("initialized", False)
+            embedding_loaded = health_data.get("embedding", {}).get("model_loaded", False)
+            vector_connected = health_data.get("vector_store", {}).get("connected", False)
+            
+            if initialized and embedding_loaded and vector_connected:
+                return "healthy", health_data
+            else:
+                return "degraded", health_data
+                
+        except ImportError:
+            return "unhealthy", {
+                "response_time_ms": 0,
+                "error_count": 1,
+                "error": "Vector singleton service not available",
+                "initialized": False
+            }
+        except Exception as e:
+            return "unhealthy", {
+                "response_time_ms": 0,
+                "error_count": 1,
+                "error": str(e),
+                "initialized": False
             }
 
     def _determine_overall_health(

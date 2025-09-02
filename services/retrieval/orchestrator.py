@@ -532,34 +532,22 @@ class RetrievalOrchestrator:
         return results[:top_k]
     
     async def _vector_search_lane(self, request: RetrievalSearchRequest) -> List[Dict[str, Any]]:
-        """Vector passage search lane with thin wrapper around existing vector service."""
+        """Vector passage search lane using optimized singleton service."""
         try:
-            # Import existing vector store instance to avoid reinitialization
-            from services.retrieval.main import VECTOR_STORE
-            from shared.embeddings.local_embedder import embed_texts
+            # Import singleton vector service (Phase I2 optimization)
+            from shared.core.services.vector_singleton_service import get_vector_singleton_service
             
-            # Use existing vector store instance (already initialized)
-            vector_store = VECTOR_STORE
+            # Get singleton service (already initialized and warmed up)
+            vector_service = await get_vector_singleton_service()
             
-            # Generate embedding for query in a thread pool to avoid blocking
-            import asyncio
-            loop = asyncio.get_event_loop()
-            
-            # Generate embedding with strict timeout (0.8s)
-            query_embedding = await asyncio.wait_for(
-                loop.run_in_executor(None, embed_texts, [request.query]),
-                timeout=0.8
-            )
-            query_embedding = query_embedding[0]
-            
-            # Perform vector search with strict top-k for performance (≤ 5 passages as required)
-            # CRITICAL: This enforces the strict top-k ≤ 5 requirement for performance
+            # CRITICAL: Enforce strict top-k ≤ 5 requirement for performance
             top_k = min(5, request.max_results)  # Strict ≤ 5 passages for performance
             
-            # Vector search with strict timeout (0.7s)
-            search_results = await asyncio.wait_for(
-                vector_store.search(query_embedding=query_embedding, top_k=top_k),
-                timeout=0.7
+            # Complete pipeline with singleton service (embed + search)
+            # This uses the optimized singleton with caching and warmup
+            embeddings, search_results = await vector_service.embed_and_search(
+                query=request.query,
+                top_k=top_k
             )
             
             # Format results
