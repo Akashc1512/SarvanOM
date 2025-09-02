@@ -1,30 +1,48 @@
 {
   "generated_at": 1755695528.1763413,
   "analysis_summary": {
-    "total_files_analyzed": 150,
-    "files_to_adopt": 45,
-    "files_to_merge": 25,
-    "files_to_rewrite": 15,
-    "files_to_archive": 50,
-    "files_to_delete": 15,
+    "total_files_analyzed": 250,
+    "files_to_adopt": 60,
+    "files_to_merge": 35,
+    "files_to_rewrite": 20,
+    "files_to_archive": 80,
+    "files_to_delete": 25,
     "major_duplications_found": [
-      "LLM client implementations (5 duplicates)",
-      "API Gateway services (3 duplicates)", 
-      "Agent implementations (20+ duplicates)",
-      "Configuration systems (3 duplicates)",
-      "Analytics services (3 duplicates)"
+      "LLM client implementations (8 duplicates)",
+      "API Gateway services (5 duplicates)",
+      "Agent implementations (25+ duplicates)",
+      "Configuration systems (5 duplicates)",
+      "Analytics services (5 duplicates)",
+      "Database repositories (3 duplicates)",
+      "Authentication services (3 duplicates)",
+      "Vector store implementations (4 duplicates)"
     ],
     "unused_modules_found": [
       "services/api_gateway/ (entire directory)",
-      "shared/core/llm_client*.py (5 files)",
-      "shared/core/config/environment_manager*.py (2 files)",
-      "services/analytics/analytics_v*.py (2 files)"
+      "shared/core/llm_client*.py (8 files)",
+      "shared/core/config/environment_manager*.py (3 files)",
+      "services/analytics/analytics_v*.py (3 files)",
+      "backend/services/query/ (unused query orchestrator)",
+      "shared/core/agents/knowledge_graph_service.py (archived but still imported)",
+      "Multiple test files in root directory",
+      "Stale markdown documentation files"
     ],
     "architectural_issues": [
       "Duplicate microservice entry points",
       "Inconsistent import patterns",
       "Mixed old and new architectures",
-      "Unused legacy code in production paths"
+      "Unused legacy code in production paths",
+      "Circular import dependencies",
+      "Unused backend services",
+      "Duplicate route definitions",
+      "Unused frontend components"
+    ],
+    "import_issues_found": [
+      "services.gateway.main.py imports non-existent modules",
+      "shared.core.agents imports archived utilities",
+      "backend services import unused modules",
+      "Frontend imports unused components",
+      "Duplicate import paths for same functionality"
     ]
   },
   "file_analysis": [
@@ -69,6 +87,494 @@
       "tests_to_update": []
     },
     {
+      "file": "test_real_llm_performance.py",
+      "status": "archive",
+      "reason": "Test script in root directory, should be in tests/",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "REORGANIZATION_SUMMARY.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "GUARDRAILS_IMPLEMENTATION_SUMMARY.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "COMPREHENSIVE_ISSUES_ANALYSIS.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "GUARDRAILS_CRITICAL_ISSUES_SUMMARY.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "GUARDRAILS_ERRORS_FIXED.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "PYTHON_EXECUTION_TROUBLESHOOTING.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "GUARDRAILS_IMPLEMENTATION_STATUS.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "GUARDRAILS_IMPLEMENTATION.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "REAL_LLM_TEST_RESULTS.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "ALWAYS_ON_PERFORMANCE_FINAL_SUMMARY.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "ALWAYS_ON_PERFORMANCE_SUMMARY.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "CREDENTIALS_CLEANUP_SUMMARY.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "POSTGRESQL_FIX_SUMMARY.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "ENV_FIX_SUMMARY.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "ROADMAP.md",
+      "status": "adopt",
+      "reason": "Essential project documentation - roadmap",
+      "impact": "medium",
+      "dependents": ["all_developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "SECURITY.md",
+      "status": "adopt",
+      "reason": "Essential project documentation - security",
+      "impact": "high",
+      "dependents": ["all_developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "LICENSE",
+      "status": "adopt",
+      "reason": "Essential project documentation - license",
+      "impact": "high",
+      "dependents": ["all_developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "Makefile",
+      "status": "adopt",
+      "reason": "Build and development scripts",
+      "impact": "medium",
+      "dependents": ["all_developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "pyproject.toml",
+      "status": "adopt",
+      "reason": "Python project configuration",
+      "impact": "medium",
+      "dependents": ["all_python_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": ".gitignore",
+      "status": "adopt",
+      "reason": "Git ignore configuration",
+      "impact": "medium",
+      "dependents": ["all_developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": ".pre-commit-config.yaml",
+      "status": "adopt",
+      "reason": "Pre-commit hooks configuration",
+      "impact": "medium",
+      "dependents": ["all_developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "env.postgresql.template",
+      "status": "adopt",
+      "reason": "Environment template for PostgreSQL",
+      "impact": "medium",
+      "dependents": ["database_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "docker-compose.postgresql.template.yml",
+      "status": "adopt",
+      "reason": "Docker Compose template for PostgreSQL",
+      "impact": "medium",
+      "dependents": ["database_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "env.docker.template",
+      "status": "adopt",
+      "reason": "Environment template for Docker",
+      "impact": "medium",
+      "dependents": ["all_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "docker-compose.dev.yml",
+      "status": "adopt",
+      "reason": "Development Docker Compose configuration",
+      "impact": "medium",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "docker-compose.meilisearch.yml",
+      "status": "adopt",
+      "reason": "Meilisearch Docker Compose configuration",
+      "impact": "medium",
+      "dependents": ["search_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "docker-compose.enterprise.yml",
+      "status": "adopt",
+      "reason": "Enterprise Docker Compose configuration",
+      "impact": "medium",
+      "dependents": ["enterprise_deployments"],
+      "tests_to_update": []
+    },
+    {
+      "file": "Dockerfile.enterprise",
+      "status": "adopt",
+      "reason": "Enterprise Docker configuration",
+      "impact": "medium",
+      "dependents": ["enterprise_deployments"],
+      "tests_to_update": []
+    },
+    {
+      "file": "meilisearch.sh",
+      "status": "adopt",
+      "reason": "Meilisearch startup script",
+      "impact": "low",
+      "dependents": ["search_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": ".flake8",
+      "status": "adopt",
+      "reason": "Flake8 linting configuration",
+      "impact": "low",
+      "dependents": ["all_developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": ".dockerignore",
+      "status": "adopt",
+      "reason": "Docker ignore configuration",
+      "impact": "low",
+      "dependents": ["docker_builds"],
+      "tests_to_update": []
+    },
+    {
+      "file": "package-lock.json",
+      "status": "adopt",
+      "reason": "Frontend dependency lock file",
+      "impact": "medium",
+      "dependents": ["frontend"],
+      "tests_to_update": []
+    },
+    {
+      "file": "venv/",
+      "status": "adopt",
+      "reason": "Python virtual environment",
+      "impact": "high",
+      "dependents": ["all_python_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "node_modules/",
+      "status": "adopt",
+      "reason": "Node.js dependencies",
+      "impact": "high",
+      "dependents": ["frontend"],
+      "tests_to_update": []
+    },
+    {
+      "file": ".next/",
+      "status": "adopt",
+      "reason": "Next.js build output",
+      "impact": "medium",
+      "dependents": ["frontend"],
+      "tests_to_update": []
+    },
+    {
+      "file": ".pytest_cache/",
+      "status": "adopt",
+      "reason": "Pytest cache directory",
+      "impact": "low",
+      "dependents": ["tests"],
+      "tests_to_update": []
+    },
+    {
+      "file": "__pycache__/",
+      "status": "adopt",
+      "reason": "Python bytecode cache",
+      "impact": "low",
+      "dependents": ["all_python_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "logs/",
+      "status": "adopt",
+      "reason": "Application logs directory",
+      "impact": "low",
+      "dependents": ["all_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "models_cache/",
+      "status": "adopt",
+      "reason": "ML model cache directory",
+      "impact": "low",
+      "dependents": ["ml_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": ".benchmarks/",
+      "status": "adopt",
+      "reason": "Benchmark results directory",
+      "impact": "low",
+      "dependents": ["performance_tests"],
+      "tests_to_update": []
+    },
+    {
+      "file": ".cursor/",
+      "status": "adopt",
+      "reason": "Cursor IDE configuration",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": ".vscode/",
+      "status": "adopt",
+      "reason": "VS Code configuration",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": ".github/",
+      "status": "adopt",
+      "reason": "GitHub Actions configuration",
+      "impact": "medium",
+      "dependents": ["ci_cd"],
+      "tests_to_update": []
+    },
+    {
+      "file": "data/",
+      "status": "adopt",
+      "reason": "Data directory",
+      "impact": "low",
+      "dependents": ["data_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "models/",
+      "status": "adopt",
+      "reason": "ML models directory",
+      "impact": "low",
+      "dependents": ["ml_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "nginx/",
+      "status": "adopt",
+      "reason": "Nginx configuration",
+      "impact": "low",
+      "dependents": ["web_server"],
+      "tests_to_update": []
+    },
+    {
+      "file": "scripts/",
+      "status": "adopt",
+      "reason": "Utility scripts directory",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "tests/",
+      "status": "adopt",
+      "reason": "Test directory",
+      "impact": "high",
+      "dependents": ["all_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "docs/",
+      "status": "adopt",
+      "reason": "Documentation directory",
+      "impact": "medium",
+      "dependents": ["all_developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "documentation/",
+      "status": "adopt",
+      "reason": "Documentation directory",
+      "impact": "medium",
+      "dependents": ["all_developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "mlops/",
+      "status": "adopt",
+      "reason": "MLOps configuration",
+      "impact": "low",
+      "dependents": ["ml_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "security/",
+      "status": "adopt",
+      "reason": "Security configuration",
+      "impact": "medium",
+      "dependents": ["security_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "config/",
+      "status": "adopt",
+      "reason": "Configuration directory",
+      "impact": "medium",
+      "dependents": ["all_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "monitoring/",
+      "status": "adopt",
+      "reason": "Monitoring configuration",
+      "impact": "low",
+      "dependents": ["monitoring_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "frontend/",
+      "status": "adopt",
+      "reason": "Frontend application",
+      "impact": "high",
+      "dependents": ["users"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/",
+      "status": "adopt",
+      "reason": "Backend services",
+      "impact": "high",
+      "dependents": ["frontend", "api_clients"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/",
+      "status": "adopt",
+      "reason": "Microservices",
+      "impact": "high",
+      "dependents": ["gateway", "api_clients"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/",
+      "status": "adopt",
+      "reason": "Shared libraries",
+      "impact": "high",
+      "dependents": ["all_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "archive/",
+      "status": "adopt",
+      "reason": "Archived files directory",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "code_garden/",
+      "status": "adopt",
+      "reason": "Code garden analysis directory",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
       "file": "services/gateway/main.py",
       "status": "adopt",
       "reason": "Primary API Gateway with comprehensive features and proper architecture",
@@ -85,20 +591,444 @@
       "tests_to_update": ["tests/unit/test_llm_integration.py"]
     },
     {
+      "file": "services/gateway/gateway_app.py",
+      "status": "merge",
+      "reason": "Duplicate gateway implementation, merge with main.py",
+      "impact": "medium",
+      "dependents": ["services/gateway/__init__.py"],
+      "tests_to_update": ["tests/unit/test_gateway.py"]
+    },
+    {
+      "file": "services/gateway/routes.py",
+      "status": "merge",
+      "reason": "Duplicate routes implementation, merge with main.py",
+      "impact": "medium",
+      "dependents": ["services/gateway/gateway_app.py"],
+      "tests_to_update": ["tests/unit/test_routes.py"]
+    },
+    {
+      "file": "services/gateway/agent_orchestrator.py",
+      "status": "adopt",
+      "reason": "Core agent orchestration service",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py", "shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_agent_orchestrator.py"]
+    },
+    {
+      "file": "services/gateway/streaming_manager.py",
+      "status": "adopt",
+      "reason": "Streaming response management service",
+      "impact": "medium",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_streaming.py"]
+    },
+    {
+      "file": "services/gateway/cache_manager.py",
+      "status": "adopt",
+      "reason": "Cache management service",
+      "impact": "medium",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_cache.py"]
+    },
+    {
+      "file": "services/gateway/background_processor.py",
+      "status": "adopt",
+      "reason": "Background task processing service",
+      "impact": "medium",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_background.py"]
+    },
+    {
+      "file": "services/gateway/analytics_collector.py",
+      "status": "adopt",
+      "reason": "Analytics collection service",
+      "impact": "medium",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_analytics.py"]
+    },
+    {
+      "file": "services/gateway/prompt_optimizer.py",
+      "status": "adopt",
+      "reason": "Prompt optimization service",
+      "impact": "medium",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_prompt_optimizer.py"]
+    },
+    {
+      "file": "services/gateway/huggingface_integration.py",
+      "status": "adopt",
+      "reason": "HuggingFace integration service",
+      "impact": "medium",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_huggingface.py"]
+    },
+    {
+      "file": "services/gateway/citations.py",
+      "status": "adopt",
+      "reason": "Citation management service",
+      "impact": "medium",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_citations.py"]
+    },
+    {
+      "file": "services/gateway/security_middleware.py",
+      "status": "adopt",
+      "reason": "Security middleware service",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_security.py"]
+    },
+    {
+      "file": "services/gateway/simple_main.py",
+      "status": "archive",
+      "reason": "Simplified gateway implementation, not used in production",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/gateway/advanced_features.py",
+      "status": "merge",
+      "reason": "Advanced features should be integrated into main.py",
+      "impact": "medium",
+      "dependents": [],
+      "tests_to_update": ["tests/unit/test_advanced_features.py"]
+    },
+    {
+      "file": "services/gateway/test_security_hardening.py",
+      "status": "archive",
+      "reason": "Test file in services directory, should be in tests/",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/gateway/test_observability.py",
+      "status": "archive",
+      "reason": "Test file in services directory, should be in tests/",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/gateway/test_sse_robustness.py",
+      "status": "archive",
+      "reason": "Test file in services directory, should be in tests/",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/gateway/verify_real_services.py",
+      "status": "archive",
+      "reason": "Verification script in services directory, should be in scripts/",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/gateway/scoring_router.py",
+      "status": "merge",
+      "reason": "Scoring functionality should be integrated into main.py",
+      "impact": "medium",
+      "dependents": [],
+      "tests_to_update": ["tests/unit/test_scoring.py"]
+    },
+    {
+      "file": "services/gateway/metrics_router.py",
+      "status": "merge",
+      "reason": "Metrics functionality should be integrated into main.py",
+      "impact": "medium",
+      "dependents": [],
+      "tests_to_update": ["tests/unit/test_metrics.py"]
+    },
+    {
+      "file": "services/gateway/model_router.py",
+      "status": "merge",
+      "reason": "Model functionality should be integrated into main.py",
+      "impact": "medium",
+      "dependents": [],
+      "tests_to_update": ["tests/unit/test_model.py"]
+    },
+    {
+      "file": "services/gateway/README.md",
+      "status": "adopt",
+      "reason": "Service documentation",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/retrieval/main.py",
+      "status": "adopt",
+      "reason": "Core retrieval service with proper implementation",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_retrieval.py"]
+    },
+    {
+      "file": "services/retrieval/orchestrator.py",
+      "status": "adopt",
+      "reason": "Retrieval orchestration service",
+      "impact": "high",
+      "dependents": ["services/retrieval/main.py"],
+      "tests_to_update": ["tests/unit/test_orchestrator.py"]
+    },
+    {
+      "file": "services/retrieval/warmup.py",
+      "status": "adopt",
+      "reason": "Service warmup functionality",
+      "impact": "low",
+      "dependents": ["services/retrieval/main.py"],
+      "tests_to_update": ["tests/unit/test_warmup.py"]
+    },
+    {
+      "file": "services/retrieval/free_tier.py",
+      "status": "adopt",
+      "reason": "Free tier retrieval service",
+      "impact": "medium",
+      "dependents": ["services/retrieval/main.py"],
+      "tests_to_update": ["tests/unit/test_free_tier.py"]
+    },
+    {
+      "file": "services/retrieval/wiki.py",
+      "status": "adopt",
+      "reason": "Wikipedia retrieval service",
+      "impact": "low",
+      "dependents": ["services/retrieval/main.py"],
+      "tests_to_update": ["tests/unit/test_wiki.py"]
+    },
+    {
+      "file": "services/retrieval/test_performance.py",
+      "status": "archive",
+      "reason": "Test file in services directory, should be in tests/",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/retrieval/test_real_services.py",
+      "status": "archive",
+      "reason": "Test file in services directory, should be in tests/",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/retrieval/test_orchestrator.py",
+      "status": "archive",
+      "reason": "Test file in services directory, should be in tests/",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/retrieval/README.md",
+      "status": "adopt",
+      "reason": "Service documentation",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/synthesis/main.py",
+      "status": "adopt",
+      "reason": "Core synthesis service",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_synthesis.py"]
+    },
+    {
+      "file": "services/synthesis/README.md",
+      "status": "adopt",
+      "reason": "Service documentation",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/fact_check/main.py",
+      "status": "adopt",
+      "reason": "Core fact-check service",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_fact_check.py"]
+    },
+    {
+      "file": "services/fact_check/README.md",
+      "status": "adopt",
+      "reason": "Service documentation",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/auth/main.py",
+      "status": "adopt",
+      "reason": "Core authentication service",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_auth.py"]
+    },
+    {
+      "file": "services/auth/routes.py",
+      "status": "adopt",
+      "reason": "Authentication routes",
+      "impact": "high",
+      "dependents": ["services/auth/main.py"],
+      "tests_to_update": ["tests/unit/test_auth_routes.py"]
+    },
+    {
+      "file": "services/auth/README.md",
+      "status": "adopt",
+      "reason": "Service documentation",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/search/main.py",
+      "status": "adopt",
+      "reason": "Core search service",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_search.py"]
+    },
+    {
+      "file": "services/search/README.md",
+      "status": "adopt",
+      "reason": "Service documentation",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/analytics/analytics.py",
+      "status": "adopt",
+      "reason": "Core analytics service",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_analytics.py"]
+    },
+    {
+      "file": "services/analytics/metrics.py",
+      "status": "adopt",
+      "reason": "Metrics service",
+      "impact": "medium",
+      "dependents": ["services/analytics/analytics.py"],
+      "tests_to_update": ["tests/unit/test_metrics.py"]
+    },
+    {
+      "file": "services/analytics/health_checks.py",
+      "status": "adopt",
+      "reason": "Health check service",
+      "impact": "medium",
+      "dependents": ["services/analytics/analytics.py"],
+      "tests_to_update": ["tests/unit/test_health_checks.py"]
+    },
+    {
+      "file": "services/analytics/integration_monitor.py",
+      "status": "adopt",
+      "reason": "Integration monitoring service",
+      "impact": "medium",
+      "dependents": ["services/analytics/analytics.py"],
+      "tests_to_update": ["tests/unit/test_integration_monitor.py"]
+    },
+    {
+      "file": "services/analytics/README.md",
+      "status": "adopt",
+      "reason": "Service documentation",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/knowledge_graph/main.py",
+      "status": "adopt",
+      "reason": "Core knowledge graph service",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_knowledge_graph.py"]
+    },
+    {
+      "file": "services/knowledge_graph/README.md",
+      "status": "adopt",
+      "reason": "Service documentation",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/crud/main.py",
+      "status": "adopt",
+      "reason": "Core CRUD service",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_crud.py"]
+    },
+    {
+      "file": "services/crud/README.md",
+      "status": "adopt",
+      "reason": "Service documentation",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/monitoring/main.py",
+      "status": "adopt",
+      "reason": "Core monitoring service",
+      "impact": "medium",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_monitoring.py"]
+    },
+    {
+      "file": "services/monitoring/README.md",
+      "status": "adopt",
+      "reason": "Service documentation",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/deployment/main.py",
+      "status": "adopt",
+      "reason": "Core deployment service",
+      "impact": "medium",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_deployment.py"]
+    },
+    {
+      "file": "services/deployment/README.md",
+      "status": "adopt",
+      "reason": "Service documentation",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/__init__.py",
+      "status": "adopt",
+      "reason": "Services package initialization",
+      "impact": "medium",
+      "dependents": ["all_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "services/README.md",
+      "status": "adopt",
+      "reason": "Services documentation",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
+    },
+    {
       "file": "shared/core/agents/base_agent.py",
       "status": "adopt",
       "reason": "Core agent base class with proper patterns and interfaces",
       "impact": "high",
       "dependents": ["all_agent_implementations"],
       "tests_to_update": ["tests/unit/test_agents.py"]
-    },
-    {
-      "file": "shared/core/agents/retrieval_agent.py",
-      "status": "adopt",
-      "reason": "Working retrieval agent with proper implementation",
-      "impact": "high",
-      "dependents": ["services/gateway/main.py"],
-      "tests_to_update": ["tests/unit/test_retrieval_agent.py"]
     },
     {
       "file": "shared/core/agents/synthesis_agent.py",
@@ -117,6 +1047,14 @@
       "tests_to_update": ["tests/unit/test_factcheck_agent.py"]
     },
     {
+      "file": "shared/core/agents/retrieval_agent.py",
+      "status": "adopt",
+      "reason": "Working retrieval agent with proper implementation",
+      "impact": "high",
+      "dependents": ["services/gateway/main.py"],
+      "tests_to_update": ["tests/unit/test_retrieval_agent.py"]
+    },
+    {
       "file": "shared/core/agents/citation_agent.py",
       "status": "adopt",
       "reason": "Working citation agent with proper implementation",
@@ -125,9 +1063,529 @@
       "tests_to_update": ["tests/unit/test_citation_agent.py"]
     },
     {
-      "file": "backend/api/routers/query_router.py",
+      "file": "shared/core/agents/task_processor.py",
       "status": "adopt",
-      "reason": "Clean architecture query router with proper separation of concerns",
+      "reason": "Simple task processor for agents",
+      "impact": "medium",
+      "dependents": ["all_agent_implementations"],
+      "tests_to_update": ["tests/unit/test_task_processor.py"]
+    },
+    {
+      "file": "shared/core/agents/common_processors.py",
+      "status": "adopt",
+      "reason": "Common processing utilities for agents",
+      "impact": "medium",
+      "dependents": ["all_agent_implementations"],
+      "tests_to_update": ["tests/unit/test_common_processors.py"]
+    },
+    {
+      "file": "shared/core/agents/common_validators.py",
+      "status": "adopt",
+      "reason": "Common validation utilities for agents",
+      "impact": "medium",
+      "dependents": ["all_agent_implementations"],
+      "tests_to_update": ["tests/unit/test_common_validators.py"]
+    },
+    {
+      "file": "shared/core/agents/agent_decorators.py",
+      "status": "adopt",
+      "reason": "Agent-specific decorators",
+      "impact": "low",
+      "dependents": ["all_agent_implementations"],
+      "tests_to_update": ["tests/unit/test_agent_decorators.py"]
+    },
+    {
+      "file": "shared/core/agents/__init__.py",
+      "status": "adopt",
+      "reason": "Agents package initialization",
+      "impact": "medium",
+      "dependents": ["all_agent_implementations"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/workflow_manager.py",
+      "status": "rewrite",
+      "reason": "Complex workflow manager with broken imports, needs refactoring",
+      "impact": "medium",
+      "dependents": ["shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_workflow_manager.py"]
+    },
+    {
+      "file": "shared/core/secure_auth.py",
+      "status": "adopt",
+      "reason": "Core security and authentication utilities",
+      "impact": "high",
+      "dependents": ["services/auth/", "services/gateway/"],
+      "tests_to_update": ["tests/unit/test_secure_auth.py"]
+    },
+    {
+      "file": "shared/core/health_checker.py",
+      "status": "adopt",
+      "reason": "Core health checking utilities",
+      "impact": "medium",
+      "dependents": ["services/gateway/", "services/analytics/"],
+      "tests_to_update": ["tests/unit/test_health_checker.py"]
+    },
+    {
+      "file": "shared/core/vector_database.py",
+      "status": "adopt",
+      "reason": "Core vector database utilities",
+      "impact": "high",
+      "dependents": ["services/retrieval/", "shared/vectorstores/"],
+      "tests_to_update": ["tests/unit/test_vector_database.py"]
+    },
+    {
+      "file": "shared/core/socket_io_manager.py",
+      "status": "adopt",
+      "reason": "Socket.IO management utilities",
+      "impact": "medium",
+      "dependents": ["services/gateway/"],
+      "tests_to_update": ["tests/unit/test_socket_io.py"]
+    },
+    {
+      "file": "shared/core/unified_logging.py",
+      "status": "adopt",
+      "reason": "Core unified logging utilities",
+      "impact": "high",
+      "dependents": ["all_services"],
+      "tests_to_update": ["tests/unit/test_logging.py"]
+    },
+    {
+      "file": "shared/core/shutdown_handler.py",
+      "status": "adopt",
+      "reason": "Graceful shutdown handling utilities",
+      "impact": "medium",
+      "dependents": ["services/gateway/"],
+      "tests_to_update": ["tests/unit/test_shutdown.py"]
+    },
+    {
+      "file": "shared/core/retry_logic.py",
+      "status": "adopt",
+      "reason": "Core retry logic utilities",
+      "impact": "medium",
+      "dependents": ["all_services"],
+      "tests_to_update": ["tests/unit/test_retry.py"]
+    },
+    {
+      "file": "shared/core/repository.py",
+      "status": "adopt",
+      "reason": "Core repository pattern utilities",
+      "impact": "medium",
+      "dependents": ["backend/repositories/"],
+      "tests_to_update": ["tests/unit/test_repository.py"]
+    },
+    {
+      "file": "shared/core/query_classifier.py",
+      "status": "adopt",
+      "reason": "Core query classification utilities",
+      "impact": "medium",
+      "dependents": ["services/gateway/"],
+      "tests_to_update": ["tests/unit/test_query_classifier.py"]
+    },
+    {
+      "file": "shared/core/prompt_templates.py",
+      "status": "adopt",
+      "reason": "Core prompt template utilities",
+      "impact": "medium",
+      "dependents": ["services/gateway/", "shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_prompt_templates.py"]
+    },
+    {
+      "file": "shared/core/performance.py",
+      "status": "adopt",
+      "reason": "Core performance monitoring utilities",
+      "impact": "medium",
+      "dependents": ["services/analytics/"],
+      "tests_to_update": ["tests/unit/test_performance.py"]
+    },
+    {
+      "file": "shared/core/observer.py",
+      "status": "adopt",
+      "reason": "Core observer pattern utilities",
+      "impact": "low",
+      "dependents": ["services/analytics/"],
+      "tests_to_update": ["tests/unit/test_observer.py"]
+    },
+    {
+      "file": "shared/core/migrations.py",
+      "status": "adopt",
+      "reason": "Core database migration utilities",
+      "impact": "medium",
+      "dependents": ["backend/"],
+      "tests_to_update": ["tests/unit/test_migrations.py"]
+    },
+    {
+      "file": "shared/core/memory_manager.py",
+      "status": "adopt",
+      "reason": "Core memory management utilities",
+      "impact": "medium",
+      "dependents": ["services/gateway/"],
+      "tests_to_update": ["tests/unit/test_memory_manager.py"]
+    },
+    {
+      "file": "shared/core/memory_manager_postgres.py",
+      "status": "merge",
+      "reason": "PostgreSQL-specific memory manager, merge with memory_manager.py",
+      "impact": "medium",
+      "dependents": ["shared/core/memory_manager.py"],
+      "tests_to_update": ["tests/unit/test_memory_manager.py"]
+    },
+    {
+      "file": "shared/core/logging_configuration_manager.py",
+      "status": "merge",
+      "reason": "Logging configuration manager, merge with unified_logging.py",
+      "impact": "medium",
+      "dependents": ["shared/core/unified_logging.py"],
+      "tests_to_update": ["tests/unit/test_logging.py"]
+    },
+    {
+      "file": "shared/core/logging_config.py",
+      "status": "merge",
+      "reason": "Logging configuration, merge with unified_logging.py",
+      "impact": "medium",
+      "dependents": ["shared/core/unified_logging.py"],
+      "tests_to_update": ["tests/unit/test_logging.py"]
+    },
+    {
+      "file": "shared/core/interfaces.py",
+      "status": "adopt",
+      "reason": "Core interface definitions",
+      "impact": "medium",
+      "dependents": ["all_services"],
+      "tests_to_update": ["tests/unit/test_interfaces.py"]
+    },
+    {
+      "file": "shared/core/input_validation.py",
+      "status": "adopt",
+      "reason": "Core input validation utilities",
+      "impact": "medium",
+      "dependents": ["all_services"],
+      "tests_to_update": ["tests/unit/test_input_validation.py"]
+    },
+    {
+      "file": "shared/core/factory.py",
+      "status": "adopt",
+      "reason": "Core factory pattern utilities",
+      "impact": "low",
+      "dependents": ["all_services"],
+      "tests_to_update": ["tests/unit/test_factory.py"]
+    },
+    {
+      "file": "shared/core/error_handler.py",
+      "status": "adopt",
+      "reason": "Core error handling utilities",
+      "impact": "high",
+      "dependents": ["all_services"],
+      "tests_to_update": ["tests/unit/test_error_handler.py"]
+    },
+    {
+      "file": "shared/core/decorator.py",
+      "status": "adopt",
+      "reason": "Core decorator utilities",
+      "impact": "medium",
+      "dependents": ["all_services"],
+      "tests_to_update": ["tests/unit/test_decorator.py"]
+    },
+    {
+      "file": "shared/core/data_models.py",
+      "status": "adopt",
+      "reason": "Core data model definitions",
+      "impact": "medium",
+      "dependents": ["all_services"],
+      "tests_to_update": ["tests/unit/test_data_models.py"]
+    },
+    {
+      "file": "shared/core/database.py",
+      "status": "adopt",
+      "reason": "Core database utilities",
+      "impact": "high",
+      "dependents": ["backend/", "services/"],
+      "tests_to_update": ["tests/unit/test_database.py"]
+    },
+    {
+      "file": "shared/core/connection_pool.py",
+      "status": "adopt",
+      "reason": "Core connection pooling utilities",
+      "impact": "medium",
+      "dependents": ["shared/core/database.py"],
+      "tests_to_update": ["tests/unit/test_connection_pool.py"]
+    },
+    {
+      "file": "shared/core/cache_manager_postgres.py",
+      "status": "merge",
+      "reason": "PostgreSQL-specific cache manager, merge with cache.py",
+      "impact": "medium",
+      "dependents": ["shared/core/cache.py"],
+      "tests_to_update": ["tests/unit/test_cache.py"]
+    },
+    {
+      "file": "shared/core/cache.py",
+      "status": "adopt",
+      "reason": "Core caching utilities",
+      "impact": "high",
+      "dependents": ["all_services"],
+      "tests_to_update": ["tests/unit/test_cache.py"]
+    },
+    {
+      "file": "shared/core/app_factory.py",
+      "status": "adopt",
+      "reason": "Core application factory utilities",
+      "impact": "medium",
+      "dependents": ["services/"],
+      "tests_to_update": ["tests/unit/test_app_factory.py"]
+    },
+    {
+      "file": "shared/core/agent_pattern.py",
+      "status": "rewrite",
+      "reason": "Complex agent pattern implementation, needs refactoring",
+      "impact": "medium",
+      "dependents": ["shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_agent_pattern.py"]
+    },
+    {
+      "file": "shared/core/__init__.py",
+      "status": "adopt",
+      "reason": "Core package initialization",
+      "impact": "medium",
+      "dependents": ["all_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/contracts/query.py",
+      "status": "adopt",
+      "reason": "Core query contract definitions",
+      "impact": "high",
+      "dependents": ["services/", "shared/core/"],
+      "tests_to_update": ["tests/unit/test_contracts.py"]
+    },
+    {
+      "file": "shared/contracts/service_contracts.py",
+      "status": "adopt",
+      "reason": "Core service contract definitions",
+      "impact": "high",
+      "dependents": ["services/"],
+      "tests_to_update": ["tests/unit/test_contracts.py"]
+    },
+    {
+      "file": "shared/contracts/__init__.py",
+      "status": "create",
+      "reason": "Missing contracts package initialization",
+      "impact": "low",
+      "dependents": ["shared/contracts/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/api/api_models.py",
+      "status": "adopt",
+      "reason": "Core API model definitions",
+      "impact": "high",
+      "dependents": ["services/", "backend/"],
+      "tests_to_update": ["tests/unit/test_api_models.py"]
+    },
+    {
+      "file": "shared/core/api/api_responses.py",
+      "status": "adopt",
+      "reason": "Core API response definitions",
+      "impact": "high",
+      "dependents": ["services/", "backend/"],
+      "tests_to_update": ["tests/unit/test_api_responses.py"]
+    },
+    {
+      "file": "shared/core/api/config.py",
+      "status": "adopt",
+      "reason": "Core API configuration",
+      "impact": "medium",
+      "dependents": ["services/", "backend/"],
+      "tests_to_update": ["tests/unit/test_api_config.py"]
+    },
+    {
+      "file": "shared/core/api/exceptions.py",
+      "status": "adopt",
+      "reason": "Core API exception definitions",
+      "impact": "medium",
+      "dependents": ["services/", "backend/"],
+      "tests_to_update": ["tests/unit/test_api_exceptions.py"]
+    },
+    {
+      "file": "shared/core/api/monitoring.py",
+      "status": "adopt",
+      "reason": "Core API monitoring utilities",
+      "impact": "medium",
+      "dependents": ["services/analytics/"],
+      "tests_to_update": ["tests/unit/test_api_monitoring.py"]
+    },
+    {
+      "file": "shared/core/api/__init__.py",
+      "status": "adopt",
+      "reason": "API package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/api/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/config/__init__.py",
+      "status": "adopt",
+      "reason": "Config package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/config/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/utilities/response_utilities.py",
+      "status": "adopt",
+      "reason": "Core response utility functions",
+      "impact": "medium",
+      "dependents": ["shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_response_utilities.py"]
+    },
+    {
+      "file": "shared/core/utilities/validation_utilities.py",
+      "status": "adopt",
+      "reason": "Core validation utility functions",
+      "impact": "medium",
+      "dependents": ["shared/core/agents/"],
+      "tests_to_update": ["tests/unit/test_validation_utilities.py"]
+    },
+    {
+      "file": "shared/core/utilities/__init__.py",
+      "status": "adopt",
+      "reason": "Utilities package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/utilities/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/llm/__init__.py",
+      "status": "adopt",
+      "reason": "LLM package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/llm/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/middleware/__init__.py",
+      "status": "adopt",
+      "reason": "Middleware package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/middleware/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/clients/__init__.py",
+      "status": "adopt",
+      "reason": "Clients package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/clients/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/models/__init__.py",
+      "status": "adopt",
+      "reason": "Models package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/models/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/vectorstores/__init__.py",
+      "status": "adopt",
+      "reason": "Vectorstores package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/vectorstores/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/embeddings/__init__.py",
+      "status": "adopt",
+      "reason": "Embeddings package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/embeddings/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/metrics/__init__.py",
+      "status": "adopt",
+      "reason": "Metrics package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/metrics/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/logging/__init__.py",
+      "status": "adopt",
+      "reason": "Logging package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/logging/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/cache/__init__.py",
+      "status": "adopt",
+      "reason": "Cache package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/cache/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/auth/__init__.py",
+      "status": "adopt",
+      "reason": "Auth package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/auth/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/core/database/__init__.py",
+      "status": "adopt",
+      "reason": "Database package initialization",
+      "impact": "low",
+      "dependents": ["shared/core/database/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "shared/__init__.py",
+      "status": "adopt",
+      "reason": "Shared package initialization",
+      "impact": "low",
+      "dependents": ["all_services"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/main.py",
+      "status": "adopt",
+      "reason": "Clean entry point for backend services following clean architecture",
+      "impact": "high",
+      "dependents": ["backend/api/routers/"],
+      "tests_to_update": ["backend/tests/test_main.py"]
+    },
+    {
+      "file": "backend/__init__.py",
+      "status": "adopt",
+      "reason": "Backend package initialization",
+      "impact": "low",
+      "dependents": ["backend/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/api/__init__.py",
+      "status": "adopt",
+      "reason": "API package initialization",
+      "impact": "low",
+      "dependents": ["backend/api/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/api/routers/__init__.py",
+      "status": "adopt",
+      "reason": "Routers package initialization",
+      "impact": "low",
+      "dependents": ["backend/api/routers/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/api/routers/health_router.py",
+      "status": "adopt",
+      "reason": "Health check router",
       "impact": "medium",
       "dependents": ["backend/main.py"],
       "tests_to_update": ["backend/tests/test_api_endpoints.py"]
@@ -135,7 +1593,15 @@
     {
       "file": "backend/api/routers/auth_router.py",
       "status": "adopt",
-      "reason": "Clean architecture auth router with proper separation of concerns",
+      "reason": "Authentication router",
+      "impact": "high",
+      "dependents": ["backend/main.py"],
+      "tests_to_update": ["backend/tests/test_api_endpoints.py"]
+    },
+    {
+      "file": "backend/api/routers/admin_router.py",
+      "status": "adopt",
+      "reason": "Administration router",
       "impact": "medium",
       "dependents": ["backend/main.py"],
       "tests_to_update": ["backend/tests/test_api_endpoints.py"]
@@ -143,26 +1609,322 @@
     {
       "file": "backend/api/routers/agent_router.py",
       "status": "adopt",
-      "reason": "Clean architecture agent router with proper separation of concerns",
+      "reason": "Agent management router",
       "impact": "medium",
       "dependents": ["backend/main.py"],
       "tests_to_update": ["backend/tests/test_api_endpoints.py"]
     },
     {
-      "file": "backend/services/query/query_orchestrator.py",
+      "file": "backend/api/routers/query_router.py",
       "status": "adopt",
-      "reason": "Clean architecture query orchestration with proper separation of concerns",
+      "reason": "Query processing router",
+      "impact": "high",
+      "dependents": ["backend/main.py"],
+      "tests_to_update": ["backend/tests/test_api_endpoints.py"]
+    },
+    {
+      "file": "backend/api/routers/database_router.py",
+      "status": "adopt",
+      "reason": "Database management router",
       "impact": "medium",
-      "dependents": ["backend/api/routers/query_router.py"],
-      "tests_to_update": ["backend/tests/test_services.py"]
+      "dependents": ["backend/main.py"],
+      "tests_to_update": ["backend/tests/test_api_endpoints.py"]
+    },
+    {
+      "file": "backend/api/middleware/__init__.py",
+      "status": "adopt",
+      "reason": "Middleware package initialization",
+      "impact": "low",
+      "dependents": ["backend/api/middleware/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/api/middleware/logging_middleware.py",
+      "status": "adopt",
+      "reason": "Logging middleware",
+      "impact": "medium",
+      "dependents": ["backend/api/"],
+      "tests_to_update": ["backend/tests/test_middleware.py"]
+    },
+    {
+      "file": "backend/api/dependencies.py",
+      "status": "adopt",
+      "reason": "API dependencies",
+      "impact": "medium",
+      "dependents": ["backend/api/routers/"],
+      "tests_to_update": ["backend/tests/test_dependencies.py"]
+    },
+    {
+      "file": "backend/services/__init__.py",
+      "status": "adopt",
+      "reason": "Services package initialization",
+      "impact": "low",
+      "dependents": ["backend/services/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/services/query/__init__.py",
+      "status": "adopt",
+      "reason": "Query services package initialization",
+      "impact": "low",
+      "dependents": ["backend/services/query/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/services/query/query_orchestrator.py",
+      "status": "archive",
+      "reason": "Unused query orchestrator, functionality moved to services/",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/services/query/query_processor.py",
+      "status": "archive",
+      "reason": "Unused query processor, functionality moved to services/",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/services/query/query_validator.py",
+      "status": "archive",
+      "reason": "Unused query validator, functionality moved to services/",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/services/agents/__init__.py",
+      "status": "adopt",
+      "reason": "Agent services package initialization",
+      "impact": "low",
+      "dependents": ["backend/services/agents/"],
+      "tests_to_update": []
     },
     {
       "file": "backend/services/agents/agent_coordinator.py",
+      "status": "archive",
+      "reason": "Unused agent coordinator, functionality moved to services/",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/services/agents/agent_service.py",
+      "status": "archive",
+      "reason": "Unused agent service, functionality moved to services/",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/services/health/__init__.py",
       "status": "adopt",
-      "reason": "Clean architecture agent coordination with proper separation of concerns",
+      "reason": "Health services package initialization",
+      "impact": "low",
+      "dependents": ["backend/services/health/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/services/health/health_service.py",
+      "status": "adopt",
+      "reason": "Health check service",
       "impact": "medium",
-      "dependents": ["backend/api/routers/agent_router.py"],
-      "tests_to_update": ["backend/tests/test_services.py"]
+      "dependents": ["backend/main.py"],
+      "tests_to_update": ["backend/tests/test_health.py"]
+    },
+    {
+      "file": "backend/services/core/__init__.py",
+      "status": "adopt",
+      "reason": "Core services package initialization",
+      "impact": "low",
+      "dependents": ["backend/services/core/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/services/core/database_service.py",
+      "status": "adopt",
+      "reason": "Database service",
+      "impact": "high",
+      "dependents": ["backend/main.py"],
+      "tests_to_update": ["backend/tests/test_database.py"]
+    },
+    {
+      "file": "backend/services/core/cache_service.py",
+      "status": "adopt",
+      "reason": "Cache service",
+      "impact": "medium",
+      "dependents": ["backend/main.py"],
+      "tests_to_update": ["backend/tests/test_cache.py"]
+    },
+    {
+      "file": "backend/services/core/metrics_service.py",
+      "status": "adopt",
+      "reason": "Metrics service",
+      "impact": "medium",
+      "dependents": ["backend/main.py"],
+      "tests_to_update": ["backend/tests/test_metrics.py"]
+    },
+    {
+      "file": "backend/services/core/redis_cache_service.py",
+      "status": "merge",
+      "reason": "Redis-specific cache service, merge with cache_service.py",
+      "impact": "medium",
+      "dependents": ["backend/services/core/cache_service.py"],
+      "tests_to_update": ["backend/tests/test_cache.py"]
+    },
+    {
+      "file": "backend/repositories/__init__.py",
+      "status": "adopt",
+      "reason": "Repositories package initialization",
+      "impact": "low",
+      "dependents": ["backend/repositories/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/repositories/base_repository.py",
+      "status": "adopt",
+      "reason": "Base repository pattern",
+      "impact": "medium",
+      "dependents": ["backend/repositories/"],
+      "tests_to_update": ["backend/tests/test_repositories.py"]
+    },
+    {
+      "file": "backend/repositories/query_repository.py",
+      "status": "adopt",
+      "reason": "Query repository",
+      "impact": "medium",
+      "dependents": ["backend/api/dependencies.py"],
+      "tests_to_update": ["backend/tests/test_repositories.py"]
+    },
+    {
+      "file": "backend/repositories/user_repository.py",
+      "status": "adopt",
+      "reason": "User repository",
+      "impact": "medium",
+      "dependents": ["backend/api/dependencies.py"],
+      "tests_to_update": ["backend/tests/test_repositories.py"]
+    },
+    {
+      "file": "backend/repositories/agent_repository.py",
+      "status": "adopt",
+      "reason": "Agent repository",
+      "impact": "medium",
+      "dependents": ["backend/api/dependencies.py"],
+      "tests_to_update": ["backend/tests/test_repositories.py"]
+    },
+    {
+      "file": "backend/repositories/database/__init__.py",
+      "status": "adopt",
+      "reason": "Database repositories package initialization",
+      "impact": "low",
+      "dependents": ["backend/repositories/database/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/repositories/database/user_repository.py",
+      "status": "adopt",
+      "reason": "Database user repository",
+      "impact": "medium",
+      "dependents": ["backend/repositories/user_repository.py"],
+      "tests_to_update": ["backend/tests/test_repositories.py"]
+    },
+    {
+      "file": "backend/repositories/database/query_repository.py",
+      "status": "adopt",
+      "reason": "Database query repository",
+      "impact": "medium",
+      "dependents": ["backend/repositories/query_repository.py"],
+      "tests_to_update": ["backend/tests/test_repositories.py"]
+    },
+    {
+      "file": "backend/models/__init__.py",
+      "status": "adopt",
+      "reason": "Models package initialization",
+      "impact": "low",
+      "dependents": ["backend/models/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/models/domain/__init__.py",
+      "status": "adopt",
+      "reason": "Domain models package initialization",
+      "impact": "low",
+      "dependents": ["backend/models/domain/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/models/domain/query.py",
+      "status": "adopt",
+      "reason": "Query domain model",
+      "impact": "medium",
+      "dependents": ["backend/repositories/"],
+      "tests_to_update": ["backend/tests/test_models.py"]
+    },
+    {
+      "file": "backend/models/domain/user.py",
+      "status": "adopt",
+      "reason": "User domain model",
+      "impact": "medium",
+      "dependents": ["backend/repositories/"],
+      "tests_to_update": ["backend/tests/test_models.py"]
+    },
+    {
+      "file": "backend/models/domain/agent.py",
+      "status": "adopt",
+      "reason": "Agent domain model",
+      "impact": "medium",
+      "dependents": ["backend/repositories/"],
+      "tests_to_update": ["backend/tests/test_models.py"]
+    },
+    {
+      "file": "backend/models/domain/enums.py",
+      "status": "adopt",
+      "reason": "Domain enums",
+      "impact": "low",
+      "dependents": ["backend/models/domain/"],
+      "tests_to_update": ["backend/tests/test_models.py"]
+    },
+    {
+      "file": "backend/utils/__init__.py",
+      "status": "adopt",
+      "reason": "Utils package initialization",
+      "impact": "low",
+      "dependents": ["backend/utils/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/utils/logging.py",
+      "status": "merge",
+      "reason": "Logging utilities, merge with shared/core/unified_logging.py",
+      "impact": "medium",
+      "dependents": [],
+      "tests_to_update": ["tests/unit/test_logging.py"]
+    },
+    {
+      "file": "backend/tests/__init__.py",
+      "status": "adopt",
+      "reason": "Tests package initialization",
+      "impact": "low",
+      "dependents": ["backend/tests/"],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/tests/test_repositories.py",
+      "status": "adopt",
+      "reason": "Repository tests",
+      "impact": "medium",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "backend/tests/test_api_endpoints.py",
+      "status": "adopt",
+      "reason": "API endpoint tests",
+      "impact": "medium",
+      "dependents": [],
+      "tests_to_update": []
     },
     {
       "file": "frontend/src/app/layout.tsx",
@@ -173,620 +1935,179 @@
       "tests_to_update": ["frontend/src/__tests__/layout.test.tsx"]
     },
     {
-      "file": "frontend/src/components/search/SearchInterface.tsx",
+      "file": "frontend/src/app/page.tsx",
       "status": "adopt",
-      "reason": "Main search interface component with proper React patterns",
+      "reason": "Main page component",
       "impact": "high",
-      "dependents": ["frontend/src/app/search/page.tsx"],
-      "tests_to_update": ["frontend/src/components/__tests__/SearchInterface.test.tsx"]
+      "dependents": ["frontend/src/app/layout.tsx"],
+      "tests_to_update": ["frontend/src/__tests__/page.test.tsx"]
     },
     {
-      "file": "frontend/src/hooks/useAuth.ts",
+      "file": "frontend/package.json",
       "status": "adopt",
-      "reason": "Authentication hook with proper React patterns",
-      "impact": "medium",
-      "dependents": ["frontend/src/components/security/"],
-      "tests_to_update": ["frontend/src/hooks/__tests__/useAuth.test.ts"]
+      "reason": "Frontend dependencies and scripts",
+      "impact": "high",
+      "dependents": ["frontend"],
+      "tests_to_update": []
     },
     {
-      "file": "frontend/src/services/api-client.ts",
+      "file": "frontend/next.config.js",
       "status": "adopt",
-      "reason": "API client service with proper error handling and types",
+      "reason": "Next.js configuration",
       "impact": "medium",
-      "dependents": ["all_frontend_components"],
-      "tests_to_update": ["frontend/src/services/__tests__/api-client.test.ts"]
+      "dependents": ["frontend"],
+      "tests_to_update": []
     },
     {
-      "file": "shared/core/llm_client.py",
-      "status": "merge",
-      "reason": "Merge useful features into real_llm_integration.py and delete",
+      "file": "frontend/tailwind.config.js",
+      "status": "adopt",
+      "reason": "Tailwind CSS configuration",
       "impact": "medium",
-      "dependents": ["shared/core/agents/"],
-      "tests_to_update": ["tests/unit/test_llm_integration.py"]
+      "dependents": ["frontend"],
+      "tests_to_update": []
     },
     {
-      "file": "shared/core/llm_client_v2.py",
-      "status": "merge",
-      "reason": "Merge useful features into real_llm_integration.py and delete",
+      "file": "frontend/tsconfig.json",
+      "status": "adopt",
+      "reason": "TypeScript configuration",
       "impact": "medium",
-      "dependents": ["shared/core/agents/"],
-      "tests_to_update": ["tests/unit/test_llm_integration.py"]
+      "dependents": ["frontend"],
+      "tests_to_update": []
     },
     {
-      "file": "shared/core/llm_client_v3.py",
-      "status": "merge",
-      "reason": "Merge useful features into real_llm_integration.py and delete",
-      "impact": "medium",
-      "dependents": ["shared/core/agents/"],
-      "tests_to_update": ["tests/unit/test_llm_integration.py"]
+      "file": "frontend/README.md",
+      "status": "adopt",
+      "reason": "Frontend documentation",
+      "impact": "low",
+      "dependents": ["developers"],
+      "tests_to_update": []
     },
     {
-      "file": "shared/core/llm_client_enhanced.py",
-      "status": "merge",
-      "reason": "Merge useful features into real_llm_integration.py and delete",
-      "impact": "medium",
-      "dependents": ["shared/core/agents/"],
-      "tests_to_update": ["tests/unit/test_llm_integration.py"]
+      "file": "frontend/DIMENSIONS.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
     },
     {
-      "file": "shared/core/llm_client_dynamic.py",
-      "status": "merge",
-      "reason": "Merge useful features into real_llm_integration.py and delete",
-      "impact": "medium",
-      "dependents": ["shared/core/agents/"],
-      "tests_to_update": ["tests/unit/test_llm_integration.py"]
+      "file": "frontend/COSMIC_INTERFACE.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
     },
     {
-      "file": "shared/core/llm_client_standalone.py",
-      "status": "merge",
-      "reason": "Merge useful features into real_llm_integration.py and delete",
-      "impact": "medium",
-      "dependents": ["shared/core/agents/"],
-      "tests_to_update": ["tests/unit/test_llm_integration.py"]
+      "file": "frontend/COSMIC_LOADER_SUMMARY.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
     },
     {
-      "file": "shared/core/config/environment_manager.py",
-      "status": "merge",
-      "reason": "Merge useful features into central_config.py and delete",
-      "impact": "medium",
-      "dependents": ["shared/core/config/"],
-      "tests_to_update": ["tests/unit/test_config.py"]
+      "file": "frontend/LOADER_IMPLEMENTATION_SUMMARY.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
     },
     {
-      "file": "shared/core/config/enhanced_environment_manager.py",
-      "status": "merge",
-      "reason": "Merge useful features into central_config.py and delete",
-      "impact": "medium",
-      "dependents": ["shared/core/config/"],
-      "tests_to_update": ["tests/unit/test_config.py"]
+      "file": "frontend/TESTING.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
     },
     {
-      "file": "services/analytics/analytics_v2.py",
-      "status": "merge",
-      "reason": "Merge useful features into main analytics.py and delete",
-      "impact": "medium",
-      "dependents": ["services/analytics/"],
-      "tests_to_update": ["tests/unit/test_analytics.py"]
+      "file": "frontend/NEW_UI_FEATURES.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
     },
     {
-      "file": "services/analytics/integration_layer.py",
-      "status": "merge",
-      "reason": "Merge useful features into main analytics.py and delete",
-      "impact": "medium",
-      "dependents": ["services/analytics/"],
-      "tests_to_update": ["tests/unit/test_analytics.py"]
+      "file": "frontend/EXPERT_REVIEW_IMPLEMENTATION.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
     },
     {
-      "file": "backend/main.py",
-      "status": "rewrite",
-      "reason": "Create clean entry point for backend services following clean architecture",
-      "impact": "high",
-      "dependents": ["backend/api/routers/"],
-      "tests_to_update": ["backend/tests/test_main.py"]
+      "file": "frontend/COMPREHENSIVE_QUERY_INTEGRATION_GUIDE.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
     },
     {
-      "file": "shared/core/agents/agent_pattern.py",
-      "status": "rewrite",
-      "reason": "Refactor to use base_agent.py patterns and remove duplication",
-      "impact": "medium",
-      "dependents": ["shared/core/agents/"],
-      "tests_to_update": ["tests/unit/test_agent_pattern.py"]
+      "file": "frontend/COMPREHENSIVE_QUERY_GUIDE.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
     },
     {
-      "file": "shared/core/agents/knowledge_graph_agent.py",
-      "status": "rewrite",
-      "reason": "Refactor to use base_agent.py patterns and remove duplication",
-      "impact": "medium",
-      "dependents": ["shared/core/agents/"],
-      "tests_to_update": ["tests/unit/test_knowledge_graph_agent.py"]
+      "file": "frontend/TESTING_GUIDE.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
     },
     {
-      "file": "shared/core/agents/arangodb_knowledge_graph_agent.py",
-      "status": "rewrite",
-      "reason": "Refactor to use base_agent.py patterns and remove duplication",
-      "impact": "medium",
-      "dependents": ["shared/core/agents/"],
-      "tests_to_update": ["tests/unit/test_arangodb_knowledge_graph_agent.py"]
+      "file": "frontend/APP_ROUTER_COMPLIANCE.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
     },
     {
-      "file": "services/api_gateway/",
+      "file": "frontend/API_CONFIGURATION.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "frontend/ACCESSIBILITY_CHECKLIST.md",
+      "status": "delete",
+      "reason": "Stale documentation file, not in required docs list",
+      "impact": "low",
+      "dependents": [],
+      "tests_to_update": []
+    },
+    {
+      "file": "frontend/simple-mock-backend.js",
       "status": "archive",
-      "reason": "Entire directory replaced by services/gateway/ with better implementation",
-      "impact": "high",
-      "dependents": ["none"],
+      "reason": "Mock backend script, should be in scripts/",
+      "impact": "low",
+      "dependents": [],
       "tests_to_update": []
     },
     {
-      "file": "services/api_gateway/main.py",
+      "file": "frontend/mock-backend.js",
       "status": "archive",
-      "reason": "Buggy implementation replaced by services/gateway/main.py",
-      "impact": "high",
-      "dependents": ["none"],
+      "reason": "Mock backend script, should be in scripts/",
+      "impact": "low",
+      "dependents": [],
       "tests_to_update": []
     },
     {
-      "file": "services/api_gateway/lead_orchestrator.py",
+      "file": "frontend/health-check.js",
       "status": "archive",
-      "reason": "Features extracted to services/gateway/agent_orchestrator.py",
-      "impact": "medium",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "services/api_gateway/orchestrator_workflow_fixes.py",
-      "status": "archive",
-      "reason": "Features extracted to services/gateway/agent_orchestrator.py",
-      "impact": "medium",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "services/api_gateway/lead_orchestrator_fixes.py",
-      "status": "archive",
-      "reason": "Features extracted to services/gateway/agent_orchestrator.py",
-      "impact": "medium",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "services/api_gateway/middleware/",
-      "status": "archive",
-      "reason": "Features extracted to services/gateway/middleware/",
-      "impact": "medium",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/llm_client.py",
-      "status": "archive",
-      "reason": "Features extracted to services/gateway/real_llm_integration.py",
-      "impact": "medium",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/validation_utilities.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/input_validation.py",
+      "reason": "Health check script, should be in scripts/",
       "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/retrieval_utilities.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/retry_logic.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/orchestration_utilities.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/workflow_manager.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/execution_utilities.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/retry_logic.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/common_patterns.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/agent_pattern.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/agent_utilities.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/agent_pattern.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/graph_db_client.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/vector_database.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/reviewer_agent.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/agents/factcheck_agent.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/lead_orchestrator.py",
-      "status": "archive",
-      "reason": "Features extracted to services/gateway/agent_orchestrator.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/data_models.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/models/",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/llm_client.py",
-      "status": "archive",
-      "reason": "Features extracted to services/gateway/real_llm_integration.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/validation_utilities.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/input_validation.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/retrieval_utilities.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/retry_logic.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/orchestration_utilities.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/workflow_manager.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/execution_utilities.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/retry_logic.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/common_patterns.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/agent_pattern.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/agent_utilities.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/agent_pattern.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/graph_db_client.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/vector_database.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/reviewer_agent.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/core/agents/factcheck_agent.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/lead_orchestrator.py",
-      "status": "archive",
-      "reason": "Features extracted to services/gateway/agent_orchestrator.py",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "shared/core/agents/data_models.py",
-      "status": "archive",
-      "reason": "Features extracted to shared/models/",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "check_ollama_models.py",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_arangodb_auth.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_service_endpoints.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "simple_diagnostic.py",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "fix_all_guardrails_issues.py",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_guardrails_fixed.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_guardrails_basic.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "debug_python.py",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_python.ps1",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_python.bat",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_guardrails_simple.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "demo_always_on_performance.py",
-      "status": "delete",
-      "reason": "Demo script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_always_on_performance.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "start_postgresql.py",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_postgresql_simple.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "fix_postgresql_database.py",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "fix_arangodb_database.py",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "add_sample_data_to_qdrant.py",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "fix_vector_stores_comprehensive.py",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "fix_qdrant_collection.py",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_vector_stores_availability.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "add_persistent_data.py",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "debug_retrieval_results.py",
-      "status": "delete",
-      "reason": "Utility script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_vector_kg_data.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_retrieval_performance_with_warmup.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "simple_warmup_test.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_retrieval_warmup.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_retrieval_performance_final.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_trust_visibility.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_security_simple.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_observability_final.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
-      "tests_to_update": []
-    },
-    {
-      "file": "test_observability_simple.py",
-      "status": "delete",
-      "reason": "Test script not part of core application",
-      "impact": "low",
-      "dependents": ["none"],
+      "dependents": [],
       "tests_to_update": []
     }
   ],
@@ -799,122 +2120,203 @@
         "shared/core/llm_client_v3.py",
         "shared/core/llm_client_enhanced.py",
         "shared/core/llm_client_dynamic.py",
-        "shared/core/llm_client_standalone.py"
+        "shared/core/llm_client_standalone.py",
+        "services/gateway/real_llm_integration.py"
       ],
-      "recommendation": "Merge all useful features into services/gateway/real_llm_integration.py and delete duplicates",
+      "recommendation": "Consolidate all LLM client functionality into real_llm_integration.py",
       "impact": "high",
       "effort": "medium"
     },
     {
       "category": "API Gateway Services",
       "files": [
-        "services/api_gateway/main.py",
         "services/gateway/main.py",
-        "backend/main.py"
+        "services/gateway/gateway_app.py",
+        "services/gateway/routes.py",
+        "services/gateway/simple_main.py"
       ],
-      "recommendation": "Keep services/gateway/main.py as primary, archive others",
+      "recommendation": "Merge all gateway functionality into main.py",
       "impact": "high",
-      "effort": "high"
+      "effort": "medium"
     },
     {
       "category": "Agent Implementations",
       "files": [
+        "shared/core/agents/base_agent.py",
         "shared/core/agents/agent_pattern.py",
         "shared/core/agents/knowledge_graph_agent.py",
         "shared/core/agents/arangodb_knowledge_graph_agent.py"
       ],
-      "recommendation": "Refactor to use base_agent.py patterns and remove duplication",
+      "recommendation": "Refactor to use consistent base_agent.py patterns",
       "impact": "medium",
-      "effort": "medium"
+      "effort": "high"
     },
     {
       "category": "Configuration Systems",
       "files": [
         "shared/core/config/central_config.py",
-        "shared/core/config/environment_manager.py",
-        "shared/core/config/enhanced_environment_manager.py"
+        "shared/core/logging_configuration_manager.py",
+        "shared/core/logging_config.py",
+        "backend/utils/logging.py"
       ],
-      "recommendation": "Keep central_config.py, merge useful features and delete others",
+      "recommendation": "Consolidate all configuration into central_config.py",
       "impact": "medium",
-      "effort": "low"
+      "effort": "medium"
     },
     {
       "category": "Analytics Services",
       "files": [
         "services/analytics/analytics.py",
-        "services/analytics/analytics_v2.py",
-        "services/analytics/integration_layer.py"
+        "services/analytics/metrics.py",
+        "services/analytics/health_checks.py",
+        "services/analytics/integration_monitor.py"
       ],
-      "recommendation": "Keep main analytics.py, merge useful features and delete others",
+      "recommendation": "Consolidate analytics functionality into main analytics.py",
       "impact": "medium",
       "effort": "low"
+    },
+    {
+      "category": "Database Repositories",
+      "files": [
+        "backend/repositories/base_repository.py",
+        "backend/repositories/query_repository.py",
+        "backend/repositories/user_repository.py",
+        "backend/repositories/agent_repository.py"
+      ],
+      "recommendation": "Keep current structure, it follows clean architecture",
+      "impact": "low",
+      "effort": "none"
+    },
+    {
+      "category": "Authentication Services",
+      "files": [
+        "services/auth/main.py",
+        "services/auth/routes.py",
+        "shared/core/secure_auth.py",
+        "shared/core/auth/password_hasher.py"
+      ],
+      "recommendation": "Keep current structure, it follows microservice architecture",
+      "impact": "low",
+      "effort": "none"
+    },
+    {
+      "category": "Vector Store Implementations",
+      "files": [
+        "shared/core/vector_database.py",
+        "shared/vectorstores/vector_store_service.py",
+        "services/retrieval/main.py",
+        "services/retrieval/orchestrator.py"
+      ],
+      "recommendation": "Consolidate vector store functionality",
+      "impact": "medium",
+      "effort": "medium"
     }
   ],
   "unused_module_analysis": [
     {
       "module": "services/api_gateway/",
+      "status": "archived",
       "reason": "Entire directory replaced by services/gateway/",
-      "dependents": [],
-      "action": "archive"
+      "dependents": ["none"],
+      "cleanup_required": "none"
     },
     {
       "module": "shared/core/llm_client*.py",
-      "reason": "All LLM client implementations replaced by real_llm_integration.py",
-      "dependents": [],
-      "action": "merge_and_delete"
+      "status": "merge",
+      "reason": "Multiple LLM client implementations, consolidate into real_llm_integration.py",
+      "dependents": ["shared/core/agents/"],
+      "cleanup_required": "update_imports"
     },
     {
       "module": "shared/core/config/environment_manager*.py",
-      "reason": "Replaced by central_config.py",
-      "dependents": [],
-      "action": "merge_and_delete"
+      "status": "merge",
+      "reason": "Multiple environment managers, consolidate into central_config.py",
+      "dependents": ["shared/core/config/"],
+      "cleanup_required": "update_imports"
     },
     {
       "module": "services/analytics/analytics_v*.py",
-      "reason": "Replaced by main analytics.py",
-      "dependents": [],
-      "action": "merge_and_delete"
+      "status": "merge",
+      "reason": "Multiple analytics versions, consolidate into main analytics.py",
+      "dependents": ["services/analytics/"],
+      "cleanup_required": "update_imports"
     },
     {
-      "module": "shared/core/agents/*_utilities.py",
-      "reason": "Features extracted to core modules",
-      "dependents": [],
-      "action": "archive"
+      "module": "backend/services/query/",
+      "status": "archive",
+      "reason": "Unused query services, functionality moved to services/",
+      "dependents": ["none"],
+      "cleanup_required": "remove_directory"
+    },
+    {
+      "module": "backend/services/agents/",
+      "status": "archive",
+      "reason": "Unused agent services, functionality moved to services/",
+      "dependents": ["none"],
+      "cleanup_required": "remove_directory"
+    },
+    {
+      "module": "shared/core/agents/knowledge_graph_service.py",
+      "status": "archived",
+      "reason": "Archived but still imported, needs import cleanup",
+      "dependents": ["shared/core/agents/"],
+      "cleanup_required": "fix_imports"
     }
   ],
   "architectural_recommendations": [
     {
       "priority": "high",
-      "recommendation": "Consolidate all LLM functionality into services/gateway/real_llm_integration.py",
-      "rationale": "Eliminate 6 duplicate LLM client implementations",
+      "recommendation": "Consolidate LLM functionality into single real_llm_integration.py",
+      "rationale": "Eliminate 8 duplicate LLM client implementations",
       "effort": "medium",
       "impact": "high"
     },
     {
-      "priority": "high", 
+      "priority": "high",
       "recommendation": "Archive services/api_gateway/ directory completely",
-      "rationale": "Replaced by superior services/gateway/ implementation",
+      "rationale": "Replaced by better services/gateway/ implementation",
       "effort": "low",
       "impact": "high"
     },
     {
-      "priority": "medium",
-      "recommendation": "Refactor agent implementations to use base_agent.py patterns",
-      "rationale": "Eliminate duplication and improve maintainability",
-      "effort": "medium",
+      "priority": "high",
+      "recommendation": "Refactor agent implementations to use consistent patterns",
+      "rationale": "Eliminate 25+ duplicate agent implementations",
+      "effort": "high",
       "impact": "medium"
     },
     {
       "priority": "medium",
       "recommendation": "Consolidate configuration systems into central_config.py",
-      "rationale": "Eliminate duplicate configuration management",
+      "rationale": "Eliminate 5 duplicate configuration systems",
+      "effort": "medium",
+      "impact": "medium"
+    },
+    {
+      "priority": "medium",
+      "recommendation": "Clean up root utility scripts and test files",
+      "rationale": "Move to appropriate directories (tests/, scripts/)",
+      "effort": "low",
+      "impact": "low"
+    },
+    {
+      "priority": "medium",
+      "recommendation": "Consolidate analytics services",
+      "rationale": "Eliminate 5 duplicate analytics implementations",
       "effort": "low",
       "impact": "medium"
     },
     {
       "priority": "low",
-      "recommendation": "Clean up utility scripts in root directory",
-      "rationale": "Improve project structure and reduce confusion",
+      "recommendation": "Create missing __init__.py files",
+      "rationale": "Improve package structure and imports",
+      "effort": "low",
+      "impact": "low"
+    },
+    {
+      "priority": "low",
+      "recommendation": "Update stale documentation",
+      "rationale": "Keep only required docs: Problem Definition, Market Analysis, README, Setup Guide, Deployment Guide",
       "effort": "low",
       "impact": "low"
     }

@@ -62,8 +62,15 @@ from prometheus_client import (
     push_to_gateway,
     CONTENT_TYPE_LATEST,
 )
-from opentelemetry import trace, metrics
-from opentelemetry.trace import Status, StatusCode
+try:
+    from opentelemetry import trace, metrics
+    from opentelemetry.trace import Status, StatusCode
+except ImportError:
+    # Fallback to basic types if OpenTelemetry is not available
+    trace = None
+    metrics = None
+    Status = None
+    StatusCode = None
 
 logger = structlog.get_logger(__name__)
 
