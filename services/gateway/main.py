@@ -101,6 +101,7 @@ from services.gateway.real_llm_integration import RealLLMProcessor
 from services.retrieval.free_tier import get_zero_budget_retrieval, combined_search
 from services.retrieval.routers.free_tier_router import router as free_tier_router
 from services.gateway.routers.retrieval_router import router as retrieval_router
+from services.gateway.routers.citations_router import router as citations_router
 
 # Import gateway routers
 from services.gateway.routes import (
@@ -387,6 +388,7 @@ app.add_middleware(
 # Include routers
 app.include_router(free_tier_router, prefix="/retrieval")
 app.include_router(retrieval_router, prefix="/retrieval-aggregator")
+app.include_router(citations_router, prefix="/citations")
 app.include_router(analytics_router, prefix="/analytics")
 
 # Include new centralized components
