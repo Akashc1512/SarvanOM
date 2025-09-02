@@ -3,7 +3,7 @@
 Tests for Centralized LLM Provider Order System
 
 This test suite verifies the provider ordering, fallback chains, and
-dynamic provider selection functionality.
+dynamic provider selection functionality including role-based selection.
 """
 
 import os
@@ -12,13 +12,18 @@ from unittest.mock import patch, MagicMock
 from shared.llm.provider_order import (
     LLMProvider,
     QueryComplexity,
+    LLMRole,
     ProviderConfig,
+    RoleMapping,
     ProviderRegistry,
     get_provider_registry,
     get_provider_order,
     get_available_providers,
     select_provider_for_complexity,
-    get_provider_stats
+    select_provider_for_role,
+    get_provider_stats,
+    get_provider_metrics,
+    get_role_mappings
 )
 
 
@@ -50,6 +55,31 @@ class TestProviderRegistry:
         # Check paid providers
         paid_providers = [p for p in registry.providers.values() if not p.is_free]
         assert len(paid_providers) == 2  # OpenAI, Anthropic
+
+    def test_provider_capabilities(self):
+        """Test that providers have correct capability assignments."""
+        registry = ProviderRegistry()
+        
+        # Check Ollama capabilities
+        ollama_config = registry.providers[LLMProvider.OLLAMA]
+        assert LLMRole.FAST in ollama_config.capabilities
+        assert LLMRole.STANDARD in ollama_config.capabilities
+        assert LLMRole.TOOL not in ollama_config.capabilities
+        
+        # Check OpenAI capabilities (should have all roles)
+        openai_config = registry.providers[LLMProvider.OPENAI]
+        assert LLMRole.FAST in openai_config.capabilities
+        assert LLMRole.QUALITY in openai_config.capabilities
+        assert LLMRole.LONG in openai_config.capabilities
+        assert LLMRole.REASONING in openai_config.capabilities
+        assert LLMRole.TOOL in openai_config.capabilities
+        
+        # Check Anthropic capabilities
+        anthropic_config = registry.providers[LLMProvider.ANTHROPIC]
+        assert LLMRole.QUALITY in anthropic_config.capabilities
+        assert LLMRole.LONG in anthropic_config.capabilities
+        assert LLMRole.REASONING in anthropic_config.capabilities
+        assert LLMRole.TOOL in anthropic_config.capabilities
 
     def test_default_provider_order(self):
         """Test default provider order is correct."""
@@ -148,6 +178,147 @@ class TestProviderRegistry:
         # Ollama depends on service being available, not just URL
 
 
+class TestRoleMapping:
+    """Test the RoleMapping class for role-based provider selection."""
+
+    def setup_method(self):
+        """Set up test environment."""
+        import shared.llm.provider_order
+        shared.llm.provider_order._provider_registry = None
+
+    def test_default_role_mappings(self):
+        """Test default role mappings are loaded correctly."""
+        role_mapping = RoleMapping()
+        
+        # Check that all roles have mappings
+        for role in LLMRole:
+            mappings = role_mapping.get_providers_for_role(role)
+            assert len(mappings) > 0, f"Role {role} should have provider mappings"
+        
+        # Check specific role mappings
+        fast_providers = role_mapping.get_providers_for_role(LLMRole.FAST)
+        assert "ollama:llama3" in fast_providers
+        assert "openai:gpt-4o-mini" in fast_providers
+        
+        quality_providers = role_mapping.get_providers_for_role(LLMRole.QUALITY)
+        assert "anthropic:claude-3-5-sonnet" in quality_providers
+        assert "openai:gpt-4o" in quality_providers
+
+    @patch.dict(os.environ, {
+        "LLM_FAST": "ollama:llama3",
+        "LLM_QUALITY": "openai:gpt-4o"
+    })
+    def test_custom_role_mappings_from_env(self):
+        """Test custom role mappings from environment variables."""
+        role_mapping = RoleMapping()
+        
+        fast_providers = role_mapping.get_providers_for_role(LLMRole.FAST)
+        assert fast_providers == ["ollama:llama3"]
+        
+        quality_providers = role_mapping.get_providers_for_role(LLMRole.QUALITY)
+        assert quality_providers == ["openai:gpt-4o"]
+
+    def test_get_role_for_provider(self):
+        """Test getting the primary role for a provider."""
+        role_mapping = RoleMapping()
+        
+        # Test that providers are mapped to appropriate roles
+        ollama_role = role_mapping.get_role_for_provider("ollama")
+        assert ollama_role == LLMRole.FAST
+        
+        openai_role = role_mapping.get_role_for_provider("openai")
+        assert openai_role in [LLMRole.FAST, LLMRole.QUALITY, LLMRole.LONG, LLMRole.REASONING, LLMRole.TOOL]
+
+    def test_get_all_mappings(self):
+        """Test getting all role mappings."""
+        role_mapping = RoleMapping()
+        all_mappings = role_mapping.get_all_mappings()
+        
+        # Check that all roles are present
+        for role in LLMRole:
+            assert role in all_mappings
+            assert len(all_mappings[role]) > 0
+
+
+class TestRoleBasedProviderSelection:
+    """Test role-based provider selection functionality."""
+
+    def setup_method(self):
+        """Set up test environment."""
+        import shared.llm.provider_order
+        shared.llm.provider_order._provider_registry = None
+
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    def test_select_provider_for_fast_role(self):
+        """Test provider selection for FAST role."""
+        registry = ProviderRegistry()
+        
+        provider = registry.select_provider_for_role(LLMRole.FAST, prefer_free=True)
+        
+        # Should prefer free providers for FAST role
+        if provider:
+            config = registry.providers[provider]
+            assert LLMRole.FAST in config.capabilities
+            # Should prefer free providers when available
+            if provider in [LLMProvider.OLLAMA, LLMProvider.HUGGINGFACE, LLMProvider.LOCAL_STUB]:
+                assert config.is_free
+
+    @patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-key"})
+    def test_select_provider_for_quality_role(self):
+        """Test provider selection for QUALITY role."""
+        registry = ProviderRegistry()
+        
+        provider = registry.select_provider_for_role(LLMRole.QUALITY, prefer_free=False)
+        
+        # Should select a provider capable of QUALITY role
+        if provider:
+            config = registry.providers[provider]
+            assert LLMRole.QUALITY in config.capabilities
+
+    @patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"})
+    def test_select_provider_for_tool_role(self):
+        """Test provider selection for TOOL role."""
+        registry = ProviderRegistry()
+        
+        provider = registry.select_provider_for_role(LLMRole.TOOL, prefer_free=False)
+        
+        # Should select a provider capable of TOOL role
+        if provider:
+            config = registry.providers[provider]
+            assert LLMRole.TOOL in config.capabilities
+            assert config.supports_tools
+
+    def test_select_provider_for_role_no_available_providers(self):
+        """Test role-based selection when no providers are available."""
+        with patch.dict(os.environ, {}, clear=True):
+            registry = ProviderRegistry()
+            
+            # Mock all availability checks to return False except local_stub
+            with patch.object(ProviderRegistry, '_check_ollama_availability', return_value=False):
+                provider = registry.select_provider_for_role(LLMRole.QUALITY, prefer_free=True)
+                
+                # Should return None since no suitable providers available
+                assert provider is None
+
+    def test_role_based_selection_with_mixed_availability(self):
+        """Test role-based selection with mixed provider availability."""
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}):
+            registry = ProviderRegistry()
+            
+            # Test FAST role - should prefer free providers
+            fast_provider = registry.select_provider_for_role(LLMRole.FAST, prefer_free=True)
+            if fast_provider:
+                config = registry.providers[fast_provider]
+                assert LLMRole.FAST in config.capabilities
+            
+            # Test TOOL role - should use OpenAI since it's available and supports tools
+            tool_provider = registry.select_provider_for_role(LLMRole.TOOL, prefer_free=False)
+            if tool_provider:
+                config = registry.providers[tool_provider]
+                assert LLMRole.TOOL in config.capabilities
+                assert config.supports_tools
+
+
 class TestProviderSelection:
     """Test provider selection for different query complexities."""
 
@@ -188,7 +359,7 @@ class TestProviderSelection:
         
         # Should prefer providers with tool support for expert queries
         if provider:
-            config = registry.get_provider_info(provider)
+            config = registry.providers[provider]
             # For expert queries, should prioritize tool-supporting providers
             assert config.supports_tools or provider == LLMProvider.LOCAL_STUB
 
@@ -251,6 +422,16 @@ class TestProviderOrderFunctions:
         # Should return a provider name or None
         assert provider is None or isinstance(provider, str)
 
+    def test_select_provider_for_role_function(self):
+        """Test select_provider_for_role function."""
+        provider = select_provider_for_role(
+            LLMRole.FAST, 
+            prefer_free=True
+        )
+        
+        # Should return a provider name or None
+        assert provider is None or isinstance(provider, str)
+
     def test_get_provider_stats_function(self):
         """Test get_provider_stats function."""
         stats = get_provider_stats()
@@ -269,6 +450,29 @@ class TestProviderOrderFunctions:
         assert "openai_available" in stats
         assert "anthropic_available" in stats
         assert "local_stub_available" in stats
+
+    def test_get_provider_metrics_function(self):
+        """Test get_provider_metrics function."""
+        metrics = get_provider_metrics()
+        
+        assert isinstance(metrics, dict)
+        # Should include base stats
+        assert "total_providers" in metrics
+        
+        # Should include role-based metrics
+        for role in LLMRole:
+            assert f"role_{role.value}_providers" in metrics
+            assert f"role_{role.value}_available" in metrics
+
+    def test_get_role_mappings_function(self):
+        """Test get_role_mappings function."""
+        mappings = get_role_mappings()
+        
+        assert isinstance(mappings, dict)
+        # Should include all roles
+        for role in LLMRole:
+            assert role in mappings
+            assert isinstance(mappings[role], list)
 
 
 class TestFallbackChain:
