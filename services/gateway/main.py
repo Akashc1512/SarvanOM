@@ -1311,6 +1311,36 @@ async def lane_metrics():
         }
 
 
+# E1: Advanced Performance Monitoring Integration
+@app.get("/metrics/performance")
+async def performance_metrics():
+    """Get comprehensive performance metrics and SLA compliance (Phase E1)."""
+    try:
+        from shared.core.services.performance_monitor import get_performance_summary
+        
+        summary = get_performance_summary()
+        
+        return {
+            "status": "available",
+            "performance_summary": summary,
+            "monitoring": {
+                "health_score": summary.get("health_score", 0),
+                "sla_compliance": summary.get("sla_compliance", {}),
+                "active_alerts": summary.get("active_alerts", []),
+                "cost_efficiency": summary.get("cost_summary", {}).get("cost_efficiency_score", 0)
+            },
+            "recommendations": summary.get("cost_summary", {}).get("optimization_recommendations", []),
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        logger.error(f"Performance metrics failed: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": time.time()
+        }
+
+
 # C1: Retrieval Aggregator Integration
 @app.get("/search")
 async def search_endpoint(
