@@ -128,19 +128,22 @@ class StartupWarmupService:
     async def _warmup_vector_singleton(self) -> bool:
         """Warmup vector singleton service."""
         try:
-            from shared.core.services.vector_singleton_service import get_vector_singleton_service
+            from shared.core.services.vector_singleton_service import warmup_vector_singleton, get_vector_singleton_health
             
-            service = await get_vector_singleton_service()
+            # Execute full warmup (embedding model + vector store)
+            warmup_result = await warmup_vector_singleton()
             
-            # Service initialization includes warmup
-            health = await service.health_check()
+            # Get health status after warmup
+            health = await get_vector_singleton_health()
             
-            logger.info("Vector singleton warmup completed", 
-                       initialized=health.get("initialized", False),
+            logger.info("Vector singleton warmup completed",
+                       warmup_status=warmup_result.get("status", "unknown"),
+                       warmup_completed=warmup_result.get("warmup_completed", False),
                        embedding_loaded=health.get("embedding", {}).get("model_loaded", False),
-                       vector_connected=health.get("vector_store", {}).get("connected", False))
+                       vector_connected=health.get("vector_store", {}).get("connected", False),
+                       cache_size=health.get("embedding", {}).get("cache_size", 0))
             
-            return health.get("initialized", False)
+            return warmup_result.get("warmup_completed", False) and health.get("initialized", False)
             
         except Exception as e:
             logger.error("Vector singleton warmup failed", error=str(e))

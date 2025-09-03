@@ -1,18 +1,15 @@
-#!/usr/bin/env python3
 """
-Vector Singleton Service - Process-Level Singletons + Cold-Start Killer
+Vector Singleton Service - Process-Level Singletons for Vector Operations
+========================================================================
 
-This service eliminates the 20-30s cold-start penalty by establishing:
-- Process-level singleton embedder (preloaded at startup)
-- Process-level singleton vector store clients (connection pooling)
-- In-memory LRU embedding cache with TTL
-- Background warmup tasks for optimal performance
+Eliminates cold-start penalty for vector operations by providing:
+- Process-level singleton for embedding model
+- Process-level singleton for vector store client
+- In-memory LRU cache for embeddings with TTL
+- Background warmup automation
+- Performance metrics (TFTI, TTS)
 
-Key Features:
-- Sub-2s vector queries after warmup (≤800ms median on subsequent queries)
-- Thread/async-safe singletons with proper lifecycle management
-- Structured logging for TFTI (time-to-first-inference) and TTS (time-to-search)
-- Environment-driven configuration
+Maps to Phase I2 requirements for sub-2s vector query performance.
 """
 
 import os
@@ -20,649 +17,839 @@ import asyncio
 import threading
 import time
 from typing import Dict, Any, Optional, List, Tuple
-from dataclasses import dataclass
-from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from functools import lru_cache
+import structlog
 import hashlib
-from contextlib import asynccontextmanager
 
-# LRU Cache with TTL
+# Optional dependencies with graceful fallback
 try:
-    from cachetools import TTLCache
-    CACHETOOLS_AVAILABLE = True
-except ImportError:
-    CACHETOOLS_AVAILABLE = False
-    TTLCache = None
-
-# Sentence Transformers
-try:
-    from sentence_transformers import SentenceTransformer
+    import sentence_transformers
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
+    sentence_transformers = None
     SENTENCE_TRANSFORMERS_AVAILABLE = False
-    SentenceTransformer = None
 
-# Vector Store Imports
 try:
-    from shared.vectorstores.vector_store_service import QdrantVectorStore, ChromaVectorStore, InMemoryVectorStore
-    VECTOR_STORES_AVAILABLE = True
+    import chromadb
+    CHROMADB_AVAILABLE = True
 except ImportError:
-    VECTOR_STORES_AVAILABLE = False
-    QdrantVectorStore = None
-    ChromaVectorStore = None
-    InMemoryVectorStore = None
+    chromadb = None
+    CHROMADB_AVAILABLE = False
 
-from shared.core.unified_logging import get_logger
+try:
+    from qdrant_client import QdrantClient
+    from qdrant_client.models import Distance, VectorParams
+    QDRANT_AVAILABLE = True
+except ImportError:
+    QdrantClient = None
+    Distance = None
+    VectorParams = None
+    QDRANT_AVAILABLE = False
 
-logger = get_logger(__name__)
+logger = structlog.get_logger(__name__)
+
 
 @dataclass
 class VectorConfig:
     """Vector service configuration from environment variables."""
     
     # Embedding Configuration
-    embedding_model: str
-    embedding_dimension: int
-    embedding_cache_size: int
-    embedding_cache_ttl: int
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_cache_size: int = 1000
+    embedding_cache_ttl: int = 3600  # 1 hour
     
     # Vector Store Configuration
-    vector_db_provider: str
-    vector_db_url: str
-    vector_db_api_key: Optional[str]
-    vector_collection_name: str
+    vector_db_provider: str = "chroma"  # chroma, qdrant
+    qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: Optional[str] = None
+    vector_collection_name: str = "sarvanom_embeddings"
+    chroma_persist_directory: str = "./chroma_db"
     
     # Performance Configuration
-    warmup_enabled: bool
-    warmup_queries: int
-    max_workers: int
-    search_timeout: float
-    embedding_timeout: float
+    vector_warmup_enabled: bool = True
+    warmup_timeout: float = 30.0
+    query_timeout: float = 2.0
     
     @classmethod
     def from_environment(cls) -> 'VectorConfig':
         """Load configuration from environment variables."""
         return cls(
-            # Embedding settings
-            embedding_model=os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"),
-            embedding_dimension=int(os.getenv("EMBEDDING_DIMENSION", "384")),
-            embedding_cache_size=int(os.getenv("EMBEDDING_CACHE_SIZE", "1000")),
-            embedding_cache_ttl=int(os.getenv("EMBEDDING_CACHE_TTL", "3600")),  # 1 hour
-            
-            # Vector store settings
-            vector_db_provider=os.getenv("VECTOR_DB_PROVIDER", "chroma"),
-            vector_db_url=os.getenv("VECTOR_DB_URL", "http://localhost:6333"),
-            vector_db_api_key=os.getenv("VECTOR_DB_API_KEY"),
-            vector_collection_name=os.getenv("VECTOR_COLLECTION_NAME", "sarvanom_embeddings"),
-            
-            # Performance settings
-            warmup_enabled=os.getenv("VECTOR_WARMUP_ENABLED", "true").lower() == "true",
-            warmup_queries=int(os.getenv("VECTOR_WARMUP_QUERIES", "5")),
-            max_workers=int(os.getenv("VECTOR_MAX_WORKERS", "4")),
-            search_timeout=float(os.getenv("VECTOR_SEARCH_TIMEOUT", "2.0")),
-            embedding_timeout=float(os.getenv("VECTOR_EMBEDDING_TIMEOUT", "0.8"))
+            embedding_model=os.getenv('EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2'),
+            embedding_cache_size=int(os.getenv('EMBEDDING_CACHE_SIZE', '1000')),
+            embedding_cache_ttl=int(os.getenv('EMBEDDING_CACHE_TTL', '3600')),
+            vector_db_provider=os.getenv('VECTOR_DB_PROVIDER', 'chroma').lower(),
+            qdrant_url=os.getenv('QDRANT_URL', 'http://localhost:6333'),
+            qdrant_api_key=os.getenv('QDRANT_API_KEY'),
+            vector_collection_name=os.getenv('VECTOR_COLLECTION_NAME', 'sarvanom_embeddings'),
+            chroma_persist_directory=os.getenv('CHROMA_PERSIST_DIRECTORY', './chroma_db'),
+            vector_warmup_enabled=os.getenv('VECTOR_WARMUP_ENABLED', 'true').lower() == 'true',
+            warmup_timeout=float(os.getenv('VECTOR_WARMUP_TIMEOUT', '30.0')),
+            query_timeout=float(os.getenv('VECTOR_QUERY_TIMEOUT', '2.0'))
         )
+    
+    def get_redacted_config(self) -> Dict[str, Any]:
+        """Return configuration with sensitive data redacted."""
+        return {
+            'embedding_model': self.embedding_model,
+            'embedding_cache_size': self.embedding_cache_size,
+            'embedding_cache_ttl': self.embedding_cache_ttl,
+            'vector_db_provider': self.vector_db_provider,
+            'qdrant_url': self.qdrant_url,
+            'qdrant_api_key': '[REDACTED]' if self.qdrant_api_key else None,
+            'vector_collection_name': self.vector_collection_name,
+            'chroma_persist_directory': self.chroma_persist_directory,
+            'vector_warmup_enabled': self.vector_warmup_enabled,
+            'warmup_timeout': self.warmup_timeout,
+            'query_timeout': self.query_timeout
+        }
+
+
+@dataclass
+class CacheEntry:
+    """Embedding cache entry with TTL."""
+    embedding: List[float]
+    created_at: datetime
+    hits: int = 0
+    
+    def is_expired(self, ttl_seconds: int) -> bool:
+        """Check if cache entry is expired."""
+        return datetime.now() - self.created_at > timedelta(seconds=ttl_seconds)
+
+
+@dataclass
+class PerformanceMetrics:
+    """Performance metrics for vector operations."""
+    tfti_ms: float = 0.0  # Time to first inference
+    tts_ms: float = 0.0   # Time to search
+    cache_hits: int = 0
+    cache_misses: int = 0
+    total_queries: int = 0
+    avg_embedding_time_ms: float = 0.0
+    avg_search_time_ms: float = 0.0
+    warmup_completed: bool = False
+    warmup_duration_ms: float = 0.0
+    
+    @property
+    def cache_hit_rate(self) -> float:
+        """Calculate cache hit rate."""
+        total = self.cache_hits + self.cache_misses
+        return self.cache_hits / total if total > 0 else 0.0
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            'tfti_ms': self.tfti_ms,
+            'tts_ms': self.tts_ms,
+            'cache_hits': self.cache_hits,
+            'cache_misses': self.cache_misses,
+            'total_queries': self.total_queries,
+            'cache_hit_rate': self.cache_hit_rate,
+            'avg_embedding_time_ms': self.avg_embedding_time_ms,
+            'avg_search_time_ms': self.avg_search_time_ms,
+            'warmup_completed': self.warmup_completed,
+            'warmup_duration_ms': self.warmup_duration_ms
+        }
 
 
 class EmbeddingSingleton:
-    """Process-level singleton for embedding model with thread safety."""
+    """
+    Process-level singleton for embedding model.
+    
+    Features:
+    - Thread-safe initialization
+    - LRU cache with TTL
+    - Performance metrics collection
+    - Graceful fallback if model unavailable
+    """
     
     _instance: Optional['EmbeddingSingleton'] = None
     _lock = threading.Lock()
     
+    def __new__(cls, config: VectorConfig) -> 'EmbeddingSingleton':
+        """Thread-safe singleton implementation."""
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance._initialized = False
+            return cls._instance
+    
     def __init__(self, config: VectorConfig):
-        """Initialize embedding singleton (called only once)."""
-        self.config = config
-        self.model: Optional[SentenceTransformer] = None
-        self.executor: Optional[ThreadPoolExecutor] = None
-        self.cache: Optional[TTLCache] = None
-        self.warmup_completed = False
-        self.load_time_ms = 0
-        self.first_inference_time_ms = 0
-        
-        # Initialize components
-        self._initialize_cache()
-        self._initialize_executor()
-        
-        logger.info("EmbeddingSingleton initialized", config={
-            "model": config.embedding_model,
-            "dimension": config.embedding_dimension,
-            "cache_size": config.embedding_cache_size,
-            "cache_ttl": config.embedding_cache_ttl
-        })
-    
-    @classmethod
-    def get_instance(cls, config: Optional[VectorConfig] = None) -> 'EmbeddingSingleton':
-        """Get or create singleton instance (thread-safe)."""
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    if config is None:
-                        config = VectorConfig.from_environment()
-                    cls._instance = cls(config)
-        return cls._instance
-    
-    def _initialize_cache(self):
-        """Initialize LRU cache with TTL."""
-        if CACHETOOLS_AVAILABLE:
-            self.cache = TTLCache(
-                maxsize=self.config.embedding_cache_size,
-                ttl=self.config.embedding_cache_ttl
-            )
-            logger.info("Embedding cache initialized", 
-                       cache_size=self.config.embedding_cache_size,
-                       ttl_seconds=self.config.embedding_cache_ttl)
-        else:
-            logger.warning("cachetools not available - using simple dict cache")
-            self.cache = {}
-    
-    def _initialize_executor(self):
-        """Initialize thread pool executor for embedding operations."""
-        self.executor = ThreadPoolExecutor(
-            max_workers=self.config.max_workers,
-            thread_name_prefix="embedding"
-        )
-        logger.info("Embedding thread pool initialized", max_workers=self.config.max_workers)
-    
-    def _load_model_sync(self) -> bool:
-        """Load embedding model (synchronous - called in thread)."""
-        if not SENTENCE_TRANSFORMERS_AVAILABLE:
-            logger.error("sentence-transformers not available")
-            return False
+        """Initialize embedding singleton."""
+        if hasattr(self, '_initialized') and self._initialized:
+            return
             
-        if self.model is not None:
+        self.config = config
+        self.model = None
+        self.cache: Dict[str, CacheEntry] = {}
+        self.metrics = PerformanceMetrics()
+        self._model_loaded = False
+        self._warmup_completed = False
+        self._lock = threading.Lock()
+        self._initialized = True
+        
+        logger.info("EmbeddingSingleton initialized", 
+                   config=config.get_redacted_config())
+    
+    def _normalize_text(self, text: str) -> str:
+        """Normalize text for consistent caching."""
+        return text.strip().lower()
+    
+    def _get_cache_key(self, text: str) -> str:
+        """Generate cache key for text."""
+        normalized = self._normalize_text(text)
+        return hashlib.md5(normalized.encode()).hexdigest()
+    
+    def _cleanup_expired_cache(self):
+        """Remove expired cache entries."""
+        current_time = datetime.now()
+        expired_keys = [
+            key for key, entry in self.cache.items()
+            if entry.is_expired(self.config.embedding_cache_ttl)
+        ]
+        
+        for key in expired_keys:
+            del self.cache[key]
+        
+        if expired_keys:
+            logger.debug("Cleaned up expired cache entries", 
+                        count=len(expired_keys),
+                        remaining=len(self.cache))
+    
+    def _manage_cache_size(self):
+        """Ensure cache doesn't exceed size limit."""
+        while len(self.cache) > self.config.embedding_cache_size:
+            # Remove least recently used (lowest hits)
+            lru_key = min(self.cache.keys(), 
+                         key=lambda k: (self.cache[k].hits, self.cache[k].created_at))
+            del self.cache[lru_key]
+    
+    async def load_model(self) -> bool:
+        """Load embedding model with timeout."""
+        if self._model_loaded:
             return True
             
+        if not SENTENCE_TRANSFORMERS_AVAILABLE:
+            logger.warning("sentence-transformers not available, embedding disabled")
+            return False
+        
+        start_time = time.time()
+        
         try:
-            load_start = time.time()
+            # Load model with timeout
+            load_task = asyncio.to_thread(
+                sentence_transformers.SentenceTransformer,
+                self.config.embedding_model
+            )
             
-            logger.info("Loading embedding model", model=self.config.embedding_model)
-            self.model = SentenceTransformer(self.config.embedding_model)
+            self.model = await asyncio.wait_for(
+                load_task,
+                timeout=self.config.warmup_timeout
+            )
             
-            self.load_time_ms = (time.time() - load_start) * 1000
+            self._model_loaded = True
+            load_time_ms = (time.time() - start_time) * 1000
+            
+            # Record TFTI (Time to First Inference)
+            if self.metrics.tfti_ms == 0.0:
+                self.metrics.tfti_ms = load_time_ms
             
             logger.info("Embedding model loaded successfully",
                        model=self.config.embedding_model,
-                       load_time_ms=round(self.load_time_ms, 2))
+                       load_time_ms=round(load_time_ms, 2))
             
             return True
             
+        except asyncio.TimeoutError:
+            logger.error("Embedding model load timeout",
+                        model=self.config.embedding_model,
+                        timeout=self.config.warmup_timeout)
+            return False
         except Exception as e:
-            logger.error("Failed to load embedding model", 
+            logger.error("Failed to load embedding model",
                         model=self.config.embedding_model,
                         error=str(e))
             return False
     
-    def _dummy_inference_sync(self) -> bool:
-        """Perform dummy inference to warm up model (synchronous)."""
-        if self.model is None:
-            return False
-            
-        try:
-            inference_start = time.time()
-            
-            # Perform dummy inference to warm up GPU/CPU caches
-            dummy_texts = [
-                "This is a dummy text for model warmup",
-                "Vector search warmup query",
-                "Embedding model initialization"
-            ]
-            
-            _ = self.model.encode(dummy_texts, normalize_embeddings=True)
-            
-            self.first_inference_time_ms = (time.time() - inference_start) * 1000
-            
-            logger.info("Model warmup inference completed",
-                       first_inference_time_ms=round(self.first_inference_time_ms, 2))
-            
-            return True
-            
-        except Exception as e:
-            logger.error("Model warmup inference failed", error=str(e))
-            return False
-    
-    async def load_model(self) -> bool:
-        """Load model asynchronously."""
-        if self.model is not None:
-            return True
-            
-        try:
-            # Run model loading in thread pool
-            success = await asyncio.get_event_loop().run_in_executor(
-                self.executor, self._load_model_sync
-            )
-            
-            if success and self.config.warmup_enabled:
-                # Perform warmup inference
-                warmup_success = await asyncio.get_event_loop().run_in_executor(
-                    self.executor, self._dummy_inference_sync
-                )
-                
-                if warmup_success:
-                    self.warmup_completed = True
-                    logger.info("Embedding model warmup completed",
-                               total_time_ms=round(self.load_time_ms + self.first_inference_time_ms, 2))
-            
-            return success
-            
-        except Exception as e:
-            logger.error("Failed to load embedding model asynchronously", error=str(e))
-            return False
-    
-    def _get_cache_key(self, text: str) -> str:
-        """Generate cache key for text."""
-        normalized_text = text.strip().lower()
-        return hashlib.md5(normalized_text.encode('utf-8')).hexdigest()
-    
-    def _embed_texts_sync(self, texts: List[str]) -> List[List[float]]:
-        """Embed texts synchronously (called in thread pool)."""
-        if self.model is None:
-            raise RuntimeError("Embedding model not loaded")
-            
-        try:
-            embeddings = self.model.encode(texts, normalize_embeddings=True)
-            return embeddings.tolist()
-            
-        except Exception as e:
-            logger.error("Embedding generation failed", error=str(e), text_count=len(texts))
-            raise
-    
-    async def embed_texts(self, texts: List[str]) -> List[List[float]]:
+    async def embed_text(self, text: str) -> Optional[List[float]]:
         """
-        Embed texts with caching and performance optimization.
+        Generate embedding for text with caching.
         
         Args:
-            texts: List of text strings to embed
+            text: Text to embed
             
         Returns:
-            List of embedding vectors
+            Embedding vector or None if failed
         """
-        if not texts:
-            return []
+        if not text or not text.strip():
+            return None
+        
+        start_time = time.time()
+        cache_key = self._get_cache_key(text)
+        
+        # Check cache first
+        with self._lock:
+            self._cleanup_expired_cache()
             
-        embed_start = time.time()
+            if cache_key in self.cache:
+                entry = self.cache[cache_key]
+                entry.hits += 1
+                self.metrics.cache_hits += 1
+                
+                logger.debug("Cache hit for embedding",
+                           cache_key=cache_key[:8],
+                           hits=entry.hits)
+                
+                return entry.embedding
         
-        # Check cache for each text
-        cached_embeddings = {}
-        texts_to_embed = []
-        text_indices = []
+        # Cache miss - generate embedding
+        self.metrics.cache_misses += 1
         
-        for i, text in enumerate(texts):
-            cache_key = self._get_cache_key(text)
+        if not self._model_loaded:
+            await self.load_model()
+        
+        if not self._model_loaded or self.model is None:
+            return None
+        
+        try:
+            # Generate embedding
+            embed_task = asyncio.to_thread(
+                self.model.encode,
+                [text],
+                convert_to_tensor=False
+            )
             
-            if self.cache and cache_key in self.cache:
-                cached_embeddings[i] = self.cache[cache_key]
-            else:
-                texts_to_embed.append(text)
-                text_indices.append(i)
-        
-        # Generate embeddings for uncached texts
-        new_embeddings = []
-        if texts_to_embed:
-            try:
-                # Run embedding in thread pool with timeout
-                new_embeddings = await asyncio.wait_for(
-                    asyncio.get_event_loop().run_in_executor(
-                        self.executor, self._embed_texts_sync, texts_to_embed
-                    ),
-                    timeout=self.config.embedding_timeout
+            embeddings = await asyncio.wait_for(
+                embed_task,
+                timeout=self.config.query_timeout
+            )
+            
+            embedding = embeddings[0].tolist()
+            embed_time_ms = (time.time() - start_time) * 1000
+            
+            # Update metrics
+            self.metrics.total_queries += 1
+            self.metrics.avg_embedding_time_ms = (
+                (self.metrics.avg_embedding_time_ms * (self.metrics.total_queries - 1) + embed_time_ms) 
+                / self.metrics.total_queries
+            )
+            
+            # Cache the result
+            with self._lock:
+                self.cache[cache_key] = CacheEntry(
+                    embedding=embedding,
+                    created_at=datetime.now(),
+                    hits=1
                 )
-                
-                # Cache new embeddings
-                if self.cache:
-                    for text, embedding in zip(texts_to_embed, new_embeddings):
-                        cache_key = self._get_cache_key(text)
-                        self.cache[cache_key] = embedding
-                
-            except asyncio.TimeoutError:
-                logger.error("Embedding generation timed out",
-                           timeout=self.config.embedding_timeout,
-                           text_count=len(texts_to_embed))
-                raise TimeoutError(f"Embedding timed out after {self.config.embedding_timeout}s")
-            except Exception as e:
-                logger.error("Embedding generation failed", error=str(e))
-                raise
-        
-        # Combine cached and new embeddings in original order
-        result_embeddings = []
-        new_embedding_index = 0
-        
-        for i in range(len(texts)):
-            if i in cached_embeddings:
-                result_embeddings.append(cached_embeddings[i])
-            else:
-                result_embeddings.append(new_embeddings[new_embedding_index])
-                new_embedding_index += 1
-        
-        embed_time_ms = (time.time() - embed_start) * 1000
-        
-        logger.debug("Text embedding completed",
-                    text_count=len(texts),
-                    cached_count=len(cached_embeddings),
-                    new_count=len(texts_to_embed),
-                    embed_time_ms=round(embed_time_ms, 2))
-        
-        return result_embeddings
+                self._manage_cache_size()
+            
+            logger.debug("Generated new embedding",
+                        text_length=len(text),
+                        embedding_dim=len(embedding),
+                        time_ms=round(embed_time_ms, 2))
+            
+            return embedding
+            
+        except asyncio.TimeoutError:
+            logger.warning("Embedding generation timeout",
+                          text_length=len(text),
+                          timeout=self.config.query_timeout)
+            return None
+        except Exception as e:
+            logger.error("Embedding generation failed",
+                        text_length=len(text),
+                        error=str(e))
+            return None
     
-    async def health_check(self) -> Dict[str, Any]:
+    async def warmup(self) -> bool:
+        """Warmup embedding model with dummy text."""
+        if self._warmup_completed:
+            return True
+        
+        start_time = time.time()
+        
+        # Load model
+        if not await self.load_model():
+            return False
+        
+        # Generate dummy embedding for warmup
+        dummy_texts = [
+            "This is a test query for warming up the embedding model.",
+            "Vector search performance optimization.",
+            "Knowledge graph integration test."
+        ]
+        
+        warmup_success = True
+        for text in dummy_texts:
+            embedding = await self.embed_text(text)
+            if embedding is None:
+                warmup_success = False
+                break
+        
+        warmup_time_ms = (time.time() - start_time) * 1000
+        self.metrics.warmup_duration_ms = warmup_time_ms
+        self.metrics.warmup_completed = warmup_success
+        self._warmup_completed = warmup_success
+        
+        if warmup_success:
+            logger.info("Embedding model warmup completed",
+                       warmup_time_ms=round(warmup_time_ms, 2),
+                       cache_entries=len(self.cache))
+        else:
+            logger.error("Embedding model warmup failed",
+                        warmup_time_ms=round(warmup_time_ms, 2))
+        
+        return warmup_success
+    
+    def get_health_status(self) -> Dict[str, Any]:
         """Get embedding service health status."""
         return {
-            "service": "embedding_singleton",
-            "model_loaded": self.model is not None,
-            "warmup_completed": self.warmup_completed,
-            "load_time_ms": self.load_time_ms,
-            "first_inference_time_ms": self.first_inference_time_ms,
-            "cache_size": len(self.cache) if self.cache else 0,
-            "max_cache_size": self.config.embedding_cache_size if CACHETOOLS_AVAILABLE else "unlimited",
-            "executor_active": self.executor is not None and not self.executor._shutdown
+            'model_loaded': self._model_loaded,
+            'warmup_completed': self._warmup_completed,
+            'cache_size': len(self.cache),
+            'cache_capacity': self.config.embedding_cache_size,
+            'model_name': self.config.embedding_model,
+            'metrics': self.metrics.to_dict()
         }
 
 
 class VectorStoreSingleton:
-    """Process-level singleton for vector store clients with connection pooling."""
+    """
+    Process-level singleton for vector store client.
+    
+    Features:
+    - Support for Qdrant and Chroma
+    - Connection pooling and health checks
+    - Performance metrics collection
+    - Graceful degradation on failures
+    """
     
     _instance: Optional['VectorStoreSingleton'] = None
     _lock = threading.Lock()
     
+    def __new__(cls, config: VectorConfig) -> 'VectorStoreSingleton':
+        """Thread-safe singleton implementation."""
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance._initialized = False
+            return cls._instance
+    
     def __init__(self, config: VectorConfig):
         """Initialize vector store singleton."""
+        if hasattr(self, '_initialized') and self._initialized:
+            return
+            
         self.config = config
-        self.vector_store = None
-        self.connected = False
-        self.warmup_completed = False
-        self.connection_time_ms = 0
-        self.first_search_time_ms = 0
+        self.client = None
+        self.collection = None
+        self._connected = False
+        self._warmup_completed = False
+        self._lock = threading.Lock()
+        self._initialized = True
         
-        logger.info("VectorStoreSingleton initialized", config={
-            "provider": config.vector_db_provider,
-            "url": config.vector_db_url,
-            "collection": config.vector_collection_name
-        })
-    
-    @classmethod
-    def get_instance(cls, config: Optional[VectorConfig] = None) -> 'VectorStoreSingleton':
-        """Get or create singleton instance (thread-safe)."""
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    if config is None:
-                        config = VectorConfig.from_environment()
-                    cls._instance = cls(config)
-        return cls._instance
+        logger.info("VectorStoreSingleton initialized",
+                   provider=config.vector_db_provider,
+                   config=config.get_redacted_config())
     
     async def connect(self) -> bool:
-        """Connect to vector store with connection pooling."""
-        if self.connected and self.vector_store is not None:
+        """Connect to vector store."""
+        if self._connected:
             return True
-            
-        if not VECTOR_STORES_AVAILABLE:
-            logger.error("Vector store implementations not available")
-            return False
-            
-        connect_start = time.time()
         
         try:
-            provider = self.config.vector_db_provider.lower()
-            
-            if provider == "qdrant":
-                self.vector_store = QdrantVectorStore(
-                    url=self.config.vector_db_url,
-                    api_key=self.config.vector_db_api_key,
-                    collection=self.config.vector_collection_name,
-                    vector_size=self.config.embedding_dimension
-                )
-            elif provider == "chroma":
-                self.vector_store = ChromaVectorStore(
-                    collection_name=self.config.vector_collection_name
-                )
+            if self.config.vector_db_provider == "qdrant":
+                return await self._connect_qdrant()
+            elif self.config.vector_db_provider == "chroma":
+                return await self._connect_chroma()
             else:
-                logger.warning(f"Unknown vector provider {provider}, falling back to in-memory")
-                self.vector_store = InMemoryVectorStore()
-            
-            self.connection_time_ms = (time.time() - connect_start) * 1000
-            self.connected = True
-            
-            logger.info("Vector store connected successfully",
-                       provider=provider,
-                       connection_time_ms=round(self.connection_time_ms, 2))
-            
-            return True
-            
+                logger.error("Unsupported vector database provider",
+                           provider=self.config.vector_db_provider)
+                return False
+                
         except Exception as e:
             logger.error("Vector store connection failed",
                         provider=self.config.vector_db_provider,
                         error=str(e))
-            self.connected = False
             return False
     
-    async def warmup_search(self) -> bool:
-        """Perform warmup searches to prime caches."""
-        if not self.connected or self.vector_store is None:
+    async def _connect_qdrant(self) -> bool:
+        """Connect to Qdrant vector database."""
+        if not QDRANT_AVAILABLE:
+            logger.warning("Qdrant client not available, install qdrant-client")
             return False
-            
+        
         try:
-            warmup_start = time.time()
+            # Initialize Qdrant client
+            connect_task = asyncio.to_thread(
+                QdrantClient,
+                url=self.config.qdrant_url,
+                api_key=self.config.qdrant_api_key,
+                timeout=self.config.query_timeout
+            )
             
-            # Create dummy embedding for warmup
-            dummy_embedding = [0.1] * self.config.embedding_dimension
+            self.client = await asyncio.wait_for(
+                connect_task,
+                timeout=self.config.warmup_timeout
+            )
             
-            # Perform multiple warmup searches
-            for i in range(self.config.warmup_queries):
-                try:
-                    await asyncio.wait_for(
-                        self.vector_store.search(
-                            query_embedding=dummy_embedding,
-                            top_k=1
-                        ),
-                        timeout=1.0
-                    )
-                except Exception as e:
-                    logger.debug(f"Warmup search {i+1} failed (expected): {e}")
-                    continue
+            # Test connection
+            info_task = asyncio.to_thread(self.client.get_collections)
+            await asyncio.wait_for(info_task, timeout=5.0)
             
-            self.first_search_time_ms = (time.time() - warmup_start) * 1000
-            self.warmup_completed = True
+            self._connected = True
             
-            logger.info("Vector store warmup completed",
-                       warmup_queries=self.config.warmup_queries,
-                       warmup_time_ms=round(self.first_search_time_ms, 2))
+            logger.info("Connected to Qdrant",
+                       url=self.config.qdrant_url,
+                       collection=self.config.vector_collection_name)
             
             return True
             
         except Exception as e:
-            logger.error("Vector store warmup failed", error=str(e))
+            logger.error("Qdrant connection failed",
+                        url=self.config.qdrant_url,
+                        error=str(e))
             return False
     
-    async def search(self, query_embedding: List[float], top_k: int = 10) -> List[Dict[str, Any]]:
+    async def _connect_chroma(self) -> bool:
+        """Connect to Chroma vector database."""
+        if not CHROMADB_AVAILABLE:
+            logger.warning("ChromaDB not available, install chromadb")
+            return False
+        
+        try:
+            # Initialize Chroma client
+            connect_task = asyncio.to_thread(
+                chromadb.PersistentClient,
+                path=self.config.chroma_persist_directory
+            )
+            
+            self.client = await asyncio.wait_for(
+                connect_task,
+                timeout=self.config.warmup_timeout
+            )
+            
+            # Get or create collection
+            collection_task = asyncio.to_thread(
+                self.client.get_or_create_collection,
+                name=self.config.vector_collection_name
+            )
+            
+            self.collection = await asyncio.wait_for(
+                collection_task,
+                timeout=5.0
+            )
+            
+            self._connected = True
+            
+            logger.info("Connected to ChromaDB",
+                       path=self.config.chroma_persist_directory,
+                       collection=self.config.vector_collection_name)
+            
+            return True
+            
+        except Exception as e:
+            logger.error("ChromaDB connection failed",
+                        path=self.config.chroma_persist_directory,
+                        error=str(e))
+            return False
+    
+    async def search_similar(self, embedding: List[float], top_k: int = 5) -> List[Dict[str, Any]]:
         """
-        Perform vector search with timeout and performance logging.
+        Search for similar vectors.
         
         Args:
-            query_embedding: Query embedding vector
+            embedding: Query embedding vector
             top_k: Number of results to return
             
         Returns:
-            List of search results
+            List of similar documents with scores
         """
-        if not self.connected or self.vector_store is None:
-            raise RuntimeError("Vector store not connected")
-            
-        search_start = time.time()
+        if not self._connected:
+            await self.connect()
+        
+        if not self._connected:
+            return []
+        
+        start_time = time.time()
         
         try:
-            # Perform search with timeout
-            results = await asyncio.wait_for(
-                self.vector_store.search(
-                    query_embedding=query_embedding,
-                    top_k=top_k
-                ),
-                timeout=self.config.search_timeout
-            )
-            
-            search_time_ms = (time.time() - search_start) * 1000
-            
-            logger.debug("Vector search completed",
-                        result_count=len(results) if results else 0,
-                        search_time_ms=round(search_time_ms, 2),
-                        top_k=top_k)
-            
-            return results or []
-            
+            if self.config.vector_db_provider == "qdrant":
+                return await self._search_qdrant(embedding, top_k)
+            elif self.config.vector_db_provider == "chroma":
+                return await self._search_chroma(embedding, top_k)
+            else:
+                return []
+                
         except asyncio.TimeoutError:
-            logger.error("Vector search timed out",
-                        timeout=self.config.search_timeout,
-                        top_k=top_k)
-            raise TimeoutError(f"Vector search timed out after {self.config.search_timeout}s")
+            search_time_ms = (time.time() - start_time) * 1000
+            logger.warning("Vector search timeout",
+                          time_ms=round(search_time_ms, 2),
+                          timeout=self.config.query_timeout)
+            return []
         except Exception as e:
-            logger.error("Vector search failed", error=str(e), top_k=top_k)
-            raise
+            search_time_ms = (time.time() - start_time) * 1000
+            logger.error("Vector search failed",
+                        provider=self.config.vector_db_provider,
+                        error=str(e),
+                        time_ms=round(search_time_ms, 2))
+            return []
     
-    async def health_check(self) -> Dict[str, Any]:
+    async def _search_qdrant(self, embedding: List[float], top_k: int) -> List[Dict[str, Any]]:
+        """Search in Qdrant vector database."""
+        search_task = asyncio.to_thread(
+            self.client.search,
+            collection_name=self.config.vector_collection_name,
+            query_vector=embedding,
+            limit=top_k
+        )
+        
+        results = await asyncio.wait_for(
+            search_task,
+            timeout=self.config.query_timeout
+        )
+        
+        return [
+            {
+                'id': result.id,
+                'score': result.score,
+                'payload': result.payload or {}
+            }
+            for result in results
+        ]
+    
+    async def _search_chroma(self, embedding: List[float], top_k: int) -> List[Dict[str, Any]]:
+        """Search in ChromaDB vector database."""
+        if not self.collection:
+            return []
+        
+        search_task = asyncio.to_thread(
+            self.collection.query,
+            query_embeddings=[embedding],
+            n_results=top_k
+        )
+        
+        results = await asyncio.wait_for(
+            search_task,
+            timeout=self.config.query_timeout
+        )
+        
+        # Convert ChromaDB format to standard format
+        documents = results.get('documents', [[]])[0]
+        distances = results.get('distances', [[]])[0]
+        ids = results.get('ids', [[]])[0]
+        metadatas = results.get('metadatas', [[]])[0]
+        
+        return [
+            {
+                'id': doc_id,
+                'score': 1.0 - distance,  # Convert distance to similarity
+                'payload': {
+                    'document': document,
+                    'metadata': metadata or {}
+                }
+            }
+            for doc_id, document, distance, metadata in zip(ids, documents, distances, metadatas)
+        ]
+    
+    async def warmup(self) -> bool:
+        """Warmup vector store with dummy search."""
+        if self._warmup_completed:
+            return True
+        
+        # Connect to vector store
+        if not await self.connect():
+            return False
+        
+        # Perform dummy search for warmup
+        try:
+            dummy_embedding = [0.1] * 384  # Standard embedding dimension
+            await self.search_similar(dummy_embedding, top_k=1)
+            
+            self._warmup_completed = True
+            logger.info("Vector store warmup completed",
+                       provider=self.config.vector_db_provider)
+            return True
+            
+        except Exception as e:
+            logger.error("Vector store warmup failed",
+                        provider=self.config.vector_db_provider,
+                        error=str(e))
+            return False
+    
+    def get_health_status(self) -> Dict[str, Any]:
         """Get vector store health status."""
         return {
-            "service": "vector_store_singleton",
-            "provider": self.config.vector_db_provider,
-            "connected": self.connected,
-            "warmup_completed": self.warmup_completed,
-            "connection_time_ms": self.connection_time_ms,
-            "first_search_time_ms": self.first_search_time_ms,
-            "collection": self.config.vector_collection_name
+            'connected': self._connected,
+            'warmup_completed': self._warmup_completed,
+            'provider': self.config.vector_db_provider,
+            'collection_name': self.config.vector_collection_name
         }
 
 
 class VectorSingletonService:
-    """High-level vector service combining embedding and vector store singletons."""
+    """
+    Coordinated service for vector operations combining embedding and vector store.
     
-    def __init__(self, config: Optional[VectorConfig] = None):
+    Features:
+    - Coordinates embedding generation and vector search
+    - Performance metrics aggregation
+    - Unified health monitoring
+    - Background warmup coordination
+    """
+    
+    def __init__(self):
         """Initialize vector singleton service."""
-        self.config = config or VectorConfig.from_environment()
-        self.embedding_singleton = EmbeddingSingleton.get_instance(self.config)
-        self.vector_store_singleton = VectorStoreSingleton.get_instance(self.config)
-        self.initialization_completed = False
+        self.config = VectorConfig.from_environment()
+        self.embedding_singleton = EmbeddingSingleton(self.config)
+        self.vector_store_singleton = VectorStoreSingleton(self.config)
+        self._service_initialized = False
         
-        logger.info("VectorSingletonService created")
+        logger.info("VectorSingletonService initialized",
+                   config=self.config.get_redacted_config())
     
     async def initialize(self) -> bool:
-        """Initialize all components with full warmup."""
-        if self.initialization_completed:
+        """Initialize both embedding and vector store services."""
+        if self._service_initialized:
             return True
-            
-        init_start = time.time()
         
-        try:
-            # Initialize embedding model
-            embedding_success = await self.embedding_singleton.load_model()
-            if not embedding_success:
-                logger.error("Failed to initialize embedding model")
-                return False
-            
-            # Initialize vector store
-            vector_success = await self.vector_store_singleton.connect()
-            if not vector_success:
-                logger.error("Failed to initialize vector store")
-                return False
-            
-            # Perform warmup if enabled
-            if self.config.warmup_enabled:
-                warmup_success = await self.vector_store_singleton.warmup_search()
-                if not warmup_success:
-                    logger.warning("Vector store warmup failed, but continuing")
-            
-            init_time_ms = (time.time() - init_start) * 1000
-            self.initialization_completed = True
-            
-            logger.info("Vector singleton service initialized successfully",
-                       init_time_ms=round(init_time_ms, 2),
-                       warmup_enabled=self.config.warmup_enabled)
-            
-            return True
-            
-        except Exception as e:
-            logger.error("Vector singleton service initialization failed", error=str(e))
-            return False
+        embedding_ready = await self.embedding_singleton.load_model()
+        vector_ready = await self.vector_store_singleton.connect()
+        
+        self._service_initialized = embedding_ready or vector_ready
+        
+        logger.info("VectorSingletonService initialization complete",
+                   embedding_ready=embedding_ready,
+                   vector_ready=vector_ready,
+                   service_ready=self._service_initialized)
+        
+        return self._service_initialized
     
-    async def embed_and_search(self, query: str, top_k: int = 10) -> Tuple[List[List[float]], List[Dict[str, Any]]]:
+    async def warmup(self) -> bool:
+        """Perform complete warmup of vector services."""
+        if not self.config.vector_warmup_enabled:
+            logger.info("Vector warmup disabled by configuration")
+            return True
+        
+        start_time = time.time()
+        
+        # Initialize services
+        await self.initialize()
+        
+        # Warmup both services
+        embedding_warmup = await self.embedding_singleton.warmup()
+        vector_warmup = await self.vector_store_singleton.warmup()
+        
+        warmup_time_ms = (time.time() - start_time) * 1000
+        warmup_success = embedding_warmup or vector_warmup
+        
+        # Record TTS (Time to Search) metric
+        if warmup_success and self.embedding_singleton.metrics.tts_ms == 0.0:
+            self.embedding_singleton.metrics.tts_ms = warmup_time_ms
+        
+        logger.info("Vector services warmup completed",
+                   embedding_success=embedding_warmup,
+                   vector_success=vector_warmup,
+                   overall_success=warmup_success,
+                   warmup_time_ms=round(warmup_time_ms, 2))
+        
+        return warmup_success
+    
+    async def semantic_search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """
-        Complete embed and search pipeline with performance logging.
+        Perform semantic search with embedding and vector search.
         
         Args:
-            query: Query text
-            top_k: Number of results
+            query: Search query text
+            top_k: Number of results to return
             
         Returns:
-            Tuple of (embeddings, search_results)
+            List of search results with scores
         """
-        if not self.initialization_completed:
-            raise RuntimeError("Vector service not initialized")
-            
-        pipeline_start = time.time()
+        start_time = time.time()
         
-        try:
-            # TFTI: Time-to-first-inference (embedding)
-            tfti_start = time.time()
-            embeddings = await self.embedding_singleton.embed_texts([query])
-            tfti_ms = (time.time() - tfti_start) * 1000
-            
-            # TTS: Time-to-search
-            tts_start = time.time()
-            results = await self.vector_store_singleton.search(embeddings[0], top_k)
-            tts_ms = (time.time() - tts_start) * 1000
-            
-            total_time_ms = (time.time() - pipeline_start) * 1000
-            
-            logger.info("Vector pipeline completed",
-                       query=query[:100] + "..." if len(query) > 100 else query,
-                       tfti_ms=round(tfti_ms, 2),
-                       tts_ms=round(tts_ms, 2),
-                       total_time_ms=round(total_time_ms, 2),
-                       result_count=len(results))
-            
-            return embeddings, results
-            
-        except Exception as e:
-            logger.error("Vector pipeline failed", query=query[:100], error=str(e))
-            raise
+        # Generate embedding for query
+        embedding = await self.embedding_singleton.embed_text(query)
+        if not embedding:
+            logger.warning("Failed to generate embedding for query",
+                          query_length=len(query))
+            return []
+        
+        # Search vector store
+        results = await self.vector_store_singleton.search_similar(embedding, top_k)
+        
+        search_time_ms = (time.time() - start_time) * 1000
+        
+        # Update search metrics
+        metrics = self.embedding_singleton.metrics
+        metrics.total_queries += 1
+        metrics.avg_search_time_ms = (
+            (metrics.avg_search_time_ms * (metrics.total_queries - 1) + search_time_ms)
+            / metrics.total_queries
+        )
+        
+        logger.debug("Semantic search completed",
+                    query_length=len(query),
+                    results_count=len(results),
+                    search_time_ms=round(search_time_ms, 2))
+        
+        return results
     
     async def health_check(self) -> Dict[str, Any]:
-        """Get comprehensive health status."""
-        embedding_health = await self.embedding_singleton.health_check()
-        vector_health = await self.vector_store_singleton.health_check()
+        """Get comprehensive health status of vector services."""
+        embedding_health = self.embedding_singleton.get_health_status()
+        vector_health = self.vector_store_singleton.get_health_status()
+        
+        overall_initialized = (
+            embedding_health.get('model_loaded', False) or
+            vector_health.get('connected', False)
+        )
         
         return {
-            "service": "vector_singleton_service",
-            "initialized": self.initialization_completed,
-            "embedding": embedding_health,
-            "vector_store": vector_health,
-            "config": {
-                "embedding_model": self.config.embedding_model,
-                "vector_provider": self.config.vector_db_provider,
-                "warmup_enabled": self.config.warmup_enabled
-            }
+            'initialized': overall_initialized,
+            'service_ready': self._service_initialized,
+            'embedding': embedding_health,
+            'vector_store': vector_health,
+            'config': self.config.get_redacted_config()
         }
 
 
 # Global service instance
 _vector_singleton_service: Optional[VectorSingletonService] = None
+_service_lock = threading.Lock()
 
-async def get_vector_singleton_service() -> VectorSingletonService:
+def get_vector_singleton_service() -> VectorSingletonService:
     """Get or create global vector singleton service."""
     global _vector_singleton_service
     
-    if _vector_singleton_service is None:
-        _vector_singleton_service = VectorSingletonService()
-        await _vector_singleton_service.initialize()
+    with _service_lock:
+        if _vector_singleton_service is None:
+            _vector_singleton_service = VectorSingletonService()
     
     return _vector_singleton_service
 
 async def get_vector_singleton_health() -> Dict[str, Any]:
-    """Get vector singleton service health for /health endpoint."""
-    try:
-        service = await get_vector_singleton_service()
-        return await service.health_check()
-    except Exception as e:
-        logger.error("Failed to get vector singleton health", error=str(e))
-        return {
-            "service": "vector_singleton_service",
-            "status": "error",
-            "error": str(e),
-            "initialized": False
-        }
+    """Get vector singleton service health for health check endpoints."""
+    service = get_vector_singleton_service()
+    return await service.health_check()
+
+async def warmup_vector_singleton() -> Dict[str, Any]:
+    """Execute vector singleton warmup tasks."""
+    service = get_vector_singleton_service()
+    success = await service.warmup()
+    
+    return {
+        'status': 'completed' if success else 'failed',
+        'warmup_completed': success,
+        'health': await service.health_check()
+    }
+
+# Export public interface
+__all__ = [
+    'VectorConfig',
+    'VectorSingletonService',
+    'get_vector_singleton_service',
+    'get_vector_singleton_health',
+    'warmup_vector_singleton'
+]

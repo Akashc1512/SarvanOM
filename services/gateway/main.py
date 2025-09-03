@@ -1238,6 +1238,48 @@ async def router_metrics():
         }
 
 
+@app.get("/metrics/vector")
+async def vector_metrics():
+    """Get vector singleton performance metrics (Phase I2)."""
+    try:
+        from shared.core.services.vector_singleton_service import get_vector_singleton_health
+        
+        health = await get_vector_singleton_health()
+        embedding_metrics = health.get("embedding", {}).get("metrics", {})
+        
+        return {
+            "status": "available",
+            "health": health,
+            "performance_metrics": {
+                "tfti_ms": embedding_metrics.get("tfti_ms", 0.0),
+                "tts_ms": embedding_metrics.get("tts_ms", 0.0),
+                "cache_hit_rate": embedding_metrics.get("cache_hit_rate", 0.0),
+                "cache_hits": embedding_metrics.get("cache_hits", 0),
+                "cache_misses": embedding_metrics.get("cache_misses", 0),
+                "total_queries": embedding_metrics.get("total_queries", 0),
+                "avg_embedding_time_ms": embedding_metrics.get("avg_embedding_time_ms", 0.0),
+                "avg_search_time_ms": embedding_metrics.get("avg_search_time_ms", 0.0),
+                "warmup_completed": embedding_metrics.get("warmup_completed", False)
+            },
+            "cache_status": {
+                "size": health.get("embedding", {}).get("cache_size", 0),
+                "capacity": health.get("embedding", {}).get("cache_capacity", 0),
+                "utilization": (
+                    health.get("embedding", {}).get("cache_size", 0) / 
+                    max(health.get("embedding", {}).get("cache_capacity", 1), 1)
+                )
+            },
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        logger.error(f"Vector metrics failed: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": time.time()
+        }
+
+
 # Search/Retrieval service endpoint
 @app.get("/search")
 async def search_endpoint():

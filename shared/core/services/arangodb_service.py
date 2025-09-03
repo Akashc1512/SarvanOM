@@ -1,3 +1,5 @@
+
+
 """
 ArangoDB Service - Environment-Driven Configuration & Warm Path
 ================================================================
