@@ -802,7 +802,7 @@ class ProviderRegistry:
         
         for provider in order:
             if self._is_provider_available(provider):
-                available.append(provider)
+            available.append(provider)
         
         return available
     
@@ -994,9 +994,9 @@ class ProviderRegistry:
         
         if not openai_key:
             logger.debug("OpenAI not available: OPENAI_API_KEY not set")
-            return False
+                return False
         
-        return True
+                        return True
     
     def _check_anthropic_availability(self) -> bool:
         """Check if Anthropic is available."""
@@ -1005,7 +1005,7 @@ class ProviderRegistry:
         
         if not anthropic_key:
             logger.debug("Anthropic not available: ANTHROPIC_API_KEY not set")
-            return False
+                    return False
         
         return True
     
@@ -1059,7 +1059,7 @@ class ProviderRegistry:
         Args:
             complexity: The complexity level of the query
             prefer_free: If True, prioritize free providers
-            
+        
         Returns:
             Tuple of (provider, model) or (None, None) if none available
         """
