@@ -1280,6 +1280,37 @@ async def vector_metrics():
         }
 
 
+@app.get("/metrics/lanes")
+async def lane_metrics():
+    """Get multi-lane orchestration metrics (Phase B3)."""
+    try:
+        from shared.core.services.multi_lane_orchestrator import get_orchestration_metrics, get_orchestrator_health
+        
+        metrics = get_orchestration_metrics()
+        health = get_orchestrator_health()
+        
+        return {
+            "status": "available",
+            "orchestration_metrics": metrics,
+            "orchestrator_health": health,
+            "performance_summary": {
+                "total_requests": metrics.get("total_requests", 0),
+                "success_rate": metrics.get("success_rate", 0.0),
+                "partial_rate": metrics.get("partial_rate", 0.0),
+                "enabled_lanes": health.get("enabled_lanes", []),
+                "circuit_breaker_states": health.get("circuit_breaker_states", {})
+            },
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        logger.error(f"Lane metrics failed: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": time.time()
+        }
+
+
 # Search/Retrieval service endpoint
 @app.get("/search")
 async def search_endpoint():
