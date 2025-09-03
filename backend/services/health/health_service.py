@@ -420,8 +420,13 @@ class HealthService:
             
             health_data = await get_arangodb_health()
             
-            if health_data.get("available", False):
+            # Check status from our new service
+            status = health_data.get("status", "unknown")
+            
+            if status == "ok":
                 return "healthy", health_data
+            elif status == "timeout":
+                return "degraded", health_data
             else:
                 return "unhealthy", health_data
                 
@@ -430,14 +435,14 @@ class HealthService:
                 "response_time_ms": 0,
                 "error_count": 1,
                 "error": "ArangoDB service not available - missing python-arango package",
-                "available": False
+                "status": "unavailable"
             }
         except Exception as e:
             return "unhealthy", {
                 "response_time_ms": 0,
                 "error_count": 1,
                 "error": str(e),
-                "available": False
+                "status": "error"
             }
 
     async def _check_vector_singleton(self) -> tuple[str, Dict[str, Any]]:

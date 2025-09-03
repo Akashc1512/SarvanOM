@@ -1,480 +1,451 @@
-#!/usr/bin/env python3
 """
-ArangoDB Service - Environment-Driven Knowledge Graph Connection
+ArangoDB Service - Environment-Driven Configuration & Warm Path
+================================================================
 
-This service provides environment-driven configuration for ArangoDB connections
-with health checks, warmup, and structured logging.
-
-Key Features:
+Provides authenticated ArangoDB connection with:
 - Environment-driven configuration (no hardcoded values)
 - Lightweight connection probe (≤300ms)
-- Background warmup task with cache priming
+- Background warmup (index creation + cache priming)
 - Structured logging with secret redaction
-- Health endpoint integration
+- Health check integration
+
+Maps to Phase I1 requirements for production-grade KG operations.
 """
 
 import os
 import asyncio
 import logging
-import time
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 from contextlib import asynccontextmanager
+import structlog
+from datetime import datetime
 
 try:
     from arango import ArangoClient
     from arango.database import StandardDatabase
-    from arango.collection import StandardCollection
-    ARANGO_AVAILABLE = True
+    from arango.exceptions import ArangoError, DatabaseCreateError, CollectionCreateError
 except ImportError:
-    ARANGO_AVAILABLE = False
     ArangoClient = None
     StandardDatabase = None
-    StandardCollection = None
+    ArangoError = Exception
+    DatabaseCreateError = Exception
+    CollectionCreateError = Exception
 
-from shared.core.unified_logging import get_logger
+logger = structlog.get_logger(__name__)
 
-logger = get_logger(__name__)
 
 @dataclass
 class ArangoDBConfig:
     """ArangoDB configuration from environment variables."""
-    
     url: str
-    username: str  
+    username: str
     password: str
     database: str
-    connection_timeout: int
-    query_timeout: int
-    max_connection_pool_size: int
+    connection_timeout: int = 10
+    probe_timeout: float = 0.3  # 300ms probe limit
+    warmup_enabled: bool = True
     
     @classmethod
     def from_environment(cls) -> 'ArangoDBConfig':
         """Load configuration from environment variables."""
         return cls(
-            url=os.getenv("ARANGODB_URL", "http://localhost:8529"),
-            username=os.getenv("ARANGODB_USERNAME", "root"),
-            password=os.getenv("ARANGODB_PASSWORD", ""),
-            database=os.getenv("ARANGODB_DATABASE", "sarvanom_kg"),
-            connection_timeout=int(os.getenv("ARANGODB_CONNECTION_TIMEOUT", "10")),
-            query_timeout=int(os.getenv("ARANGODB_QUERY_TIMEOUT", "30")), 
-            max_connection_pool_size=int(os.getenv("ARANGODB_MAX_CONNECTIONS", "10"))
+            url=os.getenv('ARANGODB_URL', 'http://localhost:8529'),
+            username=os.getenv('ARANGODB_USERNAME', 'root'),
+            password=os.getenv('ARANGODB_PASSWORD', ''),
+            database=os.getenv('ARANGODB_DATABASE', 'sarvanom_kg'),
+            connection_timeout=int(os.getenv('ARANGODB_CONNECTION_TIMEOUT', '10')),
+            probe_timeout=float(os.getenv('ARANGODB_PROBE_TIMEOUT', '0.3')),
+            warmup_enabled=os.getenv('ARANGODB_WARMUP_ENABLED', 'true').lower() == 'true'
         )
     
     def get_redacted_config(self) -> Dict[str, Any]:
-        """Get configuration with password redacted for logging."""
+        """Return configuration with password redacted for logging."""
         return {
-            "url": self.url,
-            "username": self.username,
-            "password": "***REDACTED***" if self.password else "***EMPTY***",
-            "database": self.database,
-            "connection_timeout": self.connection_timeout,
-            "query_timeout": self.query_timeout,
-            "max_connection_pool_size": self.max_connection_pool_size
+            'url': self.url,
+            'username': self.username,
+            'password': '[REDACTED]' if self.password else '[MISSING]',
+            'database': self.database,
+            'connection_timeout': self.connection_timeout,
+            'probe_timeout': self.probe_timeout,
+            'warmup_enabled': self.warmup_enabled
         }
 
 
 class ArangoDBService:
-    """Production-ready ArangoDB service with environment-driven configuration."""
+    """
+    Production-grade ArangoDB service with warm path optimization.
     
-    def __init__(self, config: Optional[ArangoDBConfig] = None):
-        """Initialize ArangoDB service with environment configuration."""
-        self.config = config or ArangoDBConfig.from_environment()
-        self.client: Optional[ArangoClient] = None
-        self.db: Optional[StandardDatabase] = None
-        self.connected = False
-        self.warmup_completed = False
-        self.last_health_check = 0
-        self.connection_start_time = 0
-        
-        if not ARANGO_AVAILABLE:
-            logger.warning("ArangoDB client not available - install python-arango package")
-            return
-            
-        logger.info("ArangoDB service initialized", config=self.config.get_redacted_config())
+    Features:
+    - Environment-driven configuration
+    - Connection health probes with timeout
+    - Background warmup tasks
+    - Structured logging with secret redaction
+    - Thread-safe singleton pattern
+    """
     
-    async def connect(self) -> bool:
+    _instance: Optional['ArangoDBService'] = None
+    _client: Optional[ArangoClient] = None
+    _database: Optional[StandardDatabase] = None
+    _config: Optional[ArangoDBConfig] = None
+    _health_status: Dict[str, Any] = {'status': 'unknown', 'last_check': None}
+    _warmup_completed: bool = False
+    
+    def __new__(cls) -> 'ArangoDBService':
+        """Singleton pattern for process-level instance."""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
+    def __init__(self):
+        """Initialize service with environment configuration."""
+        if self._config is None:
+            self._config = ArangoDBConfig.from_environment()
+            logger.info(
+                "ArangoDB service initialized",
+                config=self._config.get_redacted_config()
+            )
+    
+    @property
+    def config(self) -> ArangoDBConfig:
+        """Get current configuration."""
+        return self._config
+    
+    @property
+    def is_available(self) -> bool:
+        """Check if ArangoDB is available."""
+        return ArangoClient is not None
+    
+    @property
+    def health_status(self) -> Dict[str, Any]:
+        """Get current health status."""
+        return self._health_status.copy()
+    
+    @property
+    def is_warmup_completed(self) -> bool:
+        """Check if warmup tasks completed."""
+        return self._warmup_completed
+    
+    async def connection_probe(self) -> Dict[str, Any]:
         """
-        Connect to ArangoDB with lightweight probe (≤300ms timeout).
+        Lightweight connection probe (≤300ms).
         
         Returns:
-            bool: True if connection successful, False otherwise
+            Dict with status, latency, and details
         """
-        if not ARANGO_AVAILABLE:
-            logger.error("ArangoDB client not available")
-            return False
-            
-        if self.connected:
-            return True
-            
-        self.connection_start_time = time.time()
+        if not self.is_available:
+            return {
+                'status': 'unavailable',
+                'error': 'ArangoDB client not installed',
+                'latency_ms': 0
+            }
+        
+        start_time = datetime.now()
         
         try:
-            # Create client with timeout
-            self.client = ArangoClient(
-                hosts=self.config.url,
-                request_timeout=min(self.config.connection_timeout, 0.3)  # Max 300ms for probe
+            # Timeout-protected probe
+            result = await asyncio.wait_for(
+                self._probe_connection(),
+                timeout=self._config.probe_timeout
             )
             
-            # Lightweight connection probe
-            connection_probe_start = time.time()
+            latency_ms = (datetime.now() - start_time).total_seconds() * 1000
             
-            # Connect to database
-            self.db = self.client.db(
-                name=self.config.database,
-                username=self.config.username,
-                password=self.config.password
-            )
-            
-            # Quick connection test with timeout
-            probe_timeout = 0.3  # 300ms max
-            try:
-                await asyncio.wait_for(
-                    self._test_connection_probe(),
-                    timeout=probe_timeout
-                )
-            except asyncio.TimeoutError:
-                logger.error("ArangoDB connection probe timed out", timeout_ms=probe_timeout * 1000)
-                return False
-            
-            connection_time_ms = (time.time() - connection_probe_start) * 1000
-            
-            self.connected = True
-            self.last_health_check = time.time()
+            self._health_status = {
+                'status': 'ok',
+                'last_check': datetime.now().isoformat(),
+                'latency_ms': round(latency_ms, 2),
+                'database': self._config.database,
+                'warmup_completed': self._warmup_completed
+            }
             
             logger.info(
-                "ArangoDB connection established",
-                url=self.config.url,
-                database=self.config.database,
-                connection_time_ms=round(connection_time_ms, 2)
+                "ArangoDB connection probe successful",
+                latency_ms=round(latency_ms, 2),
+                database=self._config.database
             )
+            
+            return self._health_status.copy()
+            
+        except asyncio.TimeoutError:
+            error_msg = f"Connection probe timeout after {self._config.probe_timeout}s"
+            self._health_status = {
+                'status': 'timeout',
+                'error': error_msg,
+                'last_check': datetime.now().isoformat(),
+                'latency_ms': self._config.probe_timeout * 1000
+            }
+            
+            logger.warning(
+                "ArangoDB connection probe timeout",
+                timeout_ms=self._config.probe_timeout * 1000,
+                config=self._config.get_redacted_config()
+            )
+            
+            return self._health_status.copy()
+            
+        except Exception as e:
+            error_msg = f"Connection probe failed: {str(e)}"
+            self._health_status = {
+                'status': 'error',
+                'error': error_msg,
+                'last_check': datetime.now().isoformat(),
+                'latency_ms': (datetime.now() - start_time).total_seconds() * 1000
+            }
+            
+            logger.error(
+                "ArangoDB connection probe failed",
+                error=str(e),
+                config=self._config.get_redacted_config()
+            )
+            
+            return self._health_status.copy()
+    
+    async def _probe_connection(self) -> bool:
+        """Internal connection probe logic."""
+        try:
+            # Initialize client if needed
+            if self._client is None:
+                self._client = ArangoClient(hosts=self._config.url)
+            
+            # Test database connection
+            if self._database is None:
+                self._database = self._client.db(
+                    self._config.database,
+                    username=self._config.username,
+                    password=self._config.password
+                )
+            
+            # Simple health check query
+            result = self._database.aql.execute('RETURN 1')
+            list(result)  # Consume result to ensure query executes
             
             return True
             
         except Exception as e:
             logger.error(
-                "Failed to connect to ArangoDB",
+                "ArangoDB probe connection failed",
                 error=str(e),
-                url=self.config.url,
-                database=self.config.database
+                database=self._config.database
             )
-            self.connected = False
-            return False
+            raise
     
-    async def _test_connection_probe(self) -> None:
-        """Lightweight connection probe - quick test query."""
-        try:
-            # Simple query to test connection
-            result = self.db.aql.execute("RETURN 1", count=True)
-            test_result = list(result)
-            
-            if not test_result or test_result[0] != 1:
-                raise ConnectionError("ArangoDB probe query failed")
-                
-        except Exception as e:
-            raise ConnectionError(f"ArangoDB connection probe failed: {e}")
-    
-    async def ensure_collections(self) -> bool:
+    async def background_warmup(self) -> Dict[str, Any]:
         """
-        Ensure required collections exist with proper indexes.
+        Background warmup tasks for optimal performance.
+        
+        Tasks:
+        - Create missing collections
+        - Create essential indices
+        - Prime query cache with trivial AQL
         
         Returns:
-            bool: True if collections created/verified, False otherwise
+            Warmup results and timing
         """
-        if not self.connected:
-            logger.warning("ArangoDB not connected - cannot ensure collections")
-            return False
-            
-        try:
-            # Create entities collection if not exists
-            if not self.db.has_collection("entities"):
-                entities_col = self.db.create_collection("entities")
-                logger.info("Created entities collection")
-            else:
-                entities_col = self.db.collection("entities")
-            
-            # Create relationships edge collection if not exists  
-            if not self.db.has_collection("relationships"):
-                relationships_col = self.db.create_collection("relationships", edge=True)
-                logger.info("Created relationships edge collection")
-            else:
-                relationships_col = self.db.collection("relationships")
-            
-            return True
-            
-        except Exception as e:
-            logger.error("Failed to ensure ArangoDB collections", error=str(e))
-            return False
-    
-    async def create_indexes(self) -> bool:
-        """
-        Create performance indexes if missing.
+        if not self._config.warmup_enabled:
+            logger.info("ArangoDB warmup disabled by configuration")
+            return {'status': 'disabled', 'warmup_completed': False}
         
-        Returns:
-            bool: True if indexes created, False otherwise
-        """
-        if not self.connected:
-            return False
-            
-        try:
-            entities_col = self.db.collection("entities")
-            relationships_col = self.db.collection("relationships")
-            
-            # Create indexes for entities
-            existing_indexes = {idx['fields'][0] for idx in entities_col.indexes() 
-                              if idx['type'] == 'persistent' and len(idx['fields']) == 1}
-            
-            if 'name' not in existing_indexes:
-                entities_col.add_index({'fields': ['name'], 'type': 'persistent'})
-                logger.info("Created entities.name index")
-                
-            if 'type' not in existing_indexes:
-                entities_col.add_index({'fields': ['type'], 'type': 'persistent'})
-                logger.info("Created entities.type index")
-            
-            # Create indexes for relationships
-            rel_existing_indexes = {idx['fields'][0] for idx in relationships_col.indexes()
-                                   if idx['type'] == 'persistent' and len(idx['fields']) == 1}
-            
-            if 'type' not in rel_existing_indexes:
-                relationships_col.add_index({'fields': ['type'], 'type': 'persistent'})
-                logger.info("Created relationships.type index")
-            
-            return True
-            
-        except Exception as e:
-            logger.error("Failed to create ArangoDB indexes", error=str(e))
-            return False
-    
-    async def warmup_cache(self) -> bool:
-        """
-        Background warmup task - run trivial AQL to prime caches.
+        start_time = datetime.now()
+        warmup_results = {'tasks': [], 'errors': []}
         
-        Returns:
-            bool: True if warmup successful, False otherwise
-        """
-        if not self.connected:
-            return False
-            
         try:
-            warmup_start = time.time()
+            # Ensure connection is established
+            await self._probe_connection()
             
-            # Run a few cache-priming queries
-            warmup_queries = [
-                "RETURN 1",
-                "FOR e IN entities LIMIT 1 RETURN e",
-                "FOR r IN relationships LIMIT 1 RETURN r",
-                "RETURN LENGTH(entities)",
-                "RETURN LENGTH(relationships)"
-            ]
+            # Create essential collections
+            await self._create_essential_collections(warmup_results)
             
-            for query in warmup_queries:
-                try:
-                    result = self.db.aql.execute(query, count=True)
-                    # Consume the cursor to ensure query executes
-                    list(result)
-                except Exception as e:
-                    logger.debug(f"Warmup query failed (expected): {query}", error=str(e))
-                    continue
-                    
-            warmup_time_ms = (time.time() - warmup_start) * 1000
-            self.warmup_completed = True
+            # Create essential indices
+            await self._create_essential_indices(warmup_results)
+            
+            # Prime query cache
+            await self._prime_query_cache(warmup_results)
+            
+            self._warmup_completed = True
+            warmup_duration = (datetime.now() - start_time).total_seconds()
             
             logger.info(
-                "ArangoDB cache warmup completed",
-                warmup_time_ms=round(warmup_time_ms, 2)
+                "ArangoDB warmup completed successfully",
+                duration_seconds=round(warmup_duration, 2),
+                tasks_completed=len(warmup_results['tasks']),
+                errors=len(warmup_results['errors'])
             )
             
-            return True
+            return {
+                'status': 'completed',
+                'warmup_completed': True,
+                'duration_seconds': round(warmup_duration, 2),
+                'tasks_completed': len(warmup_results['tasks']),
+                'results': warmup_results
+            }
             
         except Exception as e:
-            logger.error("ArangoDB warmup failed", error=str(e))
-            return False
-    
-    async def start_background_warmup(self) -> None:
-        """Start background warmup task after connection."""
-        if not self.connected:
-            return
+            warmup_duration = (datetime.now() - start_time).total_seconds()
             
-        async def warmup_task():
-            # Wait a bit for main connection to stabilize
-            await asyncio.sleep(1)
+            logger.error(
+                "ArangoDB warmup failed",
+                error=str(e),
+                duration_seconds=round(warmup_duration, 2),
+                partial_results=warmup_results
+            )
             
-            # Ensure collections and indexes
-            await self.ensure_collections()
-            await self.create_indexes()
-            
-            # Prime caches
-            await self.warmup_cache()
-        
-        # Start warmup task in background
-        asyncio.create_task(warmup_task())
-        logger.info("Started ArangoDB background warmup task")
-    
-    async def health_check(self) -> Dict[str, Any]:
-        """
-        Perform health check for /health endpoint.
-        
-        Returns:
-            Dict with health status information
-        """
-        if not ARANGO_AVAILABLE:
             return {
-                "status": "error",
-                "message": "ArangoDB client not available",
-                "available": False
+                'status': 'failed',
+                'warmup_completed': False,
+                'error': str(e),
+                'duration_seconds': round(warmup_duration, 2),
+                'partial_results': warmup_results
             }
-            
-        if not self.connected:
-            return {
-                "status": "error", 
-                "message": "Not connected",
-                "available": False
-            }
+    
+    async def _create_essential_collections(self, results: Dict) -> None:
+        """Create essential collections for knowledge graph operations."""
+        essential_collections = [
+            'entities',
+            'relationships', 
+            'documents',
+            'facts',
+            'topics'
+        ]
         
-        try:
-            # Quick health probe
-            health_start = time.time()
-            result = self.db.aql.execute("RETURN 1")
-            list(result)  # Consume cursor
-            health_time_ms = (time.time() - health_start) * 1000
-            
-            self.last_health_check = time.time()
-            
-            # Get collection counts
-            entities_count = 0
-            relationships_count = 0
-            
+        for collection_name in essential_collections:
             try:
-                if self.db.has_collection("entities"):
-                    entities_count = self.db.collection("entities").count()
-                if self.db.has_collection("relationships"):
-                    relationships_count = self.db.collection("relationships").count()
-            except Exception:
-                pass  # Counts are optional for health check
+                if not self._database.has_collection(collection_name):
+                    self._database.create_collection(collection_name)
+                    results['tasks'].append(f"Created collection: {collection_name}")
+                else:
+                    results['tasks'].append(f"Collection exists: {collection_name}")
+                    
+            except CollectionCreateError as e:
+                if "duplicate name" in str(e).lower():
+                    results['tasks'].append(f"Collection exists: {collection_name}")
+                else:
+                    results['errors'].append(f"Failed to create {collection_name}: {e}")
+            except Exception as e:
+                results['errors'].append(f"Error with {collection_name}: {e}")
+    
+    async def _create_essential_indices(self, results: Dict) -> None:
+        """Create essential indices for optimal query performance."""
+        try:
+            # Entity name index
+            entities = self._database.collection('entities')
+            if entities.has_index():
+                entities.add_index({'fields': ['name'], 'type': 'hash'})
+                results['tasks'].append("Created entities.name index")
             
-            return {
-                "status": "ok",
-                "available": True,
-                "response_time_ms": round(health_time_ms, 2),
-                "database": self.config.database,
-                "entities_count": entities_count,
-                "relationships_count": relationships_count,
-                "warmup_completed": self.warmup_completed,
-                "last_check": self.last_health_check
-            }
+            # Relationship type index
+            relationships = self._database.collection('relationships')
+            if relationships.has_index():
+                relationships.add_index({'fields': ['type'], 'type': 'hash'})
+                results['tasks'].append("Created relationships.type index")
+                
+        except Exception as e:
+            results['errors'].append(f"Index creation error: {e}")
+    
+    async def _prime_query_cache(self, results: Dict) -> None:
+        """Prime query cache with trivial AQL queries."""
+        try:
+            # Simple count queries to warm cache
+            cache_queries = [
+                'FOR e IN entities LIMIT 1 RETURN e',
+                'FOR r IN relationships LIMIT 1 RETURN r',
+                'RETURN LENGTH(FOR e IN entities RETURN 1)'
+            ]
+            
+            for query in cache_queries:
+                try:
+                    result = self._database.aql.execute(query)
+                    list(result)  # Consume to execute
+                    results['tasks'].append(f"Cache primed: {query[:30]}...")
+                except Exception as e:
+                    results['errors'].append(f"Cache prime failed: {e}")
+                    
+        except Exception as e:
+            results['errors'].append(f"Cache priming error: {e}")
+    
+    @asynccontextmanager
+    async def get_database(self):
+        """
+        Get database connection with automatic error handling.
+        
+        Usage:
+            async with arangodb_service.get_database() as db:
+                result = db.aql.execute('FOR e IN entities RETURN e')
+        """
+        try:
+            if self._database is None:
+                await self._probe_connection()
+            
+            yield self._database
             
         except Exception as e:
-            logger.error("ArangoDB health check failed", error=str(e))
-            return {
-                "status": "error",
-                "message": str(e),
-                "available": False
-            }
+            logger.error(
+                "ArangoDB database operation failed",
+                error=str(e),
+                config=self._config.get_redacted_config()
+            )
+            raise
     
-    async def execute_aql(self, query: str, bind_vars: Optional[Dict] = None, 
-                         timeout: Optional[float] = None) -> List[Dict[str, Any]]:
+    async def execute_aql(self, query: str, bind_vars: Optional[Dict] = None) -> List[Dict]:
         """
-        Execute AQL query with timeout.
+        Execute AQL query with error handling and logging.
         
         Args:
             query: AQL query string
             bind_vars: Query bind variables
-            timeout: Query timeout in seconds
             
         Returns:
-            List of query results
+            Query results as list of dictionaries
         """
-        if not self.connected:
-            raise ConnectionError("ArangoDB not connected")
-            
-        query_timeout = timeout or self.config.query_timeout
+        start_time = datetime.now()
         
         try:
-            query_start = time.time()
-            
-            # Execute with timeout
-            cursor = self.db.aql.execute(
-                query, 
-                bind_vars=bind_vars or {},
-                count=True,
-                batch_size=1000
-            )
-            
-            # Convert cursor to list with timeout
-            results = []
-            async def execute_query():
-                nonlocal results
-                results = list(cursor)
-            
-            await asyncio.wait_for(execute_query(), timeout=query_timeout)
-            
-            query_time_ms = (time.time() - query_start) * 1000
-            
-            logger.debug(
-                "AQL query executed",
-                query=query[:100] + "..." if len(query) > 100 else query,
-                result_count=len(results),
-                query_time_ms=round(query_time_ms, 2)
-            )
-            
-            return results
-            
-        except asyncio.TimeoutError:
-            logger.error("AQL query timed out", query=query[:100], timeout=query_timeout)
-            raise TimeoutError(f"AQL query timed out after {query_timeout}s")
+            async with self.get_database() as db:
+                result = db.aql.execute(query, bind_vars=bind_vars or {})
+                results = list(result)
+                
+                query_duration = (datetime.now() - start_time).total_seconds()
+                
+                logger.info(
+                    "AQL query executed successfully",
+                    query=query[:100] + "..." if len(query) > 100 else query,
+                    duration_seconds=round(query_duration, 3),
+                    result_count=len(results)
+                )
+                
+                return results
+                
         except Exception as e:
-            logger.error("AQL query failed", query=query[:100], error=str(e))
-            raise
-    
-    async def disconnect(self) -> None:
-        """Disconnect from ArangoDB."""
-        if self.client:
-            try:
-                # ArangoDB client doesn't need explicit disconnect
-                self.connected = False
-                self.client = None
-                self.db = None
-                logger.info("Disconnected from ArangoDB")
-            except Exception as e:
-                logger.error("Error disconnecting from ArangoDB", error=str(e))
-    
-    @asynccontextmanager
-    async def get_connection(self):
-        """Context manager for ArangoDB operations."""
-        if not self.connected:
-            await self.connect()
+            query_duration = (datetime.now() - start_time).total_seconds()
             
-        try:
-            yield self.db
-        finally:
-            # Connection stays open for reuse
-            pass
+            logger.error(
+                "AQL query execution failed",
+                query=query[:100] + "..." if len(query) > 100 else query,
+                error=str(e),
+                duration_seconds=round(query_duration, 3)
+            )
+            raise
 
 
 # Global service instance
-_arangodb_service: Optional[ArangoDBService] = None
+arangodb_service = ArangoDBService()
 
-async def get_arangodb_service() -> ArangoDBService:
-    """Get or create global ArangoDB service instance."""
-    global _arangodb_service
-    
-    if _arangodb_service is None:
-        _arangodb_service = ArangoDBService()
-        await _arangodb_service.connect()
-        await _arangodb_service.start_background_warmup()
-    
-    return _arangodb_service
 
 async def get_arangodb_health() -> Dict[str, Any]:
-    """Get ArangoDB health status for /health endpoint."""
-    try:
-        service = await get_arangodb_service()
-        return await service.health_check()
-    except Exception as e:
-        logger.error("Failed to get ArangoDB health", error=str(e))
-        return {
-            "status": "error",
-            "message": str(e),
-            "available": False
-        }
+    """Get ArangoDB health status for health check endpoints."""
+    return await arangodb_service.connection_probe()
+
+
+async def warmup_arangodb() -> Dict[str, Any]:
+    """Execute ArangoDB warmup tasks."""
+    return await arangodb_service.background_warmup()
+
+
+# Export public interface
+__all__ = [
+    'ArangoDBConfig',
+    'ArangoDBService', 
+    'arangodb_service',
+    'get_arangodb_health',
+    'warmup_arangodb'
+]

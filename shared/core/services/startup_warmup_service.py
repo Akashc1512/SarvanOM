@@ -149,18 +149,20 @@ class StartupWarmupService:
     async def _warmup_arangodb(self) -> bool:
         """Warmup ArangoDB service."""
         try:
-            from shared.core.services.arangodb_service import get_arangodb_service
+            from shared.core.services.arangodb_service import warmup_arangodb, get_arangodb_health
             
-            service = await get_arangodb_service()
+            # Execute full warmup (probe + background tasks)
+            warmup_result = await warmup_arangodb()
             
-            # Service includes background warmup
-            health = await service.health_check()
+            # Get health status after warmup
+            health = await get_arangodb_health()
             
             logger.info("ArangoDB warmup completed",
-                       connected=health.get("available", False),
-                       warmup_completed=health.get("warmup_completed", False))
+                       warmup_status=warmup_result.get("status", "unknown"),
+                       health_status=health.get("status", "unknown"),
+                       warmup_completed=warmup_result.get("warmup_completed", False))
             
-            return health.get("available", False)
+            return health.get("status") == "ok" and warmup_result.get("warmup_completed", False)
             
         except Exception as e:
             logger.error("ArangoDB warmup failed", error=str(e))
