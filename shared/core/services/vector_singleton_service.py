@@ -75,11 +75,15 @@ class VectorConfig:
     @classmethod
     def from_environment(cls) -> 'VectorConfig':
         """Load configuration from environment variables."""
+        # Phase J3: Intelligent dev/prod environment detection
+        environment = os.getenv('ENVIRONMENT', 'development').lower()
+        default_provider = 'chroma' if environment in ['development', 'dev', 'local'] else 'qdrant'
+        
         return cls(
             embedding_model=os.getenv('EMBEDDING_MODEL', 'sentence-transformers/all-MiniLM-L6-v2'),
             embedding_cache_size=int(os.getenv('EMBEDDING_CACHE_SIZE', '1000')),
             embedding_cache_ttl=int(os.getenv('EMBEDDING_CACHE_TTL', '3600')),
-            vector_db_provider=os.getenv('VECTOR_DB_PROVIDER', 'chroma').lower(),
+            vector_db_provider=os.getenv('VECTOR_DB_PROVIDER', default_provider).lower(),
             qdrant_url=os.getenv('QDRANT_URL', 'http://localhost:6333'),
             qdrant_api_key=os.getenv('QDRANT_API_KEY'),
             vector_collection_name=os.getenv('VECTOR_COLLECTION_NAME', 'sarvanom_embeddings'),
@@ -475,18 +479,21 @@ class VectorStoreSingleton:
             return False
     
     async def _connect_qdrant(self) -> bool:
-        """Connect to Qdrant vector database."""
+        """Connect to Qdrant vector database with production optimizations."""
         if not QDRANT_AVAILABLE:
             logger.warning("Qdrant client not available, install qdrant-client")
             return False
         
         try:
-            # Initialize Qdrant client
+            # Initialize Qdrant client with production settings (Phase J2)
             connect_task = asyncio.to_thread(
                 QdrantClient,
                 url=self.config.qdrant_url,
                 api_key=self.config.qdrant_api_key,
-                timeout=self.config.query_timeout
+                timeout=self.config.query_timeout,
+                # Production optimizations
+                prefer_grpc=True,  # Use gRPC for better performance
+                https=True if self.config.qdrant_url.startswith('https') else False
             )
             
             self.client = await asyncio.wait_for(
@@ -494,15 +501,19 @@ class VectorStoreSingleton:
                 timeout=self.config.warmup_timeout
             )
             
-            # Test connection
+            # Test connection and get collection info
             info_task = asyncio.to_thread(self.client.get_collections)
-            await asyncio.wait_for(info_task, timeout=5.0)
+            collections_info = await asyncio.wait_for(info_task, timeout=5.0)
+            
+            # Ensure collection exists with proper configuration
+            await self._ensure_qdrant_collection_optimal()
             
             self._connected = True
             
-            logger.info("Connected to Qdrant",
+            logger.info("Connected to Qdrant with production optimizations",
                        url=self.config.qdrant_url,
-                       collection=self.config.vector_collection_name)
+                       collection=self.config.vector_collection_name,
+                       collections_count=len(collections_info.collections))
             
             return True
             
@@ -511,6 +522,66 @@ class VectorStoreSingleton:
                         url=self.config.qdrant_url,
                         error=str(e))
             return False
+    
+    async def _ensure_qdrant_collection_optimal(self) -> None:
+        """Ensure Qdrant collection exists with optimal production settings."""
+        try:
+            from qdrant_client.models import VectorParams, Distance
+            
+            collection_name = self.config.vector_collection_name
+            
+            # Check if collection exists
+            collections_task = asyncio.to_thread(self.client.get_collections)
+            collections_info = await collections_task
+            
+            collection_exists = any(
+                col.name == collection_name 
+                for col in collections_info.collections
+            )
+            
+            if not collection_exists:
+                # Create collection with optimal settings
+                vector_size = 384  # Standard sentence-transformers dimension
+                
+                create_task = asyncio.to_thread(
+                    self.client.create_collection,
+                    collection_name=collection_name,
+                    vectors_config=VectorParams(
+                        size=vector_size,
+                        distance=Distance.COSINE,
+                        # Production optimizations
+                        hnsw_config={
+                            "m": 16,  # Number of bi-directional links for each node
+                            "ef_construct": 200,  # Size of dynamic candidate list
+                            "full_scan_threshold": 10000  # Threshold for full scan
+                        },
+                        on_disk=True  # Store vectors on disk for large collections
+                    )
+                )
+                
+                await create_task
+                
+                logger.info("Created Qdrant collection with production settings",
+                           collection=collection_name,
+                           vector_size=vector_size,
+                           distance="COSINE")
+            else:
+                # Verify collection configuration
+                collection_info_task = asyncio.to_thread(
+                    self.client.get_collection,
+                    collection_name
+                )
+                collection_info = await collection_info_task
+                
+                logger.info("Qdrant collection verified",
+                           collection=collection_name,
+                           vectors_count=collection_info.vectors_count,
+                           points_count=collection_info.points_count)
+        
+        except Exception as e:
+            logger.warning("Could not optimize Qdrant collection",
+                          collection=self.config.vector_collection_name,
+                          error=str(e))
     
     async def _connect_chroma(self) -> bool:
         """Connect to Chroma vector database."""

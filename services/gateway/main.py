@@ -1341,6 +1341,42 @@ async def performance_metrics():
         }
 
 
+# J1: Meilisearch Status Endpoint
+@app.get("/status/search")
+async def search_status():
+    """Get Meilisearch service status and index information (Phase J1)."""
+    try:
+        from shared.core.services.meilisearch_service import get_search_status
+        
+        status = await get_search_status()
+        
+        return {
+            "service": "meilisearch",
+            "status": status.get("status", "unknown"),
+            "search_health": status,
+            "summary": {
+                "total_indexes": len(status.get("index_stats", {})),
+                "total_documents": sum(
+                    idx.get("numberOfDocuments", 0) 
+                    for idx in status.get("index_stats", {}).values()
+                    if isinstance(idx, dict) and "numberOfDocuments" in idx
+                ),
+                "avg_search_time_ms": status.get("performance_metrics", {}).get("avg_search_time_ms", 0),
+                "total_searches": status.get("performance_metrics", {}).get("total_searches", 0),
+                "last_bulk_operation": status.get("performance_metrics", {}).get("last_bulk_operation")
+            },
+            "timestamp": time.time()
+        }
+    except Exception as e:
+        logger.error(f"Search status failed: {e}")
+        return {
+            "service": "meilisearch",
+            "status": "error",
+            "error": str(e),
+            "timestamp": time.time()
+        }
+
+
 # C1: Retrieval Aggregator Integration
 @app.get("/search")
 async def search_endpoint(
