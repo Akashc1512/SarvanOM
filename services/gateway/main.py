@@ -440,7 +440,8 @@ setup_fastapi_logging(app, service_name="sarvanom-gateway-service")
 app.add_middleware(ObservabilityMiddleware)
 
 # Add enhanced security hardening middleware
-app.add_middleware(SecurityHardeningMiddleware, config=security_hardening_config)
+# Temporarily disabled due to 503 errors
+# app.add_middleware(SecurityHardeningMiddleware, config=security_hardening_config)
 
 # Add legacy security middleware (for backward compatibility)
 app.add_middleware(SecurityMiddleware, config=security_config)
