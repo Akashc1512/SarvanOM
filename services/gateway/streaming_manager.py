@@ -44,6 +44,17 @@ HEARTBEAT_INTERVAL = int(os.getenv("HEARTBEAT_INTERVAL", "5"))  # Reduced to 5 s
 CHUNK_DELAY_MS = int(os.getenv("CHUNK_DELAY_MS", "50"))
 SILENCE_THRESHOLD = int(os.getenv("SILENCE_THRESHOLD", "15"))  # 15 seconds of silence triggers reconnect
 
+# Phase E1/E2: Budget enforcement for streaming
+STREAM_BUDGET_SIMPLE_MS = int(os.getenv("STREAM_BUDGET_SIMPLE_MS", "2000"))      # 2s for simple queries
+STREAM_BUDGET_TECHNICAL_MS = int(os.getenv("STREAM_BUDGET_TECHNICAL_MS", "4000")) # 4s for technical queries
+STREAM_BUDGET_RESEARCH_MS = int(os.getenv("STREAM_BUDGET_RESEARCH_MS", "6000"))   # 6s for research queries
+STREAM_BUDGET_MULTIMEDIA_MS = int(os.getenv("STREAM_BUDGET_MULTIMEDIA_MS", "8000")) # 8s for multimedia queries
+
+# CI Performance gates
+CI_PERF_TTFT_MAX_MS = int(os.getenv("CI_PERF_TTFT_MAX_MS", "800"))      # Time to first token
+CI_PERF_CHUNK_INTERVAL_MS = int(os.getenv("CI_PERF_CHUNK_INTERVAL_MS", "100"))  # Max interval between chunks
+CI_PERF_HEARTBEAT_INTERVAL_MS = int(os.getenv("CI_PERF_HEARTBEAT_INTERVAL_MS", "2000")) # Max heartbeat interval
+
 
 class StreamEventType(str, Enum):
     """SSE event types."""
@@ -77,6 +88,14 @@ class StreamContext:
     heartbeat_count: int = 0
     max_duration_reached: bool = False
     metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    # Phase E1/E2: Budget enforcement fields
+    budget_ms: int = 0
+    intent_classification: str = "standard"
+    ttft_ms: float = 0.0  # Time to first token
+    first_chunk_time: Optional[datetime] = None
+    budget_exceeded: bool = False
+    ci_performance_metrics: Dict[str, Any] = field(default_factory=dict)
 
 
 class StreamingManager:
@@ -119,6 +138,48 @@ class StreamingManager:
     def _generate_trace_id(self) -> str:
         """Generate unique trace ID."""
         return f"trace_{uuid.uuid4().hex[:16]}"
+    
+    def _classify_query_intent(self, query: str) -> str:
+        """Classify query intent for budget allocation."""
+        query_lower = query.lower()
+        
+        # Simple queries: definitions, basic facts
+        if any(word in query_lower for word in ['what is', 'define', 'meaning', 'who is', 'when', 'where']):
+            return 'simple'
+        
+        # Technical queries: code, algorithms, specifications
+        if any(word in query_lower for word in ['code', 'algorithm', 'how to', 'implementation', 'api', 'function']):
+            return 'technical'
+        
+        # Research queries: analysis, comparison, deep dive
+        if any(word in query_lower for word in ['compare', 'analysis', 'research', 'study', 'investigate', 'explore']):
+            return 'research'
+        
+        # Multimedia queries: video, demo, visual content
+        if any(word in query_lower for word in ['video', 'demo', 'show', 'visual', 'image', 'picture']):
+            return 'multimedia'
+        
+        return 'standard'
+    
+    def _get_stream_budget_ms(self, query: str) -> int:
+        """Get stream budget based on query intent."""
+        intent = self._classify_query_intent(query)
+        
+        budget_map = {
+            'simple': STREAM_BUDGET_SIMPLE_MS,
+            'technical': STREAM_BUDGET_TECHNICAL_MS,
+            'research': STREAM_BUDGET_RESEARCH_MS,
+            'multimedia': STREAM_BUDGET_MULTIMEDIA_MS,
+            'standard': STREAM_BUDGET_TECHNICAL_MS  # Default to technical budget
+        }
+        
+        return budget_map.get(intent, STREAM_BUDGET_TECHNICAL_MS)
+    
+    def _check_budget_compliance(self, start_time: datetime, budget_ms: int) -> tuple[bool, float]:
+        """Check if stream is within budget."""
+        elapsed_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
+        within_budget = elapsed_ms <= budget_ms
+        return within_budget, elapsed_ms
     
     def _format_sse_event(self, event: StreamEvent) -> str:
         """Format event as SSE message."""
@@ -197,7 +258,63 @@ class StreamingManager:
                 await asyncio.sleep(5)  # Wait before retrying
     
     async def _send_heartbeat(self, stream_id: str, context: StreamContext):
-        """Send heartbeat event to stream."""
+        """Send heartbeat event to stream with budget and performance information."""
+        try:
+            current_time = datetime.now(timezone.utc)
+            elapsed_ms = (current_time - context.start_time).total_seconds() * 1000
+            
+            # Check budget compliance for heartbeat
+            within_budget, _ = self._check_budget_compliance(context.start_time, context.budget_ms)
+            
+            # Enhanced heartbeat with budget and performance data
+            heartbeat_data = {
+                "stream_id": stream_id,
+                "timestamp": current_time.isoformat(),
+                "heartbeat_count": context.heartbeat_count,
+                "elapsed_ms": elapsed_ms,
+                "budget_ms": context.budget_ms,
+                "within_budget": within_budget,
+                "intent": context.intent_classification,
+                "chunks_sent": context.total_chunks,
+                "tokens_sent": context.total_tokens,
+                "ttft_ms": context.ttft_ms,
+                "ci_performance": context.ci_performance_metrics
+            }
+            
+            heartbeat_event = StreamEvent(
+                event_type=StreamEventType.HEARTBEAT,
+                data=heartbeat_data,
+                trace_id=context.trace_id
+            )
+            
+            # Log heartbeat with performance metrics
+            logger.debug(f"Heartbeat sent: {stream_id}", extra={
+                "stream_id": stream_id,
+                "elapsed_ms": elapsed_ms,
+                "within_budget": within_budget,
+                "intent": context.intent_classification,
+                "ttft_ms": context.ttft_ms
+            })
+            
+            # Check CI performance gate for heartbeat interval
+            if context.last_heartbeat:
+                heartbeat_interval_ms = (current_time - context.last_heartbeat).total_seconds() * 1000
+                heartbeat_compliant = heartbeat_interval_ms <= CI_PERF_HEARTBEAT_INTERVAL_MS
+                context.ci_performance_metrics["heartbeat_compliant"] = heartbeat_compliant
+                context.ci_performance_metrics["heartbeat_interval_ms"] = heartbeat_interval_ms
+                
+                if not heartbeat_compliant:
+                    logger.warning(f"Heartbeat interval exceeded CI gate: {heartbeat_interval_ms:.2f}ms > {CI_PERF_HEARTBEAT_INTERVAL_MS}ms", extra={
+                        "stream_id": stream_id,
+                        "heartbeat_interval_ms": heartbeat_interval_ms,
+                        "ci_gate": CI_PERF_HEARTBEAT_INTERVAL_MS
+                    })
+            
+        except Exception as e:
+            logger.error(f"Failed to send heartbeat: {stream_id}", extra={
+                "stream_id": stream_id,
+                "error": str(e)
+            })
         try:
             current_time = datetime.now(timezone.utc)
             duration = (current_time - context.start_time).total_seconds()
@@ -295,19 +412,37 @@ class StreamingManager:
             trace_id = self._generate_trace_id()
         start_time = datetime.now(timezone.utc)
         
-        # Create stream context
+        # Phase E1/E2: Budget enforcement setup
+        intent_classification = self._classify_query_intent(query)
+        budget_ms = self._get_stream_budget_ms(query)
+        
+        # Create stream context with budget tracking
         context = StreamContext(
             stream_id=stream_id,
             trace_id=trace_id,
             query=query,
             start_time=start_time,
+            budget_ms=budget_ms,
+            intent_classification=intent_classification,
             metadata={
                 "max_tokens": max_tokens,
-                "temperature": temperature
+                "temperature": temperature,
+                "intent": intent_classification,
+                "budget_ms": budget_ms
             }
         )
         
         self.active_streams[stream_id] = context
+        
+        logger.info(f"Stream started with budget enforcement: {stream_id}", extra={
+            "stream_id": stream_id,
+            "trace_id": trace_id,
+            "query": query[:100],
+            "intent": intent_classification,
+            "budget_ms": budget_ms,
+            "max_tokens": max_tokens,
+            "temperature": temperature
+        })
         
         # Record SSE connection metrics
         metrics_collector = get_metrics_collector()
@@ -440,6 +575,23 @@ class StreamingManager:
                     trace_id=trace_id
                 )
                 
+                # Phase E1/E2: Record TTFT (Time to First Token)
+                if context.first_chunk_time is None:
+                    context.first_chunk_time = datetime.now(timezone.utc)
+                    context.ttft_ms = (context.first_chunk_time - start_time).total_seconds() * 1000
+                    
+                    # Check CI performance gate for TTFT
+                    ttft_compliant = context.ttft_ms <= CI_PERF_TTFT_MAX_MS
+                    context.ci_performance_metrics["ttft_compliant"] = ttft_compliant
+                    context.ci_performance_metrics["ttft_ms"] = context.ttft_ms
+                    
+                    logger.info(f"TTFT recorded: {context.ttft_ms:.2f}ms (compliant: {ttft_compliant})", extra={
+                        "stream_id": stream_id,
+                        "ttft_ms": context.ttft_ms,
+                        "ttft_compliant": ttft_compliant,
+                        "ci_gate": CI_PERF_TTFT_MAX_MS
+                    })
+                
                 yield self._format_sse_event(citations_event)
                 context.total_chunks += 1
                 
@@ -451,6 +603,33 @@ class StreamingManager:
                     # Check if client is still connected
                     if not context.client_connected:
                         logger.info(f"Client disconnected during streaming: {stream_id}")
+                        break
+                    
+                    # Phase E1/E2: Budget enforcement check
+                    within_budget, elapsed_ms = self._check_budget_compliance(start_time, context.budget_ms)
+                    if not within_budget and not context.budget_exceeded:
+                        context.budget_exceeded = True
+                        logger.warning(f"Stream budget exceeded: {stream_id}", extra={
+                            "stream_id": stream_id,
+                            "budget_ms": context.budget_ms,
+                            "elapsed_ms": elapsed_ms,
+                            "intent": context.intent_classification
+                        })
+                        
+                        # Send budget exceeded event
+                        budget_event = StreamEvent(
+                            event_type=StreamEventType.ERROR,
+                            data={
+                                "stream_id": stream_id,
+                                "error": "budget_exceeded",
+                                "budget_ms": context.budget_ms,
+                                "elapsed_ms": elapsed_ms,
+                                "intent": context.intent_classification,
+                                "reason": f"Query exceeded {context.budget_ms}ms budget for {context.intent_classification} intent"
+                            },
+                            trace_id=trace_id
+                        )
+                        yield self._format_sse_event(budget_event)
                         break
                     
                     # Check stream duration limit

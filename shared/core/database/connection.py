@@ -18,6 +18,7 @@ Version:
 
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import Optional, Dict, Any, AsyncGenerator, Union
 from urllib.parse import urlparse
@@ -37,9 +38,10 @@ from sqlalchemy.pool import _ConnectionFairy
 
 import structlog
 
-from shared.core.config.central_config import initialize_config
-
+# Setup logger
 logger = structlog.get_logger(__name__)
+
+from shared.core.config.central_config import initialize_config
 
 
 class DatabaseConnectionManager:
@@ -72,12 +74,43 @@ class DatabaseConnectionManager:
         if self.config.database_url:
             self._start_health_check()
 
+    def _fix_database_url_for_local_dev(self, url: str) -> str:
+        """Fix database URL for local development environment."""
+        if not url:
+            return url
+            
+        # Check if we're in local development (not Docker)
+        is_docker_enabled = os.getenv("DOCKER_ENABLED", "false").lower() == "true"
+        environment = os.getenv("ENVIRONMENT", "development").lower()
+        
+        if environment == "development" and not is_docker_enabled:
+            # Replace Docker service names with localhost for local development
+            hostname_mappings = {
+                "sarvanom-postgres": "localhost",
+                "postgres": "localhost",
+                "redis": "localhost",
+                "meilisearch": "localhost",
+                "arangodb": "localhost",
+                "qdrant": "localhost",
+                "ollama": "localhost"
+            }
+            
+            for docker_host, local_host in hostname_mappings.items():
+                if docker_host in url:
+                    updated_url = url.replace(docker_host, local_host)
+                    logger.info(f"Fixed database URL for local development: {docker_host} -> {local_host}")
+                    return updated_url
+        
+        return url
+
     def _init_connection_pools(self):
         """Initialize database connection pools."""
         try:
             # Primary database
             if self.config.database_url:
-                self._create_engine("primary", self.config.database_url)
+                # Fix URL for local development
+                fixed_url = self._fix_database_url_for_local_dev(self.config.database_url)
+                self._create_engine("primary", fixed_url)
                 logger.info("Primary database connection pool initialized")
 
             # Read replica (if configured)
@@ -244,8 +277,14 @@ class DatabaseConnectionManager:
     def _start_health_check(self):
         """Start the background health check task."""
         if not self._health_check_task:
-            self._health_check_task = asyncio.create_task(self._health_check_loop())
-            logger.info("Database health check task started")
+            try:
+                # Only create task if there's a running event loop
+                loop = asyncio.get_running_loop()
+                self._health_check_task = loop.create_task(self._health_check_loop())
+                logger.info("Database health check task started")
+            except RuntimeError:
+                # No event loop running, will start health check later when needed
+                logger.debug("No event loop available, health check will start when async context is available")
 
     async def shutdown(self):
         """Gracefully shutdown all database connections."""

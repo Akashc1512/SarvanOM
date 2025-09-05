@@ -37,10 +37,10 @@ except ImportError:
     ANTHROPIC_AVAILABLE = False
 
 try:
-    from .huggingface_client import HuggingfaceClient
+    from .huggingface_client import HuggingFaceClient
     HUGGINGFACE_AVAILABLE = True
 except ImportError:
-    HuggingfaceClient = None
+    HuggingFaceClient = None
     HUGGINGFACE_AVAILABLE = False
 
 try:
@@ -69,8 +69,8 @@ if ANTHROPIC_AVAILABLE and AnthropicClient:
     PROVIDERS["anthropic"] = AnthropicClient
     logger.info("✅ Anthropic provider registered")
 
-if HUGGINGFACE_AVAILABLE and HuggingfaceClient:
-    PROVIDERS["huggingface"] = HuggingfaceClient
+if HUGGINGFACE_AVAILABLE and HuggingFaceClient:
+    PROVIDERS["huggingface"] = HuggingFaceClient
     logger.info("✅ HuggingFace provider registered")
 
 if OLLAMA_AVAILABLE and OllamaClient:

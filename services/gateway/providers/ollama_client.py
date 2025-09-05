@@ -39,6 +39,12 @@ class OllamaClient:
         except Exception as e:
             logger.warning(f"Ollama connection test failed: {e}")
     
+    async def generate_completion(self, prompt: str, model: str = "llama3.2:3b", 
+                                max_tokens: int = 150, temperature: float = 0.7) -> Optional[str]:
+        """Generate completion using Ollama API (alias for compatibility)."""
+        result = await self.generate_text(prompt, max_tokens, temperature, model)
+        return result.get("content") if result.get("success") else None
+    
     def _select_model(self, prompt: str, max_tokens: int) -> str:
         """Select optimal Ollama model based on query characteristics."""
         prompt_lower = prompt.lower()

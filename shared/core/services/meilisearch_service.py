@@ -444,6 +444,13 @@ class MeilisearchService:
                     batch
                 )
                 
+                # Wait for task completion if it's a task object
+                if hasattr(task_info, 'task_uid'):
+                    await asyncio.to_thread(
+                        self.client.wait_for_task,
+                        task_info.task_uid
+                    )
+                
                 batch_results.append(task_info)
                 total_processed += len(batch)
                 
@@ -552,10 +559,15 @@ async def get_search_status() -> Dict[str, Any]:
     service = get_meilisearch_service()
     return await service.get_status()
 
+async def get_meilisearch_status() -> Dict[str, Any]:
+    """Get Meilisearch status (alias for compatibility)."""
+    return await get_search_status()
+
 # Export public interface
 __all__ = [
     'MeilisearchService',
     'MeilisearchConfig',
     'get_meilisearch_service',
-    'get_search_status'
+    'get_search_status',
+    'get_meilisearch_status'
 ]

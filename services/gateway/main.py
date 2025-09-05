@@ -46,6 +46,9 @@ SQL_INJECTION_PATTERN = re.compile(r'(\b(SELECT|INSERT|UPDATE|DELETE|DROP|CREATE
 # Import unified logging
 from shared.core.unified_logging import setup_logging, get_logger, setup_fastapi_logging
 
+# Setup logger early for import error handling
+logger = get_logger(__name__)
+
 # Import observability middleware
 from services.gateway.middleware.observability import (
     ObservabilityMiddleware,
@@ -106,13 +109,15 @@ from services.gateway.routers.citations_router import router as citations_router
 # Import gateway routers
 from services.gateway.routes import (
     analytics_router,
-    health_router,
     search_router,
     fact_check_router,
     synthesis_router,
     auth_router,
     vector_router
 )
+
+# Import comprehensive health router (Phase I1)
+from services.gateway.routers.health_router import router as health_router
 
 # Import new centralized components
 from services.gateway.model_router import get_model_router
@@ -125,51 +130,51 @@ from services.gateway.metrics_endpoint import metrics_router as prometheus_metri
 try:
     from services.gateway.routers.advanced_features_router import router as advanced_features_router
 except Exception as e:
-    print(f"Warning: Could not import advanced features router: {e}")
+    logger.debug(f"Optional router not available: advanced features ({e})")
     advanced_features_router = None
 
 # Import additional service routers (with error handling)
 try:
     from services.auth.routes import router as auth_service_router
 except Exception as e:
-    print(f"Warning: Could not import auth service router: {e}")
+    logger.debug(f"Optional router not available: auth service router: {e}")
     auth_service_router = None
 
 try:
     from services.fact_check.routes import router as fact_check_service_router
 except Exception as e:
-    print(f"Warning: Could not import fact check service router: {e}")
+    logger.debug(f"Optional router not available: fact check service router: {e}")
     fact_check_service_router = None
 
 # Import backend API routers (with error handling)
 try:
     from backend.api.routers.admin_router import router as admin_router
 except Exception as e:
-    print(f"Warning: Could not import admin router: {e}")
+    logger.debug(f"Optional router not available: admin router: {e}")
     admin_router = None
 
 try:
     from backend.api.routers.agent_router import router as agent_router
 except Exception as e:
-    print(f"Warning: Could not import agent router: {e}")
+    logger.debug(f"Optional router not available: agent router: {e}")
     agent_router = None
 
 try:
     from backend.api.routers.auth_router import router as backend_auth_router
 except Exception as e:
-    print(f"Warning: Could not import backend auth router: {e}")
+    logger.debug(f"Optional router not available: backend auth router: {e}")
     backend_auth_router = None
 
 try:
     from backend.api.routers.database_router import router as database_router
 except Exception as e:
-    print(f"Warning: Could not import database router: {e}")
+    logger.debug(f"Optional router not available: database router: {e}")
     database_router = None
 
 try:
     from backend.api.routers.health_router import router as backend_health_router
 except Exception as e:
-    print(f"Warning: Could not import backend health router: {e}")
+    logger.debug(f"Optional router not available: backend health router: {e}")
     backend_health_router = None
 
 # Phase I2: Startup warmup service
@@ -177,7 +182,7 @@ try:
     from shared.core.services.startup_warmup_service import start_application_warmup, get_warmup_status
     STARTUP_WARMUP_AVAILABLE = True
 except Exception as e:
-    print(f"Warning: Could not import startup warmup service: {e}")
+    logger.debug(f"Optional router not available: startup warmup service: {e}")
     start_application_warmup = None
     get_warmup_status = None
     STARTUP_WARMUP_AVAILABLE = False
@@ -185,7 +190,7 @@ except Exception as e:
 try:
     from backend.api.routers.query_router import router as query_router
 except Exception as e:
-    print(f"Warning: Could not import query router: {e}")
+    logger.debug(f"Optional router not available: query router: {e}")
     query_router = None
 
 # Import streaming manager
@@ -212,7 +217,6 @@ llm_processor = RealLLMProcessor()
 
 # Configure unified logging
 logging_config = setup_logging(service_name="sarvanom-gateway-service")
-logger = get_logger(__name__)
 
 # Health and readiness tracking
 startup_time = time.time()
@@ -245,6 +249,12 @@ async def initialize_advanced_features():
         await huggingface_integration.initialize()
         logger.info("✅ HuggingFace integration initialized")
         
+        # Initialize audit service
+        from shared.core.services.audit_service import get_audit_service
+        audit_service = get_audit_service()
+        await audit_service.initialize()
+        logger.info("✅ Audit service initialized")
+        
     except Exception as e:
         logger.error(f"❌ Failed to initialize advanced features: {e}")
 
@@ -254,6 +264,50 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    logger.info("🚀 Starting application with Phase I1 ArangoDB warmup")
+    
+    # Phase I1: Initialize ArangoDB warmup with real env variables
+    try:
+        from shared.core.services.arangodb_service import warmup_arangodb
+        warmup_result = await warmup_arangodb()
+        
+        if warmup_result.get('status') == 'completed':
+            logger.info(
+                "✅ ArangoDB warmup completed successfully",
+                duration_seconds=warmup_result.get('duration_seconds'),
+                tasks_completed=warmup_result.get('tasks_completed')
+            )
+        else:
+            logger.warning(
+                "⚠️ ArangoDB warmup failed or disabled",
+                status=warmup_result.get('status'),
+                error=warmup_result.get('error')
+            )
+    except Exception as e:
+        logger.error("❌ ArangoDB warmup initialization failed", error=str(e))
+    
+    # Phase I2: Initialize Vector Service warmup with real env variables
+    try:
+        from shared.core.services.vector_singleton_service import warmup_vector_singleton
+        vector_warmup_result = await warmup_vector_singleton()
+        
+        if vector_warmup_result.get('status') == 'completed':
+            logger.info(
+                "✅ Vector service warmup completed successfully",
+                warmup_time_ms=vector_warmup_result.get('health', {}).get('embedding', {}).get('metrics', {}).get('tts_ms', 0),
+                embedding_loaded=vector_warmup_result.get('health', {}).get('embedding', {}).get('model_loaded', False),
+                vector_connected=vector_warmup_result.get('health', {}).get('vector_store', {}).get('connected', False)
+            )
+        else:
+            logger.warning(
+                "⚠️ Vector service warmup failed",
+                status=vector_warmup_result.get('status'),
+                warmup_completed=vector_warmup_result.get('warmup_completed', False)
+            )
+    except Exception as e:
+        logger.error("❌ Vector service warmup initialization failed", error=str(e))
+    
+
     await initialize_advanced_features()
     yield
     # Shutdown
@@ -262,6 +316,11 @@ async def lifespan(app: FastAPI):
     await huggingface_integration.close()
     await background_processor.close()
     await prompt_optimizer.close()
+    
+    # Shutdown audit service
+    from shared.core.services.audit_service import get_audit_service
+    audit_service = get_audit_service()
+    await audit_service.close()
 
 
 
@@ -453,7 +512,7 @@ async def reset_circuit_breaker(provider: str):
     except Exception as e:
         log_error("circuit_breaker_reset_failed", str(e))
         raise HTTPException(status_code=500, detail=f"Failed to reset circuit breaker for {provider}")
-app.include_router(health_router, prefix="/health")
+app.include_router(health_router)  # health_router already has /health prefix
 app.include_router(search_router, prefix="/search")
 app.include_router(fact_check_router, prefix="/factcheck")
 app.include_router(synthesis_router, prefix="/synthesis")
@@ -1338,6 +1397,480 @@ async def performance_metrics():
             "status": "error",
             "error": str(e),
             "timestamp": time.time()
+        }
+
+
+        # YouTube Lane Metrics Endpoint
+        @app.get("/metrics/youtube")
+        async def get_youtube_metrics():
+            """Get YouTube lane metrics and quota status."""
+            try:
+                from services.retrieval.youtube_retrieval import get_youtube_metrics
+                
+                metrics = get_youtube_metrics()
+                
+                # Add environment configuration
+                config = {
+                    "enabled": os.getenv("ENABLE_YOUTUBE", "true").lower() == "true",
+                    "max_results": int(os.getenv("YT_MAX_RESULTS", "5")),
+                    "daily_unit_budget": int(os.getenv("YT_DAILY_UNIT_BUDGET", "10000")),
+                    "quota_buffer_pct": int(os.getenv("YT_DAILY_UNIT_BUDGET", "20")),
+                    "lane_ms_budget": int(os.getenv("YT_LANE_MS_BUDGET", "2000")),
+                    "region_code": os.getenv("YT_REGION_CODE", "US"),
+                    "cache_ttl_seconds": int(os.getenv("YT_CACHE_TTL_SECONDS", "3600"))
+                }
+                
+                return {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "metrics": metrics,
+                    "config": config,
+                    "status": "healthy"
+                }
+                
+            except Exception as e:
+                logger.error(f"Error getting YouTube metrics: {e}")
+                return {
+                    "status": "error",
+                    "error": str(e),
+                    "timestamp": time.time()
+                }
+        
+        # Retrieval Service Health Endpoint
+@app.get("/metrics/retrieval")
+async def get_retrieval_health():
+    """Get retrieval service health and provider status."""
+    try:
+        from services.retrieval.free_tier import get_zero_budget_retrieval
+        
+        retrieval_service = get_zero_budget_retrieval()
+        health_summary = retrieval_service.get_health_summary()
+        
+        return {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "status": "healthy",
+            "health_summary": health_summary
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting retrieval health: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": time.time()
+        }
+
+# Index Fabric Service Health Endpoint
+@app.get("/metrics/index_fabric")
+async def get_index_fabric_health():
+    """Get index fabric service health and lane status."""
+    try:
+        from shared.core.services.index_fabric_service import get_index_fabric_service
+        
+        index_fabric_service = get_index_fabric_service()
+        health_status = await index_fabric_service.get_health_status()
+        
+        return {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "status": health_status.get("status", "unknown"),
+            "health_status": health_status,
+            "service": "index_fabric"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting index fabric health: {e}")
+        return {
+            "status": "error", 
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "service": "index_fabric"
+        }
+
+# Phase E1/E2: CI Performance Gates Metrics Endpoint
+@app.get("/metrics/ci_performance")
+async def get_ci_performance_metrics():
+    """Get CI performance gate metrics for streaming and budget enforcement."""
+    try:
+        from services.gateway.streaming_manager import streaming_manager
+        
+        # Get active stream performance metrics
+        active_streams = streaming_manager.active_streams
+        ci_metrics = {
+            "ttft_compliance": {
+                "total_streams": 0,
+                "compliant_streams": 0,
+                "non_compliant_streams": 0,
+                "avg_ttft_ms": 0.0,
+                "p95_ttft_ms": 0.0
+            },
+            "budget_compliance": {
+                "total_streams": 0,
+                "within_budget": 0,
+                "exceeded_budget": 0,
+                "avg_budget_utilization": 0.0
+            },
+            "heartbeat_compliance": {
+                "total_streams": 0,
+                "compliant_streams": 0,
+                "non_compliant_streams": 0,
+                "avg_heartbeat_interval_ms": 0.0
+            },
+            "intent_distribution": {
+                "simple": 0,
+                "technical": 0,
+                "research": 0,
+                "multimedia": 0,
+                "standard": 0
+            }
+        }
+        
+        ttft_values = []
+        budget_utilizations = []
+        heartbeat_intervals = []
+        
+        for stream_id, context in active_streams.items():
+            if not context.client_connected:
+                continue
+                
+            ci_metrics["ttft_compliance"]["total_streams"] += 1
+            ci_metrics["budget_compliance"]["total_streams"] += 1
+            ci_metrics["heartbeat_compliance"]["total_streams"] += 1
+            
+            # TTFT compliance
+            if context.ttft_ms > 0:
+                ttft_values.append(context.ttft_ms)
+                if context.ci_performance_metrics.get("ttft_compliant", False):
+                    ci_metrics["ttft_compliance"]["compliant_streams"] += 1
+                else:
+                    ci_metrics["ttft_compliance"]["non_compliant_streams"] += 1
+            
+            # Budget compliance
+            if context.budget_ms > 0:
+                elapsed_ms = (datetime.now(timezone.utc) - context.start_time).total_seconds() * 1000
+                utilization = min(elapsed_ms / context.budget_ms, 1.0)
+                budget_utilizations.append(utilization)
+                
+                if context.budget_exceeded:
+                    ci_metrics["budget_compliance"]["exceeded_budget"] += 1
+                else:
+                    ci_metrics["budget_compliance"]["within_budget"] += 1
+            
+            # Heartbeat compliance
+            if context.heartbeat_count > 0:
+                if context.ci_performance_metrics.get("heartbeat_compliant", True):
+                    ci_metrics["heartbeat_compliance"]["compliant_streams"] += 1
+                else:
+                    ci_metrics["heartbeat_compliance"]["non_compliant_streams"] += 1
+                
+                if context.last_heartbeat and context.start_time:
+                    avg_interval = (context.last_heartbeat - context.start_time).total_seconds() * 1000 / max(context.heartbeat_count, 1)
+                    heartbeat_intervals.append(avg_interval)
+            
+            # Intent distribution
+            intent = context.intent_classification
+            if intent in ci_metrics["intent_distribution"]:
+                ci_metrics["intent_distribution"][intent] += 1
+        
+        # Calculate averages and percentiles
+        if ttft_values:
+            ci_metrics["ttft_compliance"]["avg_ttft_ms"] = sum(ttft_values) / len(ttft_values)
+            ttft_values.sort()
+            p95_index = int(len(ttft_values) * 0.95)
+            ci_metrics["ttft_compliance"]["p95_ttft_ms"] = ttft_values[p95_index] if p95_index < len(ttft_values) else ttft_values[-1]
+        
+        if budget_utilizations:
+            ci_metrics["budget_compliance"]["avg_budget_utilization"] = sum(budget_utilizations) / len(budget_utilizations)
+        
+        if heartbeat_intervals:
+            ci_metrics["heartbeat_compliance"]["avg_heartbeat_interval_ms"] = sum(heartbeat_intervals) / len(heartbeat_intervals)
+        
+        # Add CI performance gates status
+        ci_gates = {
+            "ttft_gate": {
+                "threshold_ms": 800,
+                "status": "pass" if ci_metrics["ttft_compliance"]["total_streams"] == 0 or 
+                         ci_metrics["ttft_compliance"]["compliant_streams"] / max(ci_metrics["ttft_compliance"]["total_streams"], 1) >= 0.95 else "fail"
+            },
+            "budget_gate": {
+                "threshold": "95%_within_budget",
+                "status": "pass" if ci_metrics["budget_compliance"]["total_streams"] == 0 or 
+                         ci_metrics["budget_compliance"]["within_budget"] / max(ci_metrics["budget_compliance"]["total_streams"], 1) >= 0.95 else "fail"
+            },
+            "heartbeat_gate": {
+                "threshold_ms": 2000,
+                "status": "pass" if ci_metrics["heartbeat_compliance"]["total_streams"] == 0 or 
+                         ci_metrics["heartbeat_compliance"]["compliant_streams"] / max(ci_metrics["heartbeat_compliance"]["total_streams"], 1) >= 0.95 else "fail"
+            }
+        }
+        
+        return {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "status": "success",
+            "ci_metrics": ci_metrics,
+            "ci_gates": ci_gates,
+            "service": "streaming_ci_performance"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting CI performance metrics: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "service": "streaming_ci_performance"
+        }
+
+# Phase E3: Security Hardening Metrics Endpoint
+@app.get("/metrics/security")
+async def get_security_metrics():
+    """Get security hardening metrics and threat detection statistics."""
+    try:
+        from services.analytics.metrics import get_metrics_collector
+        
+        # Get security metrics from the collector
+        metrics_collector = get_metrics_collector()
+        metrics_dict = metrics_collector.get_metrics_dict()
+        
+        # Extract security-specific metrics
+        security_metrics = metrics_dict.get("security", {})
+        
+        # Get current security configuration
+        from services.gateway.middleware.security_hardening import security_hardening_config
+        
+        # Security configuration summary
+        security_config = {
+            "rate_limiting": {
+                "requests_per_minute": security_hardening_config.rate_limit["requests_per_minute"],
+                "burst_limit": security_hardening_config.rate_limit["burst_limit"],
+                "block_duration": security_hardening_config.rate_limit["block_duration"]
+            },
+            "request_limits": {
+                "max_request_size_mb": security_hardening_config.request_limits["max_request_size"] / (1024 * 1024),
+                "max_query_length": security_hardening_config.request_limits["max_query_length"],
+                "max_url_length": security_hardening_config.request_limits["max_url_length"]
+            },
+            "security_headers": {
+                "csp_enabled": bool(security_hardening_config.security_headers.get("csp_policy")),
+                "hsts_enabled": security_hardening_config.security_headers.get("hsts_max_age", 0) > 0,
+                "hsts_max_age_days": security_hardening_config.security_headers.get("hsts_max_age", 0) // 86400,
+                "trusted_hosts_count": len(security_hardening_config.trusted_hosts)
+            }
+        }
+        
+        # Security status assessment
+        security_status = {
+            "overall_status": "secure",
+            "threat_level": "low",
+            "last_threat_detected": None,
+            "rate_limit_violations": 0,
+            "blocked_requests": security_metrics.get("blocked_requests", 0),
+            "total_threats": security_metrics.get("threats", 0)
+        }
+        
+        # Determine threat level based on metrics
+        if security_metrics.get("threats", 0) > 10:
+            security_status["threat_level"] = "high"
+            security_status["overall_status"] = "at_risk"
+        elif security_metrics.get("threats", 0) > 5:
+            security_status["threat_level"] = "medium"
+            security_status["overall_status"] = "monitoring"
+        
+        # Security compliance check
+        security_compliance = {
+            "csp_header": "pass" if security_config["security_headers"]["csp_enabled"] else "fail",
+            "hsts_header": "pass" if security_config["security_headers"]["hsts_enabled"] else "fail",
+            "rate_limiting": "pass" if security_config["rate_limiting"]["requests_per_minute"] <= 60 else "fail",
+            "trusted_hosts": "pass" if security_config["security_headers"]["trusted_hosts_count"] > 0 else "fail"
+        }
+        
+        return {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "status": "success",
+            "security_metrics": security_metrics,
+            "security_config": security_config,
+            "security_status": security_status,
+            "security_compliance": security_compliance,
+            "service": "security_hardening"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting security metrics: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "service": "security_hardening"
+        }
+
+# Phase E4: Audit & Provenance Endpoint
+@app.get("/audit/{trace_id}")
+async def get_audit_trail(trace_id: str):
+    """Get complete audit trail for a specific trace ID."""
+    try:
+        from shared.core.services.audit_service import get_audit_service
+        
+        audit_service = get_audit_service()
+        audit_trail = audit_service.get_audit_trail(trace_id)
+        
+        if not audit_trail:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Audit trail not found for trace ID: {trace_id}"
+            )
+        
+        # Convert audit trail to JSON-serializable format
+        audit_data = {
+            "trace_id": audit_trail.trace_id,
+            "request_id": audit_trail.request_id,
+            "user_id": audit_trail.user_id,
+            "session_id": audit_trail.session_id,
+            "start_time": audit_trail.start_time.isoformat(),
+            "end_time": audit_trail.end_time.isoformat() if audit_trail.end_time else None,
+            "total_duration_ms": audit_trail.total_duration_ms,
+            "status": audit_trail.status,
+            "final_status_code": audit_trail.final_status_code,
+            "metadata": audit_trail.metadata,
+            "events": [
+                {
+                    "event_id": event.event_id,
+                    "event_type": event.event_type.value,
+                    "timestamp": event.timestamp.isoformat(),
+                    "service_name": event.service_name,
+                    "operation": event.operation,
+                    "severity": event.severity.value,
+                    "message": event.message,
+                    "duration_ms": event.duration_ms,
+                    "status_code": event.status_code,
+                    "error_message": event.error_message,
+                    "metadata": event.metadata
+                }
+                for event in audit_trail.events
+            ],
+            "service_calls": {
+                service_name: [
+                    {
+                        "event_id": event.event_id,
+                        "event_type": event.event_type.value,
+                        "timestamp": event.timestamp.isoformat(),
+                        "operation": event.operation,
+                        "duration_ms": event.duration_ms,
+                        "status_code": event.status_code,
+                        "metadata": event.metadata
+                    }
+                    for event in events
+                ]
+                for service_name, events in audit_trail.service_calls.items()
+            },
+            "performance_metrics": audit_trail.performance_metrics,
+            "errors": [
+                {
+                    "event_id": event.event_id,
+                    "timestamp": event.timestamp.isoformat(),
+                    "service_name": event.service_name,
+                    "operation": event.operation,
+                    "severity": event.severity.value,
+                    "message": event.message,
+                    "error_message": event.error_message,
+                    "metadata": event.metadata
+                }
+                for event in audit_trail.errors
+            ],
+            "security_events": [
+                {
+                    "event_id": event.event_id,
+                    "timestamp": event.timestamp.isoformat(),
+                    "operation": event.operation,
+                    "severity": event.severity.value,
+                    "message": event.message,
+                    "metadata": event.metadata
+                }
+                for event in audit_trail.security_events
+            ]
+        }
+        
+        return {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "status": "success",
+            "audit_trail": audit_data,
+            "service": "audit_provenance"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting audit trail: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "service": "audit_provenance"
+        }
+
+# Phase E4: Audit Trails List Endpoint
+@app.get("/audit")
+async def list_audit_trails(
+    user_id: Optional[str] = None,
+    service_name: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0
+):
+    """List audit trails with filtering and pagination."""
+    try:
+        from shared.core.services.audit_service import get_audit_service
+        
+        audit_service = get_audit_service()
+        audit_trails = audit_service.get_audit_trails(
+            user_id=user_id,
+            service_name=service_name,
+            limit=limit + offset
+        )
+        
+        # Apply pagination
+        paginated_trails = audit_trails[offset:offset + limit]
+        
+        # Convert to summary format
+        trail_summaries = []
+        for trail in paginated_trails:
+            summary = {
+                "trace_id": trail.trace_id,
+                "request_id": trail.request_id,
+                "user_id": trail.user_id,
+                "session_id": trail.session_id,
+                "start_time": trail.start_time.isoformat(),
+                "end_time": trail.end_time.isoformat() if trail.end_time else None,
+                "total_duration_ms": trail.total_duration_ms,
+                "status": trail.status,
+                "final_status_code": trail.final_status_code,
+                "event_count": len(trail.events),
+                "service_count": len(trail.service_calls),
+                "error_count": len(trail.errors),
+                "security_event_count": len(trail.security_events)
+            }
+            trail_summaries.append(summary)
+        
+        return {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "status": "success",
+            "audit_trails": trail_summaries,
+            "pagination": {
+                "limit": limit,
+                "offset": offset,
+                "total": len(audit_trails),
+                "returned": len(trail_summaries)
+            },
+            "filters": {
+                "user_id": user_id,
+                "service_name": service_name
+            },
+            "service": "audit_provenance"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error listing audit trails: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "service": "audit_provenance"
         }
 
 

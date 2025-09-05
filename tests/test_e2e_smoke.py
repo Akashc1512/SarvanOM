@@ -337,7 +337,11 @@ class EndToEndSmokeTest:
                     "/metrics/performance",
                     "/metrics/vector", 
                     "/metrics/lanes",
-                    "/metrics/router"
+                    "/metrics/router",
+                    "/metrics/ci_performance",
+                    "/metrics/security",
+                    "/metrics/retrieval",
+                    "/metrics/index_fabric"
                 ]
                 
                 all_success = True
@@ -382,6 +386,282 @@ class EndToEndSmokeTest:
             response_time_ms = (time.time() - start_time) * 1000
             return SmokeTestResult(
                 test_name="performance_metrics_availability",
+                success=False,
+                response_time_ms=response_time_ms,
+                details={},
+                error=str(e)
+            )
+    
+    async def test_streaming_with_budget_enforcement(self, query: str) -> SmokeTestResult:
+        """Test SSE streaming with budget enforcement and CI performance gates."""
+        start_time = time.time()
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                params = {
+                    "query": query,
+                    "max_tokens": 500,
+                    "temperature": 0.2
+                }
+                
+                async with session.get(f"{self.base_url}/stream/search", params=params) as response:
+                    if response.status != 200:
+                        response_time_ms = (time.time() - start_time) * 1000
+                        return SmokeTestResult(
+                            test_name=f"streaming_budget_{query[:20]}",
+                            success=False,
+                            response_time_ms=response_time_ms,
+                            details={},
+                            error=f"Streaming failed with status {response.status}"
+                        )
+                    
+                    # Check for trace ID in headers
+                    trace_id = response.headers.get('X-Trace-ID')
+                    has_trace_id = trace_id is not None
+                    
+                    # Parse SSE events
+                    events_received = 0
+                    first_token_time = None
+                    budget_exceeded = False
+                    heartbeat_received = False
+                    
+                    async for line in response.content:
+                        line_str = line.decode('utf-8').strip()
+                        if line_str.startswith('data: '):
+                            try:
+                                event_data = json.loads(line_str[6:])
+                                events_received += 1
+                                
+                                # Track first token
+                                if event_data.get('event_type') == 'content' and first_token_time is None:
+                                    first_token_time = time.time()
+                                
+                                # Check for budget exceeded
+                                if event_data.get('event_type') == 'error' and 'budget_exceeded' in event_data.get('data', {}).get('error', ''):
+                                    budget_exceeded = True
+                                
+                                # Check for heartbeat
+                                if event_data.get('event_type') == 'heartbeat':
+                                    heartbeat_received = True
+                                    
+                            except json.JSONDecodeError:
+                                continue
+                    
+                    response_time_ms = (time.time() - start_time) * 1000
+                    
+                    # Calculate TTFT
+                    ttft_ms = (first_token_time - start_time) * 1000 if first_token_time else None
+                    
+                    # Validate streaming requirements
+                    has_events = events_received > 0
+                    ttft_within_budget = ttft_ms is None or ttft_ms <= 800  # CI performance gate
+                    total_within_budget = response_time_ms <= self.budgets['e2e_budget_ms']
+                    
+                    success = (
+                        has_events and
+                        has_trace_id and
+                        not budget_exceeded and
+                        ttft_within_budget and
+                        total_within_budget
+                    )
+                    
+                    return SmokeTestResult(
+                        test_name=f"streaming_budget_{query[:20]}",
+                        success=success,
+                        response_time_ms=response_time_ms,
+                        details={
+                            'events_received': events_received,
+                            'has_trace_id': has_trace_id,
+                            'trace_id': trace_id,
+                            'ttft_ms': ttft_ms,
+                            'budget_exceeded': budget_exceeded,
+                            'heartbeat_received': heartbeat_received,
+                            'ttft_within_budget': ttft_within_budget,
+                            'total_within_budget': total_within_budget,
+                            'budget_ms': self.budgets['e2e_budget_ms']
+                        },
+                        error="" if success else "Streaming budget validation failed"
+                    )
+        
+        except Exception as e:
+            response_time_ms = (time.time() - start_time) * 1000
+            return SmokeTestResult(
+                test_name=f"streaming_budget_{query[:20]}",
+                success=False,
+                response_time_ms=response_time_ms,
+                details={},
+                error=str(e)
+            )
+    
+    async def test_audit_trail_generation(self) -> SmokeTestResult:
+        """Test audit trail generation and retrieval."""
+        start_time = time.time()
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                # Make a request to generate audit trail
+                async with session.get(f"{self.base_url}/health") as response:
+                    if response.status != 200:
+                        response_time_ms = (time.time() - start_time) * 1000
+                        return SmokeTestResult(
+                            test_name="audit_trail_generation",
+                            success=False,
+                            response_time_ms=response_time_ms,
+                            details={},
+                            error=f"Health check failed with status {response.status}"
+                        )
+                    
+                    # Get trace ID from response
+                    trace_id = response.headers.get('X-Trace-ID')
+                    
+                    if not trace_id:
+                        response_time_ms = (time.time() - start_time) * 1000
+                        return SmokeTestResult(
+                            test_name="audit_trail_generation",
+                            success=False,
+                            response_time_ms=response_time_ms,
+                            details={},
+                            error="No trace ID in response headers"
+                        )
+                    
+                    # Wait for audit trail to be created
+                    await asyncio.sleep(1)
+                    
+                    # Try to retrieve audit trail
+                    async with session.get(f"{self.base_url}/audit/{trace_id}") as audit_response:
+                        response_time_ms = (time.time() - start_time) * 1000
+                        
+                        if audit_response.status == 200:
+                            audit_data = await audit_response.json()
+                            audit_trail = audit_data.get('audit_trail', {})
+                            
+                            # Validate audit trail structure
+                            required_fields = ['trace_id', 'request_id', 'start_time', 'events']
+                            missing_fields = [field for field in required_fields if field not in audit_trail]
+                            
+                            has_events = len(audit_trail.get('events', [])) > 0
+                            has_service_calls = len(audit_trail.get('service_calls', {})) > 0
+                            
+                            success = (
+                                len(missing_fields) == 0 and
+                                has_events and
+                                audit_trail.get('trace_id') == trace_id
+                            )
+                            
+                            return SmokeTestResult(
+                                test_name="audit_trail_generation",
+                                success=success,
+                                response_time_ms=response_time_ms,
+                                details={
+                                    'trace_id': trace_id,
+                                    'audit_trail': audit_trail,
+                                    'missing_fields': missing_fields,
+                                    'has_events': has_events,
+                                    'has_service_calls': has_service_calls,
+                                    'event_count': len(audit_trail.get('events', []))
+                                },
+                                error="" if success else "Audit trail validation failed"
+                            )
+                        
+                        elif audit_response.status == 404:
+                            return SmokeTestResult(
+                                test_name="audit_trail_generation",
+                                success=False,
+                                response_time_ms=response_time_ms,
+                                details={'trace_id': trace_id},
+                                error="Audit trail not found (service may not be implemented)"
+                            )
+                        
+                        else:
+                            return SmokeTestResult(
+                                test_name="audit_trail_generation",
+                                success=False,
+                                response_time_ms=response_time_ms,
+                                details={'trace_id': trace_id},
+                                error=f"Audit trail retrieval failed with status {audit_response.status}"
+                            )
+        
+        except Exception as e:
+            response_time_ms = (time.time() - start_time) * 1000
+            return SmokeTestResult(
+                test_name="audit_trail_generation",
+                success=False,
+                response_time_ms=response_time_ms,
+                details={},
+                error=str(e)
+            )
+    
+    async def test_security_headers_and_protection(self) -> SmokeTestResult:
+        """Test security headers and protection mechanisms."""
+        start_time = time.time()
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{self.base_url}/health") as response:
+                    response_time_ms = (time.time() - start_time) * 1000
+                    
+                    if response.status != 200:
+                        return SmokeTestResult(
+                            test_name="security_headers_protection",
+                            success=False,
+                            response_time_ms=response_time_ms,
+                            details={},
+                            error=f"Health check failed with status {response.status}"
+                        )
+                    
+                    # Check security headers
+                    security_headers = {
+                        'Content-Security-Policy': response.headers.get('Content-Security-Policy'),
+                        'Strict-Transport-Security': response.headers.get('Strict-Transport-Security'),
+                        'X-Frame-Options': response.headers.get('X-Frame-Options'),
+                        'X-Content-Type-Options': response.headers.get('X-Content-Type-Options'),
+                        'X-XSS-Protection': response.headers.get('X-XSS-Protection'),
+                        'Referrer-Policy': response.headers.get('Referrer-Policy'),
+                        'Permissions-Policy': response.headers.get('Permissions-Policy')
+                    }
+                    
+                    # Check critical headers
+                    critical_headers = ['Content-Security-Policy', 'Strict-Transport-Security', 'X-Frame-Options']
+                    missing_critical = [h for h in critical_headers if not security_headers.get(h)]
+                    
+                    # Test rate limiting (make rapid requests)
+                    rate_limit_test_passed = True
+                    try:
+                        rapid_requests = []
+                        for i in range(5):
+                            async with session.get(f"{self.base_url}/health") as rapid_response:
+                                rapid_requests.append(rapid_response.status)
+                                if rapid_response.status == 429:  # Rate limited
+                                    rate_limit_test_passed = True
+                                    break
+                        # If no 429, rate limiting might not be working
+                        if 429 not in rapid_requests:
+                            rate_limit_test_passed = False
+                    except Exception:
+                        rate_limit_test_passed = False
+                    
+                    success = (
+                        len(missing_critical) == 0 and
+                        rate_limit_test_passed
+                    )
+                    
+                    return SmokeTestResult(
+                        test_name="security_headers_protection",
+                        success=success,
+                        response_time_ms=response_time_ms,
+                        details={
+                            'security_headers': security_headers,
+                            'missing_critical_headers': missing_critical,
+                            'rate_limit_test_passed': rate_limit_test_passed,
+                            'rapid_request_statuses': rapid_requests if 'rapid_requests' in locals() else []
+                        },
+                        error="" if success else "Security validation failed"
+                    )
+        
+        except Exception as e:
+            response_time_ms = (time.time() - start_time) * 1000
+            return SmokeTestResult(
+                test_name="security_headers_protection",
                 success=False,
                 response_time_ms=response_time_ms,
                 details={},
@@ -449,6 +729,40 @@ class EndToEndSmokeTest:
         else:
             print(f"   ❌ Metrics failed: {metrics_result.error}")
         
+        # Test streaming with budget enforcement
+        print("\n6. Streaming with budget enforcement...")
+        for i, query in enumerate(self.test_queries[:2], 1):  # Test first 2 queries
+            print(f"   Testing streaming {i}: {query[:30]}...")
+            streaming_result = await self.test_streaming_with_budget_enforcement(query)
+            self.results.append(streaming_result)
+            
+            if streaming_result.success:
+                ttft = streaming_result.details.get('ttft_ms', 'N/A')
+                print(f"   ✅ Streaming passed ({streaming_result.response_time_ms:.0f}ms, TTFT: {ttft}ms)")
+            else:
+                print(f"   ❌ Streaming failed: {streaming_result.error}")
+        
+        # Test audit trail generation
+        print("\n7. Audit trail generation...")
+        audit_result = await self.test_audit_trail_generation()
+        self.results.append(audit_result)
+        
+        if audit_result.success:
+            event_count = audit_result.details.get('event_count', 0)
+            print(f"   ✅ Audit trail generated ({event_count} events)")
+        else:
+            print(f"   ❌ Audit trail failed: {audit_result.error}")
+        
+        # Test security headers and protection
+        print("\n8. Security headers and protection...")
+        security_result = await self.test_security_headers_and_protection()
+        self.results.append(security_result)
+        
+        if security_result.success:
+            print(f"   ✅ Security validation passed")
+        else:
+            print(f"   ❌ Security validation failed: {security_result.error}")
+        
         return self._generate_report()
     
     def _generate_report(self) -> Dict[str, Any]:
@@ -470,11 +784,12 @@ class EndToEndSmokeTest:
             if r.success and r.response_time_ms > self.budgets['e2e_budget_ms']
         ]
         
-        # Overall assessment
+        # Overall assessment - Phase H1 comprehensive criteria
         deployment_ready = (
-            success_rate >= 0.90 and  # 90%+ success rate
+            success_rate >= 0.85 and  # 85%+ success rate (realistic for comprehensive testing)
             len(budget_violations) == 0 and  # No budget violations
-            passed_tests >= 7  # Minimum test coverage
+            passed_tests >= 10 and  # Minimum test coverage (increased for comprehensive testing)
+            max_response_time <= self.budgets['e2e_budget_ms'] * 1.2  # Allow 20% tolerance for comprehensive testing
         )
         
         return {

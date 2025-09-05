@@ -31,7 +31,7 @@ try:
     MARKDOWN_AVAILABLE = True
 except ImportError:
     MARKDOWN_AVAILABLE = False
-    print("Warning: markdown not available, using basic text processing")
+    # Markdown is optional for text processing - not required for core functionality
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List, Set, Union
 from dataclasses import dataclass, field
@@ -56,6 +56,15 @@ XSS_PATTERNS = [
     re.compile(r'<embed[^>]*>', re.IGNORECASE),
     re.compile(r'<link[^>]*>', re.IGNORECASE),
     re.compile(r'<meta[^>]*>', re.IGNORECASE),
+    # Phase E3: Enhanced XSS detection
+    re.compile(r'<svg[^>]*>.*?</svg>', re.IGNORECASE | re.DOTALL),
+    re.compile(r'<math[^>]*>.*?</math>', re.IGNORECASE | re.DOTALL),
+    re.compile(r'<xmp[^>]*>.*?</xmp>', re.IGNORECASE | re.DOTALL),
+    re.compile(r'<plaintext[^>]*>.*?</plaintext>', re.IGNORECASE | re.DOTALL),
+    re.compile(r'<listing[^>]*>.*?</listing>', re.IGNORECASE | re.DOTALL),
+    re.compile(r'vbscript:', re.IGNORECASE),
+    re.compile(r'data:text/html', re.IGNORECASE),
+    re.compile(r'data:application/x-javascript', re.IGNORECASE),
 ]
 
 SQL_INJECTION_PATTERNS = [
@@ -128,6 +137,55 @@ class SecurityHardeningConfig:
         "localhost", "127.0.0.1", "::1", "sarvanom.local",
         "*.sarvanom.com", "*.sarvanom.org"
     })
+
+
+class SecurityCircuitBreaker:
+    """Security circuit breaker for threat detection and automatic blocking."""
+    
+    def __init__(self):
+        self.threat_counts: Dict[str, int] = defaultdict(int)
+        self.blocked_patterns: Dict[str, float] = {}
+        self.circuit_open: bool = False
+        self.circuit_open_time: Optional[float] = None
+        self.threat_threshold = 5  # Number of threats before circuit opens
+        self.circuit_timeout = 300  # 5 minutes circuit open timeout
+        
+    def record_threat(self, threat_type: str, severity: str = "medium"):
+        """Record a security threat."""
+        self.threat_counts[threat_type] += 1
+        
+        # Check if circuit should open
+        total_threats = sum(self.threat_counts.values())
+        if total_threats >= self.threat_threshold and not self.circuit_open:
+            self.circuit_open = True
+            self.circuit_open_time = time.time()
+            logger.warning(f"Security circuit breaker opened due to {total_threats} threats")
+        
+        return self.circuit_open
+    
+    def is_circuit_open(self) -> bool:
+        """Check if security circuit is open."""
+        if not self.circuit_open:
+            return False
+        
+        # Check if circuit should close
+        if time.time() - self.circuit_open_time > self.circuit_timeout:
+            self.circuit_open = False
+            self.circuit_open_time = None
+            self.threat_counts.clear()
+            logger.info("Security circuit breaker closed after timeout")
+            return False
+        
+        return True
+    
+    def get_threat_summary(self) -> Dict[str, Any]:
+        """Get threat summary for metrics."""
+        return {
+            "circuit_open": self.circuit_open,
+            "threat_counts": dict(self.threat_counts),
+            "total_threats": sum(self.threat_counts.values()),
+            "circuit_open_duration": time.time() - self.circuit_open_time if self.circuit_open_time else 0
+        }
 
 
 class EnhancedRateLimiter:
@@ -332,6 +390,7 @@ class SecurityHardeningMiddleware(BaseHTTPMiddleware):
         self.config = config or SecurityHardeningConfig()
         self.rate_limiter = EnhancedRateLimiter(self.config.rate_limit)
         self.sanitizer = ContentSanitizer(self.config.sanitization)
+        self.security_circuit_breaker = SecurityCircuitBreaker()
         
         # Start cleanup task
         self.rate_limiter._cleanup_task = asyncio.create_task(
@@ -343,7 +402,25 @@ class SecurityHardeningMiddleware(BaseHTTPMiddleware):
         user_id = get_user_id()
         
         try:
-            # 1. Enhanced rate limiting
+            # 1. Security circuit breaker check
+            if self.security_circuit_breaker.is_circuit_open():
+                log_security_event(
+                    "security_circuit_open",
+                    "Security circuit breaker is open - blocking all requests",
+                    {
+                        "trace_id": trace_id,
+                        "user_id": user_id,
+                        "client_ip": request.client.host if request.client else "unknown",
+                        "threat_summary": self.security_circuit_breaker.get_threat_summary()
+                    }
+                )
+                raise HTTPException(
+                    status_code=503,
+                    detail="Service temporarily unavailable due to security threats. Please try again later.",
+                    headers={"Retry-After": "300"}
+                )
+            
+            # 2. Enhanced rate limiting
             is_limited, reason = self.rate_limiter.is_rate_limited(request)
             if is_limited:
                 log_security_event(
@@ -365,6 +442,9 @@ class SecurityHardeningMiddleware(BaseHTTPMiddleware):
             
             # 2. Trusted host validation
             if not self._is_trusted_host(request):
+                # Record security threat
+                self.security_circuit_breaker.record_threat("untrusted_host", "high")
+                
                 log_security_event(
                     "untrusted_host",
                     f"Request from untrusted host: {request.headers.get('host', 'unknown')}",
@@ -382,6 +462,9 @@ class SecurityHardeningMiddleware(BaseHTTPMiddleware):
             
             # 3. Request size validation
             if not self._validate_request_size(request):
+                # Record security threat
+                self.security_circuit_breaker.record_threat("request_too_large", "medium")
+                
                 log_security_event(
                     "request_too_large",
                     "Request size exceeds limit",
@@ -398,6 +481,9 @@ class SecurityHardeningMiddleware(BaseHTTPMiddleware):
             
             # 4. URL length validation
             if len(str(request.url)) > self.config.request_limits["max_url_length"]:
+                # Record security threat
+                self.security_circuit_breaker.record_threat("url_too_long", "medium")
+                
                 log_security_event(
                     "url_too_long",
                     "URL length exceeds limit",
@@ -454,6 +540,10 @@ class SecurityHardeningMiddleware(BaseHTTPMiddleware):
                 status_code=500,
                 detail="Internal server error"
             )
+    
+    def get_security_status(self) -> Dict[str, Any]:
+        """Get security circuit breaker and threat status."""
+        return self.security_circuit_breaker.get_threat_summary()
     
     def _is_trusted_host(self, request: Request) -> bool:
         """Validate if the request is from a trusted host."""

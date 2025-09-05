@@ -10,7 +10,7 @@ import os
 
 logger = logging.getLogger(__name__)
 
-class HuggingfaceClient:
+class HuggingFaceClient:
     """HuggingFace API client with comprehensive error handling."""
     
     def __init__(self):
@@ -31,6 +31,12 @@ class HuggingfaceClient:
         except Exception as e:
             logger.error(f"Failed to initialize HuggingFace client: {e}")
             self.integration = None
+    
+    async def generate_completion(self, prompt: str, model: str = "microsoft/DialoGPT-medium", 
+                                max_tokens: int = 150, temperature: float = 0.7) -> Optional[str]:
+        """Generate completion using HuggingFace API (alias for compatibility)."""
+        result = await self.generate_text(prompt, max_tokens, temperature, model)
+        return result.get("content") if result.get("success") else None
     
     def _select_model(self, prompt: str, max_tokens: int) -> str:
         """Select appropriate HuggingFace model based on task."""

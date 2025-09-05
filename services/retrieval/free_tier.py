@@ -32,17 +32,132 @@ import requests
 from bs4 import BeautifulSoup
 import redis.asyncio as redis
 
+# Add circuit breaker imports and configuration
+import asyncio
+import hashlib
+import json
+import logging
+import os
+import time
+import uuid
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Any, Tuple
+from dataclasses import dataclass, field
+from enum import Enum
+
+import aiohttp
+import feedparser
+from bs4 import BeautifulSoup
+
 # Configure logging
 logger = logging.getLogger(__name__)
+
+# Environment variables with defaults
+CACHE_TTL_MAX = int(os.getenv("CACHE_TTL_MAX", "60"))
+MAX_RETRIES = int(os.getenv("MAX_RETRIES", "2"))
+BASE_TIMEOUT = int(os.getenv("BASE_TIMEOUT", "2"))
+BACKOFF_BASE = float(os.getenv("BACKOFF_BASE", "2.0"))
+BACKOFF_MAX = float(os.getenv("BACKOFF_MAX", "30.0"))
+
+# Circuit breaker configuration
+CIRCUIT_BREAKER_FAILURE_THRESHOLD = int(os.getenv("CIRCUIT_BREAKER_FAILURE_THRESHOLD", "3"))
+CIRCUIT_BREAKER_TIMEOUT_SECONDS = int(os.getenv("CIRCUIT_BREAKER_TIMEOUT_SECONDS", "60"))
+PROVIDER_TIMEOUT_MS = int(os.getenv("PROVIDER_TIMEOUT_MS", "1500"))  # 1.5s per provider
+
+# Provider-specific timeouts (balanced for 3s SLA)
+WIKIPEDIA_TIMEOUT_MS = int(os.getenv("WIKIPEDIA_TIMEOUT_MS", "800"))
+STACKEXCHANGE_TIMEOUT_MS = int(os.getenv("STACKEXCHANGE_TIMEOUT_MS", "800"))
+MDN_TIMEOUT_MS = int(os.getenv("MDN_TIMEOUT_MS", "800"))
+GITHUB_TIMEOUT_MS = int(os.getenv("GITHUB_TIMEOUT_MS", "800"))
+OPENALEX_TIMEOUT_MS = int(os.getenv("OPENALEX_TIMEOUT_MS", "800"))
+ARXIV_TIMEOUT_MS = int(os.getenv("ARXIV_TIMEOUT_MS", "800"))
+YOUTUBE_TIMEOUT_MS = int(os.getenv("YOUTUBE_TIMEOUT_MS", "800"))
+DUCKDUCKGO_TIMEOUT_MS = int(os.getenv("DUCKDUCKGO_TIMEOUT_MS", "800"))
+
+
+class ProviderStatus(Enum):
+    """Provider health status."""
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    FAILING = "failing"
+    CIRCUIT_OPEN = "circuit_open"
+
+
+@dataclass
+class ProviderHealth:
+    """Provider health tracking."""
+    provider: str
+    status: ProviderStatus = ProviderStatus.HEALTHY
+    failure_count: int = 0
+    last_failure: float = 0.0
+    last_success: float = 0.0
+    avg_response_time: float = 0.0
+    total_requests: int = 0
+    
+    def record_failure(self):
+        """Record a provider failure."""
+        self.failure_count += 1
+        self.last_failure = time.time()
+        self.status = ProviderStatus.FAILING if self.failure_count >= CIRCUIT_BREAKER_FAILURE_THRESHOLD else ProviderStatus.DEGRADED
+    
+    def record_success(self, response_time: float):
+        """Record a provider success."""
+        self.last_success = time.time()
+        self.total_requests += 1
+        
+        # Update average response time
+        if self.total_requests == 1:
+            self.avg_response_time = response_time
+        else:
+            self.avg_response_time = (self.avg_response_time * (self.total_requests - 1) + response_time) / self.total_requests
+        
+        # Reset failure count on success
+        if self.failure_count > 0:
+            self.failure_count = max(0, self.failure_count - 1)
+        
+        # Update status
+        if self.failure_count == 0:
+            self.status = ProviderStatus.HEALTHY
+        elif self.failure_count < CIRCUIT_BREAKER_FAILURE_THRESHOLD:
+            self.status = ProviderStatus.DEGRADED
+    
+    def should_attempt_request(self) -> bool:
+        """Check if provider should be attempted."""
+        if self.status == ProviderStatus.CIRCUIT_OPEN:
+            # Check if circuit should be closed
+            if time.time() - self.last_failure > CIRCUIT_BREAKER_TIMEOUT_SECONDS:
+                self.status = ProviderStatus.DEGRADED
+                return True
+            return False
+        return True
+    
+    def get_timeout_ms(self) -> int:
+        """Get provider-specific timeout."""
+        timeout_map = {
+            'wiki': WIKIPEDIA_TIMEOUT_MS,
+            'stackexchange': STACKEXCHANGE_TIMEOUT_MS,
+            'mdn': MDN_TIMEOUT_MS,
+            'github': GITHUB_TIMEOUT_MS,
+            'openalex': OPENALEX_TIMEOUT_MS,
+            'arxiv': ARXIV_TIMEOUT_MS,
+            'youtube': YOUTUBE_TIMEOUT_MS,
+            'web': PROVIDER_TIMEOUT_MS,  # Web search gets default timeout
+            'duckduckgo': DUCKDUCKGO_TIMEOUT_MS
+        }
+        return timeout_map.get(self.provider, PROVIDER_TIMEOUT_MS)
+
 
 # Environment variables
 BRAVE_API_KEY = os.getenv("BRAVE_API_KEY", "")
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "")
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+# Fix Docker hostname issues for local development
+if "sarvanom-redis" in REDIS_URL:
+    REDIS_URL = "redis://localhost:6379"
 CACHE_TTL_MIN = int(os.getenv("CACHE_TTL_MIN", "10"))
 CACHE_TTL_MAX = int(os.getenv("CACHE_TTL_MAX", "60"))
 MAX_RETRIES = int(os.getenv("MAX_RETRIES", "2"))
-BASE_TIMEOUT = int(os.getenv("BASE_TIMEOUT", "5"))
+BASE_TIMEOUT = int(os.getenv("BASE_TIMEOUT", "2"))
 BACKOFF_BASE = float(os.getenv("BACKOFF_BASE", "2.0"))
 BACKOFF_MAX = float(os.getenv("BACKOFF_MAX", "30.0"))
 
@@ -98,16 +213,37 @@ class ZeroBudgetRetrieval:
         self.session = None
         # Don't initialize async components here
         # They will be initialized when first needed
+        
+        # Initialize provider health tracking
+        self.provider_health = {
+            'wiki': ProviderHealth('wiki'),
+            'stackexchange': ProviderHealth('stackexchange'),
+            'mdn': ProviderHealth('mdn'),
+            'github': ProviderHealth('github'),
+            'openalex': ProviderHealth('openalex'),
+            'arxiv': ProviderHealth('arxiv'),
+            'youtube': ProviderHealth('youtube'),
+            'web': ProviderHealth('web'),
+            'duckduckgo': ProviderHealth('duckduckgo')
+        }
     
     async def setup_redis(self):
-        """Setup Redis connection for caching."""
+        """Setup Redis connection for caching with timeout."""
         if self.redis_client is not None:
             return  # Already initialized
             
         try:
-            self.redis_client = redis.from_url(REDIS_URL, decode_responses=True)
-            await self.redis_client.ping()
+            # Use asyncio.wait_for to prevent blocking on Redis connection
+            async def connect_redis():
+                client = redis.from_url(REDIS_URL, decode_responses=True)
+                await client.ping()
+                return client
+                
+            self.redis_client = await asyncio.wait_for(connect_redis(), timeout=0.5)  # 500ms timeout
             logger.info("✅ Redis connection established for caching")
+        except asyncio.TimeoutError:
+            logger.warning(f"Redis connection timed out after 500ms. Using in-memory cache.")
+            self.redis_client = None
         except Exception as e:
             logger.warning(f"Redis connection failed: {e}. Using in-memory cache.")
             self.redis_client = None
@@ -184,6 +320,46 @@ class ZeroBudgetRetrieval:
         
         return None
     
+    def _check_provider_health(self, provider: str) -> bool:
+        """Check if provider is healthy enough to attempt request."""
+        if provider not in self.provider_health:
+            return True  # Unknown provider, allow attempt
+        
+        health = self.provider_health[provider]
+        return health.should_attempt_request()
+    
+    def _get_provider_timeout(self, provider: str) -> float:
+        """Get timeout for specific provider in seconds."""
+        if provider not in self.provider_health:
+            return PROVIDER_TIMEOUT_MS / 1000
+        
+        health = self.provider_health[provider]
+        return health.get_timeout_ms() / 1000
+    
+    def _record_provider_success(self, provider: str, response_time: float):
+        """Record successful provider request."""
+        if provider in self.provider_health:
+            self.provider_health[provider].record_success(response_time)
+    
+    def _record_provider_failure(self, provider: str):
+        """Record provider failure."""
+        if provider in self.provider_health:
+            self.provider_health[provider].record_failure()
+    
+    def get_provider_health_status(self) -> Dict[str, Dict]:
+        """Get current provider health status."""
+        return {
+            provider: {
+                'status': health.status.value,
+                'failure_count': health.failure_count,
+                'avg_response_time': health.avg_response_time,
+                'total_requests': health.total_requests,
+                'last_success': health.last_success,
+                'last_failure': health.last_failure
+            }
+            for provider, health in self.provider_health.items()
+        }
+    
     async def _cache_set(self, cache_key: str, results: List[Dict], ttl_minutes: int):
         """Store results in cache."""
         await self.setup_redis()
@@ -237,62 +413,123 @@ class ZeroBudgetRetrieval:
         
         return None
     
-    async def wiki_search(self, query: str, k: int = 3) -> List[SearchResult]:
-        """Search Wikipedia using MediaWiki API."""
+    async def _make_arxiv_request(self, url: str, params: Dict = None) -> Optional[Dict]:
+        """Make HTTP request to arXiv API and parse XML response."""
+        await self.setup_session()
+        
         try:
-            # MediaWiki API endpoint
-            api_url = "https://en.wikipedia.org/api/rest_v1/page/summary/"
-            
-            # Search for pages first
+            async with self.session.get(url, params=params, timeout=BASE_TIMEOUT) as response:
+                if response.status == 200:
+                    xml_text = await response.text()
+                    
+                    # Parse XML using feedparser (simpler than BeautifulSoup for Atom feeds)
+                    try:
+                        import feedparser
+                        parsed = feedparser.parse(xml_text)
+                        
+                        # Convert to dict format similar to JSON APIs
+                        result = {
+                            "feed": {
+                                "entry": []
+                            }
+                        }
+                        
+                        for entry in parsed.entries:
+                            result["feed"]["entry"].append({
+                                "title": entry.get("title", ""),
+                                "id": entry.get("id", ""),
+                                "summary": entry.get("summary", ""),
+                                "published": entry.get("published", ""),
+                                "updated": entry.get("updated", ""),
+                                "author": [{"name": author.get("name", "")} for author in entry.get("authors", [])],
+                                "arxiv:primary_category": {"term": entry.get("arxiv_primary_category", {}).get("term", "")}
+                            })
+                        
+                        return result
+                        
+                    except ImportError:
+                        # Fallback: simple XML parsing
+                        logger.warning("feedparser not available, skipping arXiv search")
+                        return None
+                else:
+                    logger.warning(f"HTTP {response.status} for {url}")
+                    
+        except Exception as e:
+            logger.warning(f"arXiv request failed: {e}")
+        
+        return None
+    
+    async def wiki_search(self, query: str, k: int = 3) -> List[SearchResult]:
+        """Search Wikipedia using MediaWiki API with health checks and timeouts."""
+        provider = 'wikipedia'
+        
+        # Check provider health before attempting
+        if not self._check_provider_health(provider):
+            logger.warning(f"Wikipedia provider circuit breaker open, skipping request")
+            return []
+        
+        start_time = time.time()
+        try:
+            # Use OpenSearch API for faster, simpler results
             search_url = "https://en.wikipedia.org/w/api.php"
             search_params = {
-                "action": "query",
+                "action": "opensearch",
                 "format": "json",
-                "list": "search",
-                "srsearch": query,
-                "srlimit": k * 2,  # Get more to filter
-                "srnamespace": 0,  # Main namespace only
-                "srwhat": "text"
+                "search": query,
+                "limit": k,
+                "namespace": 0,
+                "redirects": "resolve"
             }
             
-            search_data = await self._make_request_with_retry(search_url, params=search_params)
-            if not search_data or "query" not in search_data:
+            # Use provider-specific timeout
+            timeout = self._get_provider_timeout(provider)
+            search_data = await asyncio.wait_for(
+                self._make_request_with_retry(search_url, params=search_params),
+                timeout=timeout
+            )
+            
+            if not search_data or len(search_data) < 4:
                 return []
             
+            # OpenSearch returns [query, titles, descriptions, urls]
+            titles = search_data[1]
+            descriptions = search_data[2] 
+            urls = search_data[3]
+            
             results = []
-            for item in search_data["query"]["search"][:k]:
+            for i, (title, description, url) in enumerate(zip(titles, descriptions, urls)):
                 try:
-                    # Get page summary
-                    page_title = quote_plus(item["title"])
-                    summary_url = f"{api_url}{page_title}"
+                    result = SearchResult(
+                        title=title,
+                        url=url,
+                        snippet=description[:300] + "..." if description else "Wikipedia article",
+                        domain="wikipedia.org",
+                        provider=SearchProvider.MEDIAWIKI,
+                        metadata={
+                            "source": "opensearch_api"
+                        }
+                    )
+                    result.relevance_score = self._calculate_relevance_score(result, query)
+                    results.append(result)
                     
-                    summary_data = await self._make_request_with_retry(summary_url)
-                    if summary_data and "extract" in summary_data:
-                        result = SearchResult(
-                            title=item["title"],
-                            url=summary_data.get("content_urls", {}).get("desktop", {}).get("page", ""),
-                            snippet=summary_data["extract"][:300] + "...",
-                            domain="wikipedia.org",
-                            provider=SearchProvider.MEDIAWIKI,
-                            metadata={
-                                "page_id": item["pageid"],
-                                "word_count": item.get("wordcount", 0)
-                            }
-                        )
-                        result.relevance_score = self._calculate_relevance_score(result, query)
-                        results.append(result)
-                        
-                        # Reduced delay for better performance
-                        await asyncio.sleep(0.01)
-                        
                 except Exception as e:
                     logger.warning(f"Error processing Wikipedia result: {e}")
                     continue
             
+            # Record success
+            response_time = time.time() - start_time
+            self._record_provider_success(provider, response_time)
+            logger.info(f"wiki search returned {len(results)} results")
+            
             return results
             
+        except asyncio.TimeoutError:
+            logger.warning(f"Wikipedia search timeout after {timeout}s")
+            self._record_provider_failure(provider)
+            return []
         except Exception as e:
             logger.error(f"Wikipedia search error: {e}")
+            self._record_provider_failure(provider)
             return []
     
     async def free_web_search(self, query: str, k: int = 5) -> List[SearchResult]:
@@ -351,8 +588,8 @@ class ZeroBudgetRetrieval:
                     result.relevance_score = self._calculate_relevance_score(result, query)
                     results.append(result)
                     
-                    # Polite delay
-                    await asyncio.sleep(0.1)
+                    # Minimal delay for performance
+                    await asyncio.sleep(0.01)
                     
                 except Exception as e:
                     logger.warning(f"Error processing StackExchange result: {e}")
@@ -397,8 +634,8 @@ class ZeroBudgetRetrieval:
                     result.relevance_score = self._calculate_relevance_score(result, query)
                     results.append(result)
                     
-                    # Polite delay
-                    await asyncio.sleep(0.1)
+                    # Minimal delay for performance
+                    await asyncio.sleep(0.01)
                     
                 except Exception as e:
                     logger.warning(f"Error processing MDN result: {e}")
@@ -450,8 +687,8 @@ class ZeroBudgetRetrieval:
                     result.relevance_score = self._calculate_relevance_score(result, query)
                     results.append(result)
                     
-                    # Polite delay
-                    await asyncio.sleep(0.1)
+                    # Minimal delay for performance
+                    await asyncio.sleep(0.01)
                     
                 except Exception as e:
                     logger.warning(f"Error processing GitHub result: {e}")
@@ -517,8 +754,8 @@ class ZeroBudgetRetrieval:
                     result.relevance_score = self._calculate_relevance_score(result, query)
                     results.append(result)
                     
-                    # Polite delay
-                    await asyncio.sleep(0.1)
+                    # Minimal delay for performance
+                    await asyncio.sleep(0.01)
                     
                 except Exception as e:
                     logger.warning(f"Error processing OpenAlex result: {e}")
@@ -543,12 +780,13 @@ class ZeroBudgetRetrieval:
                 "sortOrder": "descending"
             }
             
-            data = await self._make_request_with_retry(api_url, params=params)
-            if not data or "feed" not in data or "entry" not in data["feed"]:
+            # arXiv returns XML, not JSON - need special handling
+            xml_data = await self._make_arxiv_request(api_url, params=params)
+            if not xml_data:
                 return []
             
             results = []
-            for entry in data["feed"]["entry"][:k]:
+            for entry in xml_data.get("feed", {}).get("entry", [])[:k]:
                 try:
                     # Get authors
                     authors = []
@@ -572,8 +810,8 @@ class ZeroBudgetRetrieval:
                     result.relevance_score = self._calculate_relevance_score(result, query)
                     results.append(result)
                     
-                    # Polite delay
-                    await asyncio.sleep(0.1)
+                    # Minimal delay for performance
+                    await asyncio.sleep(0.01)
                     
                 except Exception as e:
                     logger.warning(f"Error processing arXiv result: {e}")
@@ -631,8 +869,8 @@ class ZeroBudgetRetrieval:
                     result.relevance_score = self._calculate_relevance_score(result, query)
                     results.append(result)
                     
-                    # Polite delay
-                    await asyncio.sleep(0.1)
+                    # Minimal delay for performance
+                    await asyncio.sleep(0.01)
                     
                 except Exception as e:
                     logger.warning(f"Error processing YouTube result: {e}")
@@ -791,6 +1029,9 @@ class ZeroBudgetRetrieval:
         Returns:
             SearchResponse with results and metadata
         """
+        # Define a global SLA timeout for the entire search method
+        GLOBAL_SEARCH_TIMEOUT_MS = int(os.getenv("GLOBAL_SEARCH_TIMEOUT_MS", "2800"))  # 2.8s to leave buffer for orchestrator
+        
         start_time = time.time()
         trace_id = str(uuid.uuid4())
         
@@ -799,161 +1040,304 @@ class ZeroBudgetRetrieval:
             "k": k,
             "use_wiki": use_wiki,
             "use_web": use_web,
-            "trace_id": trace_id
+            "trace_id": trace_id,
+            "timeout_ms": GLOBAL_SEARCH_TIMEOUT_MS
         })
         
-        # Check cache first
-        cache_key = self._generate_cache_key(query, "combined", k)
-        cached_results = await self._cache_get(cache_key)
-        
-        if cached_results:
-            # Reconstruct SearchResult objects from cache
-            results = []
-            for cached in cached_results:
-                result = SearchResult(
-                    title=cached["title"],
-                    url=cached["url"],
-                    snippet=cached["snippet"],
-                    domain=cached["domain"],
-                    provider=SearchProvider(cached["provider"]),
-                    relevance_score=cached["relevance_score"],
-                    timestamp=datetime.fromisoformat(cached["timestamp"]),
-                    metadata=cached.get("metadata", {})
+        # Create a wrapper function for the entire search operation
+        async def perform_search():
+            # Check cache first
+            cache_key = self._generate_cache_key(query, "combined", k)
+            cached_results = await self._cache_get(cache_key)
+            
+            if cached_results:
+                # Reconstruct SearchResult objects from cache
+                results = []
+                for cached in cached_results:
+                    result = SearchResult(
+                        title=cached["title"],
+                        url=cached["url"],
+                        snippet=cached["snippet"],
+                        domain=cached["domain"],
+                        provider=SearchProvider(cached["provider"]),
+                        relevance_score=cached["relevance_score"],
+                        timestamp=datetime.fromisoformat(cached["timestamp"]),
+                        metadata=cached.get("metadata", {})
+                    )
+                    results.append(result)
+                
+                processing_time = (time.time() - start_time) * 1000
+                
+                logger.info(f"Cache hit for query: {query}", extra={
+                    "query": query,
+                    "cache_hit": True,
+                    "results_count": len(results),
+                    "processing_time_ms": processing_time,
+                    "trace_id": trace_id
+                })
+                
+                return SearchResponse(
+                    query=query,
+                    results=results[:k],
+                    total_results=len(results),
+                    cache_hit=True,
+                    providers_used=[SearchProvider.CACHE],
+                    processing_time_ms=processing_time,
+                    trace_id=trace_id
                 )
-                results.append(result)
+            
+            # Perform fresh search with parallel execution
+            all_results = []
+            providers_used = []
+            
+            # Create tasks for parallel execution
+            tasks = []
+            
+            # Wikipedia search
+            if use_wiki:
+                tasks.append(("wiki", self.wiki_search(query, k=min(k, 3))))
+            
+            # StackExchange search
+            tasks.append(("stackexchange", self.stackexchange_search(query, k=min(k, 2))))
+            
+            # MDN search
+            tasks.append(("mdn", self.mdn_search(query, k=min(k, 2))))
+            
+            # GitHub search
+            tasks.append(("github", self.github_search(query, k=min(k, 2))))
+            
+            # OpenAlex search
+            tasks.append(("openalex", self.openalex_search(query, k=min(k, 2))))
+            
+            # arXiv search
+            tasks.append(("arxiv", self.arxiv_search(query, k=min(k, 2))))
+            
+            # YouTube search
+            tasks.append(("youtube", self.youtube_search(query, k=min(k, 2))))
+            
+            # Web search (fallback) - always include DuckDuckGo for reliability
+            if use_web:
+                tasks.append(("web", self.free_web_search(query, k=min(k, 3))))
+            
+            # Always add DuckDuckGo as backup source for reliability
+            tasks.append(("duckduckgo", self._duckduckgo_search(query, k=min(k, 2))))
+            
+            # Filter out unhealthy providers
+            healthy_tasks = []
+            for task_name, task_func in tasks:
+                if self._check_provider_health(task_name):
+                    healthy_tasks.append((task_name, task_func))
+                else:
+                    logger.info(f"Skipping {task_name} due to circuit breaker")
+            
+            if not healthy_tasks:
+                logger.warning("All providers are unhealthy, returning empty results")
+                return SearchResponse(
+                    results=[],
+                    total_results=0,
+                    cache_hit=False,
+                    processing_time_ms=0,
+                    providers_used=[],
+                    trace_id=trace_id,
+                    error_message="All providers are unhealthy"
+                )
+            
+            # Execute all tasks in parallel with strict timeout
+            logger.info(f"Executing {len(healthy_tasks)} healthy search tasks in parallel")
+            
+            # Execute tasks in parallel with individual timeouts
+            async def execute_with_timeout(task_name, task_func):
+                try:
+                    provider_timeout = self._get_provider_timeout(task_name)
+                    logger.info(f"Executing {task_name} with {provider_timeout*1000:.0f}ms timeout")
+                    
+                    result = await asyncio.wait_for(task_func, timeout=provider_timeout)
+                    return result
+                    
+                except asyncio.TimeoutError:
+                    logger.warning(f"{task_name} timed out after {provider_timeout*1000:.0f}ms")
+                    self._record_provider_failure(task_name)
+                    return []
+                except Exception as e:
+                    logger.error(f"{task_name} failed: {e}")
+                    self._record_provider_failure(task_name)
+                    return []
+            
+            # Execute all tasks in parallel
+            tasks_with_timeouts = [
+                execute_with_timeout(task_name, task_func) 
+                for task_name, task_func in healthy_tasks
+            ]
+            
+            results = await asyncio.gather(*tasks_with_timeouts, return_exceptions=True)
+            
+            # Handle any exceptions from gather
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    logger.error(f"Task {healthy_tasks[i][0]} failed with exception: {result}")
+                    results[i] = []
+            
+            # Process results
+            process_start = time.time()
+            for i, (provider_name, result) in enumerate(zip([task[0] for task in healthy_tasks], results)):
+                if isinstance(result, Exception):
+                    logger.error(f"{provider_name} search failed: {result}")
+                    continue
+                
+                if result:
+                    all_results.extend(result)
+                    if provider_name == "wiki":
+                        providers_used.append(SearchProvider.MEDIAWIKI)
+                    elif provider_name == "stackexchange":
+                        providers_used.append(SearchProvider.STACKEXCHANGE)
+                    elif provider_name == "mdn":
+                        providers_used.append(SearchProvider.MDN)
+                    elif provider_name == "github":
+                        providers_used.append(SearchProvider.GITHUB)
+                    elif provider_name == "openalex":
+                        providers_used.append(SearchProvider.OPENALEX)
+                    elif provider_name == "arxiv":
+                        providers_used.append(SearchProvider.ARXIV)
+                    elif provider_name == "youtube":
+                        providers_used.append(SearchProvider.YOUTUBE)
+                    elif provider_name == "web":
+                        providers_used.extend([r.provider for r in result])
+                    elif provider_name == "duckduckgo":
+                        providers_used.append(SearchProvider.DUCKDUCKGO)
+                    
+                    logger.info(f"{provider_name} search returned {len(result)} results")
+            
+            process_time = (time.time() - process_start) * 1000
+            logger.info(f"Results processing took {process_time:.2f}ms")
+            
+            # Deduplicate and rank results
+            dedup_start = time.time()
+            deduplicated = self._deduplicate_results(all_results)
+            dedup_time = (time.time() - dedup_start) * 1000
+            logger.info(f"Deduplication took {dedup_time:.2f}ms")
+            
+            # Sort by relevance score
+            sort_start = time.time()
+            sorted_results = sorted(deduplicated, key=lambda x: x.relevance_score, reverse=True)
+            sort_time = (time.time() - sort_start) * 1000
+            logger.info(f"Sorting took {sort_time:.2f}ms")
+            
+            # Take top k results
+            final_results = sorted_results[:k]
+            
+            # Cache results (non-blocking)
+            cache_start = time.time()
+            try:
+                cache_data = []
+                for result in final_results:
+                    cache_data.append({
+                        "title": result.title,
+                        "url": result.url,
+                        "snippet": result.snippet,
+                        "domain": result.domain,
+                        "provider": result.provider.value,
+                        "relevance_score": result.relevance_score,
+                        "timestamp": result.timestamp.isoformat(),
+                        "metadata": result.metadata
+                    })
+                
+                # Random TTL between min and max
+                import random
+                ttl_minutes = random.randint(CACHE_TTL_MIN, CACHE_TTL_MAX)
+                
+                # Use asyncio.wait_for to prevent blocking on Redis failures
+                await asyncio.wait_for(
+                    self._cache_set(cache_key, cache_data, ttl_minutes),
+                    timeout=0.5  # 500ms max for caching
+                )
+                cache_time = (time.time() - cache_start) * 1000
+                logger.info(f"Caching took {cache_time:.2f}ms")
+                
+            except asyncio.TimeoutError:
+                cache_time = (time.time() - cache_start) * 1000
+                logger.warning(f"Caching timed out after {cache_time:.2f}ms, continuing without cache")
+            except Exception as e:
+                cache_time = (time.time() - cache_start) * 1000
+                logger.warning(f"Caching failed after {cache_time:.2f}ms: {e}, continuing without cache")
             
             processing_time = (time.time() - start_time) * 1000
             
-            logger.info(f"Cache hit for query: {query}", extra={
+            logger.info(f"Search completed for query: {query}", extra={
                 "query": query,
-                "cache_hit": True,
-                "results_count": len(results),
+                "cache_hit": False,
+                "results_count": len(final_results),
+                "providers_used": [p.value for p in providers_used],
                 "processing_time_ms": processing_time,
                 "trace_id": trace_id
             })
             
             return SearchResponse(
                 query=query,
-                results=results[:k],
-                total_results=len(results),
-                cache_hit=True,
-                providers_used=[SearchProvider.CACHE],
+                results=final_results,
+                total_results=len(final_results),
+                cache_hit=False,
+                providers_used=list(set(providers_used)),
                 processing_time_ms=processing_time,
                 trace_id=trace_id
             )
         
-        # Perform fresh search with parallel execution
-        all_results = []
-        providers_used = []
-        
-        # Create tasks for parallel execution
-        tasks = []
-        
-        # Wikipedia search
-        if use_wiki:
-            tasks.append(("wiki", self.wiki_search(query, k=min(k, 3))))
-        
-        # StackExchange search
-        tasks.append(("stackexchange", self.stackexchange_search(query, k=min(k, 2))))
-        
-        # MDN search
-        tasks.append(("mdn", self.mdn_search(query, k=min(k, 2))))
-        
-        # GitHub search
-        tasks.append(("github", self.github_search(query, k=min(k, 2))))
-        
-        # OpenAlex search
-        tasks.append(("openalex", self.openalex_search(query, k=min(k, 2))))
-        
-        # arXiv search
-        tasks.append(("arxiv", self.arxiv_search(query, k=min(k, 2))))
-        
-        # YouTube search
-        tasks.append(("youtube", self.youtube_search(query, k=min(k, 2))))
-        
-        # Web search (fallback)
-        if use_web:
-            tasks.append(("web", self.free_web_search(query, k=min(k, 3))))
-        
-        # Execute all tasks in parallel
-        logger.info(f"Executing {len(tasks)} search tasks in parallel")
-        results = await asyncio.gather(*[task[1] for task in tasks], return_exceptions=True)
-        
-        # Process results
-        for i, (provider_name, result) in enumerate(zip([task[0] for task in tasks], results)):
-            if isinstance(result, Exception):
-                logger.error(f"{provider_name} search failed: {result}")
-                continue
+        # Execute the search with global timeout
+        try:
+            # Convert milliseconds to seconds for asyncio.wait_for
+            global_timeout = GLOBAL_SEARCH_TIMEOUT_MS / 1000
+            logger.info(f"Enforcing global timeout of {global_timeout:.2f}s")
             
-            if result:
-                all_results.extend(result)
-                if provider_name == "wiki":
-                    providers_used.append(SearchProvider.MEDIAWIKI)
-                elif provider_name == "stackexchange":
-                    providers_used.append(SearchProvider.STACKEXCHANGE)
-                elif provider_name == "mdn":
-                    providers_used.append(SearchProvider.MDN)
-                elif provider_name == "github":
-                    providers_used.append(SearchProvider.GITHUB)
-                elif provider_name == "openalex":
-                    providers_used.append(SearchProvider.OPENALEX)
-                elif provider_name == "arxiv":
-                    providers_used.append(SearchProvider.ARXIV)
-                elif provider_name == "youtube":
-                    providers_used.append(SearchProvider.YOUTUBE)
-                elif provider_name == "web":
-                    providers_used.extend([r.provider for r in result])
-                
-                logger.info(f"{provider_name} search returned {len(result)} results")
+            return await asyncio.wait_for(perform_search(), timeout=global_timeout)
+            
+        except asyncio.TimeoutError:
+            # If we hit the global timeout, return partial results
+            logger.warning(f"Global search timeout after {GLOBAL_SEARCH_TIMEOUT_MS}ms, returning partial results")
+            
+            # Return a minimal response with error message
+            return SearchResponse(
+                query=query,
+                results=[],  # Empty results
+                total_results=0,
+                cache_hit=False,
+                providers_used=[],
+                processing_time_ms=GLOBAL_SEARCH_TIMEOUT_MS,
+                trace_id=trace_id,
+                error_message=f"Search timed out after {GLOBAL_SEARCH_TIMEOUT_MS}ms"
+            )
+    
+    def get_health_summary(self) -> Dict[str, Any]:
+        """Get overall health summary for monitoring."""
+        health_status = self.get_provider_health_status()
         
-        # Deduplicate and rank results
-        deduplicated = self._deduplicate_results(all_results)
+        # Calculate overall health metrics
+        total_providers = len(health_status)
+        healthy_providers = sum(1 for h in health_status.values() if h['status'] == 'healthy')
+        degraded_providers = sum(1 for h in health_status.values() if h['status'] == 'degraded')
+        failing_providers = sum(1 for h in health_status.values() if h['status'] == 'failing')
+        circuit_open_providers = sum(1 for h in health_status.values() if h['status'] == 'circuit_open')
         
-        # Sort by relevance score
-        sorted_results = sorted(deduplicated, key=lambda x: x.relevance_score, reverse=True)
+        # Calculate average response times
+        avg_response_times = {}
+        for provider, health in health_status.items():
+            if health['total_requests'] > 0:
+                avg_response_times[provider] = health['avg_response_time']
         
-        # Take top k results
-        final_results = sorted_results[:k]
-        
-        # Cache results
-        cache_data = []
-        for result in final_results:
-            cache_data.append({
-                "title": result.title,
-                "url": result.url,
-                "snippet": result.snippet,
-                "domain": result.domain,
-                "provider": result.provider.value,
-                "relevance_score": result.relevance_score,
-                "timestamp": result.timestamp.isoformat(),
-                "metadata": result.metadata
-            })
-        
-        # Random TTL between min and max
-        import random
-        ttl_minutes = random.randint(CACHE_TTL_MIN, CACHE_TTL_MAX)
-        await self._cache_set(cache_key, cache_data, ttl_minutes)
-        
-        processing_time = (time.time() - start_time) * 1000
-        
-        logger.info(f"Search completed for query: {query}", extra={
-            "query": query,
-            "cache_hit": False,
-            "results_count": len(final_results),
-            "providers_used": [p.value for p in providers_used],
-            "processing_time_ms": processing_time,
-            "trace_id": trace_id
-        })
-        
-        return SearchResponse(
-            query=query,
-            results=final_results,
-            total_results=len(final_results),
-            cache_hit=False,
-            providers_used=list(set(providers_used)),
-            processing_time_ms=processing_time,
-            trace_id=trace_id
-        )
+        return {
+            'overall_health': {
+                'total_providers': total_providers,
+                'healthy_providers': healthy_providers,
+                'degraded_providers': degraded_providers,
+                'failing_providers': failing_providers,
+                'circuit_open_providers': circuit_open_providers,
+                'health_percentage': (healthy_providers / total_providers * 100) if total_providers > 0 else 0
+            },
+            'provider_details': health_status,
+            'performance_metrics': {
+                'avg_response_times': avg_response_times,
+                'total_requests': sum(h['total_requests'] for h in health_status.values())
+            },
+            'timestamp': time.time()
+        }
 
 
 # Global instance - lazy initialization

@@ -56,6 +56,9 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
+# Global flag to prevent duplicate config summaries
+_config_summary_shown = False
+
 
 class Environment(str, Enum):
     """Application environment types."""
@@ -333,6 +336,16 @@ class CentralConfig(SecureSettings):
     redis_url: Optional[RedisDsn] = Field(
         default="redis://localhost:6379/0", description="Redis connection URL"
     )
+    
+    @field_validator('redis_url', mode='before')
+    @classmethod
+    def fix_redis_url_scheme(cls, v: Any) -> Any:
+        """Fix Redis URL scheme if incorrect."""
+        if isinstance(v, str) and v.startswith('http://'):
+            # Convert http:// to redis:// for Redis URLs
+            fixed_url = v.replace('http://', 'redis://', 1)
+            return fixed_url
+        return v
     redis_password: Optional[SecretStr] = Field(
         default=None, description="Redis password"
     )
@@ -823,6 +836,11 @@ class CentralConfig(SecureSettings):
 
     def print_startup_config(self) -> None:
         """Print startup configuration summary."""
+        global _config_summary_shown
+        if _config_summary_shown:
+            return  # Already shown, skip duplicate
+        
+        _config_summary_shown = True
         logger.info("=== Configuration Summary ===")
         logger.info(f"Environment: {self.environment}")
         logger.info(f"Debug Mode: {self.debug}")

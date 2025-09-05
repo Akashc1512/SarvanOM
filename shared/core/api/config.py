@@ -35,6 +35,13 @@ from functools import lru_cache
 from enum import Enum
 import warnings
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv(override=False)  # Don't override existing env vars
+except ImportError:
+    pass  # dotenv is optional
+
 from pydantic import (
     Field,
     field_validator,
@@ -246,6 +253,16 @@ class CacheSettings(SecureSettings):
     redis_url: Optional[RedisDsn] = Field(
         default="redis://localhost:6379/0", description="Redis connection URL"
     )
+    
+    @field_validator('redis_url', mode='before')
+    @classmethod
+    def fix_redis_url_scheme(cls, v: Any) -> Any:
+        """Fix Redis URL scheme if incorrect."""
+        if isinstance(v, str) and v.startswith('http://'):
+            # Convert http:// to redis:// for Redis URLs
+            fixed_url = v.replace('http://', 'redis://', 1)
+            return fixed_url
+        return v
     redis_password: Optional[SecretStr] = Field(
         default=None, description="Redis password"
     )
@@ -682,6 +699,27 @@ class Settings(
         default=None, description="Trusted host headers"
     )
     behind_proxy: bool = Field(default=False, description="Running behind proxy")
+    
+    @field_validator('trusted_hosts', mode='before')
+    @classmethod
+    def parse_trusted_hosts(cls, v):
+        """Parse trusted_hosts from various formats"""
+        if v is None:
+            return None
+        if isinstance(v, list):
+            return v
+        if isinstance(v, str):
+            # Try to parse as JSON first
+            try:
+                import json
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except (json.JSONDecodeError, TypeError):
+                pass
+            # Fallback to comma-separated
+            return [host.strip() for host in v.split(',') if host.strip()]
+        return v
 
     # Performance
     request_timeout: conint(ge=1) = Field(

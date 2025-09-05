@@ -42,6 +42,12 @@ class OpenAIClient:
             logger.error(f"Failed to initialize OpenAI client: {e}")
             self.client = None
     
+    async def generate_completion(self, prompt: str, model: str = "gpt-4o-mini", 
+                                max_tokens: int = 150, temperature: float = 0.7) -> Optional[str]:
+        """Generate completion using OpenAI API (alias for compatibility)."""
+        result = await self.generate_text(prompt, max_tokens, temperature, model)
+        return result.get("content") if result.get("success") else None
+    
     async def generate_text(
         self, 
         prompt: str, 

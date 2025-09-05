@@ -276,6 +276,10 @@ class EmbeddingSingleton:
                         error=str(e))
             return False
     
+    async def get_embedding(self, text: str) -> Optional[List[float]]:
+        """Get embedding for text (alias for compatibility)."""
+        return await self.embed_text(text)
+    
     async def embed_text(self, text: str) -> Optional[List[float]]:
         """
         Generate embedding for text with caching.
@@ -797,6 +801,39 @@ class VectorSingletonService:
         
         return self._service_initialized
     
+    def get_health(self) -> Dict[str, Any]:
+        """Get comprehensive health status for the vector service."""
+        embedding_health = self.embedding_singleton.get_health_status()
+        vector_health = self.vector_store_singleton.get_health_status()
+        
+        # Determine overall status
+        embedding_ok = embedding_health.get('model_loaded', False)
+        vector_ok = vector_health.get('connected', False)
+        
+        if embedding_ok and vector_ok:
+            status = 'healthy'
+        elif embedding_ok or vector_ok:
+            status = 'degraded'
+        else:
+            status = 'unhealthy'
+        
+        return {
+            'status': status,
+            'service_initialized': self._service_initialized,
+            'provider': self.config.vector_db_provider,
+            'embedding': embedding_health,
+            'vector_store': vector_health,
+            'config': {
+                'model': self.config.embedding_model,
+                'collection': self.config.vector_collection_name,
+                'cache_size': self.config.embedding_cache_size
+            }
+        }
+    
+    async def get_embedding(self, text: str) -> Optional[List[float]]:
+        """Get embedding for text (delegates to embedding singleton)."""
+        return await self.embedding_singleton.embed_text(text)
+    
     async def warmup(self) -> bool:
         """Perform complete warmup of vector services."""
         if not self.config.vector_warmup_enabled:
@@ -903,7 +940,7 @@ def get_vector_singleton_service() -> VectorSingletonService:
 async def get_vector_singleton_health() -> Dict[str, Any]:
     """Get vector singleton service health for health check endpoints."""
     service = get_vector_singleton_service()
-    return await service.health_check()
+    return service.get_health()  # This is not async
 
 async def warmup_vector_singleton() -> Dict[str, Any]:
     """Execute vector singleton warmup tasks."""

@@ -1,21 +1,17 @@
 """
-Multi-Lane Orchestrator - Always-On Parallel Query Processing
-============================================================
+Multi-Lane Orchestrator - Always-On Parallel Query Processing with Deadline Enforcement
+===============================================================================
 
-Provides resilient query processing through parallel lanes:
-- Web/Retrieval lane (free sources first)
-- Vector lane (embeddings + similarity search)  
-- Knowledge Graph lane (ArangoDB)
-- LLM synthesis lane (with B2 policy)
-
-Features:
+Provides resilient query processing through parallel lanes with strict SLA enforcement:
+- Global 3,000 ms deadline per query
+- Per-lane budget allocation based on intent classification
 - Non-blocking orchestration with strict budgets
 - Graceful degradation with partial results
 - Per-lane timeout enforcement
 - Comprehensive metrics collection
 - Circuit breaker patterns
 
-Maps to Phase B3 requirements for production resilience.
+Maps to Phase B3 requirements for production resilience with SLA compliance.
 """
 
 import os
@@ -29,6 +25,25 @@ import structlog
 
 logger = structlog.get_logger(__name__)
 
+# Environment-driven SLA configuration
+SLA_GLOBAL_MS = int(os.getenv("SLA_GLOBAL_MS", "3000"))
+SLA_ORCHESTRATOR_RESERVE_MS = int(os.getenv("SLA_ORCHESTRATOR_RESERVE_MS", "200"))
+SLA_LLM_MS = int(os.getenv("SLA_LLM_MS", "900"))
+SLA_WEB_MS = int(os.getenv("SLA_WEB_MS", "1000"))
+SLA_VECTOR_MS = int(os.getenv("SLA_VECTOR_MS", "600"))
+SLA_KG_MS = int(os.getenv("SLA_KG_MS", "500"))
+SLA_YT_MS = int(os.getenv("SLA_YT_MS", "900"))
+SLA_TTFT_MAX_MS = int(os.getenv("SLA_TTFT_MAX_MS", "800"))
+MODE_DEFAULT = os.getenv("MODE_DEFAULT", "standard")  # fast|standard|deep
+
+
+class QueryIntent(Enum):
+    """Query intent classification for budget allocation."""
+    SIMPLE = "simple"        # Basic questions, definitions
+    TECHNICAL = "technical"  # Code, algorithms, specifications
+    RESEARCH = "research"    # Academic, comparative analysis
+    MULTIMEDIA = "multimedia"  # Video, demo, visual content
+
 
 class LaneStatus(Enum):
     """Status of individual processing lanes."""
@@ -38,6 +53,154 @@ class LaneStatus(Enum):
     TIMEOUT = "timeout"
     FAILED = "failed"
     SKIPPED = "skipped"
+    DEFERRED = "deferred"  # For lanes that couldn't meet budget
+
+
+@dataclass
+class LaneBudget:
+    """Budget allocation for a processing lane."""
+    lane_name: str
+    allocated_ms: int
+    start_time: float = 0.0
+    end_time: float = 0.0
+    elapsed_ms: float = 0.0
+    status: LaneStatus = LaneStatus.PENDING
+    items_returned: int = 0
+    timed_out: bool = False
+    error_message: Optional[str] = None
+    
+    @property
+    def remaining_ms(self) -> float:
+        """Get remaining budget in milliseconds."""
+        if self.start_time == 0:
+            return self.allocated_ms
+        elapsed = (time.time() - self.start_time) * 1000
+        return max(0, self.allocated_ms - elapsed)
+    
+    def start_execution(self):
+        """Mark lane execution start."""
+        self.start_time = time.time()
+        self.status = LaneStatus.RUNNING
+    
+    def complete_execution(self, status: LaneStatus, items: int = 0, error: str = None):
+        """Mark lane execution completion."""
+        self.end_time = time.time()
+        self.elapsed_ms = (self.end_time - self.start_time) * 1000
+        self.status = status
+        self.items_returned = items
+        self.error_message = error
+        self.timed_out = (status == LaneStatus.TIMEOUT)
+
+
+@dataclass
+class OrchestrationDeadline:
+    """Global deadline management for query orchestration."""
+    query_start_time: float
+    global_deadline_ms: int
+    orchestrator_reserve_ms: int
+    ttft_target_ms: int
+    
+    def __post_init__(self):
+        """Initialize deadline tracking."""
+        self.deadline_at = self.query_start_time + (self.global_deadline_ms / 1000)
+        self.slack_pool_ms = 0.0
+    
+    @property
+    def remaining_ms(self) -> float:
+        """Get remaining time until global deadline."""
+        remaining = (self.deadline_at - time.time()) * 1000
+        return max(0, remaining)
+    
+    @property
+    def ttft_remaining_ms(self) -> float:
+        """Get remaining time for TTFT target."""
+        elapsed = (time.time() - self.query_start_time) * 1000
+        return max(0, self.ttft_target_ms - elapsed)
+    
+    def can_allocate_lane(self, requested_ms: int) -> bool:
+        """Check if lane budget can be allocated."""
+        return self.remaining_ms >= (requested_ms + self.orchestrator_reserve_ms)
+    
+    def add_to_slack_pool(self, ms: float):
+        """Add unused time to slack pool."""
+        self.slack_pool_ms += ms
+    
+    def get_slack_pool(self) -> float:
+        """Get available slack pool time."""
+        return self.slack_pool_ms
+
+
+class IntentClassifier:
+    """Lightweight intent classification for budget allocation."""
+    
+    @staticmethod
+    def classify_query(query: str) -> QueryIntent:
+        """Classify query intent for budget allocation."""
+        query_lower = query.lower()
+        words = query_lower.split()
+        
+        # Multimedia indicators
+        multimedia_terms = ['video', 'watch', 'demo', 'show me', 'tutorial', 'screencast']
+        if any(term in query_lower for term in multimedia_terms):
+            return QueryIntent.MULTIMEDIA
+        
+        # Technical indicators
+        technical_terms = ['time complexity', 'rfc', 'error code', 'api', 'algorithm', 'implementation']
+        if any(term in query_lower for term in technical_terms):
+            return QueryIntent.TECHNICAL
+        
+        # Research indicators
+        if len(words) > 15 or any(term in query_lower for term in ['compare', 'survey', 'systematic', 'analysis', 'study']):
+            return QueryIntent.RESEARCH
+        
+        # Default to simple
+        return QueryIntent.SIMPLE
+    
+    @staticmethod
+    def get_budget_table(intent: QueryIntent, mode: str = "standard") -> Dict[str, int]:
+        """Get budget allocation table based on intent and mode."""
+        base_budgets = {
+            QueryIntent.SIMPLE: {
+                'retrieval': SLA_WEB_MS,
+                'vector': SLA_VECTOR_MS,
+                'knowledge_graph': SLA_KG_MS,
+                'youtube': 0,  # No video intent
+                'llm_synthesis': SLA_LLM_MS
+            },
+            QueryIntent.TECHNICAL: {
+                'retrieval': SLA_WEB_MS,
+                'vector': SLA_VECTOR_MS,
+                'knowledge_graph': SLA_KG_MS,
+                'youtube': 0,  # No video intent
+                'llm_synthesis': SLA_LLM_MS
+            },
+            QueryIntent.RESEARCH: {
+                'retrieval': SLA_WEB_MS,
+                'vector': SLA_VECTOR_MS,
+                'knowledge_graph': SLA_KG_MS,
+                'youtube': 0,  # No video intent
+                'llm_synthesis': SLA_LLM_MS
+            },
+            QueryIntent.MULTIMEDIA: {
+                'retrieval': SLA_WEB_MS,
+                'vector': SLA_VECTOR_MS,
+                'knowledge_graph': SLA_KG_MS,
+                'youtube': SLA_YT_MS,  # Full video budget
+                'llm_synthesis': SLA_LLM_MS
+            }
+        }
+        
+        # Apply mode multipliers
+        mode_multipliers = {
+            "fast": 0.7,      # 30% faster, less thorough
+            "standard": 1.0,  # Normal operation
+            "deep": 2.0       # 2x budget for thorough analysis
+        }
+        
+        multiplier = mode_multipliers.get(mode, 1.0)
+        budgets = base_budgets[intent]
+        
+        return {lane: int(budget * multiplier) for lane, budget in budgets.items()}
 
 
 @dataclass
@@ -69,6 +232,10 @@ class LaneResult:
     start_time: float = 0.0
     end_time: float = 0.0
     timeout_seconds: float = 0.0
+    budget_ms: float = 0.0
+    elapsed_ms: float = 0.0
+    items_returned: int = 0
+    timed_out: bool = False
     
     @property
     def duration_ms(self) -> float:
@@ -85,7 +252,7 @@ class LaneResult:
     @property
     def is_partial(self) -> bool:
         """Check if lane provided partial results."""
-        return self.status in [LaneStatus.TIMEOUT, LaneStatus.FAILED] and self.data is not None
+        return self.status in [LaneStatus.TIMEOUT, LaneStatus.FAILED, LaneStatus.DEFERRED] and self.data is not None
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -96,6 +263,10 @@ class LaneResult:
             'error': self.error,
             'duration_ms': self.duration_ms,
             'timeout_seconds': self.timeout_seconds,
+            'budget_ms': self.budget_ms,
+            'elapsed_ms': self.elapsed_ms,
+            'items_returned': self.items_returned,
+            'timed_out': self.timed_out,
             'is_successful': self.is_successful,
             'is_partial': self.is_partial
         }
@@ -125,6 +296,12 @@ class OrchestrationConfig:
     failure_threshold: int = 5
     circuit_timeout_seconds: int = 60
     
+    # SLA configuration
+    sla_global_ms: int = SLA_GLOBAL_MS
+    sla_orchestrator_reserve_ms: int = SLA_ORCHESTRATOR_RESERVE_MS
+    sla_ttft_max_ms: int = SLA_TTFT_MAX_MS
+    mode: str = MODE_DEFAULT
+    
     @classmethod
     def from_environment(cls) -> 'OrchestrationConfig':
         """Load configuration from environment variables."""
@@ -140,34 +317,50 @@ class OrchestrationConfig:
             max_concurrent_lanes=int(os.getenv('MAX_CONCURRENT_LANES', '4')),
             circuit_breaker_enabled=os.getenv('CIRCUIT_BREAKER_ENABLED', 'true').lower() == 'true',
             failure_threshold=int(os.getenv('CIRCUIT_FAILURE_THRESHOLD', '5')),
-            circuit_timeout_seconds=int(os.getenv('CIRCUIT_TIMEOUT_S', '60'))
+            circuit_timeout_seconds=int(os.getenv('CIRCUIT_TIMEOUT_S', '60')),
+            sla_global_ms=int(os.getenv('SLA_GLOBAL_MS', '3000')),
+            sla_orchestrator_reserve_ms=int(os.getenv('SLA_ORCHESTRATOR_RESERVE_MS', '200')),
+            sla_ttft_max_ms=int(os.getenv('SLA_TTFT_MAX_MS', '800')),
+            mode=os.getenv('MODE_DEFAULT', 'standard')
         )
     
     def get_lane_configs(self) -> Dict[str, LaneConfig]:
-        """Get configuration for each lane."""
+        """Get configuration for each lane with SLA-driven timeouts."""
         return {
             'retrieval': LaneConfig(
                 name='retrieval',
-                timeout_seconds=self.retrieval_timeout,
+                timeout_seconds=SLA_WEB_MS / 1000,  # Use SLA configuration
                 priority=1,
                 required=False
             ),
             'vector': LaneConfig(
                 name='vector', 
-                timeout_seconds=self.vector_timeout,
+                timeout_seconds=SLA_VECTOR_MS / 1000,  # Use SLA configuration
                 priority=2,
                 required=False
             ),
             'knowledge_graph': LaneConfig(
                 name='knowledge_graph',
-                timeout_seconds=self.kg_timeout,
+                timeout_seconds=SLA_KG_MS / 1000,  # Use SLA configuration
                 priority=3,
                 required=False
             ),
+            'youtube': LaneConfig(
+                name='youtube',
+                timeout_seconds=SLA_YT_MS / 1000,  # Use SLA configuration
+                priority=4,
+                required=False  # YouTube is optional, never blocks synthesis
+            ),
+            'index_fabric': LaneConfig(
+                name='index_fabric',
+                timeout_seconds=3000 / 1000,  # 3s for the entire index fabric fusion
+                priority=5,
+                required=False  # Index fabric is optional but high value
+            ),
             'llm_synthesis': LaneConfig(
                 name='llm_synthesis',
-                timeout_seconds=self.llm_timeout,
-                priority=4,
+                timeout_seconds=SLA_LLM_MS / 1000,  # Use SLA configuration
+                priority=6,
                 required=True  # LLM synthesis is required for final answer
             )
         }
@@ -451,6 +644,155 @@ class MultiLaneOrchestrator:
                 timeout_seconds=self.lane_configs[lane_name].timeout_seconds
             )
     
+    async def _execute_youtube_lane(self, query: str, context: Dict[str, Any]) -> LaneResult:
+        """Execute YouTube retrieval lane with zero-budget constraints."""
+        lane_name = "youtube"
+        start_time = time.time()
+        
+        try:
+            # Import YouTube retrieval service
+            from services.retrieval.youtube_retrieval import get_youtube_retrieval
+            
+            # Check if YouTube should execute for this query
+            youtube_service = get_youtube_retrieval()
+            
+            if not youtube_service._should_execute_youtube(query):
+                return LaneResult(
+                    lane_name=lane_name,
+                    status=LaneStatus.SKIPPED,
+                    data={'reason': 'no_video_intent'},
+                    start_time=start_time,
+                    end_time=time.time(),
+                    timeout_seconds=self.lane_configs[lane_name].timeout_seconds
+                )
+            
+            # Execute YouTube search with strict timeout
+            youtube_response = await asyncio.wait_for(
+                youtube_service.search(query, max_results=5),
+                timeout=self.lane_configs[lane_name].timeout_seconds
+            )
+            
+            # Process results
+            result_data = {
+                'videos': [
+                    {
+                        'video_id': video.video_id,
+                        'title': video.title,
+                        'description': video.description,
+                        'channel_title': video.channel_title,
+                        'published_at': video.published_at,
+                        'duration': video.duration,
+                        'thumbnail_url': video.thumbnail_url,
+                        'view_count': video.view_count,
+                        'relevance_score': video.relevance_score,
+                        'units_spent': video.units_spent,
+                        'fetch_ms': video.fetch_ms
+                    }
+                    for video in youtube_response.videos
+                ],
+                'total_results': youtube_response.total_results,
+                'units_spent': youtube_response.units_spent,
+                'quota_exhausted': youtube_response.quota_exhausted,
+                'timeout_occurred': youtube_response.timeout_occurred,
+                'provider': 'youtube'
+            }
+            
+            return LaneResult(
+                lane_name=lane_name,
+                status=LaneStatus.COMPLETED,
+                data=result_data,
+                start_time=start_time,
+                end_time=time.time(),
+                timeout_seconds=self.lane_configs[lane_name].timeout_seconds
+            )
+            
+        except asyncio.TimeoutError:
+            return LaneResult(
+                lane_name=lane_name,
+                status=LaneStatus.TIMEOUT,
+                error="YouTube lane timeout",
+                start_time=start_time,
+                end_time=time.time(),
+                timeout_seconds=self.lane_configs[lane_name].timeout_seconds
+            )
+        except Exception as e:
+            return LaneResult(
+                lane_name=lane_name,
+                status=LaneStatus.FAILED,
+                error=str(e),
+                start_time=start_time,
+                end_time=time.time(),
+                timeout_seconds=self.lane_configs[lane_name].timeout_seconds
+            )
+    
+    async def _execute_index_fabric_lane(self, query: str, context: Dict[str, Any]) -> LaneResult:
+        """Execute Index Fabric lane that fuses all indexing systems."""
+        lane_name = "index_fabric"
+        start_time = time.time()
+        
+        try:
+            # Import the Index Fabric service
+            from shared.core.services.index_fabric_service import get_index_fabric_service
+            
+            # Get the service instance
+            index_fabric_service = get_index_fabric_service()
+            
+            # Execute the fused search across all indexing lanes
+            fused_result = await asyncio.wait_for(
+                index_fabric_service.search_across_all_lanes(query, max_results=10),
+                timeout=self.lane_configs[lane_name].timeout_seconds
+            )
+            
+            # Process the results
+            result_data = {
+                'total_results': fused_result.total_results,
+                'fused_results': fused_result.fused_results,
+                'lane_results': {
+                    lane_name: {
+                        'success': lane_result.success,
+                        'results_count': len(lane_result.results),
+                        'processing_time_ms': lane_result.processing_time_ms,
+                        'error_message': lane_result.error_message,
+                        'metadata': lane_result.metadata
+                    }
+                    for lane_name, lane_result in fused_result.lane_results.items()
+                },
+                'fusion_time_ms': fused_result.fusion_time_ms,
+                'total_time_ms': fused_result.total_time_ms,
+                'within_budget': fused_result.within_budget,
+                'successful_lanes': fused_result.successful_lanes,
+                'failed_lanes': fused_result.failed_lanes,
+                'provider': 'index_fabric'
+            }
+            
+            return LaneResult(
+                lane_name=lane_name,
+                status=LaneStatus.COMPLETED,
+                data=result_data,
+                start_time=start_time,
+                end_time=time.time(),
+                timeout_seconds=self.lane_configs[lane_name].timeout_seconds
+            )
+            
+        except asyncio.TimeoutError:
+            return LaneResult(
+                lane_name=lane_name,
+                status=LaneStatus.TIMEOUT,
+                error="Index fabric lane timeout",
+                start_time=start_time,
+                end_time=time.time(),
+                timeout_seconds=self.lane_configs[lane_name].timeout_seconds
+            )
+        except Exception as e:
+            return LaneResult(
+                lane_name=lane_name,
+                status=LaneStatus.FAILED,
+                error=str(e),
+                start_time=start_time,
+                end_time=time.time(),
+                timeout_seconds=self.lane_configs[lane_name].timeout_seconds
+            )
+    
     async def _execute_llm_lane(self, query: str, context: Dict[str, Any]) -> LaneResult:
         """Execute LLM synthesis lane."""
         lane_name = "llm_synthesis"
@@ -567,9 +909,94 @@ class MultiLaneOrchestrator:
                 timeout_seconds=lane_config.timeout_seconds
             )
     
+    async def _execute_lane_with_deadline(self, lane_name: str, lane_method, query: str, 
+                                        context: Dict[str, Any], budget_ms: float, 
+                                        deadline: OrchestrationDeadline) -> LaneResult:
+        """Execute a lane with deadline-aware budget enforcement."""
+        lane_config = self.lane_configs[lane_name]
+        
+        # Check circuit breaker
+        if self.config.circuit_breaker_enabled:
+            if self.metrics.should_open_circuit_breaker(lane_name, self.config.failure_threshold):
+                # Check if circuit should be closed
+                last_failure = self.metrics.circuit_breaker_last_failure.get(lane_name, 0)
+                if time.time() - last_failure < self.config.circuit_timeout_seconds:
+                    return LaneResult(
+                        lane_name=lane_name,
+                        status=LaneStatus.SKIPPED,
+                        error="Circuit breaker open",
+                        start_time=time.time(),
+                        end_time=time.time(),
+                        timeout_seconds=lane_config.timeout_seconds,
+                        budget_ms=budget_ms,
+                        elapsed_ms=0
+                    )
+        
+        # Calculate effective timeout (min of lane config and remaining deadline)
+        effective_timeout = min(lane_config.timeout_seconds, deadline.remaining_ms / 1000)
+        
+        if effective_timeout <= 0:
+            return LaneResult(
+                lane_name=lane_name,
+                status=LaneStatus.DEFERRED,
+                error="No remaining deadline for lane execution",
+                start_time=time.time(),
+                end_time=time.time(),
+                timeout_seconds=0,
+                budget_ms=budget_ms,
+                elapsed_ms=0
+            )
+        
+        try:
+            # Execute lane with effective timeout
+            result = await asyncio.wait_for(
+                lane_method(query, context),
+                timeout=effective_timeout
+            )
+            
+            # Update result with budget information
+            result.budget_ms = budget_ms
+            result.elapsed_ms = result.duration_ms
+            
+            # Record successful execution
+            if result.is_successful:
+                self.metrics.circuit_breaker_states[lane_name] = False
+            
+            return result
+            
+        except asyncio.TimeoutError:
+            # Record timeout in circuit breaker
+            self.metrics.circuit_breaker_last_failure[lane_name] = time.time()
+            
+            return LaneResult(
+                lane_name=lane_name,
+                status=LaneStatus.TIMEOUT,
+                error=f"Lane timeout after {effective_timeout}s (budget: {budget_ms}ms)",
+                start_time=time.time(),
+                end_time=time.time(),
+                timeout_seconds=effective_timeout,
+                budget_ms=budget_ms,
+                elapsed_ms=effective_timeout * 1000,
+                timed_out=True
+            )
+        except Exception as e:
+            # Record failure in circuit breaker
+            self.metrics.circuit_breaker_last_failure[lane_name] = time.time()
+            
+            return LaneResult(
+                lane_name=lane_name,
+                status=LaneStatus.FAILED,
+                error=str(e),
+                start_time=time.time(),
+                end_time=time.time(),
+                timeout_seconds=effective_timeout,
+                budget_ms=budget_ms,
+                elapsed_ms=(time.time() - time.time()) * 1000
+            )
+    
     async def orchestrate_query(self, query: str, **kwargs) -> Dict[str, Any]:
         """
-        Orchestrate parallel query processing across all lanes.
+        Orchestrate parallel query processing across all lanes with deadline enforcement.
         
         Args:
             query: User query to process
@@ -580,71 +1007,124 @@ class MultiLaneOrchestrator:
         """
         start_time = time.time()
         
-        logger.info("Starting multi-lane orchestration",
+        # Initialize deadline management
+        deadline = OrchestrationDeadline(
+            query_start_time=start_time,
+            global_deadline_ms=self.config.sla_global_ms,
+            orchestrator_reserve_ms=self.config.sla_orchestrator_reserve_ms,
+            ttft_target_ms=self.config.sla_ttft_max_ms
+        )
+        
+        # Classify query intent for budget allocation
+        intent = IntentClassifier.classify_query(query)
+        budget_table = IntentClassifier.get_budget_table(intent, self.config.mode)
+        
+        logger.info("Starting multi-lane orchestration with deadline enforcement",
                    query=query[:100],
-                   max_time=self.config.max_total_time_seconds)
+                   intent=intent.value,
+                   mode=self.config.mode,
+                   global_deadline_ms=deadline.remaining_ms,
+                   ttft_target_ms=deadline.ttft_remaining_ms)
         
         # Define lane execution methods
         lane_methods = {
             'retrieval': self._execute_retrieval_lane,
             'vector': self._execute_vector_lane,
             'knowledge_graph': self._execute_kg_lane,
+            'youtube': self._execute_youtube_lane,
+            'index_fabric': self._execute_index_fabric_lane,
             'llm_synthesis': self._execute_llm_lane
         }
         
         # Create context object for sharing data between lanes
         context = {}
         
-        # Execute data lanes in parallel (retrieval, vector, KG)
-        data_lanes = ['retrieval', 'vector', 'knowledge_graph']
-        data_tasks = [
-            self._execute_lane_with_timeout(
+        # Execute data lanes in parallel with individual budgets
+        data_lanes = ['retrieval', 'vector', 'knowledge_graph', 'youtube', 'index_fabric']
+        data_tasks = []
+        
+        for lane_name in data_lanes:
+            if not self.lane_configs[lane_name].enabled:
+                continue
+                
+            # Check if lane budget can be allocated
+            lane_budget_ms = budget_table.get(lane_name, 0)
+            if not deadline.can_allocate_lane(lane_budget_ms):
+                logger.warning(f"Lane {lane_name} budget {lane_budget_ms}ms exceeds remaining deadline {deadline.remaining_ms}ms")
+                continue
+            
+            # Create task with lane-specific budget
+            task = self._execute_lane_with_deadline(
                 lane_name, 
                 lane_methods[lane_name], 
                 query, 
-                context
+                context,
+                lane_budget_ms,
+                deadline
             )
-            for lane_name in data_lanes
-            if self.lane_configs[lane_name].enabled
-        ]
+            data_tasks.append(task)
         
-        # Wait for data lanes with overall timeout
+        # Wait for data lanes with remaining deadline
         try:
             data_results = await asyncio.wait_for(
                 asyncio.gather(*data_tasks, return_exceptions=True),
-                timeout=self.config.max_wait_for_required_seconds
+                timeout=deadline.remaining_ms / 1000
             )
         except asyncio.TimeoutError:
-            logger.warning("Data lanes timeout exceeded",
-                          timeout=self.config.max_wait_for_required_seconds)
+            logger.warning("Global deadline exceeded for data lanes",
+                          remaining_ms=deadline.remaining_ms)
             data_results = []
         
         # Process data lane results
         lane_results = []
         for i, result in enumerate(data_results):
             if isinstance(result, Exception):
-                lane_name = data_lanes[i]
+                lane_name = data_lanes[i] if i < len(data_lanes) else 'unknown'
                 lane_results.append(LaneResult(
                     lane_name=lane_name,
                     status=LaneStatus.FAILED,
                     error=str(result),
                     start_time=start_time,
                     end_time=time.time(),
-                    timeout_seconds=self.lane_configs[lane_name].timeout_seconds
+                    timeout_seconds=self.lane_configs[lane_name].timeout_seconds if lane_name in self.lane_configs else 0,
+                    budget_ms=budget_table.get(lane_name, 0),
+                    elapsed_ms=(time.time() - start_time) * 1000
                 ))
             else:
                 lane_results.append(result)
                 # Add successful results to context
                 if result.is_successful or result.is_partial:
                     context[result.lane_name] = result.data
+                
+                # Add unused budget to slack pool
+                if result.elapsed_ms < result.budget_ms:
+                    unused_budget = result.budget_ms - result.elapsed_ms
+                    deadline.add_to_slack_pool(unused_budget)
         
-        # Execute LLM synthesis lane with context from data lanes
-        llm_result = await self._execute_lane_with_timeout(
-            'llm_synthesis',
-            lane_methods['llm_synthesis'],
-            query,
-            context
-        )
+        # Execute LLM synthesis lane with remaining deadline
+        llm_budget_ms = budget_table.get('llm_synthesis', SLA_LLM_MS)
+        if deadline.can_allocate_lane(llm_budget_ms):
+            llm_result = await self._execute_lane_with_deadline(
+                'llm_synthesis',
+                lane_methods['llm_synthesis'],
+                query,
+                context,
+                llm_budget_ms,
+                deadline
+            )
+        else:
+            # Create deferred result if no budget available
+            llm_result = LaneResult(
+                lane_name='llm_synthesis',
+                status=LaneStatus.DEFERRED,
+                error="Insufficient budget for LLM synthesis",
+                start_time=start_time,
+                end_time=time.time(),
+                timeout_seconds=0,
+                budget_ms=llm_budget_ms,
+                elapsed_ms=0
+            )
+        
         lane_results.append(llm_result)
         
         # Calculate total execution time
@@ -662,9 +1142,19 @@ class MultiLaneOrchestrator:
         else:
             overall_success = llm_result.is_successful
         
-        # Build response
+        # Build response with SLA compliance
         response = {
             'query': query,
+            'intent': intent.value,
+            'mode': self.config.mode,
+            'sla_compliance': {
+                'deadline_ms': self.config.sla_global_ms,
+                'ttft_ms': total_time_ms,
+                'finalize_ms': total_time_ms,
+                'answered_under_sla': total_time_ms <= self.config.sla_global_ms,
+                'deadline_remaining_ms': deadline.remaining_ms,
+                'slack_pool_ms': deadline.get_slack_pool()
+            },
             'success': overall_success,
             'total_time_ms': total_time_ms,
             'within_budget': total_time_ms <= (self.config.max_total_time_seconds * 1000),
@@ -717,6 +1207,18 @@ def get_multi_lane_orchestrator() -> MultiLaneOrchestrator:
         _multi_lane_orchestrator = MultiLaneOrchestrator()
     
     return _multi_lane_orchestrator
+
+
+def get_orchestration_metrics() -> Dict[str, Any]:
+    """Get orchestration metrics for /metrics/lanes endpoint."""
+    orchestrator = get_multi_lane_orchestrator()
+    return orchestrator.get_metrics()
+
+
+def get_orchestrator_health() -> Dict[str, Any]:
+    """Get orchestrator health for /metrics/lanes endpoint."""
+    orchestrator = get_multi_lane_orchestrator()
+    return orchestrator.get_health_status()
 
 async def orchestrate_query(query: str, **kwargs) -> Dict[str, Any]:
     """Execute multi-lane orchestration for query."""

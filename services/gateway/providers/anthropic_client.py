@@ -42,6 +42,12 @@ class AnthropicClient:
             logger.error(f"Failed to initialize Anthropic client: {e}")
             self.client = None
     
+    async def generate_completion(self, prompt: str, model: str = "claude-3-haiku-20240307", 
+                                max_tokens: int = 150, temperature: float = 0.7) -> Optional[str]:
+        """Generate completion using Anthropic API (alias for compatibility)."""
+        result = await self.generate_text(prompt, max_tokens, temperature, model)
+        return result.get("content") if result.get("success") else None
+    
     async def generate_text(
         self, 
         prompt: str, 

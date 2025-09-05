@@ -23,6 +23,10 @@ from .connection import (
     execute_transaction,
 )
 
+def get_database_service():
+    """Get database service (alias for connection manager)."""
+    return get_db_manager()
+
 from .repository import (
     BaseRepository,
     QueryOptions,
@@ -37,6 +41,7 @@ __all__ = [
     # Connection management
     "DatabaseConnectionManager",
     "get_db_manager",
+    "get_database_service",
     "shutdown_db_manager",
     "execute_query",
     "execute_transaction",

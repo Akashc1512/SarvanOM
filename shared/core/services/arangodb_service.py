@@ -427,6 +427,81 @@ class ArangoDBService:
                 duration_seconds=round(query_duration, 3)
             )
             raise
+    
+    async def get_health(self) -> Dict[str, Any]:
+        """Get health status (alias for compatibility)."""
+        return await self.connection_probe()
+    
+    async def create_entity(self, entity_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Create entity in knowledge graph."""
+        try:
+            async with self.get_database() as db:
+                collection = db.collection('entities')
+                result = collection.insert(entity_data)
+                return result
+        except Exception as e:
+            logger.error(f"Failed to create entity: {e}")
+            return None
+    
+    async def query_relationships(self, entity_name: str) -> List[Dict[str, Any]]:
+        """Query relationships for an entity."""
+        try:
+            query = """
+            FOR doc IN entities
+            FILTER doc.name == @entity_name
+            RETURN doc
+            """
+            results = await self.execute_aql(query, {'entity_name': entity_name})
+            return results
+        except Exception as e:
+            logger.error(f"Failed to query relationships: {e}")
+            return []
+    
+    async def search_entities(self, query: str, max_results: int = 10) -> List[Dict[str, Any]]:
+        """
+        Search for entities in the knowledge graph based on a text query.
+        
+        Args:
+            query: Text query to search for
+            max_results: Maximum number of results to return
+            
+        Returns:
+            List of matching entities
+        """
+        try:
+            if not self.is_available:
+                logger.warning("ArangoDB not available for entity search")
+                return []
+            
+            # Simple text search across entities
+            # In a real implementation, this could use full-text search or more sophisticated matching
+            aql_query = """
+            FOR doc IN entities
+            FILTER CONTAINS(LOWER(doc.name), LOWER(@search_term)) 
+               OR CONTAINS(LOWER(doc.description), LOWER(@search_term))
+               OR CONTAINS(LOWER(doc.type), LOWER(@search_term))
+            LIMIT @max_results
+            RETURN {
+                id: doc._key,
+                name: doc.name,
+                type: doc.type,
+                description: doc.description,
+                properties: doc.properties,
+                metadata: doc.metadata
+            }
+            """
+            
+            results = await self.execute_aql(aql_query, {
+                'search_term': query,
+                'max_results': max_results
+            })
+            
+            logger.debug(f"Found {len(results)} entities for query: {query[:100]}")
+            return results
+            
+        except Exception as e:
+            logger.error(f"Failed to search entities: {e}")
+            return []
 
 
 # Global service instance
