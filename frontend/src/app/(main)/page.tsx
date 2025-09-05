@@ -146,11 +146,7 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
   // Loading screen
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black text-gray-100 dark:bg-slate-950 dark:text-slate-100 cosmic-bg relative overflow-hidden">
-        {/* VSCode-Inspired Cosmic Starfield Background */}
-        <div className="absolute inset-0 cosmic-starfield opacity-20 dark:hidden"></div>
-        <div className="hidden dark:block absolute inset-0 cosmic-starfield-dark opacity-30"></div>
-        
+      <div className="cosmic-bg-primary min-h-screen relative overflow-hidden">
         <div className="relative z-10 flex items-center justify-center min-h-screen">
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -162,13 +158,13 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
               transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
               className="w-20 h-20 mx-auto"
             >
-              <RocketLaunchIcon className="w-full h-full text-vscode-accent-purple" />
+              <RocketLaunchIcon className="w-full h-full text-cosmic-primary-500 cosmic-glow-primary" />
             </motion.div>
             <div className="space-y-3">
-              <h1 className="text-3xl font-bold text-vscode-text-primary">
+              <h1 className="text-3xl font-bold cosmic-text-primary">
                 SarvanOM
               </h1>
-              <p className="text-lg text-vscode-text-secondary max-w-md mx-auto">
+              <p className="text-lg cosmic-text-secondary max-w-md mx-auto">
                 Initializing cosmic knowledge platform...
               </p>
             </div>
@@ -181,33 +177,29 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
   // Search mode - Main dashboard interface
   if (isSearchMode) {
     return (
-      <div className="min-h-screen bg-black text-gray-100 dark:bg-slate-950 dark:text-slate-100 cosmic-bg relative overflow-hidden">
-        {/* VSCode-Inspired Cosmic Starfield Background */}
-        <div className="absolute inset-0 cosmic-starfield opacity-20 dark:hidden"></div>
-        <div className="hidden dark:block absolute inset-0 cosmic-starfield-dark opacity-30"></div>
-        
+      <div className="cosmic-bg-primary min-h-screen relative overflow-hidden">
         <div className="relative z-10">
           {/* Header with Navigation and Upload Button */}
-          <header className="border-b border-vscode-border/20 bg-cosmos-bg-vscode/50 backdrop-blur-sm">
-            <div className="max-w-screen-xl mx-auto px-4 py-4">
-              <div className="flex items-center justify-between">
+          <header className="cosmic-topbar border-b border-cosmic-border-primary">
+            <div className="cosmic-container">
+              <div className="flex items-center justify-between h-16">
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => setIsSearchMode(false)}
-                    className="p-2 rounded-lg hover:bg-white/10 dark:hover:bg-gray-800/50 transition-colors text-white dark:text-gray-100"
+                    className="cosmic-btn-ghost p-2"
                     aria-label="Return to home"
                   >
                     <HomeIcon className="w-6 h-6" />
                   </button>
                   <div>
-                    <h1 className="text-2xl font-bold text-vscode-text-primary">Knowledge Search</h1>
-                    <p className="text-vscode-text-secondary">Ask questions and discover insights</p>
+                    <h1 className="text-2xl font-bold cosmic-text-primary">Knowledge Search</h1>
+                    <p className="cosmic-text-secondary">Ask questions and discover insights</p>
                   </div>
                 </div>
                 
                 <button
                   onClick={() => setUploadModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-vscode-accent-purple hover:bg-vscode-accent-blue text-white rounded-lg transition-all shadow-lg hover:shadow-xl cosmic-glow-purple"
+                  className="cosmic-btn-primary flex items-center gap-2"
                   aria-label="Upload files"
                 >
                   <CloudArrowUpIcon className="w-5 h-5" />
@@ -218,7 +210,7 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
           </header>
 
           {/* Main Content Area */}
-          <main className="max-w-screen-xl mx-auto p-4 space-y-6">
+          <main className="cosmic-container cosmic-section space-y-6">
             {/* Search Input */}
             <section aria-label="Search Interface">
               <SearchInput
@@ -239,7 +231,7 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
                   confidence={0.95}
                   processingTime={3.2}
                   citations={citations}
-                  traceId={searchError ? undefined : `trace_${Date.now()}`}
+                  traceId={searchError ? `trace_${Date.now()}` : `trace_${Date.now()}`}
                 />
               </section>
 
@@ -288,15 +280,11 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
   ];
 
   return (
-    <div className="min-h-screen bg-black text-gray-100 dark:bg-slate-950 dark:text-slate-100 cosmic-bg relative overflow-hidden">
-      {/* VSCode-Inspired Cosmic Starfield Background */}
-      <div className="absolute inset-0 cosmic-starfield opacity-20 dark:hidden"></div>
-      <div className="hidden dark:block absolute inset-0 cosmic-starfield-dark opacity-30"></div>
-      
+    <div className="cosmic-bg-primary min-h-screen relative overflow-hidden">
       <div className="relative z-10">
         {/* Hero Section */}
-        <section className="relative py-24 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto">
+        <section className="cosmic-section">
+          <div className="cosmic-container">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -317,21 +305,21 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
                   }}
                   className="w-32 h-32 mx-auto mb-8"
                 >
-                  <RocketLaunchIcon className="w-full h-full text-vscode-accent-purple" />
+                  <RocketLaunchIcon className="w-full h-full text-cosmic-primary-500 cosmic-glow-primary" />
                 </motion.div>
-                <SparklesIcon className="absolute -top-4 -right-4 w-10 h-10 text-vscode-accent-purple/60" />
+                <SparklesIcon className="absolute -top-4 -right-4 w-10 h-10 text-cosmic-primary-500/60" />
               </div>
               
               {/* Hero Content */}
               <div className="space-y-8">
-                <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-vscode-text-primary leading-tight">
+                <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold cosmic-text-primary leading-tight">
                   Welcome to{" "}
-                  <span className="cosmic-text-gradient">
+                  <span className="bg-gradient-to-r from-cosmic-primary-500 to-cosmic-secondary-500 bg-clip-text text-transparent">
                     SarvanOM
                   </span>
                 </h1>
                 
-                <p className="text-xl sm:text-2xl text-vscode-text-secondary max-w-3xl mx-auto leading-relaxed">
+                <p className="text-xl sm:text-2xl cosmic-text-secondary max-w-3xl mx-auto leading-relaxed">
                   The next-generation universal knowledge platform powered by advanced AI and cosmic intelligence
                 </p>
                 
@@ -340,7 +328,7 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setIsSearchMode(true)}
-                    className="group bg-vscode-accent-purple hover:bg-vscode-accent-blue text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-3 cosmic-glow-purple"
+                    className="cosmic-btn-primary group flex items-center gap-3 px-8 py-4 text-lg"
                   >
                     Start Exploring
                     <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -350,7 +338,7 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => router.push('/analytics')}
-                    className="border border-vscode-border hover:border-vscode-accent-blue text-vscode-accent-blue px-8 py-4 rounded-xl font-semibold transition-all duration-300 backdrop-blur-sm cosmic-bg-vscode"
+                    className="cosmic-btn-secondary px-8 py-4 text-lg"
                   >
                     View Analytics
                   </motion.button>
@@ -361,9 +349,8 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
         </section>
 
         {/* Features Section */}
-        <section className="py-24 px-4 sm:px-6 lg:px-8 relative">
-          <div className="absolute inset-0 cosmic-bg-vscode opacity-50 backdrop-blur-sm"></div>
-          <div className="relative z-10 max-w-7xl mx-auto">
+        <section className="cosmic-section relative">
+          <div className="cosmic-container">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -371,10 +358,10 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
               className="text-center space-y-16"
             >
               <div className="space-y-6">
-                <h2 className="text-4xl sm:text-5xl font-bold text-vscode-text-primary">
+                <h2 className="text-4xl sm:text-5xl font-bold cosmic-text-primary">
                   Platform Features
                 </h2>
-                <p className="text-xl text-vscode-text-secondary max-w-2xl mx-auto">
+                <p className="text-xl cosmic-text-secondary max-w-2xl mx-auto">
                   Discover the powerful capabilities that make SarvanOM the ultimate knowledge platform
                 </p>
               </div>
@@ -386,18 +373,18 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.8, delay: 0.3 + index * 0.1 }}
-                    className="group cosmic-bg-vscode rounded-2xl p-8 hover:shadow-xl hover:-translate-y-2 transition-all duration-300 border border-vscode-border hover:border-vscode-accent-blue"
+                    className="group cosmic-card p-8 cosmic-hover-lift"
                   >
                     <div className="space-y-6">
-                      <div className={cn("w-16 h-16 rounded-xl bg-vscode-accent-purple/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300", feature.color)}>
-                        <feature.icon className="w-8 h-8" />
+                      <div className="w-16 h-16 rounded-xl bg-cosmic-primary-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                        <feature.icon className="w-8 h-8 text-cosmic-primary-500" />
                       </div>
                       
                       <div className="space-y-4">
-                        <h3 className="text-2xl font-semibold text-vscode-text-primary">
+                        <h3 className="text-2xl font-semibold cosmic-text-primary">
                           {feature.title}
                         </h3>
-                        <p className="text-vscode-text-secondary leading-relaxed">
+                        <p className="cosmic-text-secondary leading-relaxed">
                           {feature.description}
                         </p>
                       </div>
@@ -410,30 +397,32 @@ The search was processed in ${searchResponse.processing_time_ms}ms with a confid
         </section>
 
         {/* CTA Section */}
-        <section className="py-24 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="space-y-6"
-            >
-              <h2 className="text-4xl sm:text-5xl font-bold text-vscode-text-primary">
-                Ready to Explore?
-              </h2>
-              <p className="text-xl text-vscode-text-secondary">
-                Join thousands of users discovering knowledge with SarvanOM
-              </p>
-              
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsSearchMode(true)}
-                className="bg-gradient-to-r from-vscode-accent-purple to-vscode-accent-blue hover:from-vscode-accent-blue hover:to-vscode-accent-purple text-white px-10 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl cosmic-glow-purple"
+        <section className="cosmic-section">
+          <div className="cosmic-container">
+            <div className="max-w-4xl mx-auto text-center space-y-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.4 }}
+                className="space-y-6"
               >
-                Get Started Now
-              </motion.button>
-            </motion.div>
+                <h2 className="text-4xl sm:text-5xl font-bold cosmic-text-primary">
+                  Ready to Explore?
+                </h2>
+                <p className="text-xl cosmic-text-secondary">
+                  Join thousands of users discovering knowledge with SarvanOM
+                </p>
+                
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsSearchMode(true)}
+                  className="cosmic-btn-primary px-10 py-4 text-lg cosmic-glow-primary"
+                >
+                  Get Started Now
+                </motion.button>
+              </motion.div>
+            </div>
           </div>
         </section>
       </div>

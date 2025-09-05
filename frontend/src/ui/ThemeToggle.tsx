@@ -98,19 +98,19 @@ export function ThemeToggle({
     const isDark = currentTheme === 'dark' || (currentTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     
     if (isDark) {
-      // Dark cosmic theme
+      // Dark cosmic theme - Update legacy variables for backward compatibility
       root.style.setProperty('--cosmos-bg', '#0b1020');
       root.style.setProperty('--cosmos-fg', '#e2e8f0');
       root.style.setProperty('--cosmos-card', '#1a2332');
-      root.style.setProperty('--cosmos-accent', '#3b82f6');
-      root.style.setProperty('--cosmos-accent-hover', '#2563eb');
+      root.style.setProperty('--cosmos-accent', '#60a5fa');
+      root.style.setProperty('--cosmos-accent-hover', '#93c5fd');
       root.style.setProperty('--cosmos-border', '#334155');
-      root.style.setProperty('--cosmos-muted', '#64748b');
+      root.style.setProperty('--cosmos-muted', '#94a3b8');
     } else {
-      // Light cosmic theme
-      root.style.setProperty('--cosmos-bg', '#f8fafc');
-      root.style.setProperty('--cosmos-fg', '#1e293b');
-      root.style.setProperty('--cosmos-card', '#ffffff');
+      // Light cosmic theme - Update legacy variables for backward compatibility
+      root.style.setProperty('--cosmos-bg', '#ffffff');
+      root.style.setProperty('--cosmos-fg', '#0f172a');
+      root.style.setProperty('--cosmos-card', '#f8fafc');
       root.style.setProperty('--cosmos-accent', '#3b82f6');
       root.style.setProperty('--cosmos-accent-hover', '#2563eb');
       root.style.setProperty('--cosmos-border', '#e2e8f0');
@@ -122,7 +122,7 @@ export function ThemeToggle({
     const themes: Theme[] = ['light', 'dark', 'system'];
     const currentIndex = themes.indexOf(theme);
     const nextIndex = (currentIndex + 1) % themes.length;
-    setTheme(themes[nextIndex]);
+    setTheme(themes[nextIndex] || 'system');
   };
 
   const getThemeIcon = () => {
@@ -157,6 +157,12 @@ export function ThemeToggle({
     lg: "h-12 w-12"
   };
 
+  const buttonSizeMap = {
+    sm: "sm" as const,
+    md: "default" as const,
+    lg: "lg" as const
+  };
+
   const iconSizes = {
     sm: "h-3 w-3",
     md: "h-4 w-4",
@@ -167,7 +173,7 @@ export function ThemeToggle({
     return (
       <Button
         variant={variant}
-        size={size}
+        size={buttonSizeMap[size]}
         className={cn(sizeClasses[size], className)}
         disabled
         aria-label="Loading theme toggle"
@@ -183,12 +189,12 @@ export function ThemeToggle({
     <div className="flex items-center gap-2">
       <Button
         variant={variant}
-        size={size}
+        size={buttonSizeMap[size]}
         onClick={cycleTheme}
         className={cn(
           sizeClasses[size],
-          "relative overflow-hidden",
-          highContrast && "border-2 border-[var(--accent)]",
+          "cosmic-btn-ghost relative overflow-hidden cosmic-hover-lift",
+          highContrast && "border-2 border-cosmic-border-accent",
           className
         )}
         aria-label={`Switch to ${getThemeLabel()}`}
@@ -212,7 +218,7 @@ export function ThemeToggle({
       </Button>
       
       {showLabels && (
-        <span className="text-sm text-[var(--fg)]/70">
+        <span className="text-sm cosmic-text-tertiary">
           {getThemeLabel()}
         </span>
       )}
@@ -221,15 +227,13 @@ export function ThemeToggle({
       <div className="flex items-center gap-1">
         {highContrast && (
           <Contrast 
-            className="h-3 w-3 text-[var(--accent)]" 
-            title="High contrast mode active"
+            className="h-3 w-3 text-cosmic-primary-500" 
             aria-label="High contrast mode active"
           />
         )}
         {reducedMotion && (
           <Accessibility 
-            className="h-3 w-3 text-[var(--accent)]" 
-            title="Reduced motion mode active"
+            className="h-3 w-3 text-cosmic-primary-500" 
             aria-label="Reduced motion mode active"
           />
         )}

@@ -17,6 +17,7 @@ import {
   LinkIcon
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/ui/ThemeToggle';
 
 interface NavItem {
   name: string;
@@ -83,7 +84,7 @@ export const CosmicNavigation: React.FC<CosmicNavigationProps> = ({
   const pathname = usePathname();
 
   const HeaderNav = () => (
-    <nav className="hidden md:flex items-center space-x-8">
+    <nav className="hidden md:flex items-center space-x-2">
       {navigation.map((item) => {
         const isActive = pathname === item.href;
         return (
@@ -91,11 +92,8 @@ export const CosmicNavigation: React.FC<CosmicNavigationProps> = ({
             key={item.name}
             href={item.href}
             className={cn(
-              'group relative px-3 py-2 text-sm font-medium rounded-md transition-all duration-200',
-              'hover:text-cosmos-accent hover:bg-cosmos-card/50',
-              isActive 
-                ? 'text-cosmos-accent bg-cosmos-card/30' 
-                : 'text-cosmos-fg/80'
+              'cosmic-nav-item group relative',
+              isActive && 'cosmic-nav-item-active'
             )}
           >
             <div className="flex items-center space-x-2">
@@ -104,7 +102,7 @@ export const CosmicNavigation: React.FC<CosmicNavigationProps> = ({
             </div>
             {isActive && (
               <motion.div
-                className="absolute inset-0 bg-cosmos-accent/20 rounded-md"
+                className="absolute inset-0 bg-cosmic-primary-500/10 rounded-lg cosmic-glow-soft"
                 layoutId="activeTab"
                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
               />
@@ -119,7 +117,7 @@ export const CosmicNavigation: React.FC<CosmicNavigationProps> = ({
     <div className="md:hidden">
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="p-2 rounded-md text-cosmos-fg hover:text-cosmos-accent hover:bg-cosmos-card/50 transition-colors"
+        className="cosmic-btn-ghost p-2"
       >
         {isMobileMenuOpen ? (
           <XMarkIcon className="w-6 h-6" />
@@ -134,7 +132,7 @@ export const CosmicNavigation: React.FC<CosmicNavigationProps> = ({
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="absolute top-full left-0 right-0 mt-2 bg-cosmos-card/95 backdrop-blur-sm border border-cosmos-accent/20 rounded-lg shadow-xl"
+            className="absolute top-full left-0 right-0 mt-2 cosmic-card-glass shadow-xl z-50"
           >
             <div className="px-4 py-2 space-y-1">
               {navigation.map((item) => {
@@ -145,10 +143,8 @@ export const CosmicNavigation: React.FC<CosmicNavigationProps> = ({
                     href={item.href}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={cn(
-                      'flex items-center space-x-3 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                      isActive
-                        ? 'text-cosmos-accent bg-cosmos-accent/20'
-                        : 'text-cosmos-fg hover:text-cosmos-accent hover:bg-cosmos-accent/10'
+                      'cosmic-nav-item flex items-center space-x-3',
+                      isActive && 'cosmic-nav-item-active'
                     )}
                   >
                     <item.icon className="w-5 h-5" />
@@ -156,6 +152,12 @@ export const CosmicNavigation: React.FC<CosmicNavigationProps> = ({
                   </Link>
                 );
               })}
+              
+              {/* Mobile Theme Toggle */}
+              <div className="flex items-center justify-between px-3 py-2 border-t border-cosmic-border-primary mt-2">
+                <span className="text-sm cosmic-text-secondary">Theme</span>
+                <ThemeToggle size="sm" variant="ghost" />
+              </div>
             </div>
           </motion.div>
         )}
@@ -166,19 +168,31 @@ export const CosmicNavigation: React.FC<CosmicNavigationProps> = ({
   if (variant === 'header') {
     return (
       <header className={cn(
-        'sticky top-0 z-50 bg-cosmos-bg/80 backdrop-blur-md border-b border-cosmos-accent/20',
+        'cosmic-topbar sticky top-0 z-50',
         className
       )}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="cosmic-container">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <Link href="/" className="flex items-center space-x-2">
-              <RocketLaunchIcon className="w-8 h-8 text-cosmos-accent" />
-              <span className="text-xl font-bold text-cosmos-fg">SarvanOM</span>
+            <Link href="/" className="flex items-center space-x-3 cosmic-hover-lift">
+              <div className="relative">
+                <RocketLaunchIcon className="w-8 h-8 text-cosmic-primary-500 cosmic-glow-primary" />
+                <motion.div
+                  className="absolute inset-0 bg-cosmic-primary-500/20 rounded-full"
+                  animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                />
+              </div>
+              <span className="text-xl font-bold cosmic-text-primary">SarvanOM</span>
             </Link>
 
             {/* Desktop Navigation */}
             <HeaderNav />
+
+            {/* Theme Toggle */}
+            <div className="hidden md:flex items-center">
+              <ThemeToggle size="sm" variant="ghost" />
+            </div>
 
             {/* Mobile Navigation */}
             <MobileNav />

@@ -1,19 +1,21 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { cn } from "@/lib/utils";
+import React from 'react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
-export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface CosmicInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
   label?: string;
   description?: string;
   required?: boolean;
+  variant?: 'default' | 'glass' | 'outlined';
+  glow?: boolean;
 }
 
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
+const CosmicInput = React.forwardRef<HTMLInputElement, CosmicInputProps>(
   (
     {
       className,
@@ -24,6 +26,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       label,
       description,
       required,
+      variant = 'default',
+      glow = false,
       id,
       ...props
     },
@@ -32,16 +36,25 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const generatedId = React.useId();
     const inputId = id || generatedId;
 
+    const variants = {
+      default: 'cosmic-input',
+      glass: 'cosmic-input bg-cosmic-bg-glass/50 backdrop-blur-sm',
+      outlined: 'cosmic-input border-2 border-cosmic-border-accent'
+    };
+
     return (
       <div className="w-full">
         {label && (
-          <label
+          <motion.label
             htmlFor={inputId}
             className="block text-sm font-medium cosmic-text-primary mb-2"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
           >
             {label}
             {required && <span className="text-cosmic-error ml-1">*</span>}
-          </label>
+          </motion.label>
         )}
         <div className="relative">
           {leftIcon && (
@@ -49,18 +62,19 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               {leftIcon}
             </div>
           )}
-          <input
+          <motion.input
             type={type}
             className={cn(
-              "cosmic-input",
-              leftIcon && "pl-10",
-              rightIcon && "pr-10",
-              error && "border-cosmic-error focus:border-cosmic-error",
+              variants[variant],
+              glow && 'cosmic-glow-soft',
+              leftIcon && 'pl-10',
+              rightIcon && 'pr-10',
+              error && 'border-cosmic-error focus:border-cosmic-error focus:ring-cosmic-error/20',
               className,
             )}
             ref={ref}
             id={inputId}
-            aria-invalid={error ? "true" : "false"}
+            aria-invalid={error ? 'true' : 'false'}
             aria-describedby={
               error
                 ? `${inputId}-error`
@@ -68,6 +82,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                   ? `${inputId}-description`
                   : undefined
             }
+            whileFocus={{ scale: 1.01 }}
+            transition={{ duration: 0.2 }}
             {...props}
           />
           {rightIcon && (
@@ -77,26 +93,33 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {error && (
-          <p
+          <motion.p
             id={`${inputId}-error`}
             className="mt-1 text-sm text-cosmic-error"
             role="alert"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
           >
             {error}
-          </p>
+          </motion.p>
         )}
         {description && !error && (
-          <p
+          <motion.p
             id={`${inputId}-description`}
             className="mt-1 text-sm cosmic-text-tertiary"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
           >
             {description}
-          </p>
+          </motion.p>
         )}
       </div>
     );
   },
 );
-Input.displayName = "Input";
 
-export { Input };
+CosmicInput.displayName = 'CosmicInput';
+
+export { CosmicInput };

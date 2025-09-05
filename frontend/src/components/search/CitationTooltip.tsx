@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLinkIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import { ArrowTopRightOnSquareIcon as ExternalLinkIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 import type { Citation } from '@/lib/api';
 

@@ -1415,16 +1415,16 @@ async def performance_metrics():
         
         return JSONResponse(
             content={
-                "status": "available",
-                "performance_summary": summary,
-                "monitoring": {
-                    "health_score": summary.get("health_score", 0),
-                    "sla_compliance": summary.get("sla_compliance", {}),
-                    "active_alerts": summary.get("active_alerts", []),
-                    "cost_efficiency": summary.get("cost_summary", {}).get("cost_efficiency_score", 0)
-                },
-                "recommendations": summary.get("cost_summary", {}).get("optimization_recommendations", []),
-                "timestamp": time.time()
+            "status": "available",
+            "performance_summary": summary,
+            "monitoring": {
+                "health_score": summary.get("health_score", 0),
+                "sla_compliance": summary.get("sla_compliance", {}),
+                "active_alerts": summary.get("active_alerts", []),
+                "cost_efficiency": summary.get("cost_summary", {}).get("cost_efficiency_score", 0)
+            },
+            "recommendations": summary.get("cost_summary", {}).get("optimization_recommendations", []),
+            "timestamp": time.time()
             },
             headers={"Content-Type": "application/json"}
         )
@@ -1432,9 +1432,9 @@ async def performance_metrics():
         logger.error(f"Performance metrics failed: {e}")
         return JSONResponse(
             content={
-                "status": "error",
-                "error": str(e),
-                "timestamp": time.time()
+            "status": "error",
+            "error": str(e),
+            "timestamp": time.time()
             },
             status_code=500,
             headers={"Content-Type": "application/json"}
@@ -1579,43 +1579,43 @@ async def optimize_datastores():
         )
 
 
-# YouTube Lane Metrics Endpoint
-@app.get("/metrics/youtube")
-async def get_youtube_metrics():
-    """Get YouTube lane metrics and quota status."""
-    try:
-        from services.retrieval.youtube_retrieval import get_youtube_metrics
+        # YouTube Lane Metrics Endpoint
+        @app.get("/metrics/youtube")
+        async def get_youtube_metrics():
+            """Get YouTube lane metrics and quota status."""
+            try:
+                from services.retrieval.youtube_retrieval import get_youtube_metrics
+                
+                metrics = get_youtube_metrics()
+                
+                # Add environment configuration
+                config = {
+                    "enabled": os.getenv("ENABLE_YOUTUBE", "true").lower() == "true",
+                    "max_results": int(os.getenv("YT_MAX_RESULTS", "5")),
+                    "daily_unit_budget": int(os.getenv("YT_DAILY_UNIT_BUDGET", "10000")),
+                    "quota_buffer_pct": int(os.getenv("YT_DAILY_UNIT_BUDGET", "20")),
+                    "lane_ms_budget": int(os.getenv("YT_LANE_MS_BUDGET", "2000")),
+                    "region_code": os.getenv("YT_REGION_CODE", "US"),
+                    "cache_ttl_seconds": int(os.getenv("YT_CACHE_TTL_SECONDS", "3600"))
+                }
+                
+                return {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "metrics": metrics,
+                    "config": config,
+                    "status": "healthy"
+                }
+                
+            except Exception as e:
+                logger.error(f"Error getting YouTube metrics: {e}")
+                return {
+                    "status": "error",
+                    "error": str(e),
+                    "timestamp": time.time()
+                }
         
-        metrics = get_youtube_metrics()
-        
-        # Add environment configuration
-        config = {
-            "enabled": os.getenv("ENABLE_YOUTUBE", "true").lower() == "true",
-            "max_results": int(os.getenv("YT_MAX_RESULTS", "5")),
-            "daily_unit_budget": int(os.getenv("YT_DAILY_UNIT_BUDGET", "10000")),
-            "quota_buffer_pct": int(os.getenv("YT_DAILY_UNIT_BUDGET", "20")),
-            "lane_ms_budget": int(os.getenv("YT_LANE_MS_BUDGET", "2000")),
-            "region_code": os.getenv("YT_REGION_CODE", "US"),
-            "cache_ttl_seconds": int(os.getenv("YT_CACHE_TTL_SECONDS", "3600"))
-        }
-        
-        return {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "metrics": metrics,
-            "config": config,
-            "status": "healthy"
-        }
-        
-    except Exception as e:
-        logger.error(f"Error getting YouTube metrics: {e}")
-        return {
-            "status": "error",
-            "error": str(e),
-            "timestamp": time.time()
-        }
 
-
-# Retrieval Service Health Endpoint
+        # Retrieval Service Health Endpoint
 @app.get("/metrics/retrieval")
 async def get_retrieval_health():
     """Get retrieval service health and provider status."""

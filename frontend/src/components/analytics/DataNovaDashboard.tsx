@@ -129,35 +129,35 @@ export function DataNovaDashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen cosmic-bg-primary flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading analytics...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-cosmic-primary-500 mx-auto mb-4"></div>
+          <p className="cosmic-text-primary text-lg">Loading analytics...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen cosmic-bg-primary">
       {/* Header */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 blur-3xl" />
-        <div className="relative backdrop-blur-sm bg-white/5 border border-white/10 rounded-3xl m-6 p-8">
+        <div className="absolute inset-0 cosmic-glow-soft" />
+        <div className="relative cosmic-card-glass rounded-3xl m-6 p-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
             >
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-medium mb-4">
+              <div className="inline-flex items-center gap-2 cosmic-btn-primary px-4 py-2 rounded-full text-sm font-medium mb-4">
                 <ChartBarIcon className="w-4 h-4" />
                 DataNova Analytics
               </div>
-              <h1 className="text-4xl font-bold text-white mb-2">
+              <h1 className="text-4xl font-bold cosmic-text-primary mb-2">
                 Platform Analytics
               </h1>
-              <p className="text-lg text-gray-300">
+              <p className="text-lg cosmic-text-secondary">
                 Real-time insights into your AI-powered knowledge platform
               </p>
             </motion.div>
@@ -175,8 +175,8 @@ export function DataNovaDashboard() {
                   onClick={() => setTimeRange(range.id)}
                   className={`px-4 py-2 rounded-lg transition-all duration-300 ${
                     timeRange === range.id
-                      ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white"
-                      : "bg-white/10 text-gray-300 hover:bg-white/20"
+                      ? "cosmic-btn-primary"
+                      : "cosmic-btn-secondary"
                   }`}
                 >
                   {range.label}
@@ -188,7 +188,7 @@ export function DataNovaDashboard() {
       </div>
 
       {/* Metrics Grid */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="cosmic-container cosmic-section">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {metrics.map((metric, index) => (
             <motion.div
@@ -198,15 +198,13 @@ export function DataNovaDashboard() {
               transition={{ duration: 0.6, delay: index * 0.1 }}
               className="group relative"
             >
-              <div className="absolute inset-0 bg-gradient-to-r opacity-0 group-hover:opacity-20 transition-opacity duration-300 rounded-2xl blur-xl"
-                   style={{ backgroundImage: `linear-gradient(to right, ${metric.color})` }} />
-              <div className="relative backdrop-blur-sm bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300">
+              <div className="cosmic-tile-metric cosmic-hover-lift">
                 <div className="flex items-center justify-between mb-4">
                   <div className={`p-3 rounded-xl bg-gradient-to-r ${metric.color}`}>
                     <metric.icon className="w-6 h-6 text-white" />
                   </div>
                   <div className={`flex items-center gap-1 text-sm ${
-                    metric.changeType === "increase" ? "text-green-400" : "text-red-400"
+                    metric.changeType === "increase" ? "text-cosmic-success" : "text-cosmic-error"
                   }`}>
                     {metric.changeType === "increase" ? (
                       <ArrowUpIcon className="w-4 h-4" />
@@ -216,9 +214,9 @@ export function DataNovaDashboard() {
                     {Math.abs(metric.change)}%
                   </div>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-1">{metric.value}</h3>
-                <p className="text-gray-400 text-sm mb-2">{metric.title}</p>
-                <p className="text-gray-500 text-xs">{metric.description}</p>
+                <h3 className="text-2xl font-bold cosmic-text-primary mb-1">{metric.value}</h3>
+                <p className="cosmic-text-tertiary text-sm mb-2">{metric.title}</p>
+                <p className="cosmic-text-tertiary text-xs">{metric.description}</p>
               </div>
             </motion.div>
           ))}
@@ -231,29 +229,29 @@ export function DataNovaDashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="backdrop-blur-sm bg-white/5 border border-white/10 rounded-2xl p-6"
+            className="cosmic-analytics-card"
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-white">Search Activity</h3>
-              <div className="flex items-center gap-2 text-sm text-gray-400">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <h3 className="text-xl font-semibold cosmic-text-primary">Search Activity</h3>
+              <div className="flex items-center gap-2 text-sm cosmic-text-tertiary">
+                <div className="w-3 h-3 bg-cosmic-primary-500 rounded-full"></div>
                 Searches
-                <div className="w-3 h-3 bg-purple-500 rounded-full ml-4"></div>
+                <div className="w-3 h-3 bg-cosmic-secondary-500 rounded-full ml-4"></div>
                 Users
               </div>
             </div>
             <div className="space-y-4">
               {userActivity.map((activity, index) => (
                 <div key={activity.time} className="flex items-center gap-4">
-                  <div className="w-12 text-gray-400 text-sm">{activity.time}</div>
+                  <div className="w-12 cosmic-text-tertiary text-sm">{activity.time}</div>
                   <div className="flex-1 flex items-center gap-2">
-                    <div className="flex-1 bg-gray-700 rounded-full h-2">
+                    <div className="flex-1 bg-cosmic-bg-secondary rounded-full h-2">
                       <div 
-                        className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
+                        className="bg-gradient-to-r from-cosmic-primary-500 to-cosmic-secondary-500 h-2 rounded-full"
                         style={{ width: `${(activity.searches / 300) * 100}%` }}
                       ></div>
                     </div>
-                    <div className="w-16 text-white text-sm text-right">{activity.searches}</div>
+                    <div className="w-16 cosmic-text-primary text-sm text-right">{activity.searches}</div>
                   </div>
                 </div>
               ))}
@@ -265,19 +263,19 @@ export function DataNovaDashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
-            className="backdrop-blur-sm bg-white/5 border border-white/10 rounded-2xl p-6"
+            className="cosmic-analytics-card"
           >
-            <h3 className="text-xl font-semibold text-white mb-6">Top Search Queries</h3>
+            <h3 className="text-xl font-semibold cosmic-text-primary mb-6">Top Search Queries</h3>
             <div className="space-y-4">
               {topQueries.map((query, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                <div key={index} className="flex items-center justify-between p-3 cosmic-card rounded-lg">
                   <div className="flex-1">
-                    <p className="text-white text-sm mb-1">{query.query}</p>
+                    <p className="cosmic-text-primary text-sm mb-1">{query.query}</p>
                     <div className="flex items-center gap-2">
-                      <span className="text-gray-400 text-xs">{query.count} searches</span>
+                      <span className="cosmic-text-tertiary text-xs">{query.count} searches</span>
                       <div className={`flex items-center gap-1 text-xs ${
-                        query.trend === "up" ? "text-green-400" : 
-                        query.trend === "down" ? "text-red-400" : "text-gray-400"
+                        query.trend === "up" ? "text-cosmic-success" : 
+                        query.trend === "down" ? "text-cosmic-error" : "cosmic-text-tertiary"
                       }`}>
                         {query.trend === "up" && <ArrowUpIcon className="w-3 h-3" />}
                         {query.trend === "down" && <ArrowDownIcon className="w-3 h-3" />}
@@ -285,7 +283,7 @@ export function DataNovaDashboard() {
                       </div>
                     </div>
                   </div>
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                  <div className="w-8 h-8 bg-gradient-to-r from-cosmic-primary-500 to-cosmic-secondary-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
                     {index + 1}
                   </div>
                 </div>
@@ -299,33 +297,33 @@ export function DataNovaDashboard() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.8 }}
-          className="backdrop-blur-sm bg-white/5 border border-white/10 rounded-2xl p-6"
+          className="cosmic-analytics-card"
         >
-          <h3 className="text-xl font-semibold text-white mb-6">Performance Metrics</h3>
+          <h3 className="text-xl font-semibold cosmic-text-primary mb-6">Performance Metrics</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-20 h-20 bg-gradient-to-r from-cosmic-success to-cosmic-success/80 rounded-full flex items-center justify-center mx-auto mb-4">
                 <ClockIcon className="w-8 h-8 text-white" />
               </div>
-              <h4 className="text-white font-semibold mb-2">Response Time</h4>
-              <p className="text-2xl font-bold text-green-400 mb-1">1.2s</p>
-              <p className="text-gray-400 text-sm">Average response time</p>
+              <h4 className="cosmic-text-primary font-semibold mb-2">Response Time</h4>
+              <p className="text-2xl font-bold text-cosmic-success mb-1">1.2s</p>
+              <p className="cosmic-text-tertiary text-sm">Average response time</p>
             </div>
             <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-20 h-20 bg-gradient-to-r from-cosmic-primary-500 to-cosmic-primary-400 rounded-full flex items-center justify-center mx-auto mb-4">
                 <EyeIcon className="w-8 h-8 text-white" />
               </div>
-              <h4 className="text-white font-semibold mb-2">Uptime</h4>
-              <p className="text-2xl font-bold text-blue-400 mb-1">99.9%</p>
-              <p className="text-gray-400 text-sm">System availability</p>
+              <h4 className="cosmic-text-primary font-semibold mb-2">Uptime</h4>
+              <p className="text-2xl font-bold text-cosmic-primary-400 mb-1">99.9%</p>
+              <p className="cosmic-text-tertiary text-sm">System availability</p>
             </div>
             <div className="text-center">
-              <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-20 h-20 bg-gradient-to-r from-cosmic-secondary-500 to-cosmic-secondary-400 rounded-full flex items-center justify-center mx-auto mb-4">
                 <ChatBubbleLeftRightIcon className="w-8 h-8 text-white" />
               </div>
-              <h4 className="text-white font-semibold mb-2">Satisfaction</h4>
-              <p className="text-2xl font-bold text-purple-400 mb-1">4.8/5</p>
-              <p className="text-gray-400 text-sm">User satisfaction</p>
+              <h4 className="cosmic-text-primary font-semibold mb-2">Satisfaction</h4>
+              <p className="text-2xl font-bold text-cosmic-secondary-400 mb-1">4.8/5</p>
+              <p className="cosmic-text-tertiary text-sm">User satisfaction</p>
             </div>
           </div>
         </motion.div>

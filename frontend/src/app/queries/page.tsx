@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { api } from "@/services/api";
-import {
+import type {
   QueryListResponse,
   QueryDetailResponse,
   QuerySummary,
@@ -108,57 +108,58 @@ export default function QueriesPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
-        return "text-green-600 bg-green-100";
+        return "text-cosmic-success bg-cosmic-success/10";
       case "processing":
-        return "text-yellow-600 bg-yellow-100";
+        return "text-cosmic-warning bg-cosmic-warning/10";
       case "failed":
-        return "text-red-600 bg-red-100";
+        return "text-cosmic-error bg-cosmic-error/10";
       default:
-        return "text-gray-600 bg-gray-100";
+        return "cosmic-text-tertiary bg-cosmic-bg-secondary";
     }
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      {/* Navigation */}
-      <div className="mb-6">
-        <nav className="flex space-x-4">
-          <Link
-            href="/"
-            className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50"
-          >
-            New Query
-          </Link>
-          <Link
-            href="/queries"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Manage Queries
-          </Link>
-          <Link
-            href="/dashboard"
-            className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50"
-          >
-            Dashboard
-          </Link>
-        </nav>
-      </div>
+    <div className="cosmic-bg-primary min-h-screen">
+      <div className="cosmic-container cosmic-section">
+        {/* Navigation */}
+        <div className="mb-6">
+          <nav className="flex space-x-4">
+            <Link
+              href="/"
+              className="cosmic-btn-secondary"
+            >
+              New Query
+            </Link>
+            <Link
+              href="/queries"
+              className="cosmic-btn-primary"
+            >
+              Manage Queries
+            </Link>
+            <Link
+              href="/dashboard"
+              className="cosmic-btn-secondary"
+            >
+              Dashboard
+            </Link>
+          </nav>
+        </div>
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl font-bold cosmic-text-primary mb-2">
           Query Management
         </h1>
-        <p className="text-gray-600">
+        <p className="cosmic-text-secondary">
           Manage and review your knowledge queries with full CRUD operations
         </p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
+      <div className="cosmic-card p-4 mb-6">
         <div className="flex flex-wrap gap-4 items-center">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium cosmic-text-primary mb-1">
               Status Filter
             </label>
             <select
@@ -174,7 +175,7 @@ export default function QueriesPage() {
                   page: 1,
                 })
               }
-              className="border border-gray-300 rounded-md px-3 py-2"
+              className="cosmic-input"
             >
               <option value="">All Statuses</option>
               <option value="completed">Completed</option>
@@ -184,7 +185,7 @@ export default function QueriesPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium cosmic-text-primary mb-1">
               Page Size
             </label>
             <select
@@ -196,7 +197,7 @@ export default function QueriesPage() {
                   page: 1,
                 })
               }
-              className="border border-gray-300 rounded-md px-3 py-2"
+              className="cosmic-input"
             >
               <option value={5}>5 per page</option>
               <option value={10}>10 per page</option>
@@ -208,7 +209,7 @@ export default function QueriesPage() {
           <button
             onClick={() => setRefreshTrigger((prev) => prev + 1)}
             disabled={isLoading}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="cosmic-btn-primary disabled:opacity-50"
           >
             {isLoading ? "Loading..." : "Refresh"}
           </button>
@@ -217,24 +218,26 @@ export default function QueriesPage() {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-          {error}
-          <button
-            onClick={() => setError(null)}
-            className="float-right text-red-500 hover:text-red-700"
-          >
-            ×
-          </button>
+        <div className="cosmic-card border-cosmic-error bg-cosmic-error/5 p-4 mb-6">
+          <div className="text-cosmic-error">
+            {error}
+            <button
+              onClick={() => setError(null)}
+              className="float-right text-cosmic-error hover:text-cosmic-error/80"
+            >
+              ×
+            </button>
+          </div>
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Queries List */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b">
-            <h2 className="text-xl font-semibold">Your Queries</h2>
+        <div className="cosmic-card">
+          <div className="p-4 border-b border-cosmic-border-primary">
+            <h2 className="text-xl font-semibold cosmic-text-primary">Your Queries</h2>
             {queries && (
-              <p className="text-sm text-gray-600">
+              <p className="text-sm cosmic-text-tertiary">
                 Showing {queries.queries.length} of {queries.total} queries
               </p>
             )}
@@ -242,26 +245,26 @@ export default function QueriesPage() {
 
           <div className="divide-y">
             {isLoading ? (
-              <div className="p-4 text-center text-gray-500">
+              <div className="p-4 text-center cosmic-text-tertiary">
                 Loading queries...
               </div>
             ) : queries?.queries.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
+              <div className="p-4 text-center cosmic-text-tertiary">
                 No queries found
               </div>
             ) : (
               queries?.queries.map((query: QuerySummary) => (
                 <div
                   key={query.query_id}
-                  className={`p-4 cursor-pointer hover:bg-gray-50 ${
+                  className={`p-4 cursor-pointer cosmic-hover-lift ${
                     selectedQuery?.query_id === query.query_id
-                      ? "bg-blue-50 border-l-4 border-blue-500"
+                      ? "bg-cosmic-primary-500/10 border-l-4 border-cosmic-primary-500"
                       : ""
                   }`}
                   onClick={() => loadQueryDetails(query.query_id)}
                 >
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-medium text-gray-900 truncate flex-1 mr-2">
+                    <h3 className="font-medium cosmic-text-primary truncate flex-1 mr-2">
                       {query.query.length > 80
                         ? `${query.query.substring(0, 80)}...`
                         : query.query}
@@ -273,7 +276,7 @@ export default function QueriesPage() {
                     </span>
                   </div>
 
-                  <div className="text-sm text-gray-500 space-y-1">
+                  <div className="text-sm cosmic-text-tertiary space-y-1">
                     <div>
                       Confidence: {(query.confidence * 100).toFixed(1)}%
                     </div>
@@ -289,7 +292,7 @@ export default function QueriesPage() {
                         e.stopPropagation();
                         handleReprocessQuery(query.query_id);
                       }}
-                      className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
+                      className="text-xs px-2 py-1 bg-cosmic-warning/10 text-cosmic-warning rounded hover:bg-cosmic-warning/20"
                     >
                       Reprocess
                     </button>
@@ -298,7 +301,7 @@ export default function QueriesPage() {
                         e.stopPropagation();
                         handleDeleteQuery(query.query_id);
                       }}
-                      className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                      className="text-xs px-2 py-1 bg-cosmic-error/10 text-cosmic-error rounded hover:bg-cosmic-error/20"
                     >
                       Delete
                     </button>
@@ -343,9 +346,9 @@ export default function QueriesPage() {
         </div>
 
         {/* Query Details */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Query Details</h2>
+        <div className="cosmic-card">
+          <div className="p-4 border-b border-cosmic-border-primary flex justify-between items-center">
+            <h2 className="text-xl font-semibold cosmic-text-primary">Query Details</h2>
             {selectedQuery && (
               <button
                 onClick={() => {
@@ -357,7 +360,7 @@ export default function QueriesPage() {
                   });
                   setShowEditModal(true);
                 }}
-                className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="cosmic-btn-primary text-sm px-3 py-1"
               >
                 Edit Query
               </button>
@@ -367,24 +370,24 @@ export default function QueriesPage() {
           {selectedQuery ? (
             <div className="p-4 space-y-4">
               <div>
-                <h3 className="font-medium text-gray-900 mb-2">Query</h3>
-                <p className="text-gray-700 bg-gray-50 p-3 rounded">
+                <h3 className="font-medium cosmic-text-primary mb-2">Query</h3>
+                <p className="cosmic-text-primary bg-cosmic-bg-secondary p-3 rounded">
                   {selectedQuery.query}
                 </p>
               </div>
 
               <div>
-                <h3 className="font-medium text-gray-900 mb-2">Answer</h3>
-                <div className="text-gray-700 bg-gray-50 p-3 rounded">
+                <h3 className="font-medium cosmic-text-primary mb-2">Answer</h3>
+                <div className="cosmic-text-primary bg-cosmic-bg-secondary p-3 rounded">
                   {selectedQuery.answer || (
-                    <em className="text-gray-500">No answer generated</em>
+                    <em className="cosmic-text-tertiary">No answer generated</em>
                   )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-medium text-gray-900">Status</h4>
+                  <h4 className="font-medium cosmic-text-primary">Status</h4>
                   <span
                     className={`inline-block px-2 py-1 text-sm rounded ${getStatusColor(selectedQuery.status)}`}
                   >
@@ -392,8 +395,8 @@ export default function QueriesPage() {
                   </span>
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">Confidence</h4>
-                  <p className="text-gray-700">
+                  <h4 className="font-medium cosmic-text-primary">Confidence</h4>
+                  <p className="cosmic-text-primary">
                     {(selectedQuery.confidence * 100).toFixed(1)}%
                   </p>
                 </div>
@@ -401,14 +404,14 @@ export default function QueriesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-medium text-gray-900">Created</h4>
-                  <p className="text-gray-700">
+                  <h4 className="font-medium cosmic-text-primary">Created</h4>
+                  <p className="cosmic-text-primary">
                     {formatDate(selectedQuery.created_at)}
                   </p>
                 </div>
                 <div>
-                  <h4 className="font-medium text-gray-900">Processing Time</h4>
-                  <p className="text-gray-700">
+                  <h4 className="font-medium cosmic-text-primary">Processing Time</h4>
+                  <p className="cosmic-text-primary">
                     {(selectedQuery.processing_time * 1000).toFixed(0)}ms
                   </p>
                 </div>
@@ -416,8 +419,8 @@ export default function QueriesPage() {
 
               {selectedQuery.updated_at && (
                 <div>
-                  <h4 className="font-medium text-gray-900">Last Updated</h4>
-                  <p className="text-gray-700">
+                  <h4 className="font-medium cosmic-text-primary">Last Updated</h4>
+                  <p className="cosmic-text-primary">
                     {formatDate(selectedQuery.updated_at)}
                   </p>
                 </div>
@@ -425,20 +428,20 @@ export default function QueriesPage() {
 
               {selectedQuery.citations.length > 0 && (
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Citations</h4>
+                  <h4 className="font-medium cosmic-text-primary mb-2">Citations</h4>
                   <div className="space-y-2">
                     {selectedQuery.citations.map((citation, index) => (
                       <div
                         key={index}
-                        className="bg-gray-50 p-2 rounded text-sm"
+                        className="bg-cosmic-bg-secondary p-2 rounded text-sm"
                       >
-                        <p className="text-gray-700">{citation.text}</p>
+                        <p className="cosmic-text-primary">{citation.text}</p>
                         {citation.url && (
                           <a
                             href={citation.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
+                            className="text-cosmic-primary-500 hover:underline"
                           >
                             {citation.url}
                           </a>
@@ -450,7 +453,7 @@ export default function QueriesPage() {
               )}
             </div>
           ) : (
-            <div className="p-4 text-center text-gray-500">
+            <div className="p-4 text-center cosmic-text-tertiary">
               Select a query to view details
             </div>
           )}
@@ -460,12 +463,12 @@ export default function QueriesPage() {
       {/* Edit Modal */}
       {showEditModal && selectedQuery && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold mb-4">Edit Query</h3>
+          <div className="cosmic-card max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold cosmic-text-primary mb-4">Edit Query</h3>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium cosmic-text-primary mb-1">
                   Query Text
                 </label>
                 <textarea
@@ -473,13 +476,13 @@ export default function QueriesPage() {
                   onChange={(e) =>
                     setEditData({ ...editData, query: e.target.value })
                   }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 h-24 resize-none"
+                  className="w-full cosmic-input h-24 resize-none"
                   placeholder="Enter your query..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium cosmic-text-primary mb-1">
                   Max Tokens
                 </label>
                 <input
@@ -491,14 +494,14 @@ export default function QueriesPage() {
                       max_tokens: parseInt(e.target.value),
                     })
                   }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="w-full cosmic-input"
                   min="100"
                   max="4000"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium cosmic-text-primary mb-1">
                   Confidence Threshold
                 </label>
                 <input
@@ -510,7 +513,7 @@ export default function QueriesPage() {
                       confidence_threshold: parseFloat(e.target.value),
                     })
                   }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="w-full cosmic-input"
                   min="0"
                   max="1"
                   step="0.1"
@@ -527,7 +530,7 @@ export default function QueriesPage() {
                   }
                   className="mr-2"
                 />
-                <label htmlFor="reprocess" className="text-sm text-gray-700">
+                <label htmlFor="reprocess" className="text-sm cosmic-text-secondary">
                   Reprocess query after update
                 </label>
               </div>
@@ -536,7 +539,7 @@ export default function QueriesPage() {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={handleUpdateQuery}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="flex-1 cosmic-btn-primary"
               >
                 Update Query
               </button>
@@ -545,7 +548,7 @@ export default function QueriesPage() {
                   setShowEditModal(false);
                   setEditData({});
                 }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                className="flex-1 cosmic-btn-secondary"
               >
                 Cancel
               </button>
@@ -553,6 +556,7 @@ export default function QueriesPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

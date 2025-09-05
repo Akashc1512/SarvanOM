@@ -54,109 +54,110 @@ export default function GraphVisualizationPage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Link href="/" className="text-gray-500 hover:text-gray-700">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-3xl font-bold text-gray-900">Knowledge Graph Explorer</h1>
+    <div className="cosmic-bg-primary min-h-screen">
+      <div className="cosmic-container cosmic-section space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Link href="/" className="cosmic-text-tertiary hover:cosmic-text-primary">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+              <h1 className="text-3xl font-bold cosmic-text-primary">Knowledge Graph Explorer</h1>
+            </div>
+            <p className="cosmic-text-secondary">
+              Interactive visualization of knowledge graph relationships and entities
+            </p>
           </div>
-          <p className="text-gray-600">
-            Interactive visualization of knowledge graph relationships and entities
-          </p>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="flex items-center gap-1 border-cosmic-border-primary text-cosmic-text-primary">
+              <Info className="h-3 w-3" />
+              Interactive
+            </Badge>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="flex items-center gap-1">
-            <Info className="h-3 w-3" />
-            Interactive
-          </Badge>
-        </div>
-      </div>
 
-      {/* Search and Controls */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Graph Search
-          </CardTitle>
-          <CardDescription>
-            Search for entities, concepts, or relationships to visualize in the knowledge graph
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label htmlFor="search">Search Query</Label>
-              <Input
-                id="search"
-                placeholder="Enter search terms..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="mt-1"
-              />
+        {/* Search and Controls */}
+        <Card className="cosmic-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 cosmic-text-primary">
+              <Search className="h-5 w-5 text-cosmic-primary-500" />
+              Graph Search
+            </CardTitle>
+            <CardDescription className="cosmic-text-secondary">
+              Search for entities, concepts, or relationships to visualize in the knowledge graph
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="search" className="cosmic-text-primary">Search Query</Label>
+                <Input
+                  id="search"
+                  placeholder="Enter search terms..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="mt-1 cosmic-input"
+                />
+              </div>
+              <div>
+                <Label htmlFor="maxNodes" className="cosmic-text-primary">Max Nodes</Label>
+                <Input
+                  id="maxNodes"
+                  type="number"
+                  min="10"
+                  max="200"
+                  value={maxNodes}
+                  onChange={(e) => setMaxNodes(parseInt(e.target.value) || 50)}
+                  className="mt-1 cosmic-input"
+                />
+              </div>
+              <div>
+                <Label htmlFor="maxEdges" className="cosmic-text-primary">Max Edges</Label>
+                <Input
+                  id="maxEdges"
+                  type="number"
+                  min="20"
+                  max="500"
+                  value={maxEdges}
+                  onChange={(e) => setMaxEdges(parseInt(e.target.value) || 100)}
+                  className="mt-1 cosmic-input"
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="maxNodes">Max Nodes</Label>
-              <Input
-                id="maxNodes"
-                type="number"
-                min="10"
-                max="200"
-                value={maxNodes}
-                onChange={(e) => setMaxNodes(parseInt(e.target.value) || 50)}
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="maxEdges">Max Edges</Label>
-              <Input
-                id="maxEdges"
-                type="number"
-                min="20"
-                max="500"
-                value={maxEdges}
-                onChange={(e) => setMaxEdges(parseInt(e.target.value) || 100)}
-                className="mt-1"
-              />
-            </div>
-          </div>
-        </CardContent>
+          </CardContent>
       </Card>
 
-      {/* Example Queries */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            Example Queries
-          </CardTitle>
-          <CardDescription>
-            Try these example searches to explore different types of relationships
-          </CardDescription>
-        </CardHeader>
+        {/* Example Queries */}
+        <Card className="cosmic-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 cosmic-text-primary">
+              <BookOpen className="h-5 w-5 text-cosmic-primary-500" />
+              Example Queries
+            </CardTitle>
+            <CardDescription className="cosmic-text-secondary">
+              Try these example searches to explore different types of relationships
+            </CardDescription>
+          </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {exampleQueries.map((example, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                className="h-auto p-4 flex flex-col items-start gap-2"
-                onClick={() => setSearchQuery(example.query)}
-              >
-                <example.icon className="h-5 w-5 text-blue-600" />
-                <div className="text-left">
-                  <div className="font-medium text-sm">{example.title}</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {example.description}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {exampleQueries.map((example, index) => (
+                <Button
+                  key={index}
+                  variant="outline"
+                  className="h-auto p-4 flex flex-col items-start gap-2 cosmic-btn-secondary"
+                  onClick={() => setSearchQuery(example.query)}
+                >
+                  <example.icon className="h-5 w-5 text-cosmic-primary-500" />
+                  <div className="text-left">
+                    <div className="font-medium text-sm cosmic-text-primary">{example.title}</div>
+                    <div className="text-xs cosmic-text-tertiary mt-1">
+                      {example.description}
+                    </div>
                   </div>
-                </div>
-              </Button>
-            ))}
-          </div>
+                </Button>
+              ))}
+            </div>
         </CardContent>
       </Card>
 
@@ -175,40 +176,41 @@ export default function GraphVisualizationPage() {
         }}
       />
 
-      {/* Information Panel */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Graph Controls
-          </CardTitle>
-          <CardDescription>
-            How to interact with the knowledge graph visualization
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-medium mb-3">Navigation</h4>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li>• <strong>Drag</strong> to pan around the graph</li>
-                <li>• <strong>Scroll</strong> to zoom in/out</li>
-                <li>• <strong>Click nodes</strong> to see details</li>
-                <li>• <strong>Click edges</strong> to view relationships</li>
-              </ul>
+        {/* Information Panel */}
+        <Card className="cosmic-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 cosmic-text-primary">
+              <Settings className="h-5 w-5 text-cosmic-primary-500" />
+              Graph Controls
+            </CardTitle>
+            <CardDescription className="cosmic-text-secondary">
+              How to interact with the knowledge graph visualization
+            </CardDescription>
+          </CardHeader>
+                  <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-medium mb-3 cosmic-text-primary">Navigation</h4>
+                <ul className="space-y-2 text-sm cosmic-text-secondary">
+                  <li>• <strong>Drag</strong> to pan around the graph</li>
+                  <li>• <strong>Scroll</strong> to zoom in/out</li>
+                  <li>• <strong>Click nodes</strong> to see details</li>
+                  <li>• <strong>Click edges</strong> to view relationships</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-medium mb-3 cosmic-text-primary">Node Types</h4>
+                <ul className="space-y-2 text-sm cosmic-text-secondary">
+                  <li>• <span className="inline-block w-3 h-3 bg-cosmic-success rounded-full mr-2"></span> <strong>Green:</strong> People</li>
+                  <li>• <span className="inline-block w-3 h-3 bg-cosmic-primary-500 rounded-full mr-2"></span> <strong>Blue:</strong> Organizations</li>
+                  <li>• <span className="inline-block w-3 h-3 bg-cosmic-warning rounded-full mr-2"></span> <strong>Orange:</strong> Locations</li>
+                  <li>• <span className="inline-block w-3 h-3 bg-cosmic-secondary-500 rounded-full mr-2"></span> <strong>Purple:</strong> Concepts</li>
+                </ul>
+              </div>
             </div>
-            <div>
-              <h4 className="font-medium mb-3">Node Types</h4>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li>• <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2"></span> <strong>Green:</strong> People</li>
-                <li>• <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-2"></span> <strong>Blue:</strong> Organizations</li>
-                <li>• <span className="inline-block w-3 h-3 bg-orange-500 rounded-full mr-2"></span> <strong>Orange:</strong> Locations</li>
-                <li>• <span className="inline-block w-3 h-3 bg-purple-500 rounded-full mr-2"></span> <strong>Purple:</strong> Concepts</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 } 

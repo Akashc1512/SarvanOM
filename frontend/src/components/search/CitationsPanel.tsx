@@ -7,7 +7,7 @@ import {
   LinkIcon, 
   ChevronDownIcon,
   ChevronUpIcon,
-  ExternalLinkIcon,
+  ArrowTopRightOnSquareIcon as ExternalLinkIcon,
   CalendarIcon,
   UserIcon,
   StarIcon
@@ -82,11 +82,11 @@ export function CitationsPanel({
         animate={{ opacity: 1, x: 0 }}
         className={cn("w-full", className)}
       >
-        <div className="bg-cosmos-card/30 backdrop-blur-sm border border-cosmos-accent/20 rounded-2xl p-6">
+        <div className="cosmic-card p-6">
           <div className="text-center">
-            <DocumentTextIcon className="w-12 h-12 text-cosmos-accent/50 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold text-cosmos-fg mb-2">No Citations Yet</h3>
-            <p className="text-cosmos-fg/60 text-sm">
+            <DocumentTextIcon className="w-12 h-12 text-cosmic-primary-500/50 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold cosmic-text-primary mb-2">No Citations Yet</h3>
+            <p className="cosmic-text-secondary text-sm">
               Sources and references will appear here when you search
             </p>
           </div>
@@ -101,29 +101,29 @@ export function CitationsPanel({
       animate={{ opacity: 1, x: 0 }}
       className={cn("w-full", className)}
     >
-      <div className="bg-cosmos-card/50 backdrop-blur-sm border border-cosmos-accent/20 rounded-2xl overflow-hidden">
+      <div className="cosmic-card overflow-hidden">
         {/* Header */}
-        <div className="p-4 border-b border-cosmos-accent/20">
+        <div className="p-4 border-b border-cosmic-border-primary">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-cosmos-accent/20 rounded-lg flex items-center justify-center">
-                <DocumentTextIcon className="w-5 h-5 text-cosmos-accent" />
+              <div className="w-8 h-8 bg-cosmic-primary-500/20 rounded-lg flex items-center justify-center">
+                <DocumentTextIcon className="w-5 h-5 text-cosmic-primary-500" />
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-cosmos-fg">Sources & Citations</h3>
-                <p className="text-sm text-cosmos-fg/60">{citations.length} references found</p>
+                <h3 className="text-xl font-semibold cosmic-text-primary">Sources & Citations</h3>
+                <p className="text-sm cosmic-text-tertiary">{citations.length} references found</p>
               </div>
             </div>
             
             {onToggle && (
               <button
                 onClick={onToggle}
-                className="p-2 rounded-lg hover:bg-cosmos-accent/10 transition-colors"
+                className="cosmic-btn-ghost p-2 rounded-lg"
               >
                 {isExpanded ? (
-                  <ChevronUpIcon className="w-5 h-5 text-cosmos-fg/60" />
+                  <ChevronUpIcon className="w-5 h-5 cosmic-text-tertiary" />
                 ) : (
-                  <ChevronDownIcon className="w-5 h-5 text-cosmos-fg/60" />
+                  <ChevronDownIcon className="w-5 h-5 cosmic-text-tertiary" />
                 )}
               </button>
             )}
@@ -147,7 +147,7 @@ export function CitationsPanel({
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="bg-cosmos-bg/20 border border-cosmos-accent/10 rounded-xl p-4 hover:bg-cosmos-bg/30 transition-all"
+                    className="cosmic-card p-4 cosmic-hover-lift"
                   >
                     {/* Citation Header */}
                     <div className="flex items-start justify-between mb-3">
@@ -161,35 +161,35 @@ export function CitationsPanel({
                           <span className="text-2xl">{getTypeIcon(citation.type)}</span>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-cosmos-fg truncate">
+                          <h4 className="font-medium cosmic-text-primary truncate">
                             {citation.title}
                           </h4>
-                          <p className="text-sm text-cosmos-fg/60 truncate">
+                          <p className="text-sm cosmic-text-tertiary truncate">
                             {citation.source}
                           </p>
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 text-xs text-cosmos-fg/60">
+                        <div className="flex items-center gap-1 text-xs cosmic-text-tertiary">
                           <StarIcon className="w-3 h-3" />
                           <span>{Math.round(citation.relevance * 100)}%</span>
                         </div>
                         <button
                           onClick={() => toggleCitation(citation.id)}
-                          className="p-1 rounded hover:bg-cosmos-accent/10 transition-colors"
+                          className="cosmic-btn-ghost p-1 rounded"
                         >
                           {expandedCitations.has(citation.id) ? (
-                            <ChevronUpIcon className="w-4 h-4 text-cosmos-fg/60" />
+                            <ChevronUpIcon className="w-4 h-4 cosmic-text-tertiary" />
                           ) : (
-                            <ChevronDownIcon className="w-4 h-4 text-cosmos-fg/60" />
+                            <ChevronDownIcon className="w-4 h-4 cosmic-text-tertiary" />
                           )}
                         </button>
                       </div>
                     </div>
 
                     {/* Citation Metadata */}
-                    <div className="flex items-center gap-4 text-xs text-cosmos-fg/60 mb-3">
+                    <div className="flex items-center gap-4 text-xs cosmic-text-tertiary mb-3">
                       {citation.author && (
                         <div className="flex items-center gap-1">
                           <UserIcon className="w-3 h-3" />
@@ -215,10 +215,10 @@ export function CitationsPanel({
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
                           transition={{ duration: 0.2 }}
-                          className="border-t border-cosmos-accent/10 pt-3"
+                          className="border-t border-cosmic-border-primary pt-3"
                         >
                           {citation.excerpt && (
-                            <p className="text-sm text-cosmos-fg/80 mb-3 leading-relaxed">
+                            <p className="text-sm cosmic-text-secondary mb-3 leading-relaxed">
                               {citation.excerpt}
                             </p>
                           )}
@@ -229,13 +229,13 @@ export function CitationsPanel({
                                 href={citation.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="flex items-center gap-2 px-3 py-2 bg-cosmos-accent/10 hover:bg-cosmos-accent/20 text-cosmos-accent rounded-lg transition-all text-sm"
+                                className="cosmic-btn-secondary flex items-center gap-2 px-3 py-2 text-sm"
                               >
                                 <ExternalLinkIcon className="w-4 h-4" />
                                 <span>View Source</span>
                               </a>
                             )}
-                            <button className="flex items-center gap-2 px-3 py-2 bg-cosmos-card/50 hover:bg-cosmos-card/70 text-cosmos-fg/80 rounded-lg transition-all text-sm">
+                            <button className="cosmic-btn-ghost flex items-center gap-2 px-3 py-2 text-sm">
                               <LinkIcon className="w-4 h-4" />
                               <span>Copy Link</span>
                             </button>

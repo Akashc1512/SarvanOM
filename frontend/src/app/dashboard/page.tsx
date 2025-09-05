@@ -105,8 +105,8 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-cosmos-bg">
-      <div className="container mx-auto px-6 sm:px-8 lg:px-12 py-8">
+    <div className="min-h-screen cosmic-bg-primary">
+      <div className="cosmic-container cosmic-section">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Navigation - Industry Standard */}
           <motion.div 
@@ -116,19 +116,19 @@ export default function DashboardPage() {
           >
             <Link
               href="/"
-              className="px-6 py-3 border border-cosmos-accent/30 text-cosmos-accent rounded-xl hover:bg-cosmos-accent/10 transition-all duration-300 backdrop-blur-sm"
+              className="cosmic-btn-secondary"
             >
               New Query
             </Link>
             <Link
               href="/queries"
-              className="px-6 py-3 border border-cosmos-accent/30 text-cosmos-accent rounded-xl hover:bg-cosmos-accent/10 transition-all duration-300 backdrop-blur-sm"
+              className="cosmic-btn-secondary"
             >
               Manage Queries
             </Link>
             <Link
               href="/dashboard"
-              className="px-6 py-3 bg-cosmos-accent text-cosmos-bg rounded-xl hover:bg-cosmos-accent/90 transition-all duration-300 shadow-lg"
+              className="cosmic-btn-primary"
             >
               Dashboard
             </Link>
@@ -142,10 +142,10 @@ export default function DashboardPage() {
             className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6"
           >
             <div className="space-y-2">
-              <h1 className="text-4xl sm:text-5xl font-bold text-cosmos-fg">
+              <h1 className="text-4xl sm:text-5xl font-bold cosmic-text-primary">
                 System Dashboard
               </h1>
-              <p className="text-lg text-cosmos-fg/70 max-w-2xl">
+              <p className="text-lg cosmic-text-secondary max-w-2xl">
                 Monitor system health, performance, and integrations in real-time
               </p>
             </div>
@@ -153,13 +153,13 @@ export default function DashboardPage() {
               <button
                 onClick={loadDashboardData}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-6 py-3 bg-cosmos-accent hover:bg-cosmos-accent/90 text-cosmos-bg rounded-xl transition-all duration-300 shadow-lg disabled:opacity-50"
+                className="cosmic-btn-primary flex items-center gap-2 disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 {isLoading ? "Refreshing..." : "Refresh"}
               </button>
               <div className="text-right">
-                <p className="text-sm text-cosmos-fg/70">
+                <p className="text-sm cosmic-text-tertiary">
                   Last updated: {lastRefresh.toLocaleTimeString()}
                 </p>
               </div>
@@ -171,13 +171,13 @@ export default function DashboardPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-red-500/10 border border-red-500/20 rounded-xl p-6"
+              className="cosmic-card border-cosmic-error bg-cosmic-error/5 p-6"
             >
               <div className="flex items-center gap-3">
-                <AlertCircle className="w-6 h-6 text-red-400" />
+                <AlertCircle className="w-6 h-6 text-cosmic-error" />
                 <div>
-                  <h3 className="font-semibold text-red-400">Error Loading Dashboard</h3>
-                  <p className="text-red-400/80 text-sm mt-1">{error}</p>
+                  <h3 className="font-semibold text-cosmic-error">Error Loading Dashboard</h3>
+                  <p className="text-cosmic-error/80 text-sm mt-1">{error}</p>
                 </div>
               </div>
             </motion.div>
@@ -228,23 +228,23 @@ export default function DashboardPage() {
                 trendUp: true
               }
             ].map((stat, index) => (
-              <div key={stat.title} className="bg-cosmos-card/50 backdrop-blur-sm border border-cosmos-accent/20 rounded-2xl p-6 hover:bg-cosmos-card/70 transition-all duration-300">
+              <div key={stat.title} className="cosmic-tile-metric cosmic-hover-lift">
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-cosmos-fg/70">{stat.title}</p>
-                    <p className="text-2xl font-bold text-cosmos-fg">{stat.value}</p>
+                    <p className="text-sm font-medium cosmic-text-tertiary">{stat.title}</p>
+                    <p className="text-2xl font-bold cosmic-text-primary">{stat.value}</p>
                     <div className="flex items-center gap-1">
                       {stat.trendUp ? (
-                        <ArrowUpRight className="w-4 h-4 text-green-400" />
+                        <ArrowUpRight className="w-4 h-4 text-cosmic-success" />
                       ) : (
-                        <ArrowDownRight className="w-4 h-4 text-red-400" />
+                        <ArrowDownRight className="w-4 h-4 text-cosmic-error" />
                       )}
-                      <span className={`text-sm font-medium ${stat.trendUp ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className={`text-sm font-medium ${stat.trendUp ? 'text-cosmic-success' : 'text-cosmic-error'}`}>
                         {stat.trend}
                       </span>
                     </div>
                   </div>
-                  <div className={`w-12 h-12 rounded-xl ${stat.bgColor} flex items-center justify-center`}>
+                  <div className={`w-12 h-12 rounded-xl ${stat.bgColor} flex items-center justify-center cosmic-glow-soft`}>
                     <stat.icon className={`w-6 h-6 ${stat.color}`} />
                   </div>
                 </div>
@@ -260,10 +260,10 @@ export default function DashboardPage() {
             className="grid grid-cols-1 lg:grid-cols-2 gap-8"
           >
             {/* API Information */}
-            <div className="bg-cosmos-card/50 backdrop-blur-sm border border-cosmos-accent/20 rounded-2xl p-8">
+            <div className="cosmic-analytics-card">
               <div className="flex items-center gap-3 mb-6">
-                <Server className="w-6 h-6 text-cosmos-accent" />
-                <h2 className="text-2xl font-semibold text-cosmos-fg">API Information</h2>
+                <Server className="w-6 h-6 text-cosmic-primary-500" />
+                <h2 className="text-2xl font-semibold cosmic-text-primary">API Information</h2>
               </div>
               {apiInfo ? (
                 <div className="space-y-4">
@@ -273,47 +273,47 @@ export default function DashboardPage() {
                     { label: "Environment", value: apiInfo.environment },
                     { label: "Uptime", value: formatUptime(apiInfo.uptime) }
                   ].map((item) => (
-                    <div key={item.label} className="flex justify-between items-center py-2 border-b border-cosmos-accent/10">
-                      <span className="text-cosmos-fg/70">{item.label}:</span>
-                      <span className="font-medium text-cosmos-fg">{item.value}</span>
+                    <div key={item.label} className="flex justify-between items-center py-2 border-b border-cosmic-border-primary">
+                      <span className="cosmic-text-tertiary">{item.label}:</span>
+                      <span className="font-medium cosmic-text-primary">{item.value}</span>
                     </div>
                   ))}
                   <div className="flex justify-between items-center py-2">
-                    <span className="text-cosmos-fg/70">Status:</span>
+                    <span className="cosmic-text-tertiary">Status:</span>
                     <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(apiInfo.status)}`}>
                       {apiInfo.status}
                     </span>
                   </div>
                 </div>
               ) : (
-                <div className="text-cosmos-fg/50">Loading API information...</div>
+                <div className="cosmic-text-tertiary">Loading API information...</div>
               )}
             </div>
 
             {/* System Metrics */}
-            <div className="bg-cosmos-card/50 backdrop-blur-sm border border-cosmos-accent/20 rounded-2xl p-8">
+            <div className="cosmic-analytics-card">
               <div className="flex items-center gap-3 mb-6">
-                <BarChart3 className="w-6 h-6 text-cosmos-accent" />
-                <h2 className="text-2xl font-semibold text-cosmos-fg">System Metrics</h2>
+                <BarChart3 className="w-6 h-6 text-cosmic-primary-500" />
+                <h2 className="text-2xl font-semibold cosmic-text-primary">System Metrics</h2>
               </div>
               {metrics && !("error" in metrics) ? (
                 <div className="space-y-4">
                   {[
-                    { label: "Total Requests", value: (metrics.sarvanom_requests_total || 0).toLocaleString(), color: "text-cosmos-fg" },
-                    { label: "Errors", value: (metrics.sarvanom_errors_total || 0).toLocaleString(), color: "text-red-400" },
-                    { label: "Cache Hits", value: (metrics.sarvanom_cache_hits_total || 0).toLocaleString(), color: "text-green-400" },
-                    { label: "Cache Misses", value: (metrics.sarvanom_cache_misses_total || 0).toLocaleString(), color: "text-yellow-400" },
-                    { label: "Avg Response Time", value: `${((metrics.sarvanom_average_response_time_seconds || 0) * 1000).toFixed(0)}ms`, color: "text-cosmos-fg" },
-                    { label: "Active Users", value: (metrics.sarvanom_active_users || 0).toLocaleString(), color: "text-cosmos-fg" }
+                    { label: "Total Requests", value: (metrics.sarvanom_requests_total || 0).toLocaleString(), color: "cosmic-text-primary" },
+                    { label: "Errors", value: (metrics.sarvanom_errors_total || 0).toLocaleString(), color: "text-cosmic-error" },
+                    { label: "Cache Hits", value: (metrics.sarvanom_cache_hits_total || 0).toLocaleString(), color: "text-cosmic-success" },
+                    { label: "Cache Misses", value: (metrics.sarvanom_cache_misses_total || 0).toLocaleString(), color: "text-cosmic-warning" },
+                    { label: "Avg Response Time", value: `${((metrics.sarvanom_average_response_time_seconds || 0) * 1000).toFixed(0)}ms`, color: "cosmic-text-primary" },
+                    { label: "Active Users", value: (metrics.sarvanom_active_users || 0).toLocaleString(), color: "cosmic-text-primary" }
                   ].map((item) => (
-                    <div key={item.label} className="flex justify-between items-center py-2 border-b border-cosmos-accent/10">
-                      <span className="text-cosmos-fg/70">{item.label}:</span>
+                    <div key={item.label} className="flex justify-between items-center py-2 border-b border-cosmic-border-primary">
+                      <span className="cosmic-text-tertiary">{item.label}:</span>
                       <span className={`font-medium ${item.color}`}>{item.value}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-cosmos-fg/50">
+                <div className="cosmic-text-tertiary">
                   {"error" in (metrics || {})
                     ? `Error: ${(metrics as ErrorResponse).error}`
                     : "Loading metrics..."}
@@ -322,28 +322,28 @@ export default function DashboardPage() {
             </div>
 
             {/* Analytics */}
-            <div className="bg-cosmos-card/50 backdrop-blur-sm border border-cosmos-accent/20 rounded-2xl p-8">
+            <div className="cosmic-analytics-card">
               <div className="flex items-center gap-3 mb-6">
-                <Database className="w-6 h-6 text-cosmos-accent" />
-                <h2 className="text-2xl font-semibold text-cosmos-fg">Analytics</h2>
+                <Database className="w-6 h-6 text-cosmic-primary-500" />
+                <h2 className="text-2xl font-semibold cosmic-text-primary">Analytics</h2>
               </div>
               {analytics && !("error" in analytics) ? (
                 <div className="space-y-4">
                   {[
-                    { label: "Total Queries", value: analytics.total_queries.toLocaleString(), color: "text-cosmos-fg" },
-                    { label: "Successful", value: analytics.successful_queries.toLocaleString(), color: "text-green-400" },
-                    { label: "Failed", value: analytics.failed_queries.toLocaleString(), color: "text-red-400" },
-                    { label: "Avg Confidence", value: `${(analytics.average_confidence * 100).toFixed(1)}%`, color: "text-cosmos-fg" },
-                    ...(analytics.cache_hit_rate !== undefined ? [{ label: "Cache Hit Rate", value: `${(analytics.cache_hit_rate * 100).toFixed(1)}%`, color: "text-cosmos-fg" }] : [])
+                    { label: "Total Queries", value: analytics.total_queries.toLocaleString(), color: "cosmic-text-primary" },
+                    { label: "Successful", value: analytics.successful_queries.toLocaleString(), color: "text-cosmic-success" },
+                    { label: "Failed", value: analytics.failed_queries.toLocaleString(), color: "text-cosmic-error" },
+                    { label: "Avg Confidence", value: `${(analytics.average_confidence * 100).toFixed(1)}%`, color: "cosmic-text-primary" },
+                    ...(analytics.cache_hit_rate !== undefined ? [{ label: "Cache Hit Rate", value: `${(analytics.cache_hit_rate * 100).toFixed(1)}%`, color: "cosmic-text-primary" }] : [])
                   ].map((item) => (
-                    <div key={item.label} className="flex justify-between items-center py-2 border-b border-cosmos-accent/10">
-                      <span className="text-cosmos-fg/70">{item.label}:</span>
+                    <div key={item.label} className="flex justify-between items-center py-2 border-b border-cosmic-border-primary">
+                      <span className="cosmic-text-tertiary">{item.label}:</span>
                       <span className={`font-medium ${item.color}`}>{item.value}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-cosmos-fg/50">
+                <div className="cosmic-text-tertiary">
                   {analytics?.error
                     ? `Error: ${analytics.error}`
                     : "Loading analytics..."}
@@ -352,31 +352,31 @@ export default function DashboardPage() {
             </div>
 
             {/* Integration Status */}
-            <div className="bg-cosmos-card/50 backdrop-blur-sm border border-cosmos-accent/20 rounded-2xl p-8">
+            <div className="cosmic-analytics-card">
               <div className="flex items-center gap-3 mb-6">
-                <Shield className="w-6 h-6 text-cosmos-accent" />
-                <h2 className="text-2xl font-semibold text-cosmos-fg">Integration Status</h2>
+                <Shield className="w-6 h-6 text-cosmic-primary-500" />
+                <h2 className="text-2xl font-semibold cosmic-text-primary">Integration Status</h2>
               </div>
               {integrations && !('error' in integrations) ? (
                 <div className="space-y-6">
                   <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="bg-green-500/10 rounded-xl p-4 border border-green-500/20">
-                      <div className="text-2xl font-bold text-green-400">
+                    <div className="cosmic-card p-4 border-cosmic-success bg-cosmic-success/5">
+                      <div className="text-2xl font-bold text-cosmic-success">
                         {integrations.summary.healthy}
                       </div>
-                      <div className="text-sm text-cosmos-fg/70">Healthy</div>
+                      <div className="text-sm cosmic-text-tertiary">Healthy</div>
                     </div>
-                    <div className="bg-red-500/10 rounded-xl p-4 border border-red-500/20">
-                      <div className="text-2xl font-bold text-red-400">
+                    <div className="cosmic-card p-4 border-cosmic-error bg-cosmic-error/5">
+                      <div className="text-2xl font-bold text-cosmic-error">
                         {integrations.summary.unhealthy}
                       </div>
-                      <div className="text-sm text-cosmos-fg/70">Unhealthy</div>
+                      <div className="text-sm cosmic-text-tertiary">Unhealthy</div>
                     </div>
-                    <div className="bg-yellow-500/10 rounded-xl p-4 border border-yellow-500/20">
-                      <div className="text-2xl font-bold text-yellow-400">
+                    <div className="cosmic-card p-4 border-cosmic-warning bg-cosmic-warning/5">
+                      <div className="text-2xl font-bold text-cosmic-warning">
                         {integrations.summary.not_configured}
                       </div>
-                      <div className="text-sm text-cosmos-fg/70">Not Configured</div>
+                      <div className="text-sm cosmic-text-tertiary">Not Configured</div>
                     </div>
                   </div>
 
@@ -385,9 +385,9 @@ export default function DashboardPage() {
                       ([name, info]) => (
                         <div
                           key={name}
-                          className="flex justify-between items-center p-3 bg-cosmos-card/30 rounded-xl border border-cosmos-accent/10"
+                          className="cosmic-card p-3 flex justify-between items-center"
                         >
-                          <span className="font-medium text-cosmos-fg capitalize">
+                          <span className="font-medium cosmic-text-primary capitalize">
                             {name.replace("_", " ")}
                           </span>
                           <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(info.status)}`}>
@@ -399,7 +399,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ) : (
-                <div className="text-cosmos-fg/50">
+                <div className="cosmic-text-tertiary">
                   {integrations && "error" in integrations
                     ? `Error: ${integrations.error}`
                     : "Loading integration status..."}

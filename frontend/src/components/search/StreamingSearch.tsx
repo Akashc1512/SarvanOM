@@ -1,5 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useSSEStream } from '../../hooks/useSSEStream';
+import { LaneChips, LaneProgress, PartialAnswerBanner, TTFTIndicator, type LaneStatus } from '../streaming/LaneChips';
+import { TraceIdDisplay, StreamingStatus } from '../streaming/TraceIdDisplay';
 
 interface StreamingSearchProps {
   onComplete?: (data: any) => void;
@@ -48,10 +50,33 @@ export function StreamingSearch({ onComplete, onError, className = '' }: Streami
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'reconnecting'>('disconnected');
   const [heartbeatData, setHeartbeatData] = useState<any>(null);
   const [traceId, setTraceId] = useState<string>('');
+  const [lanes, setLanes] = useState<LaneStatus[]>([
+    { id: 'web', name: 'Web', status: 'pending', timeout: 3000 },
+    { id: 'vector', name: 'Vector', status: 'pending', timeout: 3000 },
+    { id: 'kg', name: 'KG', status: 'pending', timeout: 3000 },
+    { id: 'llm', name: 'LLM', status: 'pending', timeout: 3000 },
+    { id: 'youtube', name: 'YouTube', status: 'pending', timeout: 3000 }
+  ]);
+  const [ttft, setTtft] = useState<number | undefined>();
+  const [showPartialBanner, setShowPartialBanner] = useState(false);
 
   const handleContent = useCallback((content: string) => {
     setAnswer(prev => prev + content);
-  }, []);
+    
+    // Update lanes when content starts flowing
+    setLanes(prev => prev.map(lane => {
+      if (lane.status === 'pending') {
+        return { ...lane, status: 'running', startTime: lane.startTime || Date.now() };
+      }
+      return lane;
+    }));
+    
+    // Show partial banner if not all lanes are complete
+    const completedLanes = lanes.filter(lane => lane.status === 'completed').length;
+    if (completedLanes < lanes.length && !showPartialBanner) {
+      setShowPartialBanner(true);
+    }
+  }, [lanes, showPartialBanner]);
 
   const handleComplete = useCallback((data: any) => {
     console.log('Stream completed:', data);
@@ -64,16 +89,34 @@ export function StreamingSearch({ onComplete, onError, className = '' }: Streami
       setCitations(data.citations);
     }
 
+    // Mark all lanes as completed
+    setLanes(prev => prev.map(lane => ({
+      ...lane,
+      status: 'completed' as const,
+      endTime: Date.now()
+    })));
+    
     setIsLoading(false);
     setConnectionStatus('disconnected');
+    setShowPartialBanner(false);
     
     onComplete?.(data);
   }, [onComplete]);
 
   const handleError = useCallback((error: string) => {
     console.error('Stream error:', error);
+    
+    // Mark all lanes as error
+    setLanes(prev => prev.map(lane => ({
+      ...lane,
+      status: 'error' as const,
+      endTime: Date.now(),
+      error
+    })));
+    
     setIsLoading(false);
     setConnectionStatus('disconnected');
+    setShowPartialBanner(false);
     onError?.(error);
   }, [onError]);
 
@@ -127,9 +170,28 @@ export function StreamingSearch({ onComplete, onError, className = '' }: Streami
     setHeartbeatData(null);
     setIsLoading(true);
     setConnectionStatus('connecting');
+    setTtft(undefined);
+    setShowPartialBanner(false);
+    
+    // Initialize lanes
+    setLanes([
+      { id: 'web', name: 'Web', status: 'pending', timeout: 3000 },
+      { id: 'vector', name: 'Vector', status: 'pending', timeout: 3000 },
+      { id: 'kg', name: 'KG', status: 'pending', timeout: 3000 },
+      { id: 'llm', name: 'LLM', status: 'pending', timeout: 3000 },
+      { id: 'youtube', name: 'YouTube', status: 'pending', timeout: 3000 }
+    ]);
+
+    const startTime = Date.now();
 
     // Start streaming
     start();
+    
+    // Set TTFT when first content arrives
+    setTimeout(() => {
+      const ttftTime = Date.now() - startTime;
+      setTtft(ttftTime);
+    }, 100);
   }, [query, isLoading, start]);
 
   const handleStop = useCallback(() => {
@@ -140,11 +202,11 @@ export function StreamingSearch({ onComplete, onError, className = '' }: Streami
 
   const getStatusColor = () => {
     switch (connectionStatus) {
-      case 'connected': return 'text-green-500';
-      case 'connecting': return 'text-yellow-500';
-      case 'reconnecting': return 'text-orange-500';
-      case 'disconnected': return 'text-gray-500';
-      default: return 'text-gray-500';
+      case 'connected': return 'text-cosmic-success';
+      case 'connecting': return 'text-cosmic-warning';
+      case 'reconnecting': return 'text-cosmic-error';
+      case 'disconnected': return 'cosmic-text-tertiary';
+      default: return 'cosmic-text-tertiary';
     }
   };
 
@@ -168,13 +230,13 @@ export function StreamingSearch({ onComplete, onError, className = '' }: Streami
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Ask anything..."
-            className="flex-1 rounded-md bg-white/10 px-4 py-3 outline-none focus:ring-2 focus:ring-blue-500"
+            className="cosmic-input flex-1"
             disabled={isLoading}
           />
           <button
             type="submit"
             disabled={!query.trim() || isLoading}
-            className="rounded-md bg-blue-500 px-6 py-3 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="cosmic-btn-primary px-6 py-3 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? 'Searching...' : 'Search'}
           </button>
@@ -182,7 +244,7 @@ export function StreamingSearch({ onComplete, onError, className = '' }: Streami
             <button
               type="button"
               onClick={handleStop}
-              className="rounded-md bg-red-500 px-4 py-3 text-white font-medium"
+              className="cosmic-btn-secondary bg-cosmic-error hover:bg-cosmic-error/80 text-white px-4 py-3 font-medium"
             >
               Stop
             </button>
@@ -190,44 +252,48 @@ export function StreamingSearch({ onComplete, onError, className = '' }: Streami
         </div>
       </form>
 
-      {/* Connection Status */}
-      <div className="mb-4 flex items-center gap-4 text-sm">
-        <div className={`flex items-center gap-2 ${getStatusColor()}`}>
-          <div className={`w-2 h-2 rounded-full ${
-            connectionStatus === 'connected' ? 'bg-green-500' :
-            connectionStatus === 'connecting' ? 'bg-yellow-500' :
-            connectionStatus === 'reconnecting' ? 'bg-orange-500' :
-            'bg-gray-500'
-          }`} />
-          <span>{getStatusText()}</span>
+      {/* Streaming Status */}
+      <div className="mb-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <StreamingStatus
+            isStreaming={isLoading}
+            connectionStatus={connectionStatus}
+            lastHeartbeat={heartbeatData?.timestamp}
+          />
+          {traceId && <TraceIdDisplay traceId={traceId} size="sm" />}
         </div>
         
-        {traceId && (
-          <div className="text-gray-400">
-            Trace ID: {traceId}
-          </div>
-        )}
+        {/* Lane Progress */}
+        {isLoading && <LaneProgress lanes={lanes} />}
         
-        {heartbeatData && (
-          <div className="text-gray-400">
-            Uptime: {Math.round(heartbeatData.uptime_seconds || 0)}s
-          </div>
-        )}
+        {/* Lane Chips */}
+        {isLoading && <LaneChips lanes={lanes} />}
+        
+        {/* TTFT Indicator */}
+        {ttft && <TTFTIndicator ttft={ttft} />}
       </div>
 
       {/* Error Display */}
       {error && (
-        <div className="mb-4 rounded-md bg-red-500/20 border border-red-500/30 px-4 py-3 text-red-200">
-          <strong>Error:</strong> {error}
+        <div className="cosmic-card border-cosmic-error bg-cosmic-error/5 p-4 mb-4">
+          <strong className="text-cosmic-error">Error:</strong> <span className="text-cosmic-error/80">{error}</span>
         </div>
       )}
+
+      {/* Partial Answer Banner */}
+      <PartialAnswerBanner
+        isVisible={showPartialBanner}
+        completedLanes={lanes.filter(lane => lane.status === 'completed').length}
+        totalLanes={lanes.length}
+        onDismiss={() => setShowPartialBanner(false)}
+      />
 
       {/* Answer Display */}
       {answer && (
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3 text-white">Answer</h3>
-          <div className="prose prose-invert max-w-none">
-            <div className="whitespace-pre-wrap text-gray-200 leading-relaxed">
+          <h3 className="text-lg font-semibold mb-3 cosmic-text-primary">Answer</h3>
+          <div className="cosmic-card p-4">
+            <div className="whitespace-pre-wrap cosmic-text-primary leading-relaxed">
               {answer}
               {isLoading && <span className="animate-pulse">|</span>}
             </div>
@@ -238,22 +304,22 @@ export function StreamingSearch({ onComplete, onError, className = '' }: Streami
       {/* Sources Display */}
       {sources.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3 text-white">Sources</h3>
+          <h3 className="text-lg font-semibold mb-3 cosmic-text-primary">Sources</h3>
           <div className="space-y-3">
             {sources.map((source, index) => (
-              <div key={index} className="bg-white/5 rounded-lg p-4 border border-white/10">
-                <h4 className="font-medium text-white mb-2">
+              <div key={index} className="cosmic-card p-4">
+                <h4 className="font-medium cosmic-text-primary mb-2">
                   <a 
                     href={source.url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="hover:text-blue-400 transition-colors"
+                    className="text-cosmic-primary-500 hover:text-cosmic-primary-400 transition-colors"
                   >
                     {source.title}
                   </a>
                 </h4>
-                <p className="text-gray-300 text-sm mb-2">{source.snippet}</p>
-                <div className="flex items-center gap-4 text-xs text-gray-400">
+                <p className="cosmic-text-secondary text-sm mb-2">{source.snippet}</p>
+                <div className="flex items-center gap-4 text-xs cosmic-text-tertiary">
                   <span>{source.domain}</span>
                   <span>Provider: {source.provider}</span>
                   <span>Score: {(source.relevance_score * 100).toFixed(1)}%</span>
@@ -267,26 +333,26 @@ export function StreamingSearch({ onComplete, onError, className = '' }: Streami
       {/* Citations Display */}
       {citations.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3 text-white">Citations</h3>
+          <h3 className="text-lg font-semibold mb-3 cosmic-text-primary">Citations</h3>
           <div className="space-y-2">
             {citations.map((citation, index) => (
-              <div key={index} className="bg-white/5 rounded-lg p-3 border border-white/10">
+              <div key={index} className="cosmic-card p-3">
                 <div className="flex items-start gap-3">
-                  <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                  <span className="bg-cosmic-primary-500 text-white text-xs px-2 py-1 rounded">
                     {citation.marker}
                   </span>
                   <div className="flex-1">
-                    <p className="text-gray-200 text-sm mb-1">
+                    <p className="cosmic-text-primary text-sm mb-1">
                       {citation.source.title}
                     </p>
-                    <div className="flex items-center gap-4 text-xs text-gray-400">
+                    <div className="flex items-center gap-4 text-xs cosmic-text-tertiary">
                       <span>Confidence: {(citation.confidence * 100).toFixed(1)}%</span>
                       <span>Type: {citation.claim_type}</span>
                       <a 
                         href={citation.source.url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-blue-400 hover:text-blue-300"
+                        className="text-cosmic-primary-500 hover:text-cosmic-primary-400"
                       >
                         View Source
                       </a>
@@ -301,9 +367,9 @@ export function StreamingSearch({ onComplete, onError, className = '' }: Streami
 
       {/* Debug Info (only in development) */}
       {process.env.NODE_ENV === 'development' && heartbeatData && (
-        <div className="mt-6 p-4 bg-gray-800 rounded-lg">
-          <h4 className="text-sm font-medium text-gray-300 mb-2">Debug Info</h4>
-          <pre className="text-xs text-gray-400 overflow-auto">
+        <div className="mt-6 cosmic-card p-4">
+          <h4 className="text-sm font-medium cosmic-text-primary mb-2">Debug Info</h4>
+          <pre className="text-xs cosmic-text-tertiary overflow-auto">
             {JSON.stringify(heartbeatData, null, 2)}
           </pre>
         </div>

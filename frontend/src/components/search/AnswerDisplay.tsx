@@ -51,7 +51,7 @@ export function AnswerDisplay({
   const parseAnswerWithCitations = (text: string) => {
     if (!text || effectiveCitations.length === 0) {
       return text.split('\n').map((paragraph, index) => (
-        <p key={index} className="text-base text-cosmos-fg/90">
+        <p key={index} className="text-base cosmic-text-primary">
           {paragraph}
         </p>
       ));
@@ -72,7 +72,7 @@ export function AnswerDisplay({
         }
 
         // Add citation
-        const citationNumber = parseInt(match[1]);
+        const citationNumber = parseInt(match[1] || '0');
         const citation = effectiveCitations[citationNumber - 1];
         
         if (citation) {
@@ -104,7 +104,7 @@ export function AnswerDisplay({
       }
 
       return (
-        <p key={paragraphIndex} className="text-base text-cosmos-fg/90 leading-relaxed">
+        <p key={paragraphIndex} className="text-base cosmic-text-primary leading-relaxed">
           {parts}
         </p>
       );
@@ -117,27 +117,27 @@ export function AnswerDisplay({
         animate={{ opacity: 1, y: 0 }}
         className={cn("w-full", className)}
       >
-        <div className="bg-cosmos-card/50 backdrop-blur-sm border border-cosmos-accent/20 rounded-2xl p-6">
+        <div className="cosmic-card p-6">
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-10 h-10 bg-cosmos-accent/20 rounded-xl flex items-center justify-center">
-              <SparklesIcon className="w-6 h-6 text-cosmos-accent animate-pulse" />
+            <div className="w-10 h-10 bg-cosmic-primary-500/20 rounded-xl flex items-center justify-center">
+              <SparklesIcon className="w-6 h-6 text-cosmic-primary-500 animate-pulse" />
             </div>
             <div className="flex-1">
-              <div className="h-4 bg-cosmos-accent/20 rounded animate-pulse mb-2"></div>
-              <div className="h-3 bg-cosmos-accent/10 rounded animate-pulse w-1/2"></div>
+              <div className="h-4 bg-cosmic-primary-500/20 rounded animate-pulse mb-2"></div>
+              <div className="h-3 bg-cosmic-primary-500/10 rounded animate-pulse w-1/2"></div>
             </div>
           </div>
           
           <div className="space-y-4">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="space-y-2">
-                <div className="h-4 bg-cosmos-accent/20 rounded animate-pulse"></div>
-                <div className="h-4 bg-cosmos-accent/10 rounded animate-pulse w-3/4"></div>
+                <div className="h-4 bg-cosmic-primary-500/20 rounded animate-pulse"></div>
+                <div className="h-4 bg-cosmic-primary-500/10 rounded animate-pulse w-3/4"></div>
               </div>
             ))}
           </div>
           
-          <div className="mt-6 flex items-center gap-4 text-sm text-cosmos-fg/60">
+          <div className="mt-6 flex items-center gap-4 text-sm cosmic-text-tertiary">
             <div className="flex items-center gap-2">
               <ClockIcon className="w-4 h-4" />
               <span>Processing your query...</span>
@@ -155,25 +155,25 @@ export function AnswerDisplay({
         animate={{ opacity: 1, y: 0 }}
         className={cn("w-full", className)}
       >
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6">
+        <div className="cosmic-card border-cosmic-error bg-cosmic-error/5 p-6">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-10 h-10 bg-red-500/20 rounded-xl flex items-center justify-center">
-              <ExclamationTriangleIcon className="w-6 h-6 text-red-400" />
+            <div className="w-10 h-10 bg-cosmic-error/20 rounded-xl flex items-center justify-center">
+              <ExclamationTriangleIcon className="w-6 h-6 text-cosmic-error" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-red-400">Error Processing Query</h3>
-              <p className="text-red-300 text-sm">Something went wrong while processing your request</p>
+              <h3 className="text-xl font-semibold text-cosmic-error">Error Processing Query</h3>
+              <p className="text-cosmic-error/80 text-sm">Something went wrong while processing your request</p>
             </div>
           </div>
           
-          <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-4">
-            <p className="text-red-300 text-sm">{error}</p>
+          <div className="bg-cosmic-error/5 border border-cosmic-error/10 rounded-lg p-4">
+            <p className="text-cosmic-error/80 text-sm">{error}</p>
           </div>
           
           <div className="mt-4">
             <button 
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-all"
+              className="cosmic-btn-secondary bg-cosmic-error/20 hover:bg-cosmic-error/30 text-cosmic-error"
             >
               Try Again
             </button>
@@ -190,12 +190,12 @@ export function AnswerDisplay({
         animate={{ opacity: 1, y: 0 }}
         className={cn("w-full", className)}
       >
-        <div className="bg-cosmos-card/30 backdrop-blur-sm border border-cosmos-accent/20 rounded-2xl p-6 text-center">
-          <div className="w-16 h-16 bg-cosmos-accent/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <DocumentTextIcon className="w-8 h-8 text-cosmos-accent" />
+        <div className="cosmic-card p-6 text-center">
+          <div className="w-16 h-16 bg-cosmic-primary-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <DocumentTextIcon className="w-8 h-8 text-cosmic-primary-500" />
           </div>
-          <h3 className="text-xl font-semibold text-cosmos-fg mb-2">Ready to Search</h3>
-          <p className="text-cosmos-fg/70">
+          <h3 className="text-xl font-semibold cosmic-text-primary mb-2">Ready to Search</h3>
+          <p className="cosmic-text-secondary">
             Enter your question above to get AI-powered insights and knowledge
           </p>
         </div>
@@ -209,18 +209,18 @@ export function AnswerDisplay({
       animate={{ opacity: 1, y: 0 }}
       className={cn("w-full", className)}
     >
-      <div className="bg-cosmos-card/50 backdrop-blur-sm border border-cosmos-accent/20 rounded-2xl p-6">
+      <div className="cosmic-card p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-cosmos-accent/20 rounded-xl flex items-center justify-center">
-              <SparklesIcon className="w-6 h-6 text-cosmos-accent" />
+            <div className="w-10 h-10 bg-cosmic-primary-500/20 rounded-xl flex items-center justify-center">
+              <SparklesIcon className="w-6 h-6 text-cosmic-primary-500" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold text-cosmos-fg">AI Response</h3>
-              <div className="flex items-center gap-4 text-sm text-cosmos-fg/60">
+              <h3 className="text-xl font-semibold cosmic-text-primary">AI Response</h3>
+              <div className="flex items-center gap-4 text-sm cosmic-text-tertiary">
                 <div className="flex items-center gap-1">
-                  <CheckCircleIcon className="w-4 h-4 text-green-400" />
+                  <CheckCircleIcon className="w-4 h-4 text-cosmic-success" />
                   <span>Confidence: {Math.round(confidence * 100)}%</span>
                 </div>
                 {processingTime && (
@@ -237,7 +237,7 @@ export function AnswerDisplay({
         {/* Answer Content */}
         <div className="prose prose-invert max-w-none">
           <div 
-            className="text-cosmos-fg leading-relaxed space-y-4"
+            className="cosmic-text-primary leading-relaxed space-y-4"
             aria-live="polite"
             aria-label="AI generated answer"
           >
@@ -246,9 +246,9 @@ export function AnswerDisplay({
         </div>
 
         {/* Footer Actions */}
-        <div className="mt-8 pt-6 border-t border-cosmos-accent/20 flex items-center justify-between">
-          <div className="flex items-center gap-4 text-sm text-cosmos-fg/60">
-            <button className="flex items-center gap-2 hover:text-cosmos-accent transition-colors">
+        <div className="mt-8 pt-6 border-t border-cosmic-border-primary flex items-center justify-between">
+          <div className="flex items-center gap-4 text-sm cosmic-text-tertiary">
+            <button className="cosmic-nav-item flex items-center gap-2">
               <DocumentTextIcon className="w-4 h-4" />
               <span>Export</span>
             </button>
@@ -259,14 +259,14 @@ export function AnswerDisplay({
               query={effectiveQuery}
               answer={effectiveAnswer}
               citations={effectiveCitations}
-              traceId={traceId}
+              {...(traceId && { traceId })}
               variant="minimal"
               size="sm"
             />
-            <button className="px-4 py-2 bg-cosmos-accent/10 hover:bg-cosmos-accent/20 text-cosmos-accent rounded-lg transition-all">
+            <button className="cosmic-btn-secondary">
               Follow Up
             </button>
-            <button className="px-4 py-2 bg-cosmos-accent hover:bg-cosmos-accent/90 text-cosmos-bg rounded-lg transition-all">
+            <button className="cosmic-btn-primary">
               Ask More
             </button>
           </div>

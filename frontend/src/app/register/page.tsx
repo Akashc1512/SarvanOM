@@ -117,31 +117,31 @@ export default function RegisterPage() {
   // Show loading state while auth is initializing
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0b1020] flex items-center justify-center">
+      <div className="min-h-screen cosmic-bg-primary flex items-center justify-center">
         <motion.div 
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center space-y-6"
         >
           <LoadingSpinner size="lg" />
-          <p className="text-lg text-[#e2e8f0]/70">Initializing SarvanOM...</p>
+          <p className="text-lg cosmic-text-secondary">Initializing SarvanOM...</p>
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0b1020] relative overflow-hidden">
+    <div className="min-h-screen cosmic-bg-primary relative overflow-hidden">
       {/* Starfield Background */}
       <div className="fixed inset-0 pointer-events-none">
         <div 
-          className="absolute inset-0 opacity-30 animate-starfield"
+          className="absolute inset-0 opacity-30 animate-starfield cosmic-starfield"
           style={{
             background: `
-              radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.8) 0, transparent 40%),
-              radial-gradient(1px 1px at 80% 20%, rgba(255,255,255,0.5) 0, transparent 40%),
-              radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.3) 0, transparent 40%),
-              radial-gradient(1px 1px at 90% 90%, rgba(255,255,255,0.4) 0, transparent 40%)
+              radial-gradient(1px 1px at 20% 30%, rgba(59, 130, 246, 0.4) 0, transparent 40%),
+              radial-gradient(1px 1px at 80% 20%, rgba(168, 85, 247, 0.3) 0, transparent 40%),
+              radial-gradient(1px 1px at 40% 70%, rgba(59, 130, 246, 0.2) 0, transparent 40%),
+              radial-gradient(1px 1px at 90% 90%, rgba(168, 85, 247, 0.3) 0, transparent 40%)
             `,
             backgroundSize: '200px 200px, 300px 300px, 150px 150px, 250px 250px'
           }}

@@ -321,3 +321,28 @@ export function StreamingErrorBoundary({ children }: { children: ReactNode }) {
     </ErrorBoundary>
   );
 }
+
+// Specific error boundary for query operations
+export function QueryErrorBoundary({ children }: { children: ReactNode }) {
+  return (
+    <ErrorBoundary
+      fallback={
+        <div className="p-6 text-center cosmic-card">
+          <AlertTriangle className="w-12 h-12 text-cosmic-warning mx-auto mb-4" />
+          <h3 className="text-lg font-semibold cosmic-text-primary mb-2">
+            Query Error
+          </h3>
+          <p className="cosmic-text-secondary mb-4">
+            We encountered an error while processing your query. Please try again.
+          </p>
+          <Button onClick={() => window.location.reload()} className="cosmic-btn-primary">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Retry Query
+          </Button>
+        </div>
+      }
+    >
+      {children}
+    </ErrorBoundary>
+  );
+}

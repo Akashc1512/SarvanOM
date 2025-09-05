@@ -48,14 +48,14 @@ export function SearchInput({
         <div className="relative">
           {/* Search Input */}
           <div className={cn(
-            "relative flex items-center bg-cosmos-card/50 backdrop-blur-sm border-2 rounded-2xl transition-all duration-300",
+            "cosmic-search-container relative flex items-center transition-all duration-300",
             isFocused 
-              ? "border-cosmos-accent shadow-lg shadow-cosmos-accent/20" 
-              : "border-cosmos-accent/20 hover:border-cosmos-accent/40"
+              ? "cosmic-glow-primary border-cosmic-border-accent" 
+              : "border-cosmic-border-primary hover:border-cosmic-border-accent"
           )}>
             {/* Search Icon */}
             <div className="pl-6 pr-4">
-              <MagnifyingGlassIcon className="w-6 h-6 text-cosmos-fg/60" />
+              <MagnifyingGlassIcon className="w-6 h-6 cosmic-text-tertiary" />
             </div>
 
             {/* Input Field */}
@@ -69,22 +69,22 @@ export function SearchInput({
               placeholder={placeholder}
               disabled={disabled}
               aria-label="Search query"
-              className="flex-1 bg-transparent text-cosmos-fg placeholder-cosmos-fg/50 text-lg py-6 pr-20 focus:outline-none disabled:opacity-50"
+              className="cosmic-search-input flex-1 bg-transparent text-lg py-6 pr-20 focus:outline-none disabled:opacity-50"
             />
 
             {/* AI Indicator */}
             <div className="absolute right-4 flex items-center gap-2">
-              <SparklesIcon className="w-5 h-5 text-cosmos-accent" />
+              <SparklesIcon className="w-5 h-5 text-cosmic-primary-500" />
               
               {/* Submit Button */}
               <button
                 type="submit"
                 disabled={!query.trim() || disabled}
                 className={cn(
-                  "p-2 rounded-xl transition-all duration-200 flex items-center justify-center",
+                  "p-2 rounded-xl transition-all duration-200 flex items-center justify-center cosmic-hover-lift",
                   query.trim() && !isLoading
-                    ? "bg-cosmos-accent hover:bg-cosmos-accent/90 text-cosmos-bg shadow-lg hover:shadow-xl hover:scale-105"
-                    : "bg-cosmos-card/30 text-cosmos-fg/30 cursor-not-allowed"
+                    ? "cosmic-btn-primary cosmic-glow-soft"
+                    : "bg-cosmic-bg-secondary text-cosmic-text-tertiary cursor-not-allowed"
                 )}
               >
                 {isLoading ? (
@@ -101,7 +101,7 @@ export function SearchInput({
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="absolute inset-0 rounded-2xl bg-gradient-to-r from-cosmos-accent/10 to-blue-500/10 border-2 border-cosmos-accent/30 pointer-events-none"
+              className="absolute inset-0 rounded-2xl bg-cosmic-primary-500/10 border-2 border-cosmic-primary-500/30 pointer-events-none cosmic-glow-soft"
             />
           )}
         </div>
@@ -111,9 +111,9 @@ export function SearchInput({
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-4 p-4 bg-cosmos-card/30 backdrop-blur-sm border border-cosmos-accent/20 rounded-xl"
+            className="mt-4 cosmic-card p-4"
           >
-            <p className="text-sm text-cosmos-fg/70 mb-3">Try asking about:</p>
+            <p className="text-sm cosmic-text-tertiary mb-3">Try asking about:</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[
                 "What are the latest developments in AI?",
@@ -124,7 +124,7 @@ export function SearchInput({
                 <button
                   key={index}
                   onClick={() => setQuery(suggestion)}
-                  className="text-left p-2 rounded-lg text-sm text-cosmos-fg/80 hover:bg-cosmos-accent/10 hover:text-cosmos-accent transition-all"
+                  className="cosmic-nav-item text-left p-2 rounded-lg text-sm"
                 >
                   {suggestion}
                 </button>

@@ -57,14 +57,82 @@ module.exports = {
           4: "hsl(var(--chart-4))",
           5: "hsl(var(--chart-5))",
         },
-        cosmos: {
-          bg: 'var(--cosmos-bg)',
-          fg: 'var(--cosmos-fg)',
-          accent: 'var(--cosmos-accent)',
-          card: 'var(--cosmos-card)',
-          border: 'var(--cosmos-border)',
-          muted: 'var(--cosmos-muted)',
-          'accent-hover': 'var(--cosmos-accent-hover)',
+        // Cosmic Pro Design System
+        cosmic: {
+          // Primary Colors
+          primary: {
+            50: "var(--cosmic-primary-50)",
+            100: "var(--cosmic-primary-100)",
+            200: "var(--cosmic-primary-200)",
+            300: "var(--cosmic-primary-300)",
+            400: "var(--cosmic-primary-400)",
+            500: "var(--cosmic-primary-500)",
+            600: "var(--cosmic-primary-600)",
+            700: "var(--cosmic-primary-700)",
+            800: "var(--cosmic-primary-800)",
+            900: "var(--cosmic-primary-900)",
+            DEFAULT: "var(--cosmic-primary-500)",
+          },
+          // Secondary Colors
+          secondary: {
+            50: "var(--cosmic-secondary-50)",
+            100: "var(--cosmic-secondary-100)",
+            200: "var(--cosmic-secondary-200)",
+            300: "var(--cosmic-secondary-300)",
+            400: "var(--cosmic-secondary-400)",
+            500: "var(--cosmic-secondary-500)",
+            600: "var(--cosmic-secondary-600)",
+            700: "var(--cosmic-secondary-700)",
+            800: "var(--cosmic-secondary-800)",
+            900: "var(--cosmic-secondary-900)",
+            DEFAULT: "var(--cosmic-secondary-500)",
+          },
+          // Neutral Colors
+          neutral: {
+            50: "var(--cosmic-neutral-50)",
+            100: "var(--cosmic-neutral-100)",
+            200: "var(--cosmic-neutral-200)",
+            300: "var(--cosmic-neutral-300)",
+            400: "var(--cosmic-neutral-400)",
+            500: "var(--cosmic-neutral-500)",
+            600: "var(--cosmic-neutral-600)",
+            700: "var(--cosmic-neutral-700)",
+            800: "var(--cosmic-neutral-800)",
+            900: "var(--cosmic-neutral-900)",
+            DEFAULT: "var(--cosmic-neutral-500)",
+          },
+          // Semantic Colors
+          success: "var(--cosmic-success)",
+          warning: "var(--cosmic-warning)",
+          error: "var(--cosmic-error)",
+          info: "var(--cosmic-info)",
+          // Background Colors
+          bg: {
+            primary: "var(--cosmic-bg-primary)",
+            secondary: "var(--cosmic-bg-secondary)",
+            tertiary: "var(--cosmic-bg-tertiary)",
+            glass: "var(--cosmic-bg-glass)",
+          },
+          // Text Colors
+          text: {
+            primary: "var(--cosmic-text-primary)",
+            secondary: "var(--cosmic-text-secondary)",
+            tertiary: "var(--cosmic-text-tertiary)",
+            inverse: "var(--cosmic-text-inverse)",
+          },
+          // Border Colors
+          border: {
+            primary: "var(--cosmic-border-primary)",
+            secondary: "var(--cosmic-border-secondary)",
+            accent: "var(--cosmic-border-accent)",
+          },
+          // Legacy support
+          'legacy-bg': 'var(--cosmos-bg)',
+          'legacy-fg': 'var(--cosmos-fg)',
+          'legacy-accent': 'var(--cosmos-accent)',
+          'legacy-card': 'var(--cosmos-card)',
+          'legacy-muted': 'var(--cosmos-muted)',
+          'legacy-accent-hover': 'var(--cosmos-accent-hover)',
         }
       },
       borderRadius: {
