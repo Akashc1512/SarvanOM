@@ -52,6 +52,10 @@ class SecurityConfig:
         "localhost",
         "127.0.0.1",
         "::1",
+        "host.docker.internal",
+        "host.docker.internal:8000",
+        "localhost:8000",
+        "127.0.0.1:8000",
         "sarvanom.local",
         "*.sarvanom.com",
         "*.sarvanom.org"
@@ -264,26 +268,32 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     
     def _is_trusted_host(self, request: Request) -> bool:
         """Validate if the request is from a trusted host."""
-        # Allow all hosts during testing
-        if os.getenv("TESTING", "false").lower() == "true":
+        # Allow all hosts during testing or development
+        if os.getenv("TESTING", "false").lower() == "true" or os.getenv("ENVIRONMENT", "development") == "development":
             return True
             
         host = request.headers.get("host", "")
         if not host:
             return False
         
-        # Remove port if present
-        host = host.split(":")[0]
+        # Always allow localhost and Docker internal hosts
+        if any(allowed in host.lower() for allowed in ["localhost", "127.0.0.1", "host.docker.internal", "::1"]):
+            return True
         
-        # Check exact matches
+        # Check exact matches first (including with port)
         if host in self.config.trusted_hosts:
+            return True
+        
+        # Remove port if present and check again
+        host_without_port = host.split(":")[0]
+        if host_without_port in self.config.trusted_hosts:
             return True
         
         # Check wildcard matches
         for trusted_host in self.config.trusted_hosts:
             if trusted_host.startswith("*."):
                 domain = trusted_host[2:]  # Remove "*. "
-                if host.endswith(domain):
+                if host_without_port.endswith(domain):
                     return True
         
         return False
