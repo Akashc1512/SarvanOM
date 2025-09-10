@@ -274,9 +274,7 @@ class RealLLMProcessor:
                     logger.error(f"Failed to initialize {provider_name} provider: {e}")
                     self.provider_health[provider_name] = False
             
-            # Always available fallback options
-            self.provider_health["local_stub"] = True
-            self.provider_health["mock"] = True
+            # No mock responses - only real providers
             
             logger.info(f"[INFO] Provider registry initialized with {len(self.available_providers)} providers")
             
@@ -284,7 +282,7 @@ class RealLLMProcessor:
             logger.error(f"Failed to setup provider registry: {e}")
             self.provider_registry = {}
             self.available_providers = []
-            self.provider_health = {"local_stub": True, "mock": True}
+            self.provider_health = {}  # No mock responses
     
     def setup_provider_configs(self):
         """Setup provider configurations with timeout, retries, and priority."""
@@ -334,15 +332,7 @@ class RealLLMProcessor:
                 api_key=OPENAI_API_KEY
             )
         
-        # Always available fallback options
-        self.provider_configs["local_stub"] = ProviderConfig(
-            provider="local_stub",
-            timeout_s=1,  # Very fast stub response
-            max_retries=0,
-            priority=999,  # Lowest priority - only used when all else fails
-            enabled=True,
-            api_key_required=False
-        )
+        # No mock responses - all providers are real
     
 
     
@@ -378,8 +368,7 @@ class RealLLMProcessor:
             except:
                 return False
         
-        elif provider == LLMProvider.LOCAL_STUB:
-            return True  # Always available
+        # Removed LOCAL_STUB - no mock responses
         
         return False
     
@@ -417,8 +406,7 @@ class RealLLMProcessor:
                     content = await self._call_openai_with_timeout(request.prompt, request.max_tokens, request.temperature, timeout)
                 elif provider == LLMProvider.ANTHROPIC:
                     content = await self._call_anthropic_with_timeout(request.prompt, request.max_tokens, request.temperature, timeout)
-                elif provider == LLMProvider.LOCAL_STUB:
-                    content = self._generate_stub_response(request.prompt)
+                # Removed LOCAL_STUB - no mock responses
                 else:
                     content = None
                 
@@ -510,8 +498,7 @@ class RealLLMProcessor:
             LLMProvider.ANTHROPIC: "claude-3-5-haiku-20241022",
             LLMProvider.OLLAMA: "deepseek-r1:8b",
             LLMProvider.HUGGINGFACE: "distilgpt2",
-            LLMProvider.LOCAL_STUB: "local_stub",
-            LLMProvider.MOCK: "mock"
+            # Removed mock providers
         }
         return model_map.get(provider, "unknown")
     
@@ -519,7 +506,7 @@ class RealLLMProcessor:
         """Generate a stub response when no providers are available."""
         return f"""I'm currently unable to process your request: "{prompt[:100]}{'...' if len(prompt) > 100 else ''}"
 
-This is a stub response (provider=local_stub) because no LLM providers are currently available. Please check your API keys and try again later.
+No LLM providers are currently available. Please check your API keys and try again later.
 
 For immediate assistance, you can:
 1. Verify your API keys are properly configured
@@ -779,8 +766,8 @@ If the problem persists, please contact support."""
         # Use centralized, env-driven order
         ordered = get_ordered_providers()
         if not ordered:
-            logger.warning("❌ No providers in registry - using local_stub")
-            return LLMProvider.LOCAL_STUB
+            logger.warning("❌ No providers in registry - no fallback available")
+            return None
         
         # Return first available provider from ordered registry
         for provider_name, provider in ordered.items():
@@ -788,9 +775,9 @@ If the problem persists, please contact support."""
                 logger.info(f"🚀 Selected {provider_name} from registry")
                 return LLMProvider(provider_name)
         
-        # Fallback to local stub if no providers available
-        logger.warning("❌ No providers available - using local_stub")
-        return LLMProvider.LOCAL_STUB
+        # No fallback available - return None
+        logger.warning("❌ No providers available - no fallback")
+        return None
     
     def _get_available_providers(self) -> List[LLMProvider]:
         """Get list of available providers in order of preference."""
@@ -851,8 +838,8 @@ If the problem persists, please contact support."""
         available_providers = self._get_available_providers()
         
         if not available_providers:
-            logger.warning("❌ No providers available - using local_stub")
-            return LLMProvider.LOCAL_STUB
+            logger.warning("❌ No providers available - no fallback")
+            return None
         
         # Return first available provider
         selected = available_providers[0]
@@ -937,21 +924,20 @@ If the problem persists, please contact support."""
                 continue
         
         if not provider_order:
-            # No providers available - return stub immediately
-            logger.warning("No LLM providers available - returning stub response", extra={
-                "provider": "local_stub",
+            # No providers available - return error
+            logger.error("No LLM providers available - cannot process request", extra={
                 "attempt": 1,
                 "latency_ms": 0,
-                "ok": True,
+                "ok": False,
                 "trace_id": trace_id
             })
             
             return LLMResponse(
-                content=self._generate_stub_response(prompt),
-                provider=LLMProvider.LOCAL_STUB,
-                model="local_stub",
+                content="No LLM providers are currently available. Please check your API keys and try again later.",
+                provider=None,
+                model=None,
                 latency_ms=0,
-                success=True,
+                success=False,
                 trace_id=trace_id,
                 attempt=1,
                 retries=0
@@ -1011,20 +997,19 @@ If the problem persists, please contact support."""
         
         # All providers failed - return stub response
         total_latency_ms = (time.time() - start_time) * 1000
-        logger.warning("All LLM providers failed - returning stub response", extra={
-            "provider": "local_stub",
+        logger.error("All LLM providers failed - cannot process request", extra={
             "attempt": len(provider_order) + 1,
             "latency_ms": total_latency_ms,
-            "ok": True,
+            "ok": False,
             "trace_id": trace_id
         })
         
         return LLMResponse(
-            content=self._generate_stub_response(prompt),
-            provider=LLMProvider.LOCAL_STUB,
-            model="local_stub",
+            content="All LLM providers failed. Please check your API keys and try again later.",
+            provider=None,
+            model=None,
             latency_ms=total_latency_ms,
-            success=True,
+            success=False,
             trace_id=trace_id,
             attempt=len(provider_order) + 1,
             retries=len(provider_order)

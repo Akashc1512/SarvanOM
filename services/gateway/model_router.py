@@ -33,8 +33,13 @@ class ModelTier(Enum):
 class QueryComplexity(Enum):
     """Query complexity levels for model selection."""
     SIMPLE = "simple"
+    SIMPLE_FACTUAL = "simple_factual"
     MODERATE = "moderate"
     COMPLEX = "complex"
+    COMPLEX_ANALYTICAL = "complex_analytical"
+    RESEARCH_INTENSIVE = "research_intensive"
+    RESEARCH_SYNTHESIS = "research_synthesis"
+    MULTI_DOMAIN = "multi_domain"
 
 
 class QueryCategory(Enum):

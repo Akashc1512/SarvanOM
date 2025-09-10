@@ -108,7 +108,7 @@ def format_prometheus_histogram(name: str, values: List[float], labels: Dict[str
     
     return "\n".join(lines)
 
-@metrics_router.get("/", response_class=PlainTextResponse)
+@metrics_router.get("/", response_class=PlainTextResponse, operation_id="get_prometheus_metrics")
 async def get_metrics():
     """Get Prometheus-compatible metrics."""
     try:
@@ -346,7 +346,7 @@ async def metrics_health():
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
-@metrics_router.get("/summary")
+@metrics_router.get("/summary", operation_id="get_metrics_summary_json")
 async def get_metrics_summary():
     """Get metrics summary in JSON format."""
     try:

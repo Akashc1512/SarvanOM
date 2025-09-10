@@ -18,8 +18,7 @@ class LLMProvider(str, Enum):
     HUGGINGFACE = "huggingface"  # Free tier API
     OPENAI = "openai"      # Paid (fallback)
     ANTHROPIC = "anthropic"  # Paid (fallback)
-    LOCAL_STUB = "local_stub"  # Stub response when no providers available
-    MOCK = "mock"          # Testing fallback
+    # Removed local_stub and mock - no mock responses allowed
 
 # Import provider client classes
 try:
@@ -50,12 +49,7 @@ except ImportError:
     OllamaClient = None
     OLLAMA_AVAILABLE = False
 
-try:
-    from .local_stub_client import LocalStubClient
-    LOCAL_STUB_AVAILABLE = True
-except ImportError:
-    LocalStubClient = None
-    LOCAL_STUB_AVAILABLE = False
+# Removed local_stub_client - no mock responses allowed
 
 # Centralized provider registry
 PROVIDERS: Dict[str, Optional[Type]] = {}
@@ -77,9 +71,7 @@ if OLLAMA_AVAILABLE and OllamaClient:
     PROVIDERS["ollama"] = OllamaClient
     logger.info("✅ Ollama provider registered")
 
-if LOCAL_STUB_AVAILABLE and LocalStubClient:
-    PROVIDERS["local_stub"] = LocalStubClient
-    logger.info("✅ Local Stub provider registered")
+# Removed local_stub provider registration - no mock responses allowed
 
 # Log registry status
 logger.info(f"📋 LLM Provider Registry initialized with {len(PROVIDERS)} providers: {list(PROVIDERS.keys())}")

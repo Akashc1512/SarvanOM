@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # Redis for caching and state management
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Model Registry Service
+  model-registry:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python model_registry/main.py
+    ports:
+      - "8000:8000"  # FastAPI
+      - "8001:8001"  # Prometheus metrics
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./model_registry:/app/model_registry
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Model Router Service
+  model-router:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python model_router/main.py
+    ports:
+      - "8001:8001"  # FastAPI
+      - "8002:8002"  # Prometheus metrics
+    environment:
+      - REGISTRY_URL=http://model-registry:8000
+    depends_on:
+      model-registry:
+        condition: service_healthy
+    volumes:
+      - ./model_router:/app/model_router
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Auto-Upgrade Service
+  auto-upgrade:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python auto_upgrade/main.py
+    ports:
+      - "8002:8002"  # FastAPI
+      - "8003:8003"  # Prometheus metrics
+    environment:
+      - REGISTRY_URL=http://model-registry:8000
+    depends_on:
+      model-registry:
+        condition: service_healthy
+    volumes:
+      - ./auto_upgrade:/app/auto_upgrade
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  redis_data:

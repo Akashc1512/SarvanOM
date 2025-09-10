@@ -54,7 +54,7 @@ class ProviderType(str, Enum):
     HUGGINGFACE = "huggingface"
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
-    LOCAL_STUB = "local_stub"
+    # Removed LOCAL_STUB - no mock responses
 
 
 class ProviderStatus(str, Enum):
@@ -530,31 +530,7 @@ class AnthropicProvider(BaseGPUProvider):
         return message.content[0].text
 
 
-class LocalStubProvider(BaseGPUProvider):
-    """Local stub provider for fallback when no providers available."""
-    
-    def __init__(self):
-        super().__init__(ProviderType.LOCAL_STUB, "local_stub")
-        # Always healthy
-        self.health.status = ProviderStatus.HEALTHY
-        self.health.success_count = 1
-    
-    async def _perform_health_check(self):
-        """Stub provider is always healthy."""
-        return {"status": "available"}
-    
-    async def _complete_request(self, request: LLMRequest) -> str:
-        """Return stub response."""
-        return f"""I'm currently unable to process your request: "{request.prompt[:100]}{'...' if len(request.prompt) > 100 else ''}"
-
-This is a stub response (provider=local_stub) because no LLM providers are currently available. Please check your API keys and try again later.
-
-For immediate assistance, you can:
-1. Verify your API keys are properly configured
-2. Check your internet connection
-3. Try again in a few moments
-
-If the problem persists, please contact support."""
+# Removed LocalStubProvider class - no mock responses allowed
 
 
 class GPUProviderOrchestrator:
@@ -567,8 +543,7 @@ class GPUProviderOrchestrator:
     
     def _initialize_providers(self):
         """Initialize available providers based on configuration."""
-        # Always add stub provider
-        self.providers[ProviderType.LOCAL_STUB] = LocalStubProvider()
+        # Removed stub provider - no mock responses
         
         # Try to add local Ollama
         try:
@@ -614,8 +589,8 @@ class GPUProviderOrchestrator:
             ProviderType.REMOTE_GPU,
             ProviderType.HUGGINGFACE,
             ProviderType.OPENAI,
-            ProviderType.ANTHROPIC,
-            ProviderType.LOCAL_STUB  # Always last
+            ProviderType.ANTHROPIC
+            # Removed LOCAL_STUB - no mock responses
         ]
         
         # Filter to only available providers
@@ -626,8 +601,8 @@ class GPUProviderOrchestrator:
         # Ensure we have at least the stub provider
         if not self.providers:
             logger.error("❌ No providers available - this should not happen")
-        elif len(self.providers) == 1 and ProviderType.LOCAL_STUB in self.providers:
-            logger.warning("⚠️ Only stub provider available - no LLM providers configured")
+        elif len(self.providers) == 0:
+            logger.warning("⚠️ No providers available - no LLM providers configured")
         else:
             logger.info(f"✅ {len(self.providers)} providers available")
     
@@ -671,10 +646,17 @@ class GPUProviderOrchestrator:
             except Exception as e:
                 logger.error(f"❌ {provider.name} exception: {e}")
         
-        # All providers failed - use stub
-        logger.warning("🚨 All providers failed - using stub")
-        stub_provider = self.providers[ProviderType.LOCAL_STUB]
-        return await stub_provider.complete(request)
+        # All providers failed - return error response
+        logger.warning("🚨 All providers failed - no fallback available")
+        return CompletionResponse(
+            content="All LLM providers are currently unavailable. Please check your configuration and try again.",
+            provider="none",
+            model="none",
+            tokens=0,
+            latency_ms=0,
+            success=False,
+            error="All providers failed"
+        )
     
     def get_available_providers(self) -> List[str]:
         """Get list of available provider names."""

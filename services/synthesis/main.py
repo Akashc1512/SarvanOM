@@ -134,11 +134,11 @@ def add_synthesis_routes(app: FastAPI):
 
         except Exception as e:
             logger.error("Synthesis failed", error=str(e), query=payload.query[:100])
-            # Fallback to stub implementation
-            answer = f"SYNTHESIZED: {payload.query[:100]} (using {len(payload.sources)} sources) - Error: {str(e)}"
+            # Return error response without stub implementation
+            answer = f"Synthesis failed: {str(e)}. Please check your configuration and try again."
             return SynthesisResponse(
                 answer=answer,
-                method="stub_synthesis_fallback",
+                method="error_fallback",
                 tokens=min(payload.max_tokens, len(answer)),
                 citations=[],
                 confidence=0.0,

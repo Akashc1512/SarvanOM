@@ -35,10 +35,10 @@ from .observability import log_error, get_request_id, get_user_id
 @dataclass
 class RateLimitConfig:
     """Configuration for rate limiting."""
-    requests_per_minute: int = 60
-    burst_limit: int = 10
+    requests_per_minute: int = 5000  # Further increased for production load
+    burst_limit: int = 500  # Further increased for production load
     window_size: int = 60  # seconds
-    block_duration: int = 300  # seconds
+    block_duration: int = 30  # Further reduced block duration
 
 
 @dataclass
@@ -118,6 +118,14 @@ class RateLimiter:
     
     def is_rate_limited(self, request: Request) -> bool:
         """Check if request should be rate limited."""
+        # Bypass rate limiting for monitoring and system endpoints
+        bypass_paths = [
+            '/health', '/metrics', '/system/status', '/graph/context',
+            '/docs', '/openapi.json', '/redoc', '/favicon.ico'
+        ]
+        if any(request.url.path.startswith(path) for path in bypass_paths):
+            return False
+            
         client_key = self._get_client_key(request)
         current_time = time.time()
         
@@ -464,6 +472,10 @@ class InputValidationMiddleware(BaseHTTPMiddleware):
         """Validate and sanitize request body."""
         content_type = request.headers.get("content-type", "")
         
+        # Skip validation for auth endpoints
+        if request.url.path.startswith("/auth/"):
+            return
+        
         if "application/json" in content_type:
             try:
                 body = await request.json()
@@ -473,7 +485,7 @@ class InputValidationMiddleware(BaseHTTPMiddleware):
                         detail="Request body must be a JSON object"
                     )
                 
-                # Validate required fields
+                # Validate required fields for non-auth endpoints
                 if "query" in body:
                     query = body["query"]
                     if not isinstance(query, str):

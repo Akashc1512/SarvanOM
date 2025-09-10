@@ -1,225 +1,280 @@
-# Backend Services
+# Model Services - SarvanOM v2
 
-This directory contains the modular backend services for the knowledge platform. The backend is organized into separate service modules, each with its own responsibility, and a unified API gateway that orchestrates all services.
+This directory contains the core model management services for SarvanOM v2:
 
-## Architecture
+- **Model Registry**: Central catalog of all available LLM models
+- **Model Router**: Routes queries to appropriate models based on intent and complexity
+- **Auto-Upgrade**: Automatically discovers, evaluates, and deploys new stable models
 
-The backend follows a modular microservices architecture with the following structure:
+## 🏗️ **Architecture**
 
 ```
-backend/
-├── __init__.py                 # Main backend package
-├── main.py                     # Application entry point
-├── retrieval/                  # Search and retrieval services
-│   ├── __init__.py
-│   ├── search_service.py       # Search service wrapper
-│   └── retrieval_agent.py      # Existing retrieval agent
-├── fact_check/                 # Fact checking services
-│   ├── __init__.py
-│   ├── factcheck_service.py    # Fact check service wrapper
-│   └── factcheck_agent.py      # Existing fact check agent
-├── synthesis/                  # Content synthesis services
-│   ├── __init__.py
-│   ├── synthesis_service.py    # Synthesis service wrapper
-│   └── synthesis_agent.py      # Existing synthesis agent
-├── auth/                       # Authentication services
-│   ├── __init__.py
-│   ├── auth_service.py         # Auth service wrapper
-│   └── auth.py                 # Existing auth modules
-├── crawler/                    # Web crawling services
-│   ├── __init__.py
-│   └── crawler_service.py      # Crawler service wrapper
-├── vector/                     # Vector database services
-│   ├── __init__.py
-│   └── vector_service.py       # Vector service implementation
-├── graph/                      # Knowledge graph services
-│   ├── __init__.py
-│   └── graph_service.py        # Graph service implementation
-└── gateway/                    # API gateway
-    ├── __init__.py
-    ├── gateway_service.py      # Main gateway service
-    └── router.py               # API routing logic
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Model Router  │    │  Model Registry │    │  Auto-Upgrade   │
+│   (Port 8001)   │◄──►│   (Port 8000)   │◄──►│   (Port 8002)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Query Router  │    │   Model Catalog │    │  Model Discovery│
+│   Classification│    │   Health Monitor│    │   Evaluation    │
+│   Fallback Chain│    │   Cost Tracking │    │   Deployment    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-## Services
+## 🚀 **Quick Start**
 
-### 1. Retrieval Service (`retrieval/`)
-- **Purpose**: Search and retrieval operations
-- **Features**:
-  - Document search and retrieval
-  - Semantic search capabilities
-  - Hybrid retrieval (keyword + semantic)
-  - Search result ranking and filtering
-  - Query processing and optimization
+### **Prerequisites**
+- Docker and Docker Compose
+- Python 3.11+
+- Redis (included in docker-compose)
 
-### 2. Fact Check Service (`fact_check/`)
-- **Purpose**: Fact checking and validation
-- **Features**:
-  - Fact verification and validation
-  - Source credibility assessment
-  - Claim verification against knowledge base
-  - Expert review system integration
-  - Validation result reporting
-
-### 3. Synthesis Service (`synthesis/`)
-- **Purpose**: Content synthesis and generation
-- **Features**:
-  - Content generation and summarization
-  - Multi-source information synthesis
-  - Citation and reference management
-  - Content recommendation
-  - ML model integration for generation
-
-### 4. Auth Service (`auth/`)
-- **Purpose**: Authentication and authorization
-- **Features**:
-  - User authentication and session management
-  - Authorization and permission control
-  - User management and profiles
-  - Security and token management
-  - Role-based access control
-
-### 5. Crawler Service (`crawler/`)
-- **Purpose**: Web crawling and data collection
-- **Features**:
-  - Web page crawling and scraping
-  - Data extraction and parsing
-  - Content discovery and indexing
-  - Rate limiting and politeness
-  - Data quality assessment
-
-### 6. Vector Service (`vector/`)
-- **Purpose**: Vector database operations
-- **Features**:
-  - Vector embeddings generation
-  - Vector database operations (Pinecone, Qdrant)
-  - Similarity search and matching
-  - Embedding model management
-  - Vector indexing and storage
-
-### 7. Graph Service (`graph/`)
-- **Purpose**: Knowledge graph operations
-- **Features**:
-  - Knowledge graph construction and maintenance
-  - Relationship extraction and modeling
-  - Graph traversal and querying
-  - Entity linking and disambiguation
-  - Graph analytics and insights
-
-### 8. Gateway Service (`gateway/`)
-- **Purpose**: API routing and orchestration
-- **Features**:
-  - Request routing to appropriate services
-  - Service discovery and load balancing
-  - Authentication and authorization middleware
-  - Rate limiting and security
-  - Request/response transformation
-  - Error handling and logging
-
-## API Endpoints
-
-The gateway provides the following API endpoints:
-
-### Search Endpoints
-- `POST /api/v1/search` - Search for information
-- `GET /api/v1/search/{query}` - GET search endpoint
-
-### Fact Check Endpoints
-- `POST /api/v1/fact-check` - Fact check a claim
-- `POST /api/v1/fact-check/batch` - Fact check multiple claims
-
-### Synthesis Endpoints
-- `POST /api/v1/synthesize` - Synthesize content
-- `POST /api/v1/synthesize/citations` - Generate citations
-
-### Crawler Endpoints
-- `POST /api/v1/crawl` - Start crawling a website
-- `GET /api/v1/crawl/status/{job_id}` - Get crawling job status
-
-### Vector Search Endpoints
-- `POST /api/v1/vector/search` - Vector similarity search
-- `POST /api/v1/vector/upsert` - Upsert documents to vector database
-
-### Graph Endpoints
-- `POST /api/v1/graph/query` - Query the knowledge graph
-- `POST /api/v1/graph/entities` - Find entities in text
-- `POST /api/v1/graph/triple` - Add knowledge triple
-
-### Auth Endpoints
-- `POST /api/v1/auth/login` - User login
-- `POST /api/v1/auth/register` - User registration
-- `GET /api/v1/auth/profile` - Get user profile
-- `POST /api/v1/auth/logout` - User logout
-
-### Health and Status Endpoints
-- `GET /health` - Health check
-- `GET /api/v1/services/status` - Service status
-
-## Getting Started
-
-### Prerequisites
-- Python 3.8+
-- Required dependencies (see requirements.txt)
-
-### Installation
-1. Install dependencies:
-   ```bash
-   .venv/bin/pip install -r requirements.txt
-   ```
-
-2. Set up environment variables:
-   ```bash
-   export BACKEND_HOST=0.0.0.0
-   export BACKEND_PORT=8000
-   export BACKEND_RELOAD=true
-   ```
-
-3. Run the backend:
-   ```bash
-   npm run start:gateway
-   ```
-
-### Development
-For development with auto-reload:
+### **Start Services**
 ```bash
-npm run dev:backend
+# Start all services
+docker-compose up -d
+
+# Check service health
+curl http://localhost:8000/health  # Registry
+curl http://localhost:8001/health  # Router
+curl http://localhost:8002/health  # Auto-Upgrade
 ```
 
-## Configuration
-
-Each service can be configured through environment variables or configuration files. See individual service documentation for specific configuration options.
-
-## Inter-Service Communication
-
-All inter-service communication goes through the gateway layer. Services do not communicate directly with each other but are orchestrated by the gateway service.
-
-## Error Handling
-
-The gateway provides centralized error handling and logging for all services. Errors are logged and appropriate HTTP status codes are returned to clients.
-
-## Monitoring
-
-Each service provides a `get_status()` method that returns health and configuration information. The gateway aggregates this information and provides it through the `/health` endpoint.
-
-## Security
-
-- Authentication is handled by the auth service
-- All endpoints (except login/register) require authentication
-- CORS is configured for cross-origin requests
-- Rate limiting can be configured per endpoint
-
-## Testing
-
-Run tests for the backend:
+### **Run Tests**
 ```bash
-pytest backend/tests/
+# Install test dependencies
+pip install -r requirements.txt
+
+# Run comprehensive tests
+python test_model_services.py
 ```
 
-## Deployment
+## 📋 **Service Details**
 
-The backend can be deployed using:
-- Docker containers
-- Kubernetes
-- Traditional server deployment
+### **Model Registry Service (Port 8000)**
 
-See deployment documentation for specific instructions. 
+**Purpose**: Central catalog of all available LLM models, their capabilities, performance characteristics, and cost information.
+
+**Key Features**:
+- Model discovery and registration
+- Capability mapping (text, multimodal, tool use, long context)
+- Performance tracking (latency, quality, success rate)
+- Cost management and optimization
+- Provider health monitoring
+- Prometheus metrics export
+
+**API Endpoints**:
+- `GET /models` - Get all models
+- `GET /models/{model_id}` - Get specific model
+- `GET /models/stable` - Get stable models only
+- `GET /models/refiners` - Get refinement models (fast & cheap)
+- `GET /models/capability/{capability}` - Get models by capability
+- `GET /models/provider/{provider}` - Get models by provider
+- `POST /models/{model_id}/usage` - Record model usage
+
+### **Model Router Service (Port 8001)**
+
+**Purpose**: Routes queries to appropriate models based on intent, capabilities, and performance requirements.
+
+**Key Features**:
+- Query classification (simple, technical, research, multimedia)
+- Automatic model selection with fallback chains
+- Cost-aware routing
+- Refinement path for Guided Prompt Confirmation
+- LMM auto-trigger for image/video content
+- Budget enforcement (5/7/10s per complexity)
+
+**API Endpoints**:
+- `POST /route` - Route query to appropriate model
+- `POST /route/refinement` - Route refinement query (≤500ms budget)
+- `GET /classify` - Classify query type and complexity
+
+**Model Selection Policy**:
+- **Simple Queries**: GPT-3.5 Turbo → Claude 3.5 Sonnet → GPT-4o
+- **Technical Queries**: Claude 3.5 Sonnet → GPT-4o → GPT-3.5 Turbo
+- **Research Queries**: GPT-4o → Claude 3.5 Sonnet → GPT-3.5 Turbo
+- **Multimedia Queries**: GPT-4o (only multimodal model)
+
+### **Auto-Upgrade Service (Port 8002)**
+
+**Purpose**: Automatically discovers, evaluates, and deploys new stable models while maintaining system reliability.
+
+**Key Features**:
+- Weekly model discovery from all providers
+- Shadow evaluation with 1-5% traffic
+- Canary deployment with 10-20% traffic
+- Full rollout with 100% traffic
+- Automatic rollback on performance regression
+- Refiner model sweep for Guided Prompt optimization
+
+**API Endpoints**:
+- `GET /candidates` - Get discovered model candidates
+- `GET /evaluations` - Get evaluation results
+- `POST /start` - Start auto-upgrade service
+- `POST /stop` - Stop auto-upgrade service
+- `POST /discover` - Trigger manual discovery
+
+**Upgrade Workflow**:
+1. **Discovery**: Scan provider APIs for new stable models
+2. **Shadow Eval**: Test with 1-5% traffic for 24-48 hours
+3. **Canary**: Deploy to 10-20% traffic for 3-7 days
+4. **Full Rollout**: Deploy to 100% traffic
+5. **Rollback**: Automatic rollback on failure detection
+
+## 🔧 **Configuration**
+
+### **Environment Variables**
+```bash
+# Registry Service
+REDIS_HOST=redis
+REDIS_PORT=6379
+
+# Router Service
+REGISTRY_URL=http://model-registry:8000
+
+# Auto-Upgrade Service
+REGISTRY_URL=http://model-registry:8000
+```
+
+### **Model Configuration**
+Models are configured in the registry with the following schema:
+```json
+{
+  "model_id": "gpt-4o-2024-08-06",
+  "provider": "openai",
+  "capabilities": {
+    "text_generation": true,
+    "multimodal": true,
+    "tool_use": true,
+    "long_context": true,
+    "streaming": true,
+    "function_calling": true,
+    "fast_inference": false
+  },
+  "performance": {
+    "avg_ttft_ms": 150,
+    "avg_completion_ms": 2500,
+    "success_rate": 0.98,
+    "quality_score": 0.92
+  },
+  "costs": {
+    "input_tokens_per_1k": 0.005,
+    "output_tokens_per_1k": 0.015,
+    "currency": "USD"
+  }
+}
+```
+
+## 📊 **Monitoring**
+
+### **Prometheus Metrics**
+- **Registry**: Port 8001 - Model usage, performance, health
+- **Router**: Port 8002 - Routing decisions, selection time, fallbacks
+- **Auto-Upgrade**: Port 8003 - Discovery runs, evaluations, deployments
+
+### **Health Checks**
+All services include health check endpoints:
+- `GET /health` - Service health status
+- Docker health checks configured
+- Automatic restart on failure
+
+## 🧪 **Testing**
+
+### **Test Coverage**
+- Unit tests for each service
+- Integration tests between services
+- End-to-end workflow testing
+- Performance and latency testing
+- Error handling and fallback testing
+
+### **Test Scenarios**
+- Model discovery and registration
+- Query classification and routing
+- Fallback chain execution
+- Refinement query routing (≤500ms budget)
+- Auto-upgrade workflow phases
+- Performance regression detection
+
+## 🔒 **Security**
+
+### **Security Features**
+- Input validation and sanitization
+- Rate limiting and abuse protection
+- Secure API key handling
+- Provider authentication
+- Audit logging for all operations
+
+### **Privacy**
+- No user data storage
+- Model usage anonymization
+- Cost tracking without PII
+- Secure provider communication
+
+## 🚀 **Deployment**
+
+### **Production Deployment**
+```bash
+# Build and deploy
+docker-compose -f docker-compose.prod.yml up -d
+
+# Scale services
+docker-compose up -d --scale model-router=3
+
+# Monitor logs
+docker-compose logs -f model-registry
+```
+
+### **Kubernetes Deployment**
+```bash
+# Apply Kubernetes manifests
+kubectl apply -f k8s/
+
+# Check deployment status
+kubectl get pods -l app=model-services
+```
+
+## 📚 **API Documentation**
+
+### **OpenAPI/Swagger**
+- Registry: http://localhost:8000/docs
+- Router: http://localhost:8001/docs
+- Auto-Upgrade: http://localhost:8002/docs
+
+### **API Examples**
+```bash
+# Route a simple query
+curl -X POST http://localhost:8001/route \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is the capital of France?"}'
+
+# Route a refinement query
+curl -X POST http://localhost:8001/route/refinement \
+  -H "Content-Type: application/json" \
+  -d '{"query": "show me apple", "refinement_type": "fast"}'
+
+# Get stable models
+curl http://localhost:8000/models/stable
+
+# Trigger model discovery
+curl -X POST http://localhost:8002/discover
+```
+
+## 🔄 **Integration**
+
+### **With Other Services**
+- **Gateway**: Uses router for model selection
+- **Retrieval**: Uses registry for model capabilities
+- **Synthesis**: Uses router for query routing
+- **Guided Prompt**: Uses router refinement path
+
+### **External Providers**
+- OpenAI API integration
+- Anthropic API integration
+- Hugging Face API integration
+- Ollama local models
+
+---
+
+**Status**: ✅ **IMPLEMENTED**  
+**Version**: 2.0.0  
+**Last Updated**: September 9, 2025
