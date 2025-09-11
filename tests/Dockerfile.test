@@ -1,0 +1,38 @@
+# Dockerfile for SarvanOM v2 Testing
+# Comprehensive test environment with all dependencies
+
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy test requirements
+COPY tests/requirements.txt /app/requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy test files
+COPY tests/ /app/tests/
+COPY services/ /app/services/
+COPY shared/ /app/shared/
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV TEST_BASE_URL=http://localhost:8004
+ENV TEST_TIMEOUT=30
+ENV SLA_DURATION=5
+
+# Create test results directory
+RUN mkdir -p /app/test_results
+
+# Default command
+CMD ["python", "-m", "pytest", "/app/tests/", "-v", "--tb=short"]

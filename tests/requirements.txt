@@ -1,0 +1,74 @@
+# Testing Dependencies - SarvanOM v2
+# Comprehensive test matrix, SLA validation, and synthetic prompt suites
+
+# Core testing framework
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+pytest-xdist>=3.3.0  # For parallel test execution
+
+# HTTP client for API testing
+aiohttp>=3.8.0
+httpx>=0.24.0  # Alternative HTTP client
+
+# Data processing and analysis
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+statistics  # Built-in, but ensuring compatibility
+
+# JSON and data serialization
+jsonschema>=4.17.0
+pydantic>=2.0.0
+
+# Async utilities
+asyncio-throttle>=1.0.0
+aiodns>=3.0.0
+
+# Monitoring and metrics
+prometheus-client>=0.17.0
+psutil>=5.9.0
+
+# Logging and debugging
+structlog>=23.1.0
+rich>=13.0.0  # For better console output
+
+# Test data generation
+faker>=19.0.0
+hypothesis>=6.82.0  # Property-based testing
+
+# Performance testing
+locust>=2.15.0  # Load testing framework
+memory-profiler>=0.60.0
+
+# Security testing
+bandit>=1.7.0  # Security linting
+safety>=2.3.0  # Dependency vulnerability scanning
+
+# Code quality
+black>=23.0.0
+isort>=5.12.0
+flake8>=6.0.0
+mypy>=1.4.0
+
+# Documentation
+sphinx>=7.0.0
+sphinx-rtd-theme>=1.3.0
+
+# Development utilities
+pre-commit>=3.3.0
+tox>=4.5.0
+
+# Optional: Machine learning for test result analysis
+scikit-learn>=1.3.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Optional: Database testing
+sqlalchemy>=2.0.0
+alembic>=1.11.0
+
+# Optional: Container testing
+docker>=6.1.0
+docker-compose>=1.29.0
