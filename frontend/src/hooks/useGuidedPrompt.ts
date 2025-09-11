@@ -1,11 +1,11 @@
 /**
- * Guided Prompt Hook
+ * useGuidedPrompt Hook
  * 
- * Custom hook for managing Guided Prompt Confirmation state and interactions.
- * Handles API calls, state management, and user preferences.
+ * React hook for managing Guided Prompt Confirmation functionality.
+ * Handles state management, API calls, and user interactions.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 interface RefinementSuggestion {
   id: string;
@@ -20,291 +20,141 @@ interface RefinementSuggestion {
 interface ConstraintChip {
   id: string;
   label: string;
-  type: 'select' | 'boolean' | 'range' | 'multi-select';
+  type: 'select' | 'boolean';
   options: string[];
-  selected?: string | string[];
+  selected?: string;
 }
 
-interface RefinementResult {
-  should_trigger: boolean;
-  suggestions: RefinementSuggestion[];
+interface GuidedPromptData {
+  originalQuery: string;
+  refinements: RefinementSuggestion[];
   constraints: ConstraintChip[];
-  latency_ms: number;
-  model_used: string;
-  cost_usd: number;
-  bypass_reason?: string;
 }
 
-interface GuidedPromptSettings {
-  enabled: boolean;
-  mode: 'ON' | 'OFF' | 'BYPASS_ONCE' | 'ALWAYS_BYPASS';
-  preferences: {
-    show_hints: boolean;
-    auto_learn: boolean;
-    constraint_chips: boolean;
-    accessibility_mode: boolean;
-  };
+interface UseGuidedPromptReturn {
+  isGuidedPromptEnabled: boolean;
+  showGuidedPrompt: boolean;
+  guidedPromptData: GuidedPromptData | null;
+  isLoading: boolean;
+  error: string | null;
+  handleGuidedPromptAccept: (refinedQuery: string, constraints: ConstraintChip[]) => void;
+  handleGuidedPromptEdit: (suggestion: RefinementSuggestion) => void;
+  handleGuidedPromptSkip: () => void;
+  handleGuidedPromptClose: () => void;
+  triggerGuidedPrompt: (query: string) => Promise<void>;
 }
 
-interface UseGuidedPromptOptions {
-  userId?: string;
-  sessionId?: string;
-  deviceType?: 'desktop' | 'mobile';
-  language?: string;
-  onRefinementComplete?: (refinedQuery: string, constraints: ConstraintChip[]) => void;
-  onRefinementSkip?: () => void;
-}
-
-export const useGuidedPrompt = (options: UseGuidedPromptOptions = {}) => {
-  const {
-    userId = 'anonymous',
-    sessionId = 'default',
-    deviceType = 'desktop',
-    language = 'en',
-    onRefinementComplete,
-    onRefinementSkip
-  } = options;
-
-  // State
-  const [isOpen, setIsOpen] = useState(false);
+export const useGuidedPrompt = (): UseGuidedPromptReturn => {
+  const [isGuidedPromptEnabled, setIsGuidedPromptEnabled] = useState(true);
+  const [showGuidedPrompt, setShowGuidedPrompt] = useState(false);
+  const [guidedPromptData, setGuidedPromptData] = useState<GuidedPromptData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [originalQuery, setOriginalQuery] = useState('');
-  const [refinements, setRefinements] = useState<RefinementSuggestion[]>([]);
-  const [constraints, setConstraints] = useState<ConstraintChip[]>([]);
-  const [settings, setSettings] = useState<GuidedPromptSettings>({
-    enabled: true,
-    mode: 'ON',
-    preferences: {
-      show_hints: true,
-      auto_learn: true,
-      constraint_chips: true,
-      accessibility_mode: false
-    }
-  });
 
-  // Load user settings on mount
+  // Load settings from localStorage
   useEffect(() => {
-    loadUserSettings();
-  }, [userId]);
-
-  // Load user settings
-  const loadUserSettings = async () => {
-    try {
-      const response = await fetch(`/api/guided-prompt/settings/${userId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSettings(data.settings);
+    const savedSettings = localStorage.getItem('sarvanom-settings');
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings);
+        setIsGuidedPromptEnabled(settings.enabled ?? true);
+      } catch (error) {
+        console.error('Failed to load guided prompt settings:', error);
       }
-    } catch (error) {
-      console.error('Failed to load user settings:', error);
     }
-  };
+  }, []);
 
-  // Save user settings
-  const saveUserSettings = async (newSettings: GuidedPromptSettings) => {
-    try {
-      const response = await fetch(`/api/guided-prompt/settings/${userId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ settings: newSettings }),
-      });
-      
-      if (response.ok) {
-        setSettings(newSettings);
-      }
-    } catch (error) {
-      console.error('Failed to save user settings:', error);
-    }
-  };
-
-  // Process query for refinement
-  const processQuery = useCallback(async (query: string, context: Record<string, any> = {}) => {
-    // Check if refinement should be triggered
-    if (!shouldTriggerRefinement(query, context)) {
-      return { should_trigger: false, bypass_reason: 'user_preference_or_confidence' };
+  // Trigger guided prompt for a query
+  const triggerGuidedPrompt = useCallback(async (query: string) => {
+    if (!isGuidedPromptEnabled || !query.trim()) {
+      return;
     }
 
     setIsLoading(true);
     setError(null);
-    setOriginalQuery(query);
 
     try {
+      // Call the guided prompt service
       const response = await fetch('/api/guided-prompt/refine', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          query,
-          context: {
-            user_id: userId,
-            session_id: sessionId,
-            device_type: deviceType,
-            language,
-            ...context
-          }
-        }),
+        body: JSON.stringify({ query }),
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`Guided prompt service error: ${response.status}`);
       }
 
-      const result: RefinementResult = await response.json();
+      const data = await response.json();
       
-      if (result.should_trigger) {
-        setRefinements(result.suggestions);
-        setConstraints(result.constraints);
-        setIsOpen(true);
-      }
-
-      return result;
+      setGuidedPromptData({
+        originalQuery: query,
+        refinements: data.refinements || [],
+        constraints: data.constraints || []
+      });
+      
+      setShowGuidedPrompt(true);
     } catch (error) {
-      console.error('Failed to process query:', error);
-      setError(error instanceof Error ? error.message : 'Failed to process query');
-      return { should_trigger: false, bypass_reason: 'api_error' };
+      console.error('Failed to trigger guided prompt:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load guided prompt');
     } finally {
       setIsLoading(false);
     }
-  }, [userId, sessionId, deviceType, language]);
+  }, [isGuidedPromptEnabled]);
 
-  // Check if refinement should be triggered
-  const shouldTriggerRefinement = (query: string, context: Record<string, any>) => {
-    // Check user settings
-    if (settings.mode === 'OFF' || settings.mode === 'ALWAYS_BYPASS') {
-      return false;
-    }
-
-    // Check session bypass
-    if (settings.mode === 'BYPASS_ONCE') {
-      return false;
-    }
-
-    // Check for bypass keywords
-    const bypassKeywords = ['skip', 'bypass', 'direct', 'immediate'];
-    if (bypassKeywords.some(keyword => query.toLowerCase().includes(keyword))) {
-      return false;
-    }
-
-    // Check intent confidence
-    const intentConfidence = context.intent_confidence || 0.5;
-    if (intentConfidence > 0.8) {
-      return false;
-    }
-
-    // Check budget constraints
-    const budgetRemaining = context.budget_remaining || 1.0;
-    if (budgetRemaining < 0.25) {
-      return false;
-    }
-
-    return true;
-  };
-
-  // Handle refinement acceptance
-  const handleAccept = useCallback((refinedQuery: string, selectedConstraints: ConstraintChip[]) => {
-    // Record feedback
-    recordFeedback('accepted', refinedQuery);
+  // Handle accepting a refinement
+  const handleGuidedPromptAccept = useCallback((refinedQuery: string, constraints: ConstraintChip[]) => {
+    // Record the acceptance
+    console.log('Guided prompt accepted:', { refinedQuery, constraints });
     
-    // Close modal
-    setIsOpen(false);
+    // Close the modal
+    setShowGuidedPrompt(false);
+    setGuidedPromptData(null);
     
-    // Call completion callback
-    onRefinementComplete?.(refinedQuery, selectedConstraints);
-  }, [onRefinementComplete]);
-
-  // Handle refinement edit
-  const handleEdit = useCallback((suggestion: RefinementSuggestion) => {
-    // Record feedback
-    recordFeedback('edited', suggestion.refined_query);
+    // You can emit analytics events here
+    // analytics.track('guided_prompt_accepted', { originalQuery, refinedQuery, constraints });
   }, []);
 
-  // Handle refinement skip
-  const handleSkip = useCallback(() => {
-    // Record feedback
-    recordFeedback('skipped', originalQuery);
+  // Handle editing a suggestion
+  const handleGuidedPromptEdit = useCallback((suggestion: RefinementSuggestion) => {
+    console.log('Guided prompt edit requested:', suggestion);
     
-    // Close modal
-    setIsOpen(false);
-    
-    // Call skip callback
-    onRefinementSkip?.();
-  }, [originalQuery, onRefinementSkip]);
+    // You can emit analytics events here
+    // analytics.track('guided_prompt_edit_requested', { suggestion });
+  }, []);
 
-  // Handle modal close
-  const handleClose = useCallback(() => {
-    setIsOpen(false);
+  // Handle skipping guided prompt
+  const handleGuidedPromptSkip = useCallback(() => {
+    console.log('Guided prompt skipped');
+    
+    // Close the modal
+    setShowGuidedPrompt(false);
+    setGuidedPromptData(null);
+    
+    // You can emit analytics events here
+    // analytics.track('guided_prompt_skipped', { originalQuery: guidedPromptData?.originalQuery });
+  }, [guidedPromptData?.originalQuery]);
+
+  // Handle closing the modal
+  const handleGuidedPromptClose = useCallback(() => {
+    setShowGuidedPrompt(false);
+    setGuidedPromptData(null);
     setError(null);
   }, []);
 
-  // Record user feedback
-  const recordFeedback = async (action: 'accepted' | 'edited' | 'skipped', query: string) => {
-    try {
-      await fetch('/api/guided-prompt/feedback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          session_id: sessionId,
-          action,
-          query,
-          timestamp: new Date().toISOString()
-        }),
-      });
-    } catch (error) {
-      console.error('Failed to record feedback:', error);
-    }
-  };
-
-  // Update constraint selection
-  const updateConstraint = useCallback((constraintId: string, value: string | string[]) => {
-    setConstraints(prev => 
-      prev.map(constraint => 
-        constraint.id === constraintId 
-          ? { ...constraint, selected: value }
-          : constraint
-      )
-    );
-  }, []);
-
-  // Remove constraint
-  const removeConstraint = useCallback((constraintId: string) => {
-    setConstraints(prev => 
-      prev.map(constraint => 
-        constraint.id === constraintId 
-          ? { ...constraint, selected: undefined }
-          : constraint
-      )
-    );
-  }, []);
-
   return {
-    // State
-    isOpen,
+    isGuidedPromptEnabled,
+    showGuidedPrompt,
+    guidedPromptData,
     isLoading,
     error,
-    originalQuery,
-    refinements,
-    constraints,
-    settings,
-    
-    // Actions
-    processQuery,
-    handleAccept,
-    handleEdit,
-    handleSkip,
-    handleClose,
-    updateConstraint,
-    removeConstraint,
-    saveUserSettings,
-    
-    // Utilities
-    shouldTriggerRefinement
+    handleGuidedPromptAccept,
+    handleGuidedPromptEdit,
+    handleGuidedPromptSkip,
+    handleGuidedPromptClose,
+    triggerGuidedPrompt,
   };
 };
 

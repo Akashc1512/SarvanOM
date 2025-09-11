@@ -81,5 +81,160 @@ services:
       timeout: 10s
       retries: 3
 
+  # Guided Prompt Confirmation Service
+  guided-prompt:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python guided_prompt/main.py
+    ports:
+      - "8003:8003"  # FastAPI
+      - "8004:8004"  # Prometheus metrics
+    environment:
+      - ROUTER_URL=http://model-router:8001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      model-router:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./guided_prompt:/app/guided_prompt
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Retrieval Service
+  retrieval:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python retrieval/main.py
+    ports:
+      - "8004:8004"  # FastAPI
+      - "8005:8005"  # Prometheus metrics
+    environment:
+      - GUIDED_PROMPT_URL=http://guided-prompt:8003
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - QDRANT_URL=http://qdrant:6333
+      - MEILISEARCH_URL=http://meilisearch:7700
+      - ARANGO_URL=http://arangodb:8529
+    depends_on:
+      guided-prompt:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./retrieval:/app/retrieval
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # External Feeds Service
+  feeds:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python feeds/main.py
+    ports:
+      - "8005:8005"  # FastAPI
+      - "8008:8008"  # Prometheus metrics
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - NEWSAPI_KEY=${NEWSAPI_KEY:-your_newsapi_key}
+      - REDDIT_CLIENT_ID=${REDDIT_CLIENT_ID:-your_reddit_client_id}
+      - REDDIT_CLIENT_SECRET=${REDDIT_CLIENT_SECRET:-your_reddit_client_secret}
+      - ALPHAVANTAGE_KEY=${ALPHAVANTAGE_KEY:-your_alphavantage_key}
+      - COINGECKO_KEY=${COINGECKO_KEY:-your_coingecko_key}
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./feeds:/app/feeds
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Observability Service
+  observability:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python observability/main.py
+    ports:
+      - "8006:8006"  # FastAPI
+      - "8010:8010"  # Prometheus metrics
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./observability:/app/observability
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Security & Privacy Enforcement Service
+  security:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python security/main.py
+    ports:
+      - "8007:8007"  # FastAPI
+      - "8009:8009"  # Prometheus metrics
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./security:/app/security
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # CI/CD Gates & Quality Bars Service
+  cicd:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: python cicd/main.py
+    ports:
+      - "8008:8008"  # FastAPI
+      - "8011:8011"  # Prometheus metrics
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      observability:
+        condition: service_healthy
+    volumes:
+      - ./cicd:/app/cicd
+      - .:/app  # Mount entire project for linting/type checking
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   redis_data:

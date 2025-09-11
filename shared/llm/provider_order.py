@@ -32,14 +32,19 @@ class LLMProvider(str, Enum):
     HUGGINGFACE = "huggingface"
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
-    LOCAL_STUB = "local_stub"
+    # Removed LOCAL_STUB and MOCK - no mock responses allowed
 
 class QueryComplexity(str, Enum):
     """Query complexity levels for provider selection."""
     SIMPLE = "simple"      # Fast, basic queries
+    SIMPLE_FACTUAL = "simple_factual"  # Simple factual queries
     STANDARD = "standard"  # Normal queries
     COMPLEX = "complex"    # Reasoning, analysis
+    COMPLEX_ANALYTICAL = "complex_analytical"  # Complex analytical queries
     EXPERT = "expert"      # Tool use, long context
+    RESEARCH_INTENSIVE = "research_intensive"  # Research-intensive queries
+    RESEARCH_SYNTHESIS = "research_synthesis"  # Research synthesis queries
+    MULTI_DOMAIN = "multi_domain"  # Multi-domain queries
 
 class LLMRole(str, Enum):
     """LLM roles for capability-based provider selection."""
@@ -451,57 +456,7 @@ class ProviderModelRegistry:
             ]
         }
         
-        # Local Stub (Fallback)
-        models[LLMProvider.LOCAL_STUB] = {
-            LLMRole.FAST: [
-                ModelConfig(
-                    name="local_stub",
-                    provider=LLMProvider.LOCAL_STUB,
-                    role=LLMRole.FAST,
-                    max_tokens=4096,
-                    avg_latency_ms=100,
-                    cost_per_1k_tokens=0.0,
-                    supports_streaming=False,
-                    supports_tools=False,
-                    is_free=True,
-                    context_window=4096,
-                    reasoning_capability=0.1,
-                    tool_capability=0.0,
-                    supports_vision=False,
-                    supports_json_mode=True,
-                    supports_function_calling=False,
-                    max_rpm=1000,
-                    max_tpm=10000,
-                    cost_tier="free",
-                    failure_threshold=5,
-                    circuit_timeout=60
-                )
-            ],
-            LLMRole.QUALITY: [
-                ModelConfig(
-                    name="local_stub",
-                    provider=LLMProvider.LOCAL_STUB,
-                    role=LLMRole.QUALITY,
-                    max_tokens=4096,
-                    avg_latency_ms=100,
-                    cost_per_1k_tokens=0.0,
-                    supports_streaming=False,
-                    supports_tools=False,
-                    is_free=True,
-                    context_window=4096,
-                    reasoning_capability=0.1,
-                    tool_capability=0.0,
-                    supports_vision=False,
-                    supports_json_mode=True,
-                    supports_function_calling=False,
-                    max_rpm=1000,
-                    max_tpm=10000,
-                    cost_tier="free",
-                    failure_threshold=5,
-                    circuit_timeout=60
-                )
-            ]
-        }
+        # Removed LOCAL_STUB section - no mock responses allowed
         
         return models
     
@@ -718,19 +673,9 @@ class ProviderRegistry:
                 cost_per_1k_tokens=0.015,
                 capabilities=[LLMRole.QUALITY, LLMRole.LONG, LLMRole.REASONING, LLMRole.TOOL],
                 models={}  # Will be populated by model registry
-            ),
-            LLMProvider.LOCAL_STUB: ProviderConfig(
-                name=LLMProvider.LOCAL_STUB,
-                priority=5,
-                is_free=True,
-                max_tokens=4096,
-                supports_streaming=False,
-                supports_tools=False,
-                avg_latency_ms=100,
-                cost_per_1k_tokens=0.0,
-                capabilities=[LLMRole.FAST, LLMRole.QUALITY],
-                models={}  # Will be populated by model registry
             )
+            # Removed LOCAL_STUB provider configuration
+        
         }
     
     def _get_base_order(self) -> List[LLMProvider]:
@@ -759,8 +704,8 @@ class ProviderRegistry:
             LLMProvider.OLLAMA,
             LLMProvider.HUGGINGFACE,
             LLMProvider.OPENAI,
-            LLMProvider.ANTHROPIC,
-            LLMProvider.LOCAL_STUB
+            LLMProvider.ANTHROPIC
+            # Removed LOCAL_STUB - no mock responses
         ]
         logger.info(f"Using default provider order: {[p.value for p in default_order]}")
         return default_order
@@ -944,8 +889,7 @@ class ProviderRegistry:
         Returns:
             True if provider is available, False otherwise
         """
-        if provider == LLMProvider.LOCAL_STUB:
-            return True  # Always available as fallback
+        # Removed LOCAL_STUB - no mock responses
         
         if provider == LLMProvider.OLLAMA:
             return self._check_ollama_availability()

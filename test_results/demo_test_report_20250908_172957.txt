@@ -1,0 +1,33 @@
+================================================================================
+SARVANOM COMPREHENSIVE TEST DEMO REPORT
+================================================================================
+
+Test Execution Time: 2025-09-08T17:29:57.077183
+Total Tests: 76
+Successful: 56
+Failed: 20
+Success Rate: 73.68%
+Total Execution Time: 9.84s
+Average Response Time: 117.36ms
+
+BY COMPONENT:
+----------------------------------------
+backend: 1/4 (25.0%)
+llm_openai: 3/4 (75.0%)
+llm_anthropic: 2/4 (50.0%)
+llm_huggingface: 2/4 (50.0%)
+llm_ollama: 4/4 (100.0%)
+database_postgres: 3/4 (75.0%)
+database_redis: 4/4 (100.0%)
+database_arangodb: 4/4 (100.0%)
+database_qdrant: 2/4 (50.0%)
+database_meilisearch: 4/4 (100.0%)
+knowledge_graph: 16/20 (80.0%)
+integrated_workflow: 11/16 (68.8%)
+
+BY COMPLEXITY:
+----------------------------------------
+simple: 17/22 (77.3%)
+medium: 14/18 (77.8%)
+complex: 13/18 (72.2%)
+expert: 12/18 (66.7%)

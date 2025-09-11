@@ -200,7 +200,15 @@ class UnifiedLogger:
         if self._user_id:
             extra["user_id"] = self._user_id
 
-        self.logger.log(level, message, extra=extra, exc_info=exc_info)
+        # Ensure message is properly encoded for Windows console
+        try:
+            # Remove or replace problematic Unicode characters for Windows console
+            safe_message = message.encode('ascii', 'replace').decode('ascii')
+            self.logger.log(level, safe_message, extra=extra, exc_info=exc_info)
+        except UnicodeEncodeError:
+            # Fallback: remove all non-ASCII characters
+            safe_message = ''.join(char if ord(char) < 128 else '?' for char in message)
+            self.logger.log(level, safe_message, extra=extra, exc_info=exc_info)
 
     def debug(self, message: str, **kwargs):
         """Log debug message."""

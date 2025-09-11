@@ -14,33 +14,22 @@ export async function GET(
       );
     }
 
-    // For now, return mock data since backend is not available
-    const mockResponse = {
-      session_id: sessionId,
-      conversation_history: [
-        {
-          query: "What is artificial intelligence?",
-          answer: "Artificial intelligence is a branch of computer science...",
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-          confidence: 0.9,
-          query_id: "mock_query_1",
-          llm_provider: "openai",
-          processing_time: 2.1
-        }
-      ],
-      user_preferences: {
-        model: "gpt-4",
-        factcheck: true,
-        citations: true
+    // Forward request to backend API
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8004';
+    const response = await fetch(`${backendUrl}/state/${sessionId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': request.headers.get('Authorization') || '',
       }
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: mockResponse,
-      session_id: sessionId,
-      timestamp: new Date().toISOString()
     });
+
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
 
   } catch (error: any) {
     console.error('Session state error:', error);

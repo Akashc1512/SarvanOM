@@ -1,29 +1,7 @@
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
+import BlackspikeLanding from '@/components/landing/BlackspikeLanding';
 
-// Fallback component for when BlackspikeLanding is not available
-const FallbackLanding = () => (
-  <section className="cosmic-section">
-    <h1 className="text-4xl font-bold cosmic-text-primary">SarvanOM</h1>
-    <p className="text-lg cosmic-text-secondary">
-      Universal AI meta-search with sources, streaming answers, and a cosmic UI.
-    </p>
-    <div className="mt-6">
-      <Link href="/" className="cosmic-btn-primary">Go to Search</Link>
-    </div>
-  </section>
-);
-
-// Use dynamic import with proper error handling
-const BlackspikeLanding = dynamic(
-  () => import('@/components/landing/BlackspikeLanding').then(mod => ({ default: mod.BlackspikeLanding })),
-  { 
-    ssr: true,
-    loading: () => <FallbackLanding />
-  }
-);
-
-export const metadata = { title: 'SarvanOM — Landing' };
+// Metadata removed - this is a client component due to dynamic imports
 
 export default function LandingPage() {
   return (

@@ -5,12 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/ui/ui/button";
 import { Input } from "@/ui/ui/input";
-import { Card, CardContent } from "@/ui/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/ui/card";
 import { Label } from "@/ui/ui/label";
 import { Alert, AlertDescription } from "@/ui/ui/alert";
+import { Badge } from "@/ui/ui/badge";
 import { LoadingSpinner } from "@/ui/atoms/loading-spinner";
-import { Eye, EyeOff, AlertCircle, User, Lock, Sparkles } from "lucide-react";
+import { Eye, EyeOff, AlertCircle, User, Lock, Sparkles, RocketLaunchIcon, ArrowRightIcon } from "lucide-react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -164,6 +166,53 @@ export default function LoginPage() {
                 Sign in to your SarvanOM account
               </motion.p>
             </div>
+
+            {/* Quick Login Credentials */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mb-6"
+            >
+              <Card className="cosmic-card-glass rounded-xl border-cosmic-primary-500/20">
+                <CardContent className="p-4">
+                  <div className="text-center space-y-3">
+                    <Badge variant="outline" className="cosmic-badge-primary">
+                      🚀 Quick Login (Development)
+                    </Badge>
+                    <div className="grid grid-cols-1 gap-2 text-xs cosmic-text-secondary">
+                      <div className="flex justify-between items-center">
+                        <span className="flex items-center gap-2">
+                          <span>👤</span>
+                          <span>User:</span>
+                        </span>
+                        <span className="font-mono bg-cosmic-bg-secondary px-2 py-1 rounded">
+                          user / UserPass123!
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="flex items-center gap-2">
+                          <span>👑</span>
+                          <span>Admin:</span>
+                        </span>
+                        <span className="font-mono bg-cosmic-bg-secondary px-2 py-1 rounded">
+                          admin / AdminPass123!
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="flex items-center gap-2">
+                          <span>🧠</span>
+                          <span>Expert:</span>
+                        </span>
+                        <span className="font-mono bg-cosmic-bg-secondary px-2 py-1 rounded">
+                          expert / ExpertPass123!
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
             {/* Login Form */}
             <motion.div

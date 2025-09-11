@@ -1,0 +1,496 @@
+{
+  "summary": {
+    "total_tests": 72,
+    "successful_tests": 60,
+    "failed_tests": 12,
+    "success_rate": 66.66666666666666,
+    "average_response_time_ms": 108.69824555185106,
+    "timestamp": "2025-09-08T17:34:54.612360"
+  },
+  "by_component": {
+    "llm": {
+      "total": 16,
+      "success": 13
+    },
+    "database": {
+      "total": 20,
+      "success": 18
+    },
+    "kg": {
+      "total": 20,
+      "success": 17
+    },
+    "workflow": {
+      "total": 16,
+      "success": 12
+    }
+  },
+  "by_complexity": {
+    "simple": {
+      "total": 18,
+      "success": 15
+    },
+    "medium": {
+      "total": 18,
+      "success": 17
+    },
+    "complex": {
+      "total": 18,
+      "success": 16
+    },
+    "expert": {
+      "total": 18,
+      "success": 12
+    }
+  },
+  "detailed_results": [
+    {
+      "component": "llm_openai",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 100.11029243469238,
+      "query": "What is AI?"
+    },
+    {
+      "component": "llm_openai",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 100.2049446105957,
+      "query": "Compare supervised vs unsupervised learning"
+    },
+    {
+      "component": "llm_openai",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 100.23927688598633,
+      "query": "Design multi-agent system for distributed problem solving"
+    },
+    {
+      "component": "llm_openai",
+      "complexity": "expert",
+      "success": true,
+      "response_time_ms": 100.47125816345215,
+      "query": "Develop quantum-enhanced ML algorithm for drug discovery"
+    },
+    {
+      "component": "llm_anthropic",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 100.45194625854492,
+      "query": "What is AI?"
+    },
+    {
+      "component": "llm_anthropic",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 100.25596618652344,
+      "query": "Compare supervised vs unsupervised learning"
+    },
+    {
+      "component": "llm_anthropic",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 100.45933723449707,
+      "query": "Design multi-agent system for distributed problem solving"
+    },
+    {
+      "component": "llm_anthropic",
+      "complexity": "expert",
+      "success": true,
+      "response_time_ms": 100.2044677734375,
+      "query": "Develop quantum-enhanced ML algorithm for drug discovery"
+    },
+    {
+      "component": "llm_huggingface",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 100.41260719299316,
+      "query": "What is AI?"
+    },
+    {
+      "component": "llm_huggingface",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 100.55661201477051,
+      "query": "Compare supervised vs unsupervised learning"
+    },
+    {
+      "component": "llm_huggingface",
+      "complexity": "complex",
+      "success": false,
+      "response_time_ms": 100.24261474609375,
+      "query": "Design multi-agent system for distributed problem solving"
+    },
+    {
+      "component": "llm_huggingface",
+      "complexity": "expert",
+      "success": false,
+      "response_time_ms": 100.18467903137207,
+      "query": "Develop quantum-enhanced ML algorithm for drug discovery"
+    },
+    {
+      "component": "llm_ollama",
+      "complexity": "simple",
+      "success": false,
+      "response_time_ms": 100.16798973083496,
+      "query": "What is AI?"
+    },
+    {
+      "component": "llm_ollama",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 100.54302215576172,
+      "query": "Compare supervised vs unsupervised learning"
+    },
+    {
+      "component": "llm_ollama",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 100.48317909240723,
+      "query": "Design multi-agent system for distributed problem solving"
+    },
+    {
+      "component": "llm_ollama",
+      "complexity": "expert",
+      "success": true,
+      "response_time_ms": 100.32010078430176,
+      "query": "Develop quantum-enhanced ML algorithm for drug discovery"
+    },
+    {
+      "component": "database_postgres",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 50.64511299133301
+    },
+    {
+      "component": "database_postgres",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 50.421714782714844
+    },
+    {
+      "component": "database_postgres",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 50.31538009643555
+    },
+    {
+      "component": "database_postgres",
+      "complexity": "expert",
+      "success": true,
+      "response_time_ms": 50.4915714263916
+    },
+    {
+      "component": "database_redis",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 50.214290618896484
+    },
+    {
+      "component": "database_redis",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 50.48322677612305
+    },
+    {
+      "component": "database_redis",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 50.39787292480469
+    },
+    {
+      "component": "database_redis",
+      "complexity": "expert",
+      "success": true,
+      "response_time_ms": 50.421714782714844
+    },
+    {
+      "component": "database_arangodb",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 50.344228744506836
+    },
+    {
+      "component": "database_arangodb",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 50.219058990478516
+    },
+    {
+      "component": "database_arangodb",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 50.23598670959473
+    },
+    {
+      "component": "database_arangodb",
+      "complexity": "expert",
+      "success": false,
+      "response_time_ms": 50.35114288330078
+    },
+    {
+      "component": "database_qdrant",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 50.2016544342041
+    },
+    {
+      "component": "database_qdrant",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 50.475120544433594
+    },
+    {
+      "component": "database_qdrant",
+      "complexity": "complex",
+      "success": false,
+      "response_time_ms": 50.354719161987305
+    },
+    {
+      "component": "database_qdrant",
+      "complexity": "expert",
+      "success": true,
+      "response_time_ms": 50.60601234436035
+    },
+    {
+      "component": "database_meilisearch",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 50.53520202636719
+    },
+    {
+      "component": "database_meilisearch",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 50.64821243286133
+    },
+    {
+      "component": "database_meilisearch",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 50.122737884521484
+    },
+    {
+      "component": "database_meilisearch",
+      "complexity": "expert",
+      "success": true,
+      "response_time_ms": 50.24552345275879
+    },
+    {
+      "component": "kg_create_node",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 100.51250457763672
+    },
+    {
+      "component": "kg_create_node",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 100.39353370666504
+    },
+    {
+      "component": "kg_create_node",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 100.55899620056152
+    },
+    {
+      "component": "kg_create_node",
+      "complexity": "expert",
+      "success": true,
+      "response_time_ms": 100.36134719848633
+    },
+    {
+      "component": "kg_create_relationship",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 100.2964973449707
+    },
+    {
+      "component": "kg_create_relationship",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 100.40521621704102
+    },
+    {
+      "component": "kg_create_relationship",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 100.42333602905273
+    },
+    {
+      "component": "kg_create_relationship",
+      "complexity": "expert",
+      "success": false,
+      "response_time_ms": 100.45337677001953
+    },
+    {
+      "component": "kg_query_graph",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 100.40855407714844
+    },
+    {
+      "component": "kg_query_graph",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 100.50225257873535
+    },
+    {
+      "component": "kg_query_graph",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 100.6159782409668
+    },
+    {
+      "component": "kg_query_graph",
+      "complexity": "expert",
+      "success": true,
+      "response_time_ms": 100.1882553100586
+    },
+    {
+      "component": "kg_traverse_graph",
+      "complexity": "simple",
+      "success": false,
+      "response_time_ms": 100.31390190124512
+    },
+    {
+      "component": "kg_traverse_graph",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 100.56686401367188
+    },
+    {
+      "component": "kg_traverse_graph",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 100.65937042236328
+    },
+    {
+      "component": "kg_traverse_graph",
+      "complexity": "expert",
+      "success": false,
+      "response_time_ms": 100.43597221374512
+    },
+    {
+      "component": "kg_analyze_graph",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 100.67534446716309
+    },
+    {
+      "component": "kg_analyze_graph",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 100.12197494506836
+    },
+    {
+      "component": "kg_analyze_graph",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 100.08883476257324
+    },
+    {
+      "component": "kg_analyze_graph",
+      "complexity": "expert",
+      "success": true,
+      "response_time_ms": 100.08668899536133
+    },
+    {
+      "component": "workflow_search_and_synthesize",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 200.18768310546875
+    },
+    {
+      "component": "workflow_search_and_synthesize",
+      "complexity": "medium",
+      "success": false,
+      "response_time_ms": 200.22940635681152
+    },
+    {
+      "component": "workflow_search_and_synthesize",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 200.150728225708
+    },
+    {
+      "component": "workflow_search_and_synthesize",
+      "complexity": "expert",
+      "success": true,
+      "response_time_ms": 200.0904083251953
+    },
+    {
+      "component": "workflow_fact_check_workflow",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 200.15501976013184
+    },
+    {
+      "component": "workflow_fact_check_workflow",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 200.4537582397461
+    },
+    {
+      "component": "workflow_fact_check_workflow",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 200.28138160705566
+    },
+    {
+      "component": "workflow_fact_check_workflow",
+      "complexity": "expert",
+      "success": false,
+      "response_time_ms": 200.3490924835205
+    },
+    {
+      "component": "workflow_knowledge_extraction",
+      "complexity": "simple",
+      "success": true,
+      "response_time_ms": 200.6206512451172
+    },
+    {
+      "component": "workflow_knowledge_extraction",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 200.5763053894043
+    },
+    {
+      "component": "workflow_knowledge_extraction",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 200.3958225250244
+    },
+    {
+      "component": "workflow_knowledge_extraction",
+      "complexity": "expert",
+      "success": true,
+      "response_time_ms": 200.2706527709961
+    },
+    {
+      "component": "workflow_multi_modal_analysis",
+      "complexity": "simple",
+      "success": false,
+      "response_time_ms": 200.58679580688477
+    },
+    {
+      "component": "workflow_multi_modal_analysis",
+      "complexity": "medium",
+      "success": true,
+      "response_time_ms": 200.18887519836426
+    },
+    {
+      "component": "workflow_multi_modal_analysis",
+      "complexity": "complex",
+      "success": true,
+      "response_time_ms": 200.15382766723633
+    },
+    {
+      "component": "workflow_multi_modal_analysis",
+      "complexity": "expert",
+      "success": false,
+      "response_time_ms": 200.47569274902344
+    }
+  ]
+}

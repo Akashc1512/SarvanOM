@@ -104,12 +104,6 @@ def environment_config():
     }
 
 
-@pytest.fixture
-def mock_external_services():
-    """Mock external services that are not LLM-related."""
-    with patch("services.gateway.main.time.sleep") as mock_sleep:
-        mock_sleep.return_value = None
-        yield {"sleep": mock_sleep}
 
 
 @pytest.fixture

@@ -36,7 +36,29 @@ interface ChartData {
   }[];
 }
 
-export function DataNovaDashboard() {
+interface ProviderData {
+  name: string;
+  requests: number;
+  latency: number;
+  cost: number;
+  successRate: number;
+}
+
+interface LaneUsageData {
+  lane: string;
+  usage: number;
+  capacity: number;
+  efficiency: number;
+}
+
+interface ErrorData {
+  type: string;
+  count: number;
+  percentage: number;
+  color: string;
+}
+
+export default function DataNovaDashboard() {
   const [timeRange, setTimeRange] = useState("7d");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -45,6 +67,30 @@ export function DataNovaDashboard() {
     const timer = setTimeout(() => setIsLoading(false), 1000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Provider breakdown data
+  const providerData: ProviderData[] = [
+    { name: "OpenAI", requests: 1250, latency: 1.2, cost: 45.6, successRate: 98.5 },
+    { name: "Anthropic", requests: 890, latency: 1.8, cost: 32.1, successRate: 97.2 },
+    { name: "Hugging Face", requests: 2100, latency: 0.8, cost: 12.3, successRate: 99.1 },
+    { name: "Ollama", requests: 650, latency: 2.1, cost: 0, successRate: 96.8 }
+  ];
+
+  // Lane usage data
+  const laneUsageData: LaneUsageData[] = [
+    { lane: "Fast Lane", usage: 75, capacity: 100, efficiency: 92 },
+    { lane: "Standard Lane", usage: 60, capacity: 100, efficiency: 88 },
+    { lane: "Research Lane", usage: 45, capacity: 100, efficiency: 85 },
+    { lane: "Deep Dive Lane", usage: 30, capacity: 100, efficiency: 78 }
+  ];
+
+  // Error breakdown data
+  const errorData: ErrorData[] = [
+    { type: "Timeouts", count: 45, percentage: 35, color: "text-cosmic-warning" },
+    { type: "Rate Limits", count: 32, percentage: 25, color: "text-cosmic-error" },
+    { type: "API Errors", count: 28, percentage: 22, color: "text-cosmic-error" },
+    { type: "Network Issues", count: 23, percentage: 18, color: "text-cosmic-warning" }
+  ];
 
   const metrics: MetricCard[] = [
     {
@@ -325,6 +371,134 @@ export function DataNovaDashboard() {
               <p className="text-2xl font-bold text-cosmic-secondary-400 mb-1">4.8/5</p>
               <p className="cosmic-text-tertiary text-sm">User satisfaction</p>
             </div>
+          </div>
+        </motion.div>
+
+        {/* Enhanced Analytics Sections */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+          {/* Provider Breakdown Area Chart */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="cosmic-card p-6"
+          >
+            <h3 className="text-xl font-semibold cosmic-text-primary mb-6 flex items-center gap-2">
+              <GlobeAltIcon className="w-5 h-5 text-cosmic-primary-500" />
+              Provider Breakdown
+            </h3>
+            <div className="space-y-4">
+              {providerData.map((provider, index) => (
+                <div key={provider.name} className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="cosmic-text-primary font-medium">{provider.name}</span>
+                    <span className="cosmic-text-secondary text-sm">{provider.requests} requests</span>
+                  </div>
+                  <div className="w-full bg-cosmic-bg-tertiary rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full bg-gradient-to-r from-cosmic-primary-500 to-cosmic-secondary-500 transition-all duration-1000"
+                      style={{ 
+                        width: `${(provider.requests / Math.max(...providerData.map(p => p.requests))) * 100}%`,
+                        animationDelay: `${index * 0.2}s`
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs cosmic-text-tertiary">
+                    <span>Latency: {provider.latency}s</span>
+                    <span>Success: {provider.successRate}%</span>
+                    <span>Cost: ${provider.cost}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Lane Usage Bars */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="cosmic-card p-6"
+          >
+            <h3 className="text-xl font-semibold cosmic-text-primary mb-6 flex items-center gap-2">
+              <CpuChipIcon className="w-5 h-5 text-cosmic-primary-500" />
+              Lane Usage
+            </h3>
+            <div className="space-y-4">
+              {laneUsageData.map((lane, index) => (
+                <div key={lane.lane} className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="cosmic-text-primary font-medium">{lane.lane}</span>
+                    <span className="cosmic-text-secondary text-sm">{lane.usage}% used</span>
+                  </div>
+                  <div className="w-full bg-cosmic-bg-tertiary rounded-full h-3">
+                    <div
+                      className="h-3 rounded-full bg-gradient-to-r from-cosmic-success to-cosmic-primary-500 transition-all duration-1000"
+                      style={{ 
+                        width: `${lane.usage}%`,
+                        animationDelay: `${index * 0.2}s`
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs cosmic-text-tertiary">
+                    <span>Capacity: {lane.capacity}%</span>
+                    <span>Efficiency: {lane.efficiency}%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Timeouts vs Errors Donut */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="cosmic-card p-6 mt-8"
+        >
+          <h3 className="text-xl font-semibold cosmic-text-primary mb-6 flex items-center gap-2">
+            <ChartBarIcon className="w-5 h-5 text-cosmic-primary-500" />
+            Error Analysis
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {errorData.map((error, index) => (
+              <div key={error.type} className="text-center">
+                <div className="relative w-24 h-24 mx-auto mb-4">
+                  <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="none"
+                      className="text-cosmic-bg-tertiary"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      stroke="currentColor"
+                      strokeWidth="8"
+                      fill="none"
+                      strokeDasharray={`${2 * Math.PI * 40}`}
+                      strokeDashoffset={`${2 * Math.PI * 40 * (1 - error.percentage / 100)}`}
+                      className={error.color}
+                      style={{
+                        transition: 'stroke-dashoffset 1s ease-in-out',
+                        animationDelay: `${index * 0.2}s`
+                      }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className={`text-lg font-bold ${error.color}`}>{error.percentage}%</span>
+                  </div>
+                </div>
+                <h4 className="cosmic-text-primary font-medium mb-1">{error.type}</h4>
+                <p className="cosmic-text-tertiary text-sm">{error.count} incidents</p>
+              </div>
+            ))}
           </div>
         </motion.div>
       </div>

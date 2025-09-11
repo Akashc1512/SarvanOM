@@ -1,0 +1,95 @@
+{
+  "test_summary": {
+    "total_tests": 76,
+    "successful_tests": 56,
+    "failed_tests": 20,
+    "success_rate": 73.68421052631578,
+    "total_execution_time_seconds": 9.837981462478638,
+    "average_response_time_ms": 117.36432188435604
+  },
+  "by_component": {
+    "backend": {
+      "total": 4,
+      "success": 1,
+      "failed": 3
+    },
+    "llm_openai": {
+      "total": 4,
+      "success": 3,
+      "failed": 1
+    },
+    "llm_anthropic": {
+      "total": 4,
+      "success": 2,
+      "failed": 2
+    },
+    "llm_huggingface": {
+      "total": 4,
+      "success": 2,
+      "failed": 2
+    },
+    "llm_ollama": {
+      "total": 4,
+      "success": 4,
+      "failed": 0
+    },
+    "database_postgres": {
+      "total": 4,
+      "success": 3,
+      "failed": 1
+    },
+    "database_redis": {
+      "total": 4,
+      "success": 4,
+      "failed": 0
+    },
+    "database_arangodb": {
+      "total": 4,
+      "success": 4,
+      "failed": 0
+    },
+    "database_qdrant": {
+      "total": 4,
+      "success": 2,
+      "failed": 2
+    },
+    "database_meilisearch": {
+      "total": 4,
+      "success": 4,
+      "failed": 0
+    },
+    "knowledge_graph": {
+      "total": 20,
+      "success": 16,
+      "failed": 4
+    },
+    "integrated_workflow": {
+      "total": 16,
+      "success": 11,
+      "failed": 5
+    }
+  },
+  "by_complexity": {
+    "simple": {
+      "total": 22,
+      "success": 17,
+      "failed": 5
+    },
+    "medium": {
+      "total": 18,
+      "success": 14,
+      "failed": 4
+    },
+    "complex": {
+      "total": 18,
+      "success": 13,
+      "failed": 5
+    },
+    "expert": {
+      "total": 18,
+      "success": 12,
+      "failed": 6
+    }
+  },
+  "timestamp": "2025-09-08T17:29:57.066980"
+}

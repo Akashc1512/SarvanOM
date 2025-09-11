@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call the backend validation service
-    const backendUrl = process.env['NEXT_PUBLIC_API_URL'] || "http://localhost:8000";
+    const backendUrl = process.env['NEXT_PUBLIC_API_URL'] || "http://localhost:8004";
     const response = await fetch(`${backendUrl}/api/factcheck/validate`, {
       method: "POST",
       headers: {
@@ -84,40 +84,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Expert validation error:", error);
     
-    // Return a mock response for development/testing
-    const mockResponse: ValidationResponse = {
-      status: "supported",
-      confidence: 0.85,
-      consensus_score: 0.82,
-      total_experts: 3,
-      agreeing_experts: 2,
-      expert_network: "academic,industry,ai_model",
-      validation_time: new Date().toISOString(),
-      details: {
-        academic_validation: {
-          status: "supported",
-          confidence: 0.9,
-          notes: "Academic sources support this claim with high confidence.",
-        },
-        industry_validation: {
-          status: "supported",
-          confidence: 0.8,
-          notes: "Industry experts confirm this information.",
-        },
-        ai_model_validation: {
-          status: "supported",
-          confidence: 0.85,
-          notes: "AI model analysis supports the claim.",
-        },
+    return NextResponse.json(
+      { 
+        error: 'Failed to validate claim',
+        details: error instanceof Error ? error.message : 'Unknown error'
       },
-      sources_checked: [
-        "Academic Database",
-        "Industry Reports",
-        "Expert Opinions",
-      ],
-      reasoning: "Multiple expert networks have validated this claim with high confidence. Academic sources provide strong support, industry experts confirm the information, and AI model analysis aligns with the claim.",
-    };
-
-    return NextResponse.json(mockResponse);
+      { status: 500 }
+    );
   }
 } 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    const backendUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:8000';
+    const backendUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:8004';
     const response = await fetch(`${backendUrl}/metrics`, {
       method: 'GET',
       headers: {
@@ -11,23 +11,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
-      // Return mock data for testing when backend is not available
-      const mockData = {
-        status: "success",
-        metrics: {
-          queries_processed: 1250,
-          average_latency: 2.3,
-          active_sessions: 45,
-          cache_hit_rate: 0.78,
-          error_rate: 0.05,
-          total_users: 156,
-          daily_queries: 89,
-          system_uptime: 86400
-        },
-        timestamp: new Date().toISOString()
-      };
-      
-      return NextResponse.json(mockData);
+      throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
@@ -35,22 +19,12 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching metrics:', error);
     
-    // Return mock data for testing when backend is not available
-    const mockData = {
-      status: "success",
-      metrics: {
-        queries_processed: 1250,
-        average_latency: 2.3,
-        active_sessions: 45,
-        cache_hit_rate: 0.78,
-        error_rate: 0.05,
-        total_users: 156,
-        daily_queries: 89,
-        system_uptime: 86400
+    return NextResponse.json(
+      { 
+        error: 'Failed to fetch metrics data',
+        details: error instanceof Error ? error.message : 'Unknown error'
       },
-      timestamp: new Date().toISOString()
-    };
-    
-    return NextResponse.json(mockData);
+      { status: 500 }
+    );
   }
 } 

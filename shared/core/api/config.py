@@ -759,7 +759,7 @@ class Settings(
         default="http://arangodb:8529", description="ArangoDB URL"
     )
     qdrant_url: HttpUrl = Field(default="http://qdrant:6333", description="Qdrant URL")
-    ollama_url: HttpUrl = Field(default="http://ollama:11434", description="Ollama URL")
+    ollama_url: HttpUrl = Field(default="http://localhost:11434", description="Ollama URL")
 
     # External integrations
     smtp_host: str = Field(default="smtp.gmail.com", description="SMTP host")
@@ -876,14 +876,12 @@ class Settings(
     )
 
     # Development & Testing
-    mock_ai_responses: bool = Field(default=False, description="Mock AI responses")
     skip_authentication: bool = Field(default=False, description="Skip authentication")
     enable_debug_endpoints: bool = Field(
         default=False, description="Enable debug endpoints"
     )
     auto_reload: bool = Field(default=False, description="Auto reload")
     test_mode: bool = Field(default=False, description="Test mode")
-    mock_providers: bool = Field(default=False, description="Mock providers")
 
     # Test database
     test_database_url: str = Field(

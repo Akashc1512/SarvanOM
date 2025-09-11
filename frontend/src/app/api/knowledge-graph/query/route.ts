@@ -12,47 +12,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For now, return mock data since backend is not available
-    const mockResponse = {
-      entities: [
-        {
-          id: "entity_1",
-          name: "Artificial Intelligence",
-          type: "concept",
-          properties: { description: "Machine intelligence" },
-          confidence: 0.95
-        },
-        {
-          id: "entity_2",
-          name: "Machine Learning",
-          type: "technology",
-          properties: { description: "Subset of AI" },
-          confidence: 0.9
-        }
-      ],
-      relationships: [
-        {
-          source_id: "entity_1",
-          target_id: "entity_2",
-          relationship_type: "includes",
-          properties: { strength: "strong" },
-          confidence: 0.85
-        }
-      ],
-      paths: [],
-      query_entities: [query],
-      confidence: 0.9,
-      processing_time_ms: 1500,
-      metadata: { query_type: query_type || 'entity_search' }
-    };
 
-    return NextResponse.json({
-      success: true,
-      data: mockResponse,
-      query,
-      query_type,
-      timestamp: new Date().toISOString()
+    // Forward request to backend API
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8004';
+    const response = await fetch(`${backendUrl}/knowledge-graph/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': request.headers.get('Authorization') || '',
+      },
+      body: JSON.stringify({ query, query_type })
     });
+
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
 
   } catch (error: any) {
     console.error('Knowledge graph query error:', error);

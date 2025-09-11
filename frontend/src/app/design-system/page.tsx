@@ -1,210 +1,527 @@
 "use client";
 
-import React from "react";
-import { StandardLayout, StandardCard, StandardButton } from "@/components/layout/StandardLayout";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { 
+  SwatchIcon,
+  PaintBrushIcon,
+  EyeIcon,
+  CodeBracketIcon,
+  ClipboardDocumentIcon,
+  CheckIcon,
+  XMarkIcon,
+  ChevronDownIcon,
+  ChevronRightIcon
+} from "@heroicons/react/24/outline";
+
+interface ComponentExample {
+  name: string;
+  description: string;
+  code: string;
+  component: React.ReactNode;
+  category: string;
+}
 
 export default function DesignSystemPage() {
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [expandedComponents, setExpandedComponents] = useState<Set<string>>(new Set());
+
+  const categories = [
+    { id: "all", name: "All Components", icon: SwatchIcon },
+    { id: "buttons", name: "Buttons", icon: PaintBrushIcon },
+    { id: "cards", name: "Cards", icon: SwatchIcon },
+    { id: "inputs", name: "Inputs", icon: CodeBracketIcon },
+    { id: "navigation", name: "Navigation", icon: EyeIcon },
+    { id: "feedback", name: "Feedback", icon: CheckIcon }
+  ];
+
+  const copyToClipboard = async (code: string, componentName: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(componentName);
+      setTimeout(() => setCopiedCode(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy code:', err);
+    }
+  };
+
+  const toggleComponent = (componentName: string) => {
+    const newExpanded = new Set(expandedComponents);
+    if (newExpanded.has(componentName)) {
+      newExpanded.delete(componentName);
+    } else {
+      newExpanded.add(componentName);
+    }
+    setExpandedComponents(newExpanded);
+  };
+
+  const components: ComponentExample[] = [
+    // Buttons
+    {
+      name: "Primary Button",
+      description: "Main call-to-action button with cosmic glow effect",
+      category: "buttons",
+      code: `<button className="cosmic-btn-primary">
+  Primary Action
+</button>`,
+      component: (
+        <button className="cosmic-btn-primary">
+          Primary Action
+        </button>
+      )
+    },
+    {
+      name: "Secondary Button",
+      description: "Secondary action button with subtle styling",
+      category: "buttons",
+      code: `<button className="cosmic-btn-secondary">
+  Secondary Action
+</button>`,
+      component: (
+        <button className="cosmic-btn-secondary">
+          Secondary Action
+        </button>
+      )
+    },
+    {
+      name: "Ghost Button",
+      description: "Minimal button for subtle actions",
+      category: "buttons",
+      code: `<button className="cosmic-btn-ghost">
+  Ghost Action
+</button>`,
+      component: (
+        <button className="cosmic-btn-ghost">
+          Ghost Action
+        </button>
+      )
+    },
+    {
+      name: "Danger Button",
+      description: "Destructive action button with error styling",
+      category: "buttons",
+      code: `<button className="cosmic-btn-danger">
+  Delete Item
+</button>`,
+      component: (
+        <button className="cosmic-btn-danger">
+          Delete Item
+        </button>
+      )
+    },
+
+    // Cards
+    {
+      name: "Basic Card",
+      description: "Standard card with cosmic styling and hover effects",
+      category: "cards",
+      code: `<div className="cosmic-card p-6">
+  <h3 className="cosmic-text-primary font-semibold mb-2">Card Title</h3>
+  <p className="cosmic-text-secondary">Card content goes here</p>
+</div>`,
+      component: (
+        <div className="cosmic-card p-6">
+          <h3 className="cosmic-text-primary font-semibold mb-2">Card Title</h3>
+          <p className="cosmic-text-secondary">Card content goes here</p>
+        </div>
+      )
+    },
+    {
+      name: "Glass Card",
+      description: "Glass morphism card with backdrop blur",
+      category: "cards",
+      code: `<div className="cosmic-card-glass p-6">
+  <h3 className="cosmic-text-primary font-semibold mb-2">Glass Card</h3>
+  <p className="cosmic-text-secondary">Transparent with blur effect</p>
+</div>`,
+      component: (
+        <div className="cosmic-card-glass p-6">
+          <h3 className="cosmic-text-primary font-semibold mb-2">Glass Card</h3>
+          <p className="cosmic-text-secondary">Transparent with blur effect</p>
+        </div>
+      )
+    },
+    {
+      name: "Metric Tile",
+      description: "KPI/metric display card with hover lift effect",
+      category: "cards",
+      code: `<div className="cosmic-tile-metric cosmic-hover-lift p-6">
+  <div className="text-2xl font-bold cosmic-text-primary">1,234</div>
+  <div className="cosmic-text-secondary">Total Users</div>
+</div>`,
+      component: (
+        <div className="cosmic-tile-metric cosmic-hover-lift p-6">
+          <div className="text-2xl font-bold cosmic-text-primary">1,234</div>
+          <div className="cosmic-text-secondary">Total Users</div>
+        </div>
+      )
+    },
+
+    // Inputs
+    {
+      name: "Text Input",
+      description: "Standard text input with cosmic styling",
+      category: "inputs",
+      code: `<input 
+  type="text" 
+  placeholder="Enter text..." 
+  className="cosmic-input"
+/>`,
+      component: (
+        <input 
+          type="text" 
+          placeholder="Enter text..." 
+          className="cosmic-input"
+        />
+      )
+    },
+    {
+      name: "Search Input",
+      description: "Search input with cosmic glow and icon",
+      category: "inputs",
+      code: `<div className="cosmic-search-container">
+  <input 
+    type="text" 
+    placeholder="Search..." 
+    className="cosmic-search-input"
+  />
+  <button className="cosmic-btn-primary">
+    Search
+  </button>
+</div>`,
+      component: (
+        <div className="cosmic-search-container">
+          <input 
+            type="text" 
+            placeholder="Search..." 
+            className="cosmic-search-input"
+          />
+          <button className="cosmic-btn-primary">
+            Search
+          </button>
+        </div>
+      )
+    },
+    {
+      name: "Textarea",
+      description: "Multi-line text input with cosmic styling",
+      category: "inputs",
+      code: `<textarea 
+  placeholder="Enter description..." 
+  className="cosmic-input min-h-[100px] resize-none"
+/>`,
+      component: (
+        <textarea 
+          placeholder="Enter description..." 
+          className="cosmic-input min-h-[100px] resize-none"
+        />
+      )
+    },
+
+    // Navigation
+    {
+      name: "Nav Item",
+      description: "Navigation item with hover effects",
+      category: "navigation",
+      code: `<a href="#" className="cosmic-nav-item">
+  Navigation Item
+</a>`,
+      component: (
+        <a href="#" className="cosmic-nav-item">
+          Navigation Item
+        </a>
+      )
+    },
+    {
+      name: "Breadcrumb",
+      description: "Breadcrumb navigation with cosmic styling",
+      category: "navigation",
+      code: `<nav className="flex items-center space-x-2 text-sm">
+  <a href="#" className="cosmic-text-tertiary hover:cosmic-text-primary">
+    Home
+  </a>
+  <span className="cosmic-text-tertiary">/</span>
+  <span className="cosmic-text-primary font-medium">Current Page</span>
+</nav>`,
+      component: (
+        <nav className="flex items-center space-x-2 text-sm">
+          <a href="#" className="cosmic-text-tertiary hover:cosmic-text-primary">
+            Home
+          </a>
+          <span className="cosmic-text-tertiary">/</span>
+          <span className="cosmic-text-primary font-medium">Current Page</span>
+        </nav>
+      )
+    },
+
+    // Feedback
+    {
+      name: "Success Alert",
+      description: "Success message with cosmic success styling",
+      category: "feedback",
+      code: `<div className="cosmic-card border-cosmic-success/20 bg-cosmic-success/5 p-4">
+  <div className="flex items-center gap-2">
+    <CheckIcon className="w-5 h-5 text-cosmic-success" />
+    <span className="cosmic-text-primary">Operation completed successfully</span>
+  </div>
+</div>`,
+      component: (
+        <div className="cosmic-card border-cosmic-success/20 bg-cosmic-success/5 p-4">
+          <div className="flex items-center gap-2">
+            <CheckIcon className="w-5 h-5 text-cosmic-success" />
+            <span className="cosmic-text-primary">Operation completed successfully</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      name: "Error Alert",
+      description: "Error message with cosmic error styling",
+      category: "feedback",
+      code: `<div className="cosmic-card border-cosmic-error/20 bg-cosmic-error/5 p-4">
+  <div className="flex items-center gap-2">
+    <XMarkIcon className="w-5 h-5 text-cosmic-error" />
+    <span className="cosmic-text-primary">An error occurred</span>
+  </div>
+</div>`,
+      component: (
+        <div className="cosmic-card border-cosmic-error/20 bg-cosmic-error/5 p-4">
+          <div className="flex items-center gap-2">
+            <XMarkIcon className="w-5 h-5 text-cosmic-error" />
+            <span className="cosmic-text-primary">An error occurred</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      name: "Loading State",
+      description: "Loading indicator with cosmic animation",
+      category: "feedback",
+      code: `<div className="cosmic-card p-6 text-center">
+  <div className="cosmic-spinner mx-auto mb-4"></div>
+  <p className="cosmic-text-secondary">Loading...</p>
+</div>`,
+      component: (
+        <div className="cosmic-card p-6 text-center">
+          <div className="cosmic-spinner mx-auto mb-4"></div>
+          <p className="cosmic-text-secondary">Loading...</p>
+        </div>
+      )
+    }
+  ];
+
+  const filteredComponents = selectedCategory === "all" 
+    ? components 
+    : components.filter(comp => comp.category === selectedCategory);
+
   return (
-    <StandardLayout
-      title="Design System Showcase"
-      description="Demonstrating the standardized cosmic theme design tokens, layout utilities, and component patterns used throughout SarvanOM."
-    >
-      <div className="space-y-8">
+    <div className="min-h-screen cosmic-bg-primary">
+      <div className="cosmic-container cosmic-section">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-cosmic-primary-500 to-cosmic-secondary-500 text-white px-4 py-2 rounded-full text-sm font-medium mb-6"
+          >
+            <SwatchIcon className="w-4 h-4" />
+            Design System
+          </motion.div>
+          <h1 className="text-4xl font-bold cosmic-text-primary mb-4">
+            Cosmic Pro Component Library
+          </h1>
+          <p className="text-lg cosmic-text-secondary max-w-3xl mx-auto">
+            A comprehensive collection of reusable UI components built with the Cosmic Pro design system. 
+            Each component is designed for consistency, accessibility, and visual excellence.
+          </p>
+        </div>
+
+        {/* Category Filter */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex flex-wrap gap-2 mb-8 justify-center"
+        >
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => setSelectedCategory(category.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                selectedCategory === category.id
+                  ? "cosmic-btn-primary"
+                  : "cosmic-btn-secondary"
+              }`}
+            >
+              <category.icon className="w-4 h-4" />
+              {category.name}
+            </button>
+          ))}
+        </motion.div>
+
+        {/* Components Grid */}
+        <div className="space-y-8">
+          {filteredComponents.map((component, index) => (
+            <motion.div
+              key={component.name}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="cosmic-card p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold cosmic-text-primary mb-1">
+                    {component.name}
+                  </h3>
+                  <p className="cosmic-text-secondary text-sm">
+                    {component.description}
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggleComponent(component.name)}
+                  className="cosmic-btn-ghost p-2"
+                >
+                  {expandedComponents.has(component.name) ? (
+                    <ChevronDownIcon className="w-5 h-5" />
+                  ) : (
+                    <ChevronRightIcon className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+
+              {/* Component Preview */}
+              <div className="mb-4 p-6 bg-cosmic-bg-secondary rounded-lg border border-cosmic-border-primary">
+                {component.component}
+              </div>
+
+              {/* Code Section */}
+              {expandedComponents.has(component.name) && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-4"
+                >
+                  <div className="flex items-center justify-between">
+                    <h4 className="cosmic-text-primary font-medium">Code Example</h4>
+                    <button
+                      onClick={() => copyToClipboard(component.code, component.name)}
+                      className="cosmic-btn-secondary flex items-center gap-2 text-sm"
+                    >
+                      {copiedCode === component.name ? (
+                        <>
+                          <CheckIcon className="w-4 h-4" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <ClipboardDocumentIcon className="w-4 h-4" />
+                          Copy Code
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <pre className="bg-cosmic-bg-tertiary p-4 rounded-lg overflow-x-auto">
+                    <code className="text-sm cosmic-text-primary">{component.code}</code>
+                  </pre>
+                </motion.div>
+              )}
+            </motion.div>
+          ))}
+        </div>
+
         {/* Design Tokens Section */}
-        <StandardCard
-          title="Design Tokens"
-          description="CSS custom properties and standardized values for consistent theming"
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-16 cosmic-card p-8"
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <h4 className="font-medium text-[var(--fg)]">Colors</h4>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: "var(--bg)" }}></div>
-                  <span className="text-sm text-[var(--fg)]/70">--bg</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: "var(--fg)" }}></div>
-                  <span className="text-sm text-[var(--fg)]/70">--fg</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: "var(--accent)" }}></div>
-                  <span className="text-sm text-[var(--fg)]/70">--accent</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: "var(--card)" }}></div>
-                  <span className="text-sm text-[var(--fg)]/70">--card</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <h4 className="font-medium text-[var(--fg)]">Typography</h4>
-              <div className="space-y-2">
-                <div className="text-title text-[var(--fg)]">Title Text</div>
-                <div className="text-body text-[var(--fg)]/80">Body Text</div>
-                <div className="text-sm text-[var(--fg)]/60">Small Text</div>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <h4 className="font-medium text-[var(--fg)]">Spacing</h4>
-              <div className="space-y-2">
-                <div className="text-sm text-[var(--fg)]/70">container-std: max-w-7xl</div>
-                <div className="text-sm text-[var(--fg)]/70">section-std: space-y-6 py-6</div>
-                <div className="text-sm text-[var(--fg)]/70">Standardized 8px base unit</div>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <h4 className="font-medium text-[var(--fg)]">Components</h4>
-              <div className="space-y-2">
-                <div className="text-sm text-[var(--fg)]/70">card-std: Rounded cards</div>
-                <div className="text-sm text-[var(--fg)]/70">link-std: Accent underlined</div>
-                <div className="text-sm text-[var(--fg)]/70">cosmic: Starfield background</div>
-              </div>
-            </div>
-          </div>
-        </StandardCard>
-
-        {/* Layout Utilities Section */}
-        <StandardCard
-          title="Layout Utilities"
-          description="Standardized container sizes, spacing, and responsive layouts"
-        >
-          <div className="space-y-6">
+          <h2 className="text-2xl font-bold cosmic-text-primary mb-6 text-center">
+            Design Tokens
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Colors */}
             <div>
-              <h4 className="font-medium text-[var(--fg)] mb-3">Container Standards</h4>
-              <div className="bg-[var(--card)]/50 p-4 rounded-lg">
-                <div className="container-std bg-[var(--accent)]/20 p-4 rounded">
-                  <p className="text-[var(--fg)]">container-std: max-w-7xl with responsive padding</p>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="font-medium text-[var(--fg)] mb-3">Section Spacing</h4>
-              <div className="section-std bg-[var(--card)]/50 rounded-lg">
-                <div className="bg-[var(--accent)]/20 p-4 rounded mb-6">
-                  <p className="text-[var(--fg)]">Section with standardized spacing</p>
-                </div>
-                <div className="bg-[var(--accent)]/20 p-4 rounded">
-                  <p className="text-[var(--fg)]">Consistent vertical rhythm</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </StandardCard>
-
-        {/* Component Examples Section */}
-        <StandardCard
-          title="Component Examples"
-          description="Standardized button variants and interactive elements"
-        >
-          <div className="space-y-6">
-            <div>
-              <h4 className="font-medium text-[var(--fg)] mb-3">Button Variants</h4>
-              <div className="flex flex-wrap gap-4">
-                <StandardButton variant="primary" size="sm">
-                  Primary Small
-                </StandardButton>
-                <StandardButton variant="primary" size="md">
-                  Primary Medium
-                </StandardButton>
-                <StandardButton variant="primary" size="lg">
-                  Primary Large
-                </StandardButton>
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="font-medium text-[var(--fg)] mb-3">Secondary & Outline</h4>
-              <div className="flex flex-wrap gap-4">
-                <StandardButton variant="secondary">
-                  Secondary Button
-                </StandardButton>
-                <StandardButton variant="outline">
-                  Outline Button
-                </StandardButton>
-                <StandardButton disabled>
-                  Disabled Button
-                </StandardButton>
-              </div>
-            </div>
-            
-            <div>
-              <h4 className="font-medium text-[var(--fg)] mb-3">Interactive Elements</h4>
+              <h3 className="cosmic-text-primary font-semibold mb-4">Colors</h3>
               <div className="space-y-3">
-                <a href="#" className="link-std">
-                  Standard link with accent underline
-                </a>
-                <div className="card-std p-4 hover:bg-[var(--card)]/80 transition-colors cursor-pointer">
-                  <p className="text-[var(--fg)]">Interactive card with hover effects</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-cosmic-primary-500 rounded"></div>
+                  <span className="cosmic-text-secondary text-sm">cosmic-primary-500</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-cosmic-secondary-500 rounded"></div>
+                  <span className="cosmic-text-secondary text-sm">cosmic-secondary-500</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-cosmic-success rounded"></div>
+                  <span className="cosmic-text-secondary text-sm">cosmic-success</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-cosmic-warning rounded"></div>
+                  <span className="cosmic-text-secondary text-sm">cosmic-warning</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-cosmic-error rounded"></div>
+                  <span className="cosmic-text-secondary text-sm">cosmic-error</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Typography */}
+            <div>
+              <h3 className="cosmic-text-primary font-semibold mb-4">Typography</h3>
+              <div className="space-y-3">
+                <div>
+                  <h1 className="text-2xl font-bold cosmic-text-primary">Heading 1</h1>
+                  <p className="cosmic-text-tertiary text-xs">text-2xl font-bold</p>
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold cosmic-text-primary">Heading 2</h2>
+                  <p className="cosmic-text-tertiary text-xs">text-xl font-semibold</p>
+                </div>
+                <div>
+                  <p className="cosmic-text-primary">Body Text</p>
+                  <p className="cosmic-text-tertiary text-xs">cosmic-text-primary</p>
+                </div>
+                <div>
+                  <p className="cosmic-text-secondary">Secondary Text</p>
+                  <p className="cosmic-text-tertiary text-xs">cosmic-text-secondary</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Spacing */}
+            <div>
+              <h3 className="cosmic-text-primary font-semibold mb-4">Spacing</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-cosmic-primary-500 rounded"></div>
+                  <span className="cosmic-text-secondary text-sm">0.5rem (2)</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-2 bg-cosmic-primary-500 rounded"></div>
+                  <span className="cosmic-text-secondary text-sm">1rem (4)</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-6 h-2 bg-cosmic-primary-500 rounded"></div>
+                  <span className="cosmic-text-secondary text-sm">1.5rem (6)</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-2 bg-cosmic-primary-500 rounded"></div>
+                  <span className="cosmic-text-secondary text-sm">2rem (8)</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-2 bg-cosmic-primary-500 rounded"></div>
+                  <span className="cosmic-text-secondary text-sm">3rem (12)</span>
                 </div>
               </div>
             </div>
           </div>
-        </StandardCard>
-
-        {/* Cosmic Theme Section */}
-        <StandardCard
-          title="Cosmic Theme"
-          description="Space-inspired background and visual effects"
-        >
-          <div className="space-y-4">
-            <div className="cosmic p-8 rounded-lg text-center">
-              <h4 className="text-xl font-semibold text-white mb-2">Cosmic Starfield</h4>
-              <p className="text-white/80">
-                Performance-optimized radial gradient starfield background
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-gradient-to-br from-[var(--accent)]/20 to-purple-500/20 p-4 rounded-lg">
-                <h5 className="font-medium text-[var(--fg)] mb-2">Gradient Cards</h5>
-                <p className="text-[var(--fg)]/70 text-sm">
-                  Subtle gradients for depth and visual interest
-                </p>
-              </div>
-              <div className="bg-[var(--card)]/50 backdrop-blur-sm p-4 rounded-lg border border-white/10">
-                <h5 className="font-medium text-[var(--fg)] mb-2">Glassmorphism</h5>
-                <p className="text-[var(--fg)]/70 text-sm">
-                  Backdrop blur effects for modern UI aesthetics
-                </p>
-              </div>
-            </div>
-          </div>
-        </StandardCard>
-
-        {/* Usage Guidelines */}
-        <StandardCard
-          title="Usage Guidelines"
-          description="Best practices for implementing the design system"
-        >
-          <div className="space-y-4">
-            <div>
-              <h4 className="font-medium text-[var(--fg)] mb-2">CSS Classes</h4>
-              <ul className="space-y-1 text-sm text-[var(--fg)]/70">
-                <li>• Use <code className="bg-[var(--card)]/50 px-1 rounded">container-std</code> for main content areas</li>
-                <li>• Apply <code className="bg-[var(--card)]/50 px-1 rounded">section-std</code> for consistent vertical spacing</li>
-                <li>• Use <code className="bg-[var(--card)]/50 px-1 rounded">card-std</code> for content containers</li>
-                <li>• Apply <code className="bg-[var(--card)]/50 px-1 rounded">cosmic</code> for starfield backgrounds</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-medium text-[var(--fg)] mb-2">Component Usage</h4>
-              <ul className="space-y-1 text-sm text-[var(--fg)]/70">
-                <li>• Import and use <code className="bg-[var(--card)]/50 px-1 rounded">StandardLayout</code> for page structure</li>
-                <li>• Use <code className="bg-[var(--card)]/50 px-1 rounded">StandardCard</code> for content sections</li>
-                <li>• Apply <code className="bg-[var(--card)]/50 px-1 rounded">StandardButton</code> for consistent interactions</li>
-                <li>• Leverage CSS variables for custom styling: <code className="bg-[var(--card)]/50 px-1 rounded">var(--accent)</code></li>
-              </ul>
-            </div>
-          </div>
-        </StandardCard>
+        </motion.div>
       </div>
-    </StandardLayout>
+    </div>
   );
 }

@@ -18,7 +18,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { SearchInput } from "@/components/features/SearchInput";
 
-export function BlackspikeLanding() {
+export default function BlackspikeLanding() {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   const features = [

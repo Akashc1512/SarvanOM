@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     // Try to check backend services if available
     try {
-      const backendHealthResponse = await fetch('http://localhost:8000/health', {
+      const backendHealthResponse = await fetch('http://localhost:8004/health', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

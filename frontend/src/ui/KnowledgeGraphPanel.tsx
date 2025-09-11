@@ -1,404 +1,288 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/ui/card";
-import { Button } from "@/ui/ui/button";
-import { Input } from "@/ui/ui/input";
-import { Badge } from "@/ui/ui/badge";
-import { useToast } from "@/hooks/useToast";
-import { LoadingSpinner } from "@/ui/atoms/loading-spinner";
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 import { 
-  BarChart3, 
-  RefreshCw, 
-  ChevronUp, 
+  Network, 
+  Settings, 
+  ZoomIn, 
+  ZoomOut, 
+  RotateCcw,
+  Maximize2,
+  Minimize2,
+  Info,
   ChevronDown,
-  Search,
-  AlertCircle,
-  Sparkles,
-  MessageSquare
-} from "lucide-react";
-import { api } from "@/services/api";
-import { Network, DataSet } from "vis-network/standalone";
-import type { Node, Edge } from "vis-network";
+  ChevronUp
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface EntityNode {
+interface KnowledgeGraphNode {
   id: string;
-  name: string;
-  type: string;
-  properties: Record<string, any>;
-  confidence: number;
+  label: string;
+  type: 'person' | 'organization' | 'concept' | 'location' | 'event';
+  size: number;
+  color: string;
 }
 
-interface Relationship {
-  source_id: string;
-  target_id: string;
-  relationship_type: string;
-  properties: Record<string, any>;
-  confidence: number;
+interface KnowledgeGraphEdge {
+  id: string;
+  source: string;
+  target: string;
+  label?: string;
+  weight: number;
 }
-
-interface KnowledgeGraphResult {
-  entities: EntityNode[];
-  relationships: Relationship[];
-  paths: EntityNode[][];
-  query_entities: string[];
-  confidence: number;
-  processing_time_ms: number;
-  metadata: Record<string, any>;
-}
-
-
 
 interface KnowledgeGraphPanelProps {
-  query?: string;
-  onEntityClick?: (entity: EntityNode) => void;
-  onRelationshipClick?: (relationship: Relationship) => void;
+  nodes?: KnowledgeGraphNode[];
+  edges?: KnowledgeGraphEdge[];
   className?: string;
-  maxEntities?: number;
-  maxRelationships?: number;
+  isExpanded?: boolean;
+  onToggle?: () => void;
+  onNodeClick?: (node: KnowledgeGraphNode) => void;
+  onEdgeClick?: (edge: KnowledgeGraphEdge) => void;
 }
 
-export function KnowledgeGraphPanel({
-  query,
-  onEntityClick,
-  onRelationshipClick,
-  className = "",
-  maxEntities = 10,
-  maxRelationships = 15,
+export default function KnowledgeGraphPanel({
+  nodes = [],
+  edges = [],
+  className,
+  isExpanded = true,
+  onToggle,
+  onNodeClick,
+  onEdgeClick
 }: KnowledgeGraphPanelProps) {
-  const { toast } = useToast();
-  const [graphData, setGraphData] = useState<KnowledgeGraphResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(query || "");
-  const [currentQuery, setCurrentQuery] = useState<string>("");
-  const [selectedEntity, setSelectedEntity] = useState<EntityNode | null>(null);
-  
-  const containerRef = useRef<HTMLDivElement>(null);
-  const networkRef = useRef<Network | null>(null);
+  const [selectedNode, setSelectedNode] = useState<KnowledgeGraphNode | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<KnowledgeGraphEdge | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [showControls, setShowControls] = useState(true);
 
-  // Load graph data when query changes
-  useEffect(() => {
-    if (currentQuery) {
-      async function loadGraph() {
-        setIsLoading(true);
-        setError(null);
+  const handleNodeClick = (node: KnowledgeGraphNode) => {
+    setSelectedNode(node);
+    setSelectedEdge(null);
+    onNodeClick?.(node);
+  };
 
-        try {
-          const res = await fetch(`${process.env["NEXT_PUBLIC_API_URL"] || "http://localhost:8000"}/knowledge-graph/query`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query: currentQuery })
-          });
-          
-          if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
-          }
-          
-          const graphData = await res.json();
-          setGraphData(graphData);
-        } catch (err: any) {
-          setError(err.message || "Failed to load knowledge graph data");
-          toast({
-            title: "Error",
-            description: "Failed to load knowledge graph data",
-            variant: "destructive",
-          });
-        } finally {
-          setIsLoading(false);
-        }
-      }
-      
-      loadGraph();
+  const handleEdgeClick = (edge: KnowledgeGraphEdge) => {
+    setSelectedEdge(edge);
+    setSelectedNode(null);
+    onEdgeClick?.(edge);
+  };
+
+  const getNodeTypeColor = (type: string) => {
+    switch (type) {
+      case 'person':
+        return 'bg-cosmic-success';
+      case 'organization':
+        return 'bg-cosmic-primary-500';
+      case 'concept':
+        return 'bg-cosmic-secondary-500';
+      case 'location':
+        return 'bg-cosmic-warning';
+      case 'event':
+        return 'bg-cosmic-error';
+      default:
+        return 'bg-cosmic-border-primary';
     }
-  }, [currentQuery, toast]);
+  };
 
-  // Render graph with vis-network when graphData changes
-  useEffect(() => {
-    if (graphData && containerRef.current) {
-      // Convert graph data to vis-network format
-      const nodes = new DataSet<Node>();
-      const edges = new DataSet<Edge>();
-
-      // Add nodes
-      graphData.entities.forEach((entity) => {
-        const node: Node = {
-          id: entity.id,
-          label: entity.name,
-          title: `${entity.name} (${entity.type}) - ${Math.round(entity.confidence * 100)}% confidence`,
-          color: getEntityTypeColor(entity.type),
-          size: Math.max(20, entity.confidence * 30),
-          shape: "circle",
-          font: {
-            size: 12,
-            color: "#333"
-          }
-        };
-        nodes.add(node);
-      });
-
-      // Add edges
-      graphData.relationships.forEach((rel) => {
-        const edge: Edge = {
-          from: rel.source_id,
-          to: rel.target_id,
-          label: rel.relationship_type,
-          title: `${rel.relationship_type} - ${Math.round(rel.confidence * 100)}% confidence`,
-          color: getRelationshipColor(rel.confidence),
-          width: Math.max(1, rel.confidence * 3),
-          arrows: "to"
-        };
-        edges.add(edge);
-      });
-
-      // Network options
-      const options = {
-        layout: { 
-          improvedLayout: true,
-          hierarchical: false
-        },
-        physics: {
-          enabled: true,
-          barnesHut: {
-            gravitationalConstant: -2000,
-            springConstant: 0.04,
-            springLength: 200
-          }
-        },
-        interaction: {
-          hover: true,
-          zoomView: true,
-          dragView: true
-        },
-        nodes: {
-          borderWidth: 2,
-          shadow: true
-        },
-        edges: {
-          smooth: {
-            enabled: true,
-            type: "continuous",
-            roundness: 0.5
-          },
-          font: {
-            size: 10,
-            align: "middle"
-          }
-        }
-      };
-
-      // Create network
-      const network = new Network(containerRef.current, { nodes, edges }, options);
-      networkRef.current = network;
-
-      // Add event listeners
-      network.on("click", (params) => {
-        if (params.nodes.length > 0) {
-          const nodeId = params.nodes[0];
-          const entity = graphData.entities.find(e => e.id === nodeId);
-          if (entity) {
-            handleEntityClick(entity);
-          }
-        }
-        if (params.edges.length > 0) {
-          const edgeId = params.edges[0];
-          const edge = edges.get(edgeId);
-          if (edge && 'from' in edge && 'to' in edge) {
-            const relationship = graphData.relationships.find(r => 
-              r.source_id === edge.from && r.target_id === edge.to
-            );
-            if (relationship) {
-              handleRelationshipClick(relationship);
-            }
-          }
-        }
-      });
-
-      return () => {
-        if (networkRef.current) {
-          networkRef.current.destroy();
-          networkRef.current = null;
-        }
-      };
+  const getNodeTypeIcon = (type: string) => {
+    switch (type) {
+      case 'person':
+        return '👤';
+      case 'organization':
+        return '🏢';
+      case 'concept':
+        return '💡';
+      case 'location':
+        return '📍';
+      case 'event':
+        return '📅';
+      default:
+        return '🔗';
     }
-    
-    // Return cleanup function for when graphData is null or containerRef is null
-    return () => {
-      if (networkRef.current) {
-        networkRef.current.destroy();
-        networkRef.current = null;
-      }
-    };
-  }, [graphData]);
-
-  const loadKnowledgeGraphData = useCallback(async () => {
-    if (!searchQuery.trim()) return;
-    setCurrentQuery(searchQuery);
-  }, [searchQuery]);
-
-  const handleEntityClick = (entity: EntityNode) => {
-    setSelectedEntity(entity);
-    onEntityClick?.(entity);
   };
 
-  const handleRelationshipClick = (relationship: Relationship) => {
-    onRelationshipClick?.(relationship);
-  };
-
-  const getEntityTypeColor = (type: string) => {
-    const typeColors: Record<string, string> = {
-      technology: "#3B82F6", // blue
-      person: "#10B981", // green
-      organization: "#8B5CF6", // purple
-      concept: "#F59E0B", // yellow
-      location: "#EF4444", // red
-      event: "#F97316", // orange
-    };
-    return typeColors[type.toLowerCase()] || "#6B7280"; // gray
-  };
-
-  const getRelationshipColor = (confidence: number) => {
-    if (confidence >= 0.8) return "#10B981"; // green
-    if (confidence >= 0.6) return "#F59E0B"; // yellow
-    return "#EF4444"; // red
-  };
-
-  const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) return "text-green-600";
-    if (confidence >= 0.6) return "text-yellow-600";
-    return "text-red-600";
-  };
-
-  const formatProcessingTime = (time: number) => {
-    if (time < 1000) return `${time.toFixed(0)}ms`;
-    return `${(time / 1000).toFixed(1)}s`;
-  };
+  const displayNodes = nodes;
+  const displayEdges = edges;
 
   return (
-    <Card className={`${className}`}>
-      <CardHeader className="pb-3">
+    <Card className={cn("cosmic-card", className)}>
+      <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <BarChart3 className="h-4 w-4 text-gray-600" />
-            <CardTitle className="text-sm font-medium">
+          <CardTitle className="cosmic-text-primary flex items-center gap-2">
+            <Network className="h-5 w-5 text-cosmic-primary-500" />
               Knowledge Graph
             </CardTitle>
-            {graphData && (
-              <Badge variant="secondary" className="text-xs">
-                {graphData.entities.length} entities
-              </Badge>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowControls(!showControls)}
+              className="cosmic-btn-secondary"
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
+            {onToggle && (
+            <Button
+              variant="ghost"
+              size="sm"
+                onClick={onToggle}
+                className="cosmic-btn-secondary"
+              >
+                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
             )}
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={loadKnowledgeGraphData}
-              disabled={isLoading || !searchQuery.trim()}
-            >
-              <RefreshCw className={`h-3 w-3 ${isLoading ? "animate-spin" : ""}`} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-            >
-              {isExpanded ? (
-                <ChevronUp className="h-3 w-3" />
-              ) : (
-                <ChevronDown className="h-3 w-3" />
-              )}
-            </Button>
           </div>
         </div>
-        <CardDescription className="text-xs">
-          Explore entity relationships and connections
-        </CardDescription>
       </CardHeader>
 
+      <AnimatePresence>
       {isExpanded && (
-        <CardContent className="pt-0">
-          <div className="space-y-4">
-            {/* Search Input */}
-            <div className="flex space-x-2">
-              <Input
-                placeholder="Search entities or concepts..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && loadKnowledgeGraphData()}
-                className="flex-1"
-              />
-              <Button
-                onClick={loadKnowledgeGraphData}
-                disabled={isLoading || !searchQuery.trim()}
-                size="sm"
-              >
-                <Search className="h-4 w-4" />
-              </Button>
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <CardContent>
+              {/* Graph Visualization Placeholder */}
+              <div className="relative h-64 cosmic-bg-secondary rounded-lg border border-cosmic-border-primary mb-4 overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <Network className="h-12 w-12 text-cosmic-text-tertiary mx-auto mb-2" />
+                    <p className="text-sm cosmic-text-tertiary">Interactive Graph Visualization</p>
+                    <p className="text-xs cosmic-text-tertiary mt-1">
+                      {displayNodes.length} nodes, {displayEdges.length} relationships
+                    </p>
+                  </div>
             </div>
 
-            {/* Error Display */}
-            {error && (
-              <div className="flex items-center space-x-2 text-sm text-red-600">
-                <AlertCircle className="h-4 w-4" />
-                <span>{error}</span>
+                {/* Mock graph nodes */}
+                <div className="absolute inset-0 p-4">
+                  {displayNodes.slice(0, 5).map((node, index) => (
+                    <motion.div
+                      key={node.id}
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: index * 0.1 }}
+                      className={cn(
+                        "absolute rounded-full flex items-center justify-center text-white text-xs font-medium cursor-pointer hover:scale-110 transition-transform",
+                        getNodeTypeColor(node.type),
+                        `w-${Math.max(8, Math.min(16, node.size))} h-${Math.max(8, Math.min(16, node.size))}`
+                      )}
+                      style={{
+                        left: `${20 + (index * 15)}%`,
+                        top: `${30 + (index % 2) * 30}%`,
+                      }}
+                      onClick={() => handleNodeClick(node)}
+                    >
+                      {getNodeTypeIcon(node.type)}
+                    </motion.div>
+                  ))}
               </div>
-            )}
-
-            {/* Loading State */}
-            {isLoading && (
-              <div className="flex items-center justify-center py-8">
-                <LoadingSpinner size="lg" />
-                <span className="ml-2 text-sm text-gray-600">Loading knowledge graph...</span>
               </div>
-            )}
 
-            {/* Graph Container */}
-            {graphData && !isLoading && (
+              {/* Controls */}
+              {showControls && (
               <div className="space-y-4">
-                {/* Graph Stats */}
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div className="text-center">
-                    <div className="font-semibold text-blue-600">{graphData.entities.length}</div>
-                    <div className="text-gray-500">Entities</div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm cosmic-text-secondary">Zoom</span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
+                        className="cosmic-btn-secondary"
+                      >
+                        <ZoomOut className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm cosmic-text-primary w-12 text-center">
+                        {Math.round(zoom * 100)}%
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setZoom(Math.min(2, zoom + 0.1))}
+                        className="cosmic-btn-secondary"
+                      >
+                        <ZoomIn className="h-4 w-4" />
+                      </Button>
                   </div>
-                  <div className="text-center">
-                    <div className="font-semibold text-green-600">{graphData.relationships.length}</div>
-                    <div className="text-gray-500">Relationships</div>
-                  </div>
-                  <div className="text-center">
-                    <div className={`font-semibold ${getConfidenceColor(graphData.confidence)}`}>
-                      {Math.round(graphData.confidence * 100)}%
+                </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="cosmic-btn-secondary"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1" />
+                      Reset View
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="cosmic-btn-secondary"
+                    >
+                      <Maximize2 className="h-4 w-4 mr-1" />
+                      Fullscreen
+                    </Button>
+                </div>
+              </div>
+            )}
+
+              {/* Node Types Legend */}
+              <div className="mt-4 pt-4 border-t border-cosmic-border-primary">
+                <h4 className="text-sm font-medium cosmic-text-primary mb-3 flex items-center gap-2">
+                  <Info className="h-4 w-4" />
+                  Node Types
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {['person', 'organization', 'concept', 'location', 'event'].map((type) => (
+                    <div key={type} className="flex items-center gap-2">
+                      <div className={cn("w-3 h-3 rounded-full", getNodeTypeColor(type))}></div>
+                      <span className="cosmic-text-secondary capitalize">{type}</span>
                     </div>
-                    <div className="text-gray-500">Confidence</div>
-                  </div>
-                </div>
-
-                {/* Graph Visualization */}
-                <div 
-                  ref={containerRef} 
-                  className="w-full h-96 border border-gray-200 rounded-lg"
-                  style={{ minHeight: '400px' }}
-                />
-
-                {/* Processing Info */}
-                <div className="text-xs text-gray-500 text-center">
-                  Processed in {formatProcessingTime(graphData.processing_time_ms)}
+                  ))}
                 </div>
               </div>
-            )}
 
-            {/* Empty State */}
-            {!graphData && !isLoading && !error && (
-              <div className="text-center py-8 text-gray-500">
-                <BarChart3 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-sm">Enter a query to explore the knowledge graph</p>
+              {/* Selected Node/Edge Info */}
+              {(selectedNode || selectedEdge) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-4 p-3 cosmic-bg-secondary rounded-lg border border-cosmic-border-primary"
+                >
+                  {selectedNode && (
+                    <div>
+                      <h5 className="font-medium cosmic-text-primary mb-1">
+                        {getNodeTypeIcon(selectedNode.type)} {selectedNode.label}
+                      </h5>
+                      <p className="text-xs cosmic-text-secondary">
+                        Type: {selectedNode.type} • Size: {selectedNode.size}
+                      </p>
               </div>
             )}
+                  {selectedEdge && (
+                    <div>
+                      <h5 className="font-medium cosmic-text-primary mb-1">
+                        Relationship
+                      </h5>
+                      <p className="text-xs cosmic-text-secondary">
+                        {selectedEdge.label} • Weight: {selectedEdge.weight}
+                      </p>
           </div>
+                  )}
+                </motion.div>
+              )}
         </CardContent>
+          </motion.div>
       )}
+      </AnimatePresence>
     </Card>
   );
 } 

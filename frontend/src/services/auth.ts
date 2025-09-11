@@ -58,7 +58,7 @@ class AuthService {
   };
   private listeners: Set<(state: AuthState) => void> = new Set();
   private refreshTimer: NodeJS.Timeout | null = null;
-  private readonly API_BASE_URL = process.env["NEXT_PUBLIC_API_URL"] || "http://localhost:8000";
+  private readonly API_BASE_URL = process.env["NEXT_PUBLIC_API_URL"] || "http://localhost:8007";
 
   private constructor() {
     this.initializeAuth();
@@ -139,9 +139,9 @@ class AuthService {
       const response = await fetch(`${this.API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Type": "application/json",
         },
-        body: new URLSearchParams({
+        body: JSON.stringify({
           username: credentials.username,
           password: credentials.password,
         }),

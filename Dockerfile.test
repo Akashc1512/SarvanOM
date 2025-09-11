@@ -1,0 +1,52 @@
+# =============================================================================
+# SarvanOM Test Runner Dockerfile
+# Comprehensive testing environment for all LLM/DB/KG combinations
+# =============================================================================
+
+FROM python:3.13-slim
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PIP_NO_CACHE_DIR=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set work directory
+WORKDIR /app
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install additional testing dependencies
+RUN pip install --no-cache-dir \
+    pytest \
+    pytest-asyncio \
+    pytest-cov \
+    pytest-mock \
+    httpx \
+    requests \
+    aiohttp \
+    locust \
+    faker \
+    factory-boy
+
+# Copy application code
+COPY . .
+
+# Create test directories
+RUN mkdir -p /app/test_results /app/test_data
+
+# Set Python path
+ENV PYTHONPATH=/app
+
+# Default command
+CMD ["python", "scripts/comprehensive_test_runner.py"]

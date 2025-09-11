@@ -20,22 +20,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For now, return mock data since backend is not available
-    const mockResponse = {
-      output: "Hello, World!\n",
-      error: null,
-      execution_time: 0.5,
-      memory_used: "2.5MB",
-      exit_code: 0
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: mockResponse,
-      language,
-      execution_time: mockResponse.execution_time,
-      timestamp: new Date().toISOString()
+    // Forward request to backend API
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8004';
+    const response = await fetch(`${backendUrl}/agents/code-executor`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': request.headers.get('Authorization') || '',
+      },
+      body: JSON.stringify({ code, language })
     });
+
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
 
   } catch (error: any) {
     console.error('Code executor agent error:', error);

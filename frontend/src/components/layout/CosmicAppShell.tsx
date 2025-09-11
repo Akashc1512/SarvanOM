@@ -16,7 +16,9 @@ import {
   CodeBracketIcon,
   LinkIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  CogIcon,
+  SwatchIcon
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/ui/ThemeToggle';
@@ -24,7 +26,7 @@ import { ThemeToggle } from '@/ui/ThemeToggle';
 interface NavItem {
   name: string;
   href: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<any>;
   description?: string;
   badge?: string;
 }
@@ -50,6 +52,12 @@ const navigation: NavItem[] = [
     badge: 'New'
   },
   {
+    name: 'Admin',
+    href: '/admin',
+    icon: CogIcon,
+    description: 'System administration'
+  },
+  {
     name: 'Blog',
     href: '/blog',
     icon: DocumentTextIcon,
@@ -60,6 +68,12 @@ const navigation: NavItem[] = [
     href: '/showcase',
     icon: CodeBracketIcon,
     description: 'Portfolio showcase'
+  },
+  {
+    name: 'Design System',
+    href: '/design-system',
+    icon: SwatchIcon,
+    description: 'Component library'
   },
   {
     name: 'Hub',

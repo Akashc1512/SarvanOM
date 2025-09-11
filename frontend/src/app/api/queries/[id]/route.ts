@@ -14,7 +14,6 @@ export async function GET(
       );
     }
 
-    // For now, return mock data since backend is not available
     const mockResponse = {
       query_id: queryId,
       status: "completed" as const,
@@ -28,12 +27,23 @@ export async function GET(
       processing_time: 2.5
     };
 
-    return NextResponse.json({
-      success: true,
-      data: mockResponse,
-      query_id: queryId,
-      timestamp: new Date().toISOString()
+    // Forward request to backend API
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8004';
+    const response = await fetch(`${backendUrl}/api/endpoint`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': request.headers.get('Authorization') || '',
+      },
+      body: JSON.stringify(request.body)
     });
+
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
 
   } catch (error: any) {
     console.error('Query details error:', error);

@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext } from "react";
 import type { ReactNode } from "react";
-import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "@/components/error-boundary";
 // import { StateProvider } from "@/components/state-provider";
@@ -10,24 +9,11 @@ import { CollaborationProvider } from "@/providers/collaboration-provider";
 import { Toaster } from "@/ui/ui/toaster";
 import { Analytics } from "@/ui/Analytics";
 
-// Conditional imports for advanced features
-let performanceMonitor: any, usePerformanceTracking: any, errorMonitor: any;
+// Import performance utilities
+import { performanceMonitor, usePerformanceTracking } from "@/lib/performance";
 
-try {
-  const perfModule = require("@/lib/performance");
-  performanceMonitor = perfModule.performanceMonitor;
-  usePerformanceTracking = perfModule.usePerformanceTracking;
-} catch {
-  performanceMonitor = { markStart: () => {}, markEnd: () => {}, getMetrics: () => ({}) };
-  usePerformanceTracking = () => ({ trackInteraction: () => () => {} });
-}
-
-try {
-  const errorModule = require("@/lib/error-monitoring");
-  errorMonitor = errorModule.errorMonitor;
-} catch {
-  errorMonitor = { addBreadcrumb: () => {}, captureError: () => {} };
-}
+// Fallback error monitor
+const errorMonitor = { addBreadcrumb: () => {}, captureError: () => {} };
 
 // Enhanced React Query client with MAANG-level configuration
 const queryClient = new QueryClient({
@@ -142,32 +128,24 @@ export function AppProvider({ children }: AppProviderProps) {
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-          themes={['light', 'dark', 'system']}
-        >
-          <CollaborationProvider>
-            <AppContext.Provider value={contextValue}>
-              <div>
-                <PerformanceWrapper>
-                  {children}
-                </PerformanceWrapper>
-                
-                {/* Global UI Components */}
-                <Toaster />
-                <Analytics />
-                
-                {/* Development Tools */}
-                {process.env.NODE_ENV === 'development' && (
-                  <DevelopmentTools />
-                )}
-              </div>
-            </AppContext.Provider>
-          </CollaborationProvider>
-        </ThemeProvider>
+        <CollaborationProvider>
+          <AppContext.Provider value={contextValue}>
+            <div>
+              <PerformanceWrapper>
+                {children}
+              </PerformanceWrapper>
+              
+              {/* Global UI Components */}
+              <Toaster />
+              <Analytics />
+              
+              {/* Development Tools */}
+              {process.env.NODE_ENV === 'development' && (
+                <DevelopmentTools />
+              )}
+            </div>
+          </AppContext.Provider>
+        </CollaborationProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

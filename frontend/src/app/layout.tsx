@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/providers/app-provider";
+import { ThemeProvider } from "next-themes";
 import { CosmicNavigation } from "@/components/navigation/CosmicNavigation";
 import { CosmicLayout } from "@/components/layout/CosmicLayout";
 
@@ -117,9 +118,16 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="//cdn.example.com" />
       </head>
       <body className={`${inter.variable} antialiased`}>
-        <AppProvider>
-          {children}
-        </AppProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AppProvider>
+            {children}
+          </AppProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -261,7 +261,7 @@ GET /api/knowledge-graph/entities/{entity_id}
 
 export async function GET(request: NextRequest) {
   try {
-    const backendUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:8000';
+    const backendUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:8004';
     const response = await fetch(`${backendUrl}/wiki`, {
       method: 'GET',
       headers: {
@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const backendUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:8000';
+    const backendUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:8004';
     const response = await fetch(`${backendUrl}/wiki`, {
       method: 'POST',
       headers: {

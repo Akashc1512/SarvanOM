@@ -20,26 +20,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For now, return mock data since backend is not available
-    const mockResponse = {
-      filename: file.name,
-      file_size: file.size,
-      text: 'This is a mock extracted text from the PDF.',
-      metadata: {
-        title: file.name,
-        author: 'Mock Author',
-        pages: 5
+    // Forward request to backend API
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8004';
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch(`${backendUrl}/agents/pdf`, {
+      method: 'POST',
+      headers: {
+        'Authorization': request.headers.get('Authorization') || '',
       },
-      summary: 'This is a mock summary of the PDF document.'
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: mockResponse,
-      filename: file.name,
-      file_size: file.size,
-      timestamp: new Date().toISOString()
+      body: formData
     });
+
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
 
   } catch (error: any) {
     console.error('PDF agent error:', error);

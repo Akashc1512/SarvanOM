@@ -231,7 +231,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const backendUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:8000';
+    const backendUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:8004';
     const response = await fetch(`${backendUrl}/wiki/${params.id}`, {
       method: 'GET',
       headers: {
@@ -287,7 +287,7 @@ export async function PUT(
       );
     }
 
-    const backendUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:8000';
+    const backendUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:8004';
     const response = await fetch(`${backendUrl}/wiki/${params.id}`, {
       method: 'PUT',
       headers: {
@@ -340,7 +340,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const backendUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:8000';
+    const backendUrl = process.env['NEXT_PUBLIC_API_BASE_URL'] || 'http://localhost:8004';
     const response = await fetch(`${backendUrl}/wiki/${params.id}`, {
       method: 'DELETE',
       headers: {

@@ -12,35 +12,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For now, return mock data since backend is not available
-    const mockResponse = {
-      tasks: [
-        {
-          task: "Research the latest developments in the field",
-          priority: "high",
-          status: "pending"
-        },
-        {
-          task: "Compile a comprehensive summary of findings",
-          priority: "medium",
-          status: "pending"
-        },
-        {
-          task: "Create visualizations for the data",
-          priority: "low",
-          status: "pending"
-        }
-      ],
-      total_tasks: 3,
-      generated_at: new Date().toISOString(),
-      request_id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: mockResponse,
-      timestamp: new Date().toISOString()
+    // Forward request to backend API
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8004';
+    const response = await fetch(`${backendUrl}/tasks`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': request.headers.get('Authorization') || '',
+      },
+      body: JSON.stringify({ answer, query })
     });
+
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
 
   } catch (error: any) {
     console.error('Task generation error:', error);

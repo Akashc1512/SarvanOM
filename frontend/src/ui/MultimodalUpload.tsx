@@ -1,16 +1,34 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { Upload, File, Image, Video, Music, Archive, FileText, X, Check } from 'lucide-react';
+import React, { useState, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Progress } from './ui/progress';
+import { 
+  CloudArrowUpIcon,
+  DocumentIcon,
+  PhotoIcon,
+  VideoCameraIcon,
+  MusicalNoteIcon,
+  ArchiveBoxIcon,
+  XMarkIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  ClockIcon
+} from '@heroicons/react/24/outline';
+import { cn } from '@/lib/utils';
 
 interface UploadedFile {
-  file_id: string;
-  filename: string;
-  file_type: string;
-  processed: boolean;
-  indexed: boolean;
-  extracted_content?: {
+  id: string;
+  file: File;
+  progress: number;
+  status: 'uploading' | 'processing' | 'completed' | 'error';
+  error?: string;
+  processed?: boolean;
+  indexed?: boolean;
+  extractedContent?: {
     text: string;
     metadata: any;
   };
@@ -19,209 +37,365 @@ interface UploadedFile {
 interface MultimodalUploadProps {
   onFileUploaded?: (file: UploadedFile) => void;
   onError?: (error: string) => void;
+  className?: string;
+  maxFiles?: number;
+  maxFileSize?: number; // in MB
+  acceptedTypes?: string[];
 }
 
-const SUPPORTED_TYPES = {
-  images: ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp'],
-  videos: ['.mp4', '.avi', '.mov', '.webm', '.mkv'],
-  documents: ['.pdf', '.doc', '.docx', '.txt', '.md'],
-  audio: ['.mp3', '.wav', '.ogg', '.m4a'],
-  archives: ['.zip', '.rar', '.7z', '.tar']
-};
-
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-
-const getFileIcon = (fileType: string) => {
-  switch (fileType) {
-    case 'image': return <Image className="w-6 h-6" />;
-    case 'video': return <Video className="w-6 h-6" />;
-    case 'audio': return <Music className="w-6 h-6" />;
-    case 'document': return <FileText className="w-6 h-6" />;
-    case 'archive': return <Archive className="w-6 h-6" />;
-    default: return <File className="w-6 h-6" />;
-  }
-};
-
-export default function MultimodalUpload({ onFileUploaded, onError }: MultimodalUploadProps) {
+export default function MultimodalUpload({
+  onFileUploaded,
+  onError,
+  className,
+  maxFiles = 10,
+  maxFileSize = 100, // 100MB
+  acceptedTypes = [
+    'image/*',
+    'video/*',
+    'audio/*',
+    'application/pdf',
+    'text/*',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/zip',
+    'application/x-rar-compressed'
+  ]
+}: MultimodalUploadProps) {
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    for (const file of acceptedFiles) {
-      if (file.size > MAX_FILE_SIZE) {
-        onError?.(`File ${file.name} is too large. Maximum size is 100MB.`);
-        continue;
+  const getFileIcon = (fileType: string) => {
+    if (fileType.startsWith('image/')) return PhotoIcon;
+    if (fileType.startsWith('video/')) return VideoCameraIcon;
+    if (fileType.startsWith('audio/')) return MusicalNoteIcon;
+    if (fileType === 'application/pdf') return DocumentIcon;
+    if (fileType.includes('zip') || fileType.includes('rar')) return ArchiveBoxIcon;
+    return DocumentIcon;
+  };
+
+  const getFileTypeColor = (fileType: string) => {
+    if (fileType.startsWith('image/')) return 'text-cosmic-success';
+    if (fileType.startsWith('video/')) return 'text-cosmic-primary-500';
+    if (fileType.startsWith('audio/')) return 'text-cosmic-secondary-500';
+    if (fileType === 'application/pdf') return 'text-cosmic-error';
+    if (fileType.includes('zip') || fileType.includes('rar')) return 'text-cosmic-warning';
+    return 'text-cosmic-text-primary';
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const validateFile = (file: File): string | null => {
+    if (file.size > maxFileSize * 1024 * 1024) {
+      return `File size exceeds ${maxFileSize}MB limit`;
+    }
+    
+    const isValidType = acceptedTypes.some(type => {
+      if (type.endsWith('/*')) {
+        return file.type.startsWith(type.slice(0, -1));
+      }
+      return file.type === type;
+    });
+    
+    if (!isValidType) {
+      return 'File type not supported';
+    }
+    
+    return null;
+  };
+
+  const handleFiles = useCallback((fileList: FileList) => {
+    const newFiles: UploadedFile[] = [];
+    const errors: string[] = [];
+
+    Array.from(fileList).forEach((file) => {
+      const error = validateFile(file);
+      if (error) {
+        errors.push(`${file.name}: ${error}`);
+        return;
       }
 
-      setUploading(true);
+      if (files.length + newFiles.length >= maxFiles) {
+        errors.push(`Maximum ${maxFiles} files allowed`);
+        return;
+      }
+
+      const uploadedFile: UploadedFile = {
+        id: Math.random().toString(36).substr(2, 9),
+        file,
+        progress: 0,
+        status: 'uploading'
+      };
+
+      newFiles.push(uploadedFile);
+    });
+
+    if (errors.length > 0) {
+      onError?.(errors.join(', '));
+    }
+
+    if (newFiles.length > 0) {
+      setFiles(prev => [...prev, ...newFiles]);
+      uploadFiles(newFiles);
+    }
+  }, [files.length, maxFiles, maxFileSize, acceptedTypes, onError]);
+
+  const uploadFiles = async (filesToUpload: UploadedFile[]) => {
+    setUploading(true);
+
+    for (const fileData of filesToUpload) {
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-        const response = await fetch(`${apiBase}/api/multimodal/upload`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ detail: 'Upload failed' }));
-          throw new Error(errorData.detail || 'Upload failed');
+        // Simulate upload progress
+        for (let progress = 0; progress <= 100; progress += 10) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          setFiles(prev => prev.map(f => 
+            f.id === fileData.id 
+              ? { ...f, progress }
+              : f
+          ));
         }
 
-        const result: UploadedFile = await response.json();
-        setUploadedFiles(prev => [...prev, result]);
-        onFileUploaded?.(result);
+        // Simulate processing
+        setFiles(prev => prev.map(f => 
+          f.id === fileData.id 
+            ? { ...f, status: 'processing' as const }
+            : f
+        ));
 
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Complete upload
+        const completedFile = {
+          ...fileData,
+          status: 'completed' as const,
+          progress: 100,
+          processed: true,
+          indexed: Math.random() > 0.3, // Random for demo
+          extractedContent: {
+            text: `Extracted content from ${fileData.file.name}`,
+            metadata: {
+              size: fileData.file.size,
+              type: fileData.file.type,
+              lastModified: fileData.file.lastModified
+            }
+          }
+        };
+
+        setFiles(prev => prev.map(f => 
+          f.id === fileData.id ? completedFile : f
+        ));
+
+        onFileUploaded?.(completedFile);
       } catch (error) {
-        console.error('Upload error:', error);
-        onError?.(error instanceof Error ? error.message : 'Upload failed');
-      } finally {
-        setUploading(false);
+        setFiles(prev => prev.map(f => 
+          f.id === fileData.id 
+            ? { ...f, status: 'error' as const, error: 'Upload failed' }
+            : f
+        ));
+        onError?.('Upload failed');
       }
     }
-  }, [onFileUploaded, onError]);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    multiple: true,
-    accept: {
-      'image/*': SUPPORTED_TYPES.images,
-      'video/*': SUPPORTED_TYPES.videos,
-      'application/pdf': ['.pdf'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'text/*': ['.txt', '.md'],
-      'audio/*': SUPPORTED_TYPES.audio,
-      'application/zip': ['.zip'],
-      'application/x-rar-compressed': ['.rar'],
-      'application/x-7z-compressed': ['.7z'],
-    },
-    maxSize: MAX_FILE_SIZE,
-  });
+    setUploading(false);
+  };
 
   const removeFile = (fileId: string) => {
-    setUploadedFiles(prev => prev.filter(f => f.file_id !== fileId));
+    setFiles(prev => prev.filter(f => f.id !== fileId));
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    handleFiles(e.dataTransfer.files);
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      handleFiles(e.target.files);
+    }
+  };
+
+  const openFileDialog = () => {
+    fileInputRef.current?.click();
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6">
-      {/* Upload Area */}
-      <div
-        {...getRootProps()}
-        className={`
-          border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-          ${isDragActive 
-            ? 'border-blue-400 bg-blue-50' 
-            : 'border-gray-300 hover:border-gray-400'
-          }
-          ${uploading ? 'opacity-50 pointer-events-none' : ''}
-        `}
-      >
-        <input {...getInputProps()} />
-        <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-        
-        {uploading ? (
-          <div className="space-y-2">
-            <p className="text-lg font-medium text-gray-700">Processing file...</p>
-            <div className="w-32 mx-auto bg-gray-200 rounded-full h-2">
-              <div className="bg-blue-600 h-2 rounded-full animate-pulse w-full"></div>
+    <div className={cn("space-y-6", className)}>
+      {/* Dropzone */}
+      <Card className="cosmic-card">
+        <CardHeader>
+          <CardTitle className="cosmic-text-primary">Upload Files</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div
+            className={cn(
+              "relative border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200",
+              isDragOver
+                ? "border-cosmic-primary-500 bg-cosmic-primary-500/10 cosmic-glow-primary"
+                : "border-cosmic-border-primary hover:border-cosmic-primary-500/50"
+            )}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept={acceptedTypes.join(',')}
+              onChange={handleFileInput}
+              className="hidden"
+            />
+            
+            <motion.div
+              initial={{ scale: 1 }}
+              animate={{ scale: isDragOver ? 1.05 : 1 }}
+              transition={{ duration: 0.2 }}
+            >
+              <CloudArrowUpIcon className="h-12 w-12 text-cosmic-primary-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold cosmic-text-primary mb-2">
+                {isDragOver ? 'Drop files here' : 'Drag & drop files here'}
+              </h3>
+              <p className="cosmic-text-secondary mb-4">
+                or click to browse files
+              </p>
+              <Button
+                onClick={openFileDialog}
+                className="cosmic-btn-primary"
+                disabled={uploading}
+              >
+                Choose Files
+              </Button>
+            </motion.div>
+            
+            <div className="mt-4 text-sm cosmic-text-tertiary">
+              <p>Supported: Images, Videos, Audio, PDFs, Documents, Archives</p>
+              <p>Max file size: {maxFileSize}MB • Max files: {maxFiles}</p>
             </div>
           </div>
-        ) : isDragActive ? (
-          <p className="text-lg font-medium text-blue-600">Drop files here...</p>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-lg font-medium text-gray-700">
-              Drag & drop files here, or click to select
-            </p>
-            <p className="text-sm text-gray-500">
-              Supports images, videos, documents, audio, and archives (max 100MB)
-            </p>
+        </CardContent>
+      </Card>
+
+      {/* File Queue */}
+      <AnimatePresence>
+        {files.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+          >
+            <Card className="cosmic-card">
+              <CardHeader>
+                <CardTitle className="cosmic-text-primary flex items-center gap-2">
+                  <ClockIcon className="h-5 w-5" />
+                  Upload Queue ({files.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {files.map((fileData) => {
+                    const FileIcon = getFileIcon(fileData.file.type);
+                    const typeColor = getFileTypeColor(fileData.file.type);
+                    
+                    return (
+                      <motion.div
+                        key={fileData.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="flex items-center gap-4 p-3 cosmic-bg-secondary rounded-lg border border-cosmic-border-primary"
+                      >
+                        <FileIcon className={cn("h-8 w-8 flex-shrink-0", typeColor)} />
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium cosmic-text-primary truncate">
+                              {fileData.file.name}
+                            </p>
+                            <Badge variant="outline" className="text-xs border-cosmic-border-primary text-cosmic-text-primary">
+                              {formatFileSize(fileData.file.size)}
+                            </Badge>
           </div>
+                          
+                          <div className="flex items-center gap-2 mb-2">
+                            {fileData.status === 'uploading' && (
+                              <Badge variant="outline" className="text-xs border-cosmic-primary-500 text-cosmic-primary-500">
+                                Uploading
+                              </Badge>
+                            )}
+                            {fileData.status === 'processing' && (
+                              <Badge variant="outline" className="text-xs border-cosmic-warning text-cosmic-warning">
+                                Processing
+                              </Badge>
+                            )}
+                            {fileData.status === 'completed' && (
+                              <Badge variant="outline" className="text-xs border-cosmic-success text-cosmic-success">
+                                <CheckCircleIcon className="h-3 w-3 mr-1" />
+                                Completed
+                              </Badge>
+                            )}
+                            {fileData.status === 'error' && (
+                              <Badge variant="outline" className="text-xs border-cosmic-error text-cosmic-error">
+                                <ExclamationTriangleIcon className="h-3 w-3 mr-1" />
+                                Error
+                              </Badge>
+                            )}
+                            
+                            {fileData.processed && (
+                              <Badge variant="outline" className="text-xs border-cosmic-border-primary text-cosmic-text-primary">
+                                Processed
+                              </Badge>
+                            )}
+                            {fileData.indexed && (
+                              <Badge variant="outline" className="text-xs border-cosmic-success text-cosmic-success">
+                                Indexed
+                              </Badge>
         )}
       </div>
 
-      {/* Supported File Types */}
-      <div className="bg-gray-50 rounded-lg p-4">
-        <h3 className="text-sm font-medium text-gray-700 mb-3">Supported File Types:</h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs">
-          <div>
-            <h4 className="font-medium text-gray-600 mb-1">Images</h4>
-            <p className="text-gray-500">{SUPPORTED_TYPES.images.join(', ')}</p>
-          </div>
-          <div>
-            <h4 className="font-medium text-gray-600 mb-1">Videos</h4>
-            <p className="text-gray-500">{SUPPORTED_TYPES.videos.join(', ')}</p>
-          </div>
-          <div>
-            <h4 className="font-medium text-gray-600 mb-1">Documents</h4>
-            <p className="text-gray-500">{SUPPORTED_TYPES.documents.join(', ')}</p>
-          </div>
-          <div>
-            <h4 className="font-medium text-gray-600 mb-1">Audio</h4>
-            <p className="text-gray-500">{SUPPORTED_TYPES.audio.join(', ')}</p>
-          </div>
-          <div>
-            <h4 className="font-medium text-gray-600 mb-1">Archives</h4>
-            <p className="text-gray-500">{SUPPORTED_TYPES.archives.join(', ')}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Uploaded Files List */}
-      {uploadedFiles.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-lg font-medium text-gray-800">Uploaded Files</h3>
-          <div className="space-y-2">
-            {uploadedFiles.map((file) => (
-              <div
-                key={file.file_id}
-                className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg"
-              >
-                <div className="flex items-center space-x-3">
-                  {getFileIcon(file.file_type)}
-                  <div>
-                    <p className="font-medium text-gray-800">{file.filename}</p>
-                    <div className="flex items-center space-x-2 text-sm text-gray-500">
-                      <span className="capitalize">{file.file_type}</span>
-                      {file.processed && (
-                        <>
-                          <span>•</span>
-                          <span className="flex items-center space-x-1">
-                            <Check className="w-3 h-3 text-green-500" />
-                            <span>Processed</span>
-                          </span>
-                        </>
-                      )}
-                      {file.indexed && (
-                        <>
-                          <span>•</span>
-                          <span className="flex items-center space-x-1">
-                            <Check className="w-3 h-3 text-blue-500" />
-                            <span>Indexed</span>
-                          </span>
-                        </>
+                          {(fileData.status === 'uploading' || fileData.status === 'processing') && (
+                            <Progress value={fileData.progress} className="h-2" />
+                          )}
+                          
+                          {fileData.error && (
+                            <p className="text-sm text-cosmic-error mt-1">{fileData.error}</p>
                       )}
                     </div>
-                    {file.extracted_content?.text && (
-                      <p className="text-xs text-gray-400 mt-1 max-w-md truncate">
-                        {file.extracted_content.text.slice(0, 100)}...
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => removeFile(file.file_id)}
-                  className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(fileData.id)}
+                          className="cosmic-btn-secondary"
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </Button>
+                      </motion.div>
+                    );
+                  })}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -41,7 +41,7 @@ interface Category {
   count: number;
 }
 
-export function PersonalHub() {
+export default function PersonalHub() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isAddingLink, setIsAddingLink] = useState(false);
   const [editingLink, setEditingLink] = useState<LinkItem | null>(null);

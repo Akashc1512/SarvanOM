@@ -12,32 +12,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For now, return mock data since backend is not available
-    const mockResponse = {
-      results: [
-        {
-          title: "Search Result 1",
-          url: "https://example.com/result1",
-          snippet: "This is a mock search result for demonstration purposes.",
-          relevance_score: 0.95
-        },
-        {
-          title: "Search Result 2", 
-          url: "https://example.com/result2",
-          snippet: "Another mock search result with relevant information.",
-          relevance_score: 0.88
-        }
-      ],
-      total_results: 2,
-      search_time: 1.2
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: mockResponse,
-      query,
-      timestamp: new Date().toISOString()
+    // Forward request to backend API
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8004';
+    const response = await fetch(`${backendUrl}/agents/browser`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': request.headers.get('Authorization') || '',
+      },
+      body: JSON.stringify({ query })
     });
+
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
 
   } catch (error: any) {
     console.error('Browser agent error:', error);

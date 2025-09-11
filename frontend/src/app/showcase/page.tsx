@@ -1,22 +1,6 @@
-import dynamic from 'next/dynamic';
+import PortfolioShowcase from '@/components/portfolio/PortfolioShowcase';
 
-// Fallback component for when PortfolioShowcase is not available
-const FallbackShowcase = () => (
-  <section className="cosmic-section">
-    <h1 className="text-4xl font-bold cosmic-text-primary">Showcase</h1>
-    <p className="text-lg cosmic-text-secondary">Component demos and portfolio will appear here.</p>
-  </section>
-);
-
-const PortfolioShowcase = dynamic(
-  () => import('@/components/portfolio/PortfolioShowcase').then(mod => ({ default: mod.PortfolioShowcase })),
-  { 
-    ssr: true,
-    loading: () => <FallbackShowcase />
-  }
-);
-
-export const metadata = { title: 'SarvanOM — Showcase' };
+// Metadata removed - this is a client component due to dynamic imports
 
 export default function ShowcasePage() {
   return (

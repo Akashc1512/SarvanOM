@@ -7,7 +7,12 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Edit3, SkipForward, Check, AlertCircle, Clock, Globe, FileText } from 'lucide-react';
+import { X, Edit3, SkipForward, Check, AlertCircle, Clock, Globe, FileText, Settings, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { designTokens } from '@/lib/design-tokens';
+import RefinementSuggestion from './guided-prompt/RefinementSuggestion';
+import ConstraintChip from './guided-prompt/ConstraintChip';
 
 interface RefinementSuggestion {
   id: string;

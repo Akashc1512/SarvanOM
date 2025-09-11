@@ -1,78 +1,43 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
+import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/ui/ui/card";
-import { Button } from "@/ui/ui/button";
-import { Badge } from "@/ui/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/ui/dialog";
-import { ScrollArea } from "@/ui/ui/ScrollArea";
-import { Separator } from "@/ui/ui/separator";
-import { Input } from "@/ui/ui/input";
-import { Label } from "@/ui/ui/label";
-import {
-  Network as NetworkIcon,
-  Search,
   ZoomIn,
   ZoomOut,
   RotateCcw,
+  Maximize2, 
+  Minimize2,
   Settings,
+  Network,
   Info,
-  Loader2,
-  Eye,
-  ExternalLink,
-  AlertCircle,
-} from "lucide-react";
-import { useToast } from "@/hooks/useToast";
-
-// Dynamically import vis-network components with SSR disabled
-const Network = dynamic(() => import("vis-network/standalone").then(mod => ({ default: mod.Network })), {
-  ssr: false,
-  loading: () => <div className="h-full flex items-center justify-center">Loading network visualization...</div>
-});
-
-const DataSet = dynamic(() => import("vis-data/standalone").then(mod => ({ default: mod.DataSet })), {
-  ssr: false,
-});
+  MousePointer,
+  Move,
+  Search
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface GraphNode {
   id: string;
   label: string;
-  title?: string;
-  group?: string;
-  size?: number;
-  color?: string;
-  shape?: string;
-  properties?: Record<string, any>;
+  type: 'person' | 'organization' | 'concept' | 'location' | 'event';
+  size: number;
+  x?: number;
+  y?: number;
+  color: string;
+  description?: string;
 }
 
 interface GraphEdge {
   id: string;
-  from: string;
-  to: string;
+  source: string;
+  target: string;
   label?: string;
-  title?: string;
-  color?: string;
-  width?: number;
-  arrows?: string;
-  properties?: Record<string, any>;
-}
-
-interface GraphData {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-  metadata?: {
-    total_nodes: number;
-    total_edges: number;
-    query_time: number;
-    depth: number;
-  };
+  weight: number;
+  type?: 'related' | 'part_of' | 'causes' | 'influences';
 }
 
 interface KnowledgeGraphVisualizationProps {
@@ -83,428 +48,340 @@ interface KnowledgeGraphVisualizationProps {
   showControls?: boolean;
   onNodeClick?: (node: GraphNode) => void;
   onEdgeClick?: (edge: GraphEdge) => void;
+  className?: string;
 }
 
-export function KnowledgeGraphVisualization({
+export default function KnowledgeGraphVisualization({
   query = "",
   maxNodes = 50,
   maxEdges = 100,
-  height = "600px",
+  height = "500px",
   showControls = true,
   onNodeClick,
   onEdgeClick,
+  className
 }: KnowledgeGraphVisualizationProps) {
-  const { toast } = useToast();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const networkRef = useRef<any>(null);
-  const [graphData, setGraphData] = useState<GraphData | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<GraphEdge | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const [isClient, setIsClient] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const svgRef = useRef<SVGSVGElement>(null);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
-  // Fetch graph data
-  const fetchGraphData = async (searchQuery?: string) => {
-    if (!isClient) return;
-    
-    setIsLoading(true);
-    setError(null);
+  const getNodeColor = (type: GraphNode['type']): string => {
+    switch (type) {
+      case 'person':
+        return '#10b981'; // cosmic-success
+      case 'organization':
+        return '#3b82f6'; // cosmic-primary-500
+      case 'concept':
+        return '#8b5cf6'; // cosmic-secondary-500
+      case 'location':
+        return '#f59e0b'; // cosmic-warning
+      case 'event':
+        return '#ef4444'; // cosmic-error
+      default:
+        return '#6b7280'; // cosmic-border-primary
+    }
+  };
 
-    try {
-      const response = await fetch("/api/knowledge-graph", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query: searchQuery || query,
-          max_nodes: maxNodes,
-          max_edges: maxEdges,
-        }),
+  const nodes: GraphNode[] = [];
+  const edges: GraphEdge[] = [];
+
+  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.2, 3));
+  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.2, 0.5));
+  const handleReset = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.target === svgRef.current) {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      setPan({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch graph data: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      setGraphData(data);
-    } catch (error) {
-      console.error("Error fetching graph data:", error);
-      setError(error instanceof Error ? error.message : "Failed to fetch graph data");
-      toast({
-        title: "Graph Loading Failed",
-        description: "Failed to load knowledge graph data. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  // Initialize network visualization
-  useEffect(() => {
-    if (!isClient || !graphData || !containerRef.current) return;
-
-    const initializeNetwork = async () => {
-      try {
-        const { Network: VisNetwork, DataSet: VisDataSet } = await import("vis-network/standalone");
-        const { DataSet: VisDataDataSet } = await import("vis-data/standalone");
-
-        // Create nodes dataset
-        const nodes = new VisDataDataSet(
-          graphData.nodes.map((node) => ({
-            id: node.id,
-            label: node.label,
-            title: node.title || node.label,
-            group: node.group || "default",
-            size: node.size || 20,
-            color: node.color || getNodeColor(node.group),
-            shape: node.shape || "circle",
-            properties: node.properties || {},
-          }))
-        );
-
-        // Create edges dataset
-        const edges = new VisDataDataSet(
-          graphData.edges.map((edge) => ({
-            id: edge.id,
-            from: edge.from,
-            to: edge.to,
-            label: edge.label || "",
-            title: edge.title || edge.label || "",
-            color: edge.color || "#666",
-            width: edge.width || 1,
-            arrows: edge.arrows || "to",
-            properties: edge.properties || {},
-          }))
-        );
-
-        // Network options
-        const options = {
-          nodes: {
-            font: {
-              size: 12,
-              face: "Arial",
-            },
-            borderWidth: 2,
-            shadow: true,
-          },
-          edges: {
-            width: 1,
-            shadow: true,
-            smooth: {
-              type: "continuous",
-            },
-          },
-          physics: {
-            enabled: true,
-            barnesHut: {
-              gravitationalConstant: -2000,
-              springConstant: 0.04,
-              springLength: 200,
-            },
-          },
-          interaction: {
-            hover: true,
-            tooltipDelay: 200,
-          },
-        };
-
-        // Create network
-        const network = new VisNetwork(containerRef.current, { nodes, edges }, options);
-
-        // Event handlers
-        network.on("click", (params: any) => {
-          if (params.nodes.length > 0) {
-            const nodeId = params.nodes[0];
-            const node = graphData.nodes.find((n) => n.id === nodeId);
-            if (node) {
-              setSelectedNode(node);
-              setShowDetails(true);
-              onNodeClick?.(node);
-            }
-          } else if (params.edges.length > 0) {
-            const edgeId = params.edges[0];
-            const edge = graphData.edges.find((e) => e.id === edgeId);
-            if (edge) {
-              setSelectedEdge(edge);
-              setShowDetails(true);
-              onEdgeClick?.(edge);
-            }
-          }
-        });
-
-        network.on("stabilizationProgress", (params: any) => {
-          // Optional: Show stabilization progress
-        });
-
-        network.on("stabilizationIterationsDone", () => {
-          // Network is ready
-        });
-
-        networkRef.current = network;
-      } catch (error) {
-        console.error("Error initializing network:", error);
-        setError("Failed to initialize network visualization");
-      }
-    };
-
-    initializeNetwork();
-
-    // Cleanup
-    return () => {
-      if (networkRef.current) {
-        networkRef.current.destroy();
-        networkRef.current = null;
-      }
-    };
-  }, [graphData, isClient, onNodeClick, onEdgeClick]);
-
-  // Load initial data
-  useEffect(() => {
-    if (isClient && query) {
-      fetchGraphData();
-    }
-  }, [query, maxNodes, maxEdges, isClient]);
-
-  const handleSearch = () => {
-    if (searchTerm.trim()) {
-      fetchGraphData(searchTerm);
-    }
+  const handleMouseUp = () => {
+    setIsDragging(false);
   };
 
-  const handleZoomIn = () => {
-    if (networkRef.current) {
-      const scale = networkRef.current.getScale();
-      networkRef.current.moveTo({ scale: scale * 1.2 });
-      setZoomLevel(scale * 1.2);
-    }
+  const handleNodeClick = (node: GraphNode) => {
+    setSelectedNode(node);
+    setSelectedEdge(null);
+    onNodeClick?.(node);
   };
 
-  const handleZoomOut = () => {
-    if (networkRef.current) {
-      const scale = networkRef.current.getScale();
-      networkRef.current.moveTo({ scale: scale * 0.8 });
-      setZoomLevel(scale * 0.8);
-    }
+  const handleEdgeClick = (edge: GraphEdge) => {
+    setSelectedEdge(edge);
+    setSelectedNode(null);
+    onEdgeClick?.(edge);
   };
 
-  const handleFit = () => {
-    if (networkRef.current) {
-      networkRef.current.fit();
-      setZoomLevel(1);
-    }
-  };
-
-  const getNodeColor = (group?: string) => {
-    const colors: Record<string, string> = {
-      person: "#4285f4",
-      organization: "#34a853",
-      location: "#fbbc05",
-      concept: "#ea4335",
-      event: "#9c27b0",
-      default: "#666666",
-    };
-    return colors[group || "default"] || colors.default;
-  };
-
-  const getGroupLabel = (group?: string) => {
-    const labels: Record<string, string> = {
-      person: "Person",
-      organization: "Organization",
-      location: "Location",
-      concept: "Concept",
-      event: "Event",
-      default: "Other",
-    };
-    return labels[group || "default"] || labels.default;
-  };
-
-  if (!isClient) {
     return (
-      <div className="bg-white rounded-lg border p-6">
-        <div className="h-96 bg-gray-100 animate-pulse rounded-lg flex items-center justify-center">
-          <div className="text-gray-500">Loading visualization...</div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Search Controls */}
+    <div className={cn("space-y-4", className)}>
+      {/* Controls */}
       {showControls && (
-        <Card>
+        <Card className="cosmic-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Graph Search
+            <CardTitle className="cosmic-text-primary flex items-center gap-2">
+              <Settings className="h-5 w-5 text-cosmic-primary-500" />
+              Graph Controls
             </CardTitle>
-            <CardDescription>
-              Search for entities, concepts, or relationships to visualize
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter search terms..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                className="flex-1"
-              />
-              <Button onClick={handleSearch} disabled={isLoading}>
-                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Graph Visualization */}
-      <Card>
-        <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <NetworkIcon className="h-5 w-5" />
-                Knowledge Graph
-              </CardTitle>
-              <CardDescription>
-                Interactive visualization of knowledge relationships
-              </CardDescription>
-            </div>
-            {showControls && (
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={handleZoomOut}
+                  className="cosmic-btn-secondary"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+                <span className="text-sm cosmic-text-primary w-16 text-center">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={handleZoomIn}
-                  title="Zoom In"
+                  className="cosmic-btn-secondary"
                 >
                   <ZoomIn className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleZoomOut}
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleFit}
-                  title="Fit to View"
+                  onClick={handleReset}
+                  className="cosmic-btn-secondary"
                 >
                   <RotateCcw className="h-4 w-4" />
                 </Button>
               </div>
+              
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="border-cosmic-border-primary text-cosmic-text-primary">
+                  <Network className="h-3 w-3 mr-1" />
+                  {nodes.length} nodes
+                </Badge>
+                <Badge variant="outline" className="border-cosmic-border-primary text-cosmic-text-primary">
+                  {edges.length} edges
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className="cosmic-btn-secondary"
+                >
+                  {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Graph Visualization */}
+      <Card className="cosmic-card">
+        <CardHeader>
+          <CardTitle className="cosmic-text-primary flex items-center gap-2">
+            <Network className="h-5 w-5 text-cosmic-primary-500" />
+            Knowledge Graph
+            {query && (
+              <Badge variant="outline" className="border-cosmic-primary-500 text-cosmic-primary-500">
+                "{query}"
+              </Badge>
             )}
-          </div>
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative">
-            {error ? (
-              <div className="h-96 flex items-center justify-center text-red-500">
+          <div 
+            className="relative overflow-hidden rounded-lg border border-cosmic-border-primary"
+            style={{ height }}
+          >
+            {nodes.length === 0 ? (
+              <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                  <AlertCircle className="h-12 w-12 mx-auto mb-2" />
-                  <p>{error}</p>
+                  <Network className="h-12 w-12 text-cosmic-text-tertiary mx-auto mb-2" />
+                  <p className="cosmic-text-secondary">Enter a query to visualize the knowledge graph</p>
                 </div>
               </div>
-            ) : isLoading ? (
-              <div className="h-96 flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
             ) : (
-              <div
-                ref={containerRef}
-                style={{ height }}
-                className="border rounded-lg"
-              />
+              <svg
+                ref={svgRef}
+                className="w-full h-full cursor-grab active:cursor-grabbing"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                style={{ 
+                  transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                  transformOrigin: 'center'
+                }}
+              >
+                {/* Edges */}
+                {edges.map((edge) => {
+                  const sourceNode = nodes.find(n => n.id === edge.source);
+                  const targetNode = nodes.find(n => n.id === edge.target);
+                  
+                  if (!sourceNode || !targetNode || sourceNode.x === undefined || sourceNode.y === undefined || targetNode.x === undefined || targetNode.y === undefined) return null;
+                  
+                  return (
+                    <line
+                      key={edge.id}
+                      x1={sourceNode.x}
+                      y1={sourceNode.y}
+                      x2={targetNode.x}
+                      y2={targetNode.y}
+                      stroke="#6b7280"
+                      strokeWidth={edge.weight * 2}
+                      opacity={0.6}
+                      className="cursor-pointer hover:stroke-cosmic-primary-500"
+                      onClick={() => handleEdgeClick(edge)}
+                    />
+                  );
+                })}
+                
+                {/* Nodes */}
+                {nodes.map((node) => (
+                  <g key={node.id}>
+                    <circle
+                      cx={node.x || 0}
+                      cy={node.y || 0}
+                      r={node.size}
+                      fill={node.color}
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => handleNodeClick(node)}
+                    />
+                    <text
+                      x={node.x || 0}
+                      y={(node.y || 0) + 4}
+                      textAnchor="middle"
+                      className="text-xs fill-white font-medium pointer-events-none"
+                    >
+                      {node.label.length > 8 ? node.label.substring(0, 8) + '...' : node.label}
+                    </text>
+                  </g>
+                ))}
+              </svg>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Details Dialog */}
-      <Dialog open={showDetails} onOpenChange={setShowDetails}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedNode ? "Node Details" : "Edge Details"}
-            </DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="max-h-96">
+      {/* Node/Edge Information */}
+      {(selectedNode || selectedEdge) && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4"
+        >
             {selectedNode && (
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-sm font-medium">Label</Label>
-                  <p className="text-lg font-semibold">{selectedNode.label}</p>
+            <Card className="cosmic-card">
+              <CardHeader>
+                <CardTitle className="cosmic-text-primary flex items-center gap-2">
+                  <div 
+                    className="w-4 h-4 rounded-full" 
+                    style={{ backgroundColor: selectedNode.color }}
+                  />
+                  {selectedNode.label}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="border-cosmic-border-primary text-cosmic-text-primary">
+                      {selectedNode.type}
+                    </Badge>
+                    <Badge variant="outline" className="border-cosmic-border-primary text-cosmic-text-primary">
+                      Size: {Math.round(selectedNode.size)}
+                    </Badge>
                 </div>
-                {selectedNode.group && (
-                  <div>
-                    <Label className="text-sm font-medium">Type</Label>
-                    <Badge variant="outline">{getGroupLabel(selectedNode.group)}</Badge>
+                  {selectedNode.description && (
+                    <p className="text-sm cosmic-text-secondary">{selectedNode.description}</p>
+                  )}
                   </div>
-                )}
-                {selectedNode.properties && Object.keys(selectedNode.properties).length > 0 && (
-                  <div>
-                    <Label className="text-sm font-medium">Properties</Label>
+              </CardContent>
+            </Card>
+          )}
+
+          {selectedEdge && (
+            <Card className="cosmic-card">
+              <CardHeader>
+                <CardTitle className="cosmic-text-primary">Relationship</CardTitle>
+              </CardHeader>
+              <CardContent>
                     <div className="space-y-2">
-                      {Object.entries(selectedNode.properties).map(([key, value]) => (
-                        <div key={key} className="flex justify-between">
-                          <span className="text-sm text-gray-600">{key}:</span>
-                          <span className="text-sm">{String(value)}</span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="border-cosmic-border-primary text-cosmic-text-primary">
+                      {selectedEdge.type || 'related'}
+                    </Badge>
+                    <Badge variant="outline" className="border-cosmic-border-primary text-cosmic-text-primary">
+                      Weight: {selectedEdge.weight.toFixed(2)}
+                    </Badge>
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                  {selectedEdge.label && (
+                    <p className="text-sm cosmic-text-secondary">{selectedEdge.label}</p>
                 )}
               </div>
-            )}
-            {selectedEdge && (
-              <div className="space-y-4">
+              </CardContent>
+            </Card>
+          )}
+        </motion.div>
+      )}
+
+      {/* Instructions */}
+      <Card className="cosmic-card">
+        <CardHeader>
+          <CardTitle className="cosmic-text-primary flex items-center gap-2">
+            <Info className="h-5 w-5 text-cosmic-primary-500" />
+            How to Use
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm cosmic-text-secondary">
                 <div>
-                  <Label className="text-sm font-medium">Relationship</Label>
-                  <p className="text-lg font-semibold">{selectedEdge.label || "Unknown"}</p>
+              <h4 className="font-medium cosmic-text-primary mb-2 flex items-center gap-2">
+                <MousePointer className="h-4 w-4" />
+                Navigation
+              </h4>
+              <ul className="space-y-1">
+                <li>• Click and drag to pan around the graph</li>
+                <li>• Use zoom controls to zoom in/out</li>
+                <li>• Click nodes to see details</li>
+                <li>• Click edges to view relationships</li>
+              </ul>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">From</Label>
-                  <p className="text-sm">{selectedEdge.from}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">To</Label>
-                  <p className="text-sm">{selectedEdge.to}</p>
-                </div>
-                {selectedEdge.properties && Object.keys(selectedEdge.properties).length > 0 && (
-                  <div>
-                    <Label className="text-sm font-medium">Properties</Label>
-                    <div className="space-y-2">
-                      {Object.entries(selectedEdge.properties).map(([key, value]) => (
-                        <div key={key} className="flex justify-between">
-                          <span className="text-sm text-gray-600">{key}:</span>
-                          <span className="text-sm">{String(value)}</span>
-                        </div>
-                      ))}
+              <h4 className="font-medium cosmic-text-primary mb-2 flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Node Types
+              </h4>
+              <ul className="space-y-1">
+                <li>• <span className="inline-block w-3 h-3 bg-cosmic-success rounded-full mr-2"></span> People</li>
+                <li>• <span className="inline-block w-3 h-3 bg-cosmic-primary-500 rounded-full mr-2"></span> Organizations</li>
+                <li>• <span className="inline-block w-3 h-3 bg-cosmic-secondary-500 rounded-full mr-2"></span> Concepts</li>
+                <li>• <span className="inline-block w-3 h-3 bg-cosmic-warning rounded-full mr-2"></span> Locations</li>
+                <li>• <span className="inline-block w-3 h-3 bg-cosmic-error rounded-full mr-2"></span> Events</li>
+              </ul>
                     </div>
                   </div>
-                )}
-              </div>
-            )}
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
     </div>
   );
 } 

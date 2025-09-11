@@ -34,7 +34,7 @@ interface Project {
   };
 }
 
-export function PortfolioShowcase() {
+export default function PortfolioShowcase() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [isPlaying, setIsPlaying] = useState(false);

@@ -1,325 +1,239 @@
 "use client";
 
-import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/ui/ui/card";
-import { Button } from "@/ui/ui/button";
-import { Badge } from "@/ui/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/ui/dialog";
-import { ScrollArea } from "@/ui/ui/ScrollArea";
-import { Separator } from "@/ui/ui/separator";
-import { type Source } from "@/services/api";
-import {
-  ExternalLink,
-  BookOpen,
-  Globe,
-  Database,
-  FileText,
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { 
+  ExternalLink, 
+  Copy, 
+  Calendar, 
+  User, 
+  FileText, 
+  ChevronDown, 
+  ChevronUp,
   Star,
-  Calendar,
-  User,
-  Eye,
-  Copy,
-  Check,
-  X,
-  AlertCircle,
-  Info
-} from "lucide-react";
-import { useToast } from "@/hooks/useToast";
-import { CitationSkeleton } from "@/ui/atoms/skeleton";
+  Globe
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface CitationPanelProps {
-  sources: Source[];
-  title?: string;
-  maxDisplay?: number;
-  isLoading?: boolean;
+interface Citation {
+  id: string;
+  title: string;
+  url?: string;
+  author?: string;
+  date?: string;
+  type?: 'academic' | 'news' | 'report' | 'website';
+  relevance?: number;
+  summary?: string;
 }
 
-export function CitationPanel({ 
-  sources, 
-  title = "Sources & Citations",
-  maxDisplay = 5,
-  isLoading = false
+interface CitationPanelProps {
+  citations?: Citation[];
+  className?: string;
+  isExpanded?: boolean;
+  onToggle?: () => void;
+}
+
+export default function CitationPanel({
+  citations = [],
+  className,
+  isExpanded = true,
+  onToggle
 }: CitationPanelProps) {
-  const { toast } = useToast();
-  const [selectedSource, setSelectedSource] = useState<Source | null>(null);
-  const [showAll, setShowAll] = useState(false);
-  const [isClient, setIsClient] = useState(false);
+  const [expandedCitations, setExpandedCitations] = useState<Set<string>>(new Set());
 
-  // Ensure we're on the client side
-  useState(() => {
-    setIsClient(true);
-  });
+  const toggleCitation = (citationId: string) => {
+    const newExpanded = new Set(expandedCitations);
+    if (newExpanded.has(citationId)) {
+      newExpanded.delete(citationId);
+    } else {
+      newExpanded.add(citationId);
+    }
+    setExpandedCitations(newExpanded);
+  };
 
-  const getSourceIcon = (sourceType: string) => {
-    switch (sourceType.toLowerCase()) {
-      case "web":
-        return <Globe className="h-4 w-4" />;
-      case "document":
+  const getTypeIcon = (type?: string) => {
+    switch (type) {
+      case 'academic':
         return <FileText className="h-4 w-4" />;
-      case "database":
-        return <Database className="h-4 w-4" />;
+      case 'news':
+        return <Globe className="h-4 w-4" />;
+      case 'report':
+        return <FileText className="h-4 w-4" />;
       default:
         return <Globe className="h-4 w-4" />;
     }
   };
 
-  const getSourceTypeLabel = (sourceType: string) => {
-    switch (sourceType.toLowerCase()) {
-      case "web":
-        return "Web";
-      case "document":
-        return "Document";
-      case "database":
-        return "Database";
+  const getTypeColor = (type?: string) => {
+    switch (type) {
+      case 'academic':
+        return 'border-cosmic-primary-500 text-cosmic-primary-500';
+      case 'news':
+        return 'border-cosmic-secondary-500 text-cosmic-secondary-500';
+      case 'report':
+        return 'border-cosmic-warning text-cosmic-warning';
       default:
-        return sourceType;
+        return 'border-cosmic-border-primary text-cosmic-text-primary';
     }
   };
 
-  const getRelevanceColor = (score: number) => {
-    if (score >= 0.8) return "text-green-600";
-    if (score >= 0.6) return "text-yellow-600";
-    return "text-red-600";
-  };
-
-  const getCredibilityColor = (score?: number) => {
-    if (!score) return "text-gray-600";
-    if (score >= 0.8) return "text-green-600";
-    if (score >= 0.6) return "text-yellow-600";
-    return "text-red-600";
-  };
-
-  const handleCopyUrl = async (url: string) => {
-    try {
-      if (isClient && navigator.clipboard) {
-        await navigator.clipboard.writeText(url);
-        toast({
-          title: "URL copied",
-          description: "Source URL copied to clipboard",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Copy failed",
-        description: "Failed to copy URL to clipboard",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleOpenSource = (url: string) => {
-    if (isClient && typeof window !== "undefined") {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
-  };
-
-  // Show loading skeleton when loading
-  if (isLoading) {
+  if (citations.length === 0) {
     return (
-      <Card>
+      <Card className={cn("cosmic-card", className)}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            {title}
-          </CardTitle>
+          <CardTitle className="cosmic-text-primary">Sources</CardTitle>
         </CardHeader>
         <CardContent>
-          <CitationSkeleton />
+          <p className="cosmic-text-secondary text-center py-4">
+            No sources available yet.
+          </p>
         </CardContent>
       </Card>
     );
   }
-
-  // Show empty state if no sources
-  if (!sources || sources.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            {title}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <div className="text-center">
-              <Info className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                No sources available
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                No citations or sources were found for this response.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const displayedSources = showAll ? sources : sources.slice(0, maxDisplay);
-  const hasMoreSources = sources.length > maxDisplay;
 
   return (
-    <Card>
+    <Card className={cn("cosmic-card", className)}>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            {title}
-          </CardTitle>
-          <Badge variant="secondary">
-            {sources.length} source{sources.length !== 1 ? 's' : ''}
-          </Badge>
-        </div>
-        <CardDescription>
-          References and sources used to generate this response
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {displayedSources.map((source, index) => (
-            <div
-              key={source.url || index}
-              className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+          <CardTitle className="cosmic-text-primary">Sources & Citations</CardTitle>
+          {onToggle && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onToggle}
+              className="cosmic-btn-secondary"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    {getSourceIcon(source.source_type)}
-                    <span className="text-sm font-medium">
-                      {source.title || "Untitled Source"}
-                    </span>
-                    <Badge variant="outline" className="text-xs">
-                      {getSourceTypeLabel(source.source_type)}
-                    </Badge>
-                  </div>
-                  
-                  {source.snippet && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {source.snippet}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    {source.relevance_score && (
-                      <div className="flex items-center gap-1">
-                        <Star className="h-3 w-3" />
-                        <span className={getRelevanceColor(source.relevance_score)}>
-                          Relevance: {(source.relevance_score * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                    )}
-                    {source.credibility_score && (
-                      <div className="flex items-center gap-1">
-                        <Check className="h-3 w-3" />
-                        <span className={getCredibilityColor(source.credibility_score)}>
-                          Credibility: {(source.credibility_score * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-1 ml-4">
-                  {source.url && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCopyUrl(source.url!)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleOpenSource(source.url!)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-          
-          {hasMoreSources && (
-            <div className="text-center">
-              <Button
-                variant="outline"
-                onClick={() => setShowAll(!showAll)}
-                className="w-full"
-              >
-                {showAll ? "Show Less" : `Show ${sources.length - maxDisplay} More`}
-              </Button>
-            </div>
+              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
           )}
         </div>
-
-        {/* Source Detail Dialog */}
-        {selectedSource && (
-          <Dialog open={!!selectedSource} onOpenChange={() => setSelectedSource(null)}>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  {getSourceIcon(selectedSource.source_type)}
-                  {selectedSource.title || "Source Details"}
-                </DialogTitle>
-              </DialogHeader>
-              <ScrollArea className="max-h-96">
-                <div className="space-y-4">
-                  {selectedSource.snippet && (
-                    <div>
-                      <h4 className="font-medium mb-2">Content</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedSource.snippet}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {selectedSource.url && (
-                    <div>
-                      <h4 className="font-medium mb-2">URL</h4>
-                      <p className="text-sm text-blue-600 break-all">
-                        {selectedSource.url}
-                      </p>
-                    </div>
-                  )}
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    {selectedSource.relevance_score && (
-                      <div>
-                        <h4 className="font-medium mb-1">Relevance Score</h4>
-                        <p className={`text-sm ${getRelevanceColor(selectedSource.relevance_score)}`}>
-                          {(selectedSource.relevance_score * 100).toFixed(1)}%
-                        </p>
+      </CardHeader>
+      
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <CardContent>
+              <div className="space-y-3">
+                {citations.map((citation, index) => (
+                  <motion.div
+                    key={citation.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="p-3 cosmic-bg-secondary rounded-lg border border-cosmic-border-primary"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-cosmic-primary-500">
+                          [{index + 1}]
+                        </span>
+                        <Badge 
+                          variant="outline" 
+                          className={cn("text-xs", getTypeColor(citation.type))}
+                        >
+                          {getTypeIcon(citation.type)}
+                          <span className="ml-1">{citation.type || 'source'}</span>
+                        </Badge>
+                        {citation.relevance && (
+                          <Badge variant="outline" className="text-xs border-cosmic-border-primary text-cosmic-text-primary">
+                            <Star className="h-3 w-3 mr-1" />
+                            {citation.relevance}% relevant
+                          </Badge>
+                        )}
                       </div>
-                    )}
-                    {selectedSource.credibility_score && (
-                      <div>
-                        <h4 className="font-medium mb-1">Credibility Score</h4>
-                        <p className={`text-sm ${getCredibilityColor(selectedSource.credibility_score)}`}>
-                          {(selectedSource.credibility_score * 100).toFixed(1)}%
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </ScrollArea>
-            </DialogContent>
-          </Dialog>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleCitation(citation.id)}
+                        className="h-6 w-6 p-0"
+                      >
+                        {expandedCitations.has(citation.id) ? 
+                          <ChevronUp className="h-3 w-3" /> : 
+                          <ChevronDown className="h-3 w-3" />
+                        }
+                      </Button>
+                    </div>
+                    
+                    <h4 className="font-medium cosmic-text-primary mb-1 line-clamp-2">
+                      {citation.title}
+                    </h4>
+                    
+                    <div className="flex items-center gap-4 text-xs cosmic-text-tertiary mb-2">
+                      {citation.author && (
+                        <span className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          {citation.author}
+                        </span>
+                      )}
+                      {citation.date && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {citation.date}
+                        </span>
+                      )}
+                    </div>
+                    
+                    <AnimatePresence>
+                      {expandedCitations.has(citation.id) && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className="border-t border-cosmic-border-primary pt-2 mt-2"
+                        >
+                          {citation.summary && (
+                            <p className="text-sm cosmic-text-secondary mb-3">
+                              {citation.summary}
+                            </p>
+                          )}
+                          
+                          <div className="flex items-center gap-2">
+                            {citation.url && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                asChild
+                                className="cosmic-btn-secondary"
+                              >
+                                <a href={citation.url} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  View Source
+                                </a>
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const citationText = `${citation.title}${citation.author ? ` by ${citation.author}` : ''}${citation.date ? ` (${citation.date})` : ''}`;
+                                navigator.clipboard.writeText(citationText);
+                              }}
+                              className="cosmic-btn-secondary"
+                            >
+                              <Copy className="h-3 w-3 mr-1" />
+                              Copy Citation
+                            </Button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                ))}
+              </div>
+            </CardContent>
+          </motion.div>
         )}
-      </CardContent>
+      </AnimatePresence>
     </Card>
   );
-} 
+}

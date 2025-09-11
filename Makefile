@@ -62,6 +62,64 @@ restart:
 health-check:
 	@echo "Checking health of all services..."
 	@echo "Backend:"
+	@curl -f http://localhost:8000/health || echo "Backend not responding"
+	@echo "PostgreSQL:"
+	@docker exec sarvanom-postgres pg_isready -U postgres || echo "PostgreSQL not ready"
+	@echo "Redis:"
+	@docker exec sarvanom-redis redis-cli ping || echo "Redis not responding"
+	@echo "ArangoDB:"
+	@curl -f http://localhost:8529/_api/version || echo "ArangoDB not responding"
+	@echo "Qdrant:"
+	@curl -f http://localhost:6333/ || echo "Qdrant not responding"
+	@echo "Meilisearch:"
+	@curl -f http://localhost:7700/health || echo "Meilisearch not responding"
+	@echo "Ollama:"
+	@curl -f http://localhost:11434/api/tags || echo "Ollama not responding"
+
+# Comprehensive testing with all combinations
+test-comprehensive:
+	@echo "Running comprehensive SarvanOM testing..."
+	@python test_docker_comprehensive.py
+
+# Test specific component combinations
+test-llm-combinations:
+	@echo "Testing all LLM provider combinations..."
+	@docker compose -f docker-compose.test.yml --env-file .env.docker run --rm test-runner python -c "from scripts.comprehensive_test_runner import *; asyncio.run(ComprehensiveTestRunner().test_llm_providers())"
+
+test-db-combinations:
+	@echo "Testing all database combinations..."
+	@docker compose -f docker-compose.test.yml --env-file .env.docker run --rm test-runner python -c "from scripts.comprehensive_test_runner import *; asyncio.run(ComprehensiveTestRunner().test_database_operations())"
+
+test-kg-combinations:
+	@echo "Testing all knowledge graph combinations..."
+	@docker compose -f docker-compose.test.yml --env-file .env.docker run --rm test-runner python -c "from scripts.comprehensive_test_runner import *; asyncio.run(ComprehensiveTestRunner().test_knowledge_graph_operations())"
+
+# Test different complexity levels
+test-simple:
+	@echo "Testing simple complexity tasks..."
+	@docker compose -f docker-compose.test.yml --env-file .env.docker run --rm test-runner python -c "from scripts.comprehensive_test_runner import *; runner = ComprehensiveTestRunner(); runner.test_data = {k: v for k, v in runner.test_data.items() if k == 'simple'}; asyncio.run(runner.run_comprehensive_tests())"
+
+test-medium:
+	@echo "Testing medium complexity tasks..."
+	@docker compose -f docker-compose.test.yml --env-file .env.docker run --rm test-runner python -c "from scripts.comprehensive_test_runner import *; runner = ComprehensiveTestRunner(); runner.test_data = {k: v for k, v in runner.test_data.items() if k in ['simple', 'medium']}; asyncio.run(runner.run_comprehensive_tests())"
+
+test-complex:
+	@echo "Testing complex tasks..."
+	@docker compose -f docker-compose.test.yml --env-file .env.docker run --rm test-runner python -c "from scripts.comprehensive_test_runner import *; runner = ComprehensiveTestRunner(); runner.test_data = {k: v for k, v in runner.test_data.items() if k in ['simple', 'medium', 'complex']}; asyncio.run(runner.run_comprehensive_tests())"
+
+test-expert:
+	@echo "Testing expert level tasks..."
+	@docker compose -f docker-compose.test.yml --env-file .env.docker run --rm test-runner python -c "from scripts.comprehensive_test_runner import *; asyncio.run(ComprehensiveTestRunner().run_comprehensive_tests())"
+
+# Quick test for development
+test-quick:
+	@echo "Running quick health and basic functionality tests..."
+	@docker compose -f docker-compose.test.yml --env-file .env.docker up -d postgres redis
+	@sleep 10
+	@docker compose -f docker-compose.test.yml --env-file .env.docker up -d backend-test
+	@sleep 15
+	@curl -f http://localhost:8000/health && echo "✅ Backend healthy" || echo "❌ Backend not healthy"
+	@docker compose -f docker-compose.test.yml down -v
 	@curl -f http://localhost:8000/health/basic || echo "Backend not healthy"
 	@echo "Frontend:"
 	@curl -f http://localhost:3000 || echo "Frontend not healthy"

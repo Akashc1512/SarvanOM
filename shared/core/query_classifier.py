@@ -27,8 +27,13 @@ class QueryCategory(Enum):
 class QueryComplexity(Enum):
     """Query complexity levels."""
     SIMPLE = "simple"
+    SIMPLE_FACTUAL = "simple_factual"
     MODERATE = "moderate"
     COMPLEX = "complex"
+    COMPLEX_ANALYTICAL = "complex_analytical"
+    RESEARCH_INTENSIVE = "research_intensive"
+    RESEARCH_SYNTHESIS = "research_synthesis"
+    MULTI_DOMAIN = "multi_domain"
 
 
 @dataclass
@@ -144,12 +149,24 @@ class QueryClassifier:
             QueryComplexity.SIMPLE: [
                 "what", "who", "when", "where", "how many", "define", "explain"
             ],
+            QueryComplexity.SIMPLE_FACTUAL: [
+                "what is", "who is", "when did", "where is", "define", "explain", "tell me about"
+            ],
             QueryComplexity.MODERATE: [
                 "analyze", "compare", "evaluate", "investigate", "research", "study"
             ],
             QueryComplexity.COMPLEX: [
                 "synthesize", "critique", "examine", "explore", "assess", "review",
                 "consider", "investigate", "research", "study", "analyze"
+            ],
+            QueryComplexity.COMPLEX_ANALYTICAL: [
+                "analyze", "compare", "evaluate", "assess", "examine", "investigate"
+            ],
+            QueryComplexity.RESEARCH_INTENSIVE: [
+                "research", "study", "investigate", "explore", "examine", "synthesize"
+            ],
+            QueryComplexity.MULTI_DOMAIN: [
+                "across", "between", "combine", "integrate", "multiple", "various"
             ]
         }
     

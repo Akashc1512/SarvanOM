@@ -339,7 +339,7 @@ async def get_supported_constraints():
 
 if __name__ == "__main__":
     # Start Prometheus metrics server
-    start_http_server(8006)
+    start_http_server(8008)
     
     # Start FastAPI server
     uvicorn.run(app, host="0.0.0.0", port=8005)

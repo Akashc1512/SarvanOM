@@ -663,14 +663,12 @@ class CentralConfig(SecureSettings):
     # =============================================================================
 
     # Development features
-    mock_ai_responses: bool = Field(default=False, description="Mock AI responses")
     skip_authentication: bool = Field(default=False, description="Skip authentication")
     enable_debug_endpoints: bool = Field(
         default=False, description="Enable debug endpoints"
     )
     auto_reload: bool = Field(default=False, description="Auto reload")
     test_mode: bool = Field(default=False, description="Test mode")
-    mock_providers: bool = Field(default=False, description="Mock providers")
 
     # Production features
     backup_enabled: bool = Field(default=True, description="Enable backups")
@@ -770,8 +768,6 @@ class CentralConfig(SecureSettings):
                 values["debug"] = True
             if "log_level" not in values:
                 values["log_level"] = LogLevel.DEBUG
-            if "mock_ai_responses" not in values:
-                values["mock_ai_responses"] = True
             if "skip_authentication" not in values:
                 values["skip_authentication"] = True
 

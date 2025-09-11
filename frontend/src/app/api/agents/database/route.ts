@@ -22,29 +22,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For now, return mock data since backend is not available
-    const mockResponse = {
-      results: [
-        { id: 1, name: "Sample Data 1", value: "Value 1" },
-        { id: 2, name: "Sample Data 2", value: "Value 2" }
-      ],
-      row_count: 2,
-      execution_time: 0.3,
-      schema: {
-        columns: ["id", "name", "value"],
-        types: ["integer", "text", "text"]
-      }
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: mockResponse,
-      query,
-      database_type,
-      row_count: mockResponse.row_count,
-      execution_time: mockResponse.execution_time,
-      timestamp: new Date().toISOString()
+    // Forward request to backend API
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8004';
+    const response = await fetch(`${backendUrl}/agents/database`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': request.headers.get('Authorization') || '',
+      },
+      body: JSON.stringify({
+        query,
+        database_type,
+        limit,
+        include_schema
+      })
     });
+
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
 
   } catch (error: any) {
     console.error('Database agent error:', error);

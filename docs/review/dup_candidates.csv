@@ -1,0 +1,56 @@
+file_path,duplicate_type,reason,action,priority,notes
+frontend/eslint.config.js,duplicate_config,Multiple ESLint config files,consolidate,high,Keep eslint.config.mjs, remove .js version
+frontend/jest.config.js,duplicate_config,Multiple Jest config files,consolidate,medium,Standardize on one Jest configuration
+frontend/package.json,duplicate_dependency,Root and frontend package.json,review,high,Ensure no conflicting dependencies
+package.json,duplicate_dependency,Root and frontend package.json,review,high,Ensure no conflicting dependencies
+config/development.yaml,duplicate_config,Multiple YAML config files,consolidate,medium,Standardize configuration approach
+config/production.yaml,duplicate_config,Multiple YAML config files,consolidate,medium,Standardize configuration approach
+config/staging.yaml,duplicate_config,Multiple YAML config files,consolidate,medium,Standardize configuration approach
+config/testing.yaml,duplicate_config,Multiple YAML config files,consolidate,medium,Standardize configuration approach
+COMPREHENSIVE_MOCK_SCAN_FINAL_REPORT.md,duplicate_report,Multiple mock scan reports,consolidate,low,Keep most recent, archive others
+COMPREHENSIVE_MOCK_SCAN_REPORT.md,duplicate_report,Multiple mock scan reports,consolidate,low,Keep most recent, archive others
+COMPREHENSIVE_TESTING_GUIDE.md,duplicate_documentation,Multiple testing guides,consolidate,medium,Consolidate into single comprehensive guide
+COMPREHENSIVE_TESTING_SUMMARY.md,duplicate_documentation,Multiple testing guides,consolidate,medium,Consolidate into single comprehensive guide
+FINAL_FRONTEND_BACKEND_INTEGRATION_REPORT.md,duplicate_report,Multiple integration reports,consolidate,low,Archive old reports
+FINAL_INTEGRATION_STATUS_REPORT.md,duplicate_report,Multiple integration reports,consolidate,low,Archive old reports
+FINAL_ISSUE_RESOLUTION_REPORT.md,duplicate_report,Multiple issue resolution reports,consolidate,low,Archive old reports
+FINAL_MOCK_REMOVAL_REPORT.md,duplicate_report,Multiple mock removal reports,consolidate,low,Archive old reports
+INTEGRATION_TEST_REPORT.md,duplicate_report,Multiple integration reports,consolidate,low,Archive old reports
+MOCK_REMOVAL_SUMMARY.md,duplicate_report,Multiple mock removal reports,consolidate,low,Archive old reports
+services/gateway/main.py,duplicate_code,Multiple main.py files in services,review,high,Ensure proper service separation
+start_backend.py,duplicate_entrypoint,Multiple backend entry points,consolidate,high,Standardize on single entry point
+scripts/__pycache__,duplicate_cache,Multiple __pycache__ directories,remove,low,Clean up Python cache files
+services/__pycache__,duplicate_cache,Multiple __pycache__ directories,remove,low,Clean up Python cache files
+shared/__pycache__,duplicate_cache,Multiple __pycache__ directories,remove,low,Clean up Python cache files
+config/__pycache__,duplicate_cache,Multiple __pycache__ directories,remove,low,Clean up Python cache files
+config/production/__pycache__,duplicate_cache,Multiple __pycache__ directories,remove,low,Clean up Python cache files
+test_configs/prometheus.yml,duplicate_config,Multiple Prometheus configs,consolidate,medium,Standardize monitoring configuration
+monitoring/prometheus.yml,duplicate_config,Multiple Prometheus configs,consolidate,medium,Standardize monitoring configuration
+docker-compose.yml,duplicate_docker,Multiple Docker Compose files,review,high,Ensure proper environment separation
+docker-compose.test.yml,duplicate_docker,Multiple Docker Compose files,review,high,Ensure proper environment separation
+Dockerfile.test,duplicate_docker,Multiple Dockerfiles,review,medium,Consolidate Docker configurations
+frontend/Dockerfile,duplicate_docker,Multiple Dockerfiles,review,medium,Consolidate Docker configurations
+test_results/demo_test_report_20250908_172349.txt,duplicate_test_results,Multiple test result files,archive,low,Archive old test results
+test_results/demo_test_report_20250908_172957.txt,duplicate_test_results,Multiple test result files,archive,low,Archive old test results
+test_results/demo_test_results_20250908_172349.json,duplicate_test_results,Multiple test result files,archive,low,Archive old test results
+test_results/demo_test_results_20250908_172957.json,duplicate_test_results,Multiple test result files,archive,low,Archive old test results
+test_results/demo_test_summary_20250908_172349.json,duplicate_test_results,Multiple test result files,archive,low,Archive old test results
+test_results/demo_test_summary_20250908_172957.json,duplicate_test_results,Multiple test result files,archive,low,Archive old test results
+test_results/comprehensive_demo_results_20250908_173440.json,duplicate_test_results,Multiple test result files,archive,low,Archive old test results
+test_results/comprehensive_demo_results_20250908_173454.json,duplicate_test_results,Multiple test result files,archive,low,Archive old test results
+test_results/comprehensive_demo_results_20250908_173508.json,duplicate_test_results,Multiple test result files,archive,low,Archive old test results
+mock_scan_results.json,duplicate_scan_results,Multiple scan result files,archive,low,Archive old scan results
+targeted_mock_scan_results.txt,duplicate_scan_results,Multiple scan result files,archive,low,Archive old scan results
+frontend/restructure_frontend.md,duplicate_documentation,Multiple frontend documentation,consolidate,medium,Consolidate frontend documentation
+frontend/README.md,duplicate_documentation,Multiple README files,review,medium,Ensure consistent documentation
+README.md,duplicate_documentation,Multiple README files,review,medium,Ensure consistent documentation
+frontend/COSMIC_PRO_DESIGN_SPEC.md,duplicate_documentation,Multiple design specifications,consolidate,medium,Consolidate design documentation
+frontend/VISUAL_REFERENCE_GUIDE.md,duplicate_documentation,Multiple design specifications,consolidate,medium,Consolidate design documentation
+config/default_credentials.md,duplicate_documentation,Multiple credential documentation,consolidate,high,Consolidate security documentation
+config/production-config.md,duplicate_documentation,Multiple configuration documentation,consolidate,medium,Consolidate configuration documentation
+SECURITY.md,duplicate_documentation,Multiple security documentation,consolidate,high,Consolidate security documentation
+services/README.md,duplicate_documentation,Multiple service documentation,consolidate,medium,Consolidate service documentation
+tests/conftest.py,duplicate_test_config,Multiple test configuration files,review,medium,Ensure consistent test configuration
+tests/pytest.ini,duplicate_test_config,Multiple test configuration files,review,medium,Ensure consistent test configuration
+pyproject.toml,duplicate_config,Multiple Python configuration files,review,high,Ensure consistent Python configuration
+requirements.txt,duplicate_config,Multiple Python configuration files,review,high,Ensure consistent Python configuration

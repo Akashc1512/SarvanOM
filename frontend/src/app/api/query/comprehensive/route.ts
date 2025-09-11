@@ -12,35 +12,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For now, return mock data since backend is not available
-    const mockResponse = {
-      query_id: `query_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      status: "completed" as const,
-      answer: `This is a mock response for: "${query}". In a real implementation, this would be processed by the backend AI system with fact-checking and citations enabled.`,
-      sources: [
-        {
-          title: "Mock Source 1",
-          url: "https://example.com/source1",
-          snippet: "This is a mock source for demonstration purposes.",
-          relevance_score: 0.95,
-          source_type: "web" as const,
-          credibility_score: 0.9
-        }
-      ],
-      confidence: 0.85,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      llm_provider: model || "openai",
-      llm_model: model || "gpt-4",
-      processing_time: 2.5
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: mockResponse,
-      query,
-      timestamp: new Date().toISOString()
+    // Forward request to backend API
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:8004';
+    const response = await fetch(`${backendUrl}/query/comprehensive`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': request.headers.get('Authorization') || '',
+      },
+      body: JSON.stringify({
+        query,
+        context,
+        user_id,
+        session_id,
+        model,
+        preferences,
+        priority,
+        timeout_seconds
+      })
     });
+
+    if (!response.ok) {
+      throw new Error(`Backend API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return NextResponse.json(data);
 
   } catch (error: any) {
     console.error('Comprehensive query error:', error);

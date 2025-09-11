@@ -805,7 +805,7 @@ async def get_prometheus_metrics():
 
 if __name__ == "__main__":
     # Start Prometheus metrics server
-    start_http_server(8007)
+    start_http_server(8010)
     
     # Start FastAPI server
     uvicorn.run(app, host="0.0.0.0", port=8006)

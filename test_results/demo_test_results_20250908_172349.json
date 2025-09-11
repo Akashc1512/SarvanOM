@@ -1,0 +1,990 @@
+[
+  {
+    "test_name": "health__health",
+    "component_combination": "backend",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 824.4881629943848,
+    "error_message": null,
+    "response_data": {
+      "status_code": 200,
+      "response": "{\"status\":\"healthy\",\"timestamp\":\"2025-09-08T11:53:41.428092+00:00\",\"uptime_s\":4986.402461051941,\"version\":\"1.0.0\",\"git_sha\":\"e16cd51239397cd65fd8885e4b92161cf44c96df\",\"build_time\":\"2025-09-05 17:39:07 +0530\"}"
+    },
+    "timestamp": "2025-09-08T17:23:41.453368"
+  },
+  {
+    "test_name": "health__health_live",
+    "component_combination": "backend",
+    "complexity_level": "simple",
+    "success": false,
+    "response_time_ms": 29.27088737487793,
+    "error_message": null,
+    "response_data": {
+      "status_code": 404,
+      "response": "{\"error\":\"Endpoint not found\",\"message\":\"The requested endpoint does not exist\",\"path\":\"/health/live\",\"method\":\"GET\"}"
+    },
+    "timestamp": "2025-09-08T17:23:41.483131"
+  },
+  {
+    "test_name": "health__health_ready",
+    "component_combination": "backend",
+    "complexity_level": "simple",
+    "success": false,
+    "response_time_ms": 8.336782455444336,
+    "error_message": null,
+    "response_data": {
+      "status_code": 404,
+      "response": "{\"error\":\"Endpoint not found\",\"message\":\"The requested endpoint does not exist\",\"path\":\"/health/ready\",\"method\":\"GET\"}"
+    },
+    "timestamp": "2025-09-08T17:23:41.491889"
+  },
+  {
+    "test_name": "health__metrics",
+    "component_combination": "backend",
+    "complexity_level": "simple",
+    "success": false,
+    "response_time_ms": 5.79380989074707,
+    "error_message": null,
+    "response_data": {
+      "status_code": 307,
+      "response": ""
+    },
+    "timestamp": "2025-09-08T17:23:41.498068"
+  },
+  {
+    "test_name": "llm_openai_simple",
+    "component_combination": "llm_openai",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 104.31790351867676,
+    "error_message": null,
+    "response_data": {
+      "provider": "openai",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:41.604330"
+  },
+  {
+    "test_name": "llm_openai_medium",
+    "component_combination": "llm_openai",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 108.53075981140137,
+    "error_message": null,
+    "response_data": {
+      "provider": "openai",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:41.713295"
+  },
+  {
+    "test_name": "llm_openai_complex",
+    "component_combination": "llm_openai",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 107.78641700744629,
+    "error_message": null,
+    "response_data": {
+      "provider": "openai",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:41.821576"
+  },
+  {
+    "test_name": "llm_openai_expert",
+    "component_combination": "llm_openai",
+    "complexity_level": "expert",
+    "success": true,
+    "response_time_ms": 108.11686515808105,
+    "error_message": null,
+    "response_data": {
+      "provider": "openai",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:41.930172"
+  },
+  {
+    "test_name": "llm_anthropic_simple",
+    "component_combination": "llm_anthropic",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 107.05161094665527,
+    "error_message": null,
+    "response_data": {
+      "provider": "anthropic",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:42.037955"
+  },
+  {
+    "test_name": "llm_anthropic_medium",
+    "component_combination": "llm_anthropic",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 107.24163055419922,
+    "error_message": null,
+    "response_data": {
+      "provider": "anthropic",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:42.145965"
+  },
+  {
+    "test_name": "llm_anthropic_complex",
+    "component_combination": "llm_anthropic",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 106.26864433288574,
+    "error_message": null,
+    "response_data": {
+      "provider": "anthropic",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:42.252795"
+  },
+  {
+    "test_name": "llm_anthropic_expert",
+    "component_combination": "llm_anthropic",
+    "complexity_level": "expert",
+    "success": false,
+    "response_time_ms": 107.63216018676758,
+    "error_message": null,
+    "response_data": {
+      "provider": "anthropic",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:42.360910"
+  },
+  {
+    "test_name": "llm_huggingface_simple",
+    "component_combination": "llm_huggingface",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 109.04860496520996,
+    "error_message": null,
+    "response_data": {
+      "provider": "huggingface",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:42.470460"
+  },
+  {
+    "test_name": "llm_huggingface_medium",
+    "component_combination": "llm_huggingface",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 108.03008079528809,
+    "error_message": null,
+    "response_data": {
+      "provider": "huggingface",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:42.579042"
+  },
+  {
+    "test_name": "llm_huggingface_complex",
+    "component_combination": "llm_huggingface",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 107.13744163513184,
+    "error_message": null,
+    "response_data": {
+      "provider": "huggingface",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:42.687005"
+  },
+  {
+    "test_name": "llm_huggingface_expert",
+    "component_combination": "llm_huggingface",
+    "complexity_level": "expert",
+    "success": false,
+    "response_time_ms": 107.80024528503418,
+    "error_message": null,
+    "response_data": {
+      "provider": "huggingface",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:42.795256"
+  },
+  {
+    "test_name": "llm_ollama_simple",
+    "component_combination": "llm_ollama",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 107.0866584777832,
+    "error_message": null,
+    "response_data": {
+      "provider": "ollama",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:42.902901"
+  },
+  {
+    "test_name": "llm_ollama_medium",
+    "component_combination": "llm_ollama",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 109.39717292785645,
+    "error_message": null,
+    "response_data": {
+      "provider": "ollama",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:43.012941"
+  },
+  {
+    "test_name": "llm_ollama_complex",
+    "component_combination": "llm_ollama",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 105.17501831054688,
+    "error_message": null,
+    "response_data": {
+      "provider": "ollama",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:43.119125"
+  },
+  {
+    "test_name": "llm_ollama_expert",
+    "component_combination": "llm_ollama",
+    "complexity_level": "expert",
+    "success": true,
+    "response_time_ms": 108.36243629455566,
+    "error_message": null,
+    "response_data": {
+      "provider": "ollama",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:43.228132"
+  },
+  {
+    "test_name": "db_postgres_simple",
+    "component_combination": "database_postgres",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 59.767723083496094,
+    "error_message": null,
+    "response_data": {
+      "database": "postgres",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:43.289462"
+  },
+  {
+    "test_name": "db_postgres_medium",
+    "component_combination": "database_postgres",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 61.234235763549805,
+    "error_message": null,
+    "response_data": {
+      "database": "postgres",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:43.351530"
+  },
+  {
+    "test_name": "db_postgres_complex",
+    "component_combination": "database_postgres",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 60.713768005371094,
+    "error_message": null,
+    "response_data": {
+      "database": "postgres",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:43.412948"
+  },
+  {
+    "test_name": "db_postgres_expert",
+    "component_combination": "database_postgres",
+    "complexity_level": "expert",
+    "success": true,
+    "response_time_ms": 61.025381088256836,
+    "error_message": null,
+    "response_data": {
+      "database": "postgres",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:43.474622"
+  },
+  {
+    "test_name": "db_redis_simple",
+    "component_combination": "database_redis",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 61.81645393371582,
+    "error_message": null,
+    "response_data": {
+      "database": "redis",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:43.536787"
+  },
+  {
+    "test_name": "db_redis_medium",
+    "component_combination": "database_redis",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 62.032222747802734,
+    "error_message": null,
+    "response_data": {
+      "database": "redis",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:43.599379"
+  },
+  {
+    "test_name": "db_redis_complex",
+    "component_combination": "database_redis",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 61.850547790527344,
+    "error_message": null,
+    "response_data": {
+      "database": "redis",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:43.661660"
+  },
+  {
+    "test_name": "db_redis_expert",
+    "component_combination": "database_redis",
+    "complexity_level": "expert",
+    "success": true,
+    "response_time_ms": 62.23344802856445,
+    "error_message": null,
+    "response_data": {
+      "database": "redis",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:43.724534"
+  },
+  {
+    "test_name": "db_arangodb_simple",
+    "component_combination": "database_arangodb",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 61.12360954284668,
+    "error_message": null,
+    "response_data": {
+      "database": "arangodb",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:43.786158"
+  },
+  {
+    "test_name": "db_arangodb_medium",
+    "component_combination": "database_arangodb",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 62.35480308532715,
+    "error_message": null,
+    "response_data": {
+      "database": "arangodb",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:43.849010"
+  },
+  {
+    "test_name": "db_arangodb_complex",
+    "component_combination": "database_arangodb",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 62.29209899902344,
+    "error_message": null,
+    "response_data": {
+      "database": "arangodb",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:43.911827"
+  },
+  {
+    "test_name": "db_arangodb_expert",
+    "component_combination": "database_arangodb",
+    "complexity_level": "expert",
+    "success": false,
+    "response_time_ms": 60.468196868896484,
+    "error_message": null,
+    "response_data": {
+      "database": "arangodb",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:43.973159"
+  },
+  {
+    "test_name": "db_qdrant_simple",
+    "component_combination": "database_qdrant",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 61.25450134277344,
+    "error_message": null,
+    "response_data": {
+      "database": "qdrant",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:44.035021"
+  },
+  {
+    "test_name": "db_qdrant_medium",
+    "component_combination": "database_qdrant",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 61.99932098388672,
+    "error_message": null,
+    "response_data": {
+      "database": "qdrant",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:44.097439"
+  },
+  {
+    "test_name": "db_qdrant_complex",
+    "component_combination": "database_qdrant",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 62.03031539916992,
+    "error_message": null,
+    "response_data": {
+      "database": "qdrant",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:44.160013"
+  },
+  {
+    "test_name": "db_qdrant_expert",
+    "component_combination": "database_qdrant",
+    "complexity_level": "expert",
+    "success": true,
+    "response_time_ms": 62.04557418823242,
+    "error_message": null,
+    "response_data": {
+      "database": "qdrant",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:44.222529"
+  },
+  {
+    "test_name": "db_meilisearch_simple",
+    "component_combination": "database_meilisearch",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 61.158180236816406,
+    "error_message": null,
+    "response_data": {
+      "database": "meilisearch",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:44.284321"
+  },
+  {
+    "test_name": "db_meilisearch_medium",
+    "component_combination": "database_meilisearch",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 62.17765808105469,
+    "error_message": null,
+    "response_data": {
+      "database": "meilisearch",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:44.346858"
+  },
+  {
+    "test_name": "db_meilisearch_complex",
+    "component_combination": "database_meilisearch",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 60.94717979431152,
+    "error_message": null,
+    "response_data": {
+      "database": "meilisearch",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:44.408467"
+  },
+  {
+    "test_name": "db_meilisearch_expert",
+    "component_combination": "database_meilisearch",
+    "complexity_level": "expert",
+    "success": true,
+    "response_time_ms": 61.52749061584473,
+    "error_message": null,
+    "response_data": {
+      "database": "meilisearch",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:44.470541"
+  },
+  {
+    "test_name": "kg_create_node_simple",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 107.16009140014648,
+    "error_message": null,
+    "response_data": {
+      "operation": "create_node",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:44.580161"
+  },
+  {
+    "test_name": "kg_create_node_medium",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 107.64503479003906,
+    "error_message": null,
+    "response_data": {
+      "operation": "create_node",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:44.688504"
+  },
+  {
+    "test_name": "kg_create_node_complex",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 109.01784896850586,
+    "error_message": null,
+    "response_data": {
+      "operation": "create_node",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:44.798846"
+  },
+  {
+    "test_name": "kg_create_node_expert",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "expert",
+    "success": true,
+    "response_time_ms": 104.85172271728516,
+    "error_message": null,
+    "response_data": {
+      "operation": "create_node",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:44.904410"
+  },
+  {
+    "test_name": "kg_create_relationship_simple",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 107.8803539276123,
+    "error_message": null,
+    "response_data": {
+      "operation": "create_relationship",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:45.012889"
+  },
+  {
+    "test_name": "kg_create_relationship_medium",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 106.03618621826172,
+    "error_message": null,
+    "response_data": {
+      "operation": "create_relationship",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:45.119825"
+  },
+  {
+    "test_name": "kg_create_relationship_complex",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 107.00607299804688,
+    "error_message": null,
+    "response_data": {
+      "operation": "create_relationship",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:45.227475"
+  },
+  {
+    "test_name": "kg_create_relationship_expert",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "expert",
+    "success": false,
+    "response_time_ms": 109.21144485473633,
+    "error_message": null,
+    "response_data": {
+      "operation": "create_relationship",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:45.337354"
+  },
+  {
+    "test_name": "kg_query_graph_simple",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 108.80565643310547,
+    "error_message": null,
+    "response_data": {
+      "operation": "query_graph",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:45.446623"
+  },
+  {
+    "test_name": "kg_query_graph_medium",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 107.46383666992188,
+    "error_message": null,
+    "response_data": {
+      "operation": "query_graph",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:45.554876"
+  },
+  {
+    "test_name": "kg_query_graph_complex",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 107.36846923828125,
+    "error_message": null,
+    "response_data": {
+      "operation": "query_graph",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:45.662805"
+  },
+  {
+    "test_name": "kg_query_graph_expert",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "expert",
+    "success": false,
+    "response_time_ms": 108.0935001373291,
+    "error_message": null,
+    "response_data": {
+      "operation": "query_graph",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:45.771374"
+  },
+  {
+    "test_name": "kg_traverse_graph_simple",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "simple",
+    "success": false,
+    "response_time_ms": 110.47601699829102,
+    "error_message": null,
+    "response_data": {
+      "operation": "traverse_graph",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:45.882273"
+  },
+  {
+    "test_name": "kg_traverse_graph_medium",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 106.59313201904297,
+    "error_message": null,
+    "response_data": {
+      "operation": "traverse_graph",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:45.989319"
+  },
+  {
+    "test_name": "kg_traverse_graph_complex",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 107.64026641845703,
+    "error_message": null,
+    "response_data": {
+      "operation": "traverse_graph",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:46.097431"
+  },
+  {
+    "test_name": "kg_traverse_graph_expert",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "expert",
+    "success": false,
+    "response_time_ms": 107.57827758789062,
+    "error_message": null,
+    "response_data": {
+      "operation": "traverse_graph",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:46.205525"
+  },
+  {
+    "test_name": "kg_analyze_graph_simple",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 106.77671432495117,
+    "error_message": null,
+    "response_data": {
+      "operation": "analyze_graph",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:46.312807"
+  },
+  {
+    "test_name": "kg_analyze_graph_medium",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 107.4366569519043,
+    "error_message": null,
+    "response_data": {
+      "operation": "analyze_graph",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:46.420795"
+  },
+  {
+    "test_name": "kg_analyze_graph_complex",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "complex",
+    "success": false,
+    "response_time_ms": 107.46335983276367,
+    "error_message": null,
+    "response_data": {
+      "operation": "analyze_graph",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:46.528664"
+  },
+  {
+    "test_name": "kg_analyze_graph_expert",
+    "component_combination": "knowledge_graph",
+    "complexity_level": "expert",
+    "success": false,
+    "response_time_ms": 109.82489585876465,
+    "error_message": null,
+    "response_data": {
+      "operation": "analyze_graph",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:46.638931"
+  },
+  {
+    "test_name": "workflow_search_and_synthesize_simple",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 215.00039100646973,
+    "error_message": null,
+    "response_data": {
+      "workflow": "search_and_synthesize",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:46.856123"
+  },
+  {
+    "test_name": "workflow_search_and_synthesize_medium",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 214.87188339233398,
+    "error_message": null,
+    "response_data": {
+      "workflow": "search_and_synthesize",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:47.071534"
+  },
+  {
+    "test_name": "workflow_search_and_synthesize_complex",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 201.48849487304688,
+    "error_message": null,
+    "response_data": {
+      "workflow": "search_and_synthesize",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:47.273525"
+  },
+  {
+    "test_name": "workflow_search_and_synthesize_expert",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "expert",
+    "success": true,
+    "response_time_ms": 202.17657089233398,
+    "error_message": null,
+    "response_data": {
+      "workflow": "search_and_synthesize",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:47.476293"
+  },
+  {
+    "test_name": "workflow_fact_check_workflow_simple",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 201.11513137817383,
+    "error_message": null,
+    "response_data": {
+      "workflow": "fact_check_workflow",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:47.678134"
+  },
+  {
+    "test_name": "workflow_fact_check_workflow_medium",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 214.88332748413086,
+    "error_message": null,
+    "response_data": {
+      "workflow": "fact_check_workflow",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:47.894330"
+  },
+  {
+    "test_name": "workflow_fact_check_workflow_complex",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "complex",
+    "success": false,
+    "response_time_ms": 200.82616806030273,
+    "error_message": null,
+    "response_data": {
+      "workflow": "fact_check_workflow",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:48.095808"
+  },
+  {
+    "test_name": "workflow_fact_check_workflow_expert",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "expert",
+    "success": true,
+    "response_time_ms": 215.38496017456055,
+    "error_message": null,
+    "response_data": {
+      "workflow": "fact_check_workflow",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:48.311752"
+  },
+  {
+    "test_name": "workflow_knowledge_extraction_simple",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "simple",
+    "success": false,
+    "response_time_ms": 214.78867530822754,
+    "error_message": null,
+    "response_data": {
+      "workflow": "knowledge_extraction",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:48.527658"
+  },
+  {
+    "test_name": "workflow_knowledge_extraction_medium",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 202.98147201538086,
+    "error_message": null,
+    "response_data": {
+      "workflow": "knowledge_extraction",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:48.731357"
+  },
+  {
+    "test_name": "workflow_knowledge_extraction_complex",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 200.44493675231934,
+    "error_message": null,
+    "response_data": {
+      "workflow": "knowledge_extraction",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:48.932206"
+  },
+  {
+    "test_name": "workflow_knowledge_extraction_expert",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "expert",
+    "success": true,
+    "response_time_ms": 214.9181365966797,
+    "error_message": null,
+    "response_data": {
+      "workflow": "knowledge_extraction",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:49.147678"
+  },
+  {
+    "test_name": "workflow_multi_modal_analysis_simple",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "simple",
+    "success": true,
+    "response_time_ms": 201.95722579956055,
+    "error_message": null,
+    "response_data": {
+      "workflow": "multi_modal_analysis",
+      "complexity": "simple"
+    },
+    "timestamp": "2025-09-08T17:23:49.350765"
+  },
+  {
+    "test_name": "workflow_multi_modal_analysis_medium",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "medium",
+    "success": true,
+    "response_time_ms": 200.8993625640869,
+    "error_message": null,
+    "response_data": {
+      "workflow": "multi_modal_analysis",
+      "complexity": "medium"
+    },
+    "timestamp": "2025-09-08T17:23:49.552197"
+  },
+  {
+    "test_name": "workflow_multi_modal_analysis_complex",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "complex",
+    "success": true,
+    "response_time_ms": 200.40273666381836,
+    "error_message": null,
+    "response_data": {
+      "workflow": "multi_modal_analysis",
+      "complexity": "complex"
+    },
+    "timestamp": "2025-09-08T17:23:49.753082"
+  },
+  {
+    "test_name": "workflow_multi_modal_analysis_expert",
+    "component_combination": "integrated_workflow",
+    "complexity_level": "expert",
+    "success": false,
+    "response_time_ms": 201.81512832641602,
+    "error_message": null,
+    "response_data": {
+      "workflow": "multi_modal_analysis",
+      "complexity": "expert"
+    },
+    "timestamp": "2025-09-08T17:23:49.955581"
+  }
+]
