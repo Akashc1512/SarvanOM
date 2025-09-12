@@ -59,9 +59,23 @@ This document defines the quality gates and merge blockers that enforce code qua
 - **Consent Management**: Proper consent tracking and management
 - **Privacy Compliance**: GDPR/CCPA compliance for refinement data
 
-### 4. Integration Gates
+### 4. Provider Key Validation Gates
 
-#### 4.1 Service Integration
+#### 4.1 Required Key Validation
+- **Web Search Lane**: Must have BRAVE_SEARCH_API_KEY OR SERPAPI_KEY (both missing = CI failure)
+- **News Lane**: Must have GUARDIAN_OPEN_PLATFORM_KEY OR NEWSAPI_KEY (both missing = CI failure)
+- **Markets Lane**: Must have ALPHAVANTAGE_KEY (FINNHUB_KEY and FMP_API_KEY are optional)
+- **LLM Providers**: Must have OPENAI_API_KEY OR ANTHROPIC_API_KEY (both missing = CI failure)
+- **LMM Providers**: GEMINI_API_KEY is optional for vision features
+
+#### 4.2 Keyless Fallback Validation
+- **Budget Compliance**: Keyless-only lanes must still meet 5/7/10s end-to-end budgets
+- **Provider Timeout**: Each keyless provider must respect ≤800ms per-provider timeout
+- **Graceful Degradation**: System must handle missing keys without crashes
+
+### 5. Integration Gates
+
+#### 5.1 Service Integration
 - **Health Checks**: All services must respond to `/health` endpoint
 - **Database Connectivity**: All database connections must be verified
 - **External APIs**: All external service integrations must be tested

@@ -135,16 +135,16 @@ class ModelRouter:
         self.classifier = QueryClassifier()
         self.http_client = httpx.AsyncClient()
         
-        # Model selection policies
+        # Model selection policies (only available providers)
         self.model_policies = {
             QueryType.SIMPLE: {
-                "primary": ["gpt-3.5-turbo-0125", "claude-3-5-sonnet-20241022"],
-                "fallback": ["gpt-4o-2024-08-06"],
+                "primary": ["gpt-4o-mini-2024-07-18", "claude-3-5-haiku-20241022"],
+                "fallback": ["gpt-3.5-turbo-0125"],
                 "budget": 5.0  # 5 seconds
             },
             QueryType.TECHNICAL: {
-                "primary": ["claude-3-5-sonnet-20241022", "gpt-4o-2024-08-06"],
-                "fallback": ["gpt-3.5-turbo-0125"],
+                "primary": ["gpt-4o-2024-08-06", "claude-3-5-sonnet-20241022"],
+                "fallback": ["gpt-4o-mini-2024-07-18"],
                 "budget": 7.0  # 7 seconds
             },
             QueryType.RESEARCH: {
@@ -153,8 +153,8 @@ class ModelRouter:
                 "budget": 10.0  # 10 seconds
             },
             QueryType.MULTIMEDIA: {
-                "primary": ["gpt-4o-2024-08-06"],  # Only multimodal model
-                "fallback": ["claude-3-5-sonnet-20241022"],
+                "primary": ["gemini-1.5-pro"],  # Gemini for vision (if available)
+                "fallback": ["gpt-4o-2024-08-06"],  # OpenAI vision fallback
                 "budget": 10.0  # 10 seconds
             }
         }
@@ -163,12 +163,17 @@ class ModelRouter:
         self.refinement_policies = {
             "fast": {
                 "primary": ["gpt-3.5-turbo-0125"],
-                "fallback": ["claude-3-5-sonnet-20241022"],
+                "fallback": ["claude-3-5-haiku-20241022"],
                 "budget": 0.5  # 500ms
             },
             "quality": {
-                "primary": ["claude-3-5-sonnet-20241022"],
-                "fallback": ["gpt-4o-2024-08-06"],
+                "primary": ["gpt-4o-mini-2024-07-18"],
+                "fallback": ["claude-3-5-sonnet-20241022"],
+                "budget": 0.8  # 800ms
+            },
+            "lmm": {
+                "primary": ["gemini-1.5-pro"],  # Gemini for vision refinement
+                "fallback": ["gpt-4o-2024-08-06"],  # OpenAI vision fallback
                 "budget": 0.8  # 800ms
             }
         }

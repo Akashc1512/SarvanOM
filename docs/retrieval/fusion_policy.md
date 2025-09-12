@@ -16,6 +16,8 @@ The Retrieval & Index Fabric implements a multi-lane retrieval system that runs 
 3. **Deduplication**: Remove duplicates by domain + title + hash similarity
 4. **Citation Alignment**: Sentence-to-passage alignment with inline markers
 5. **Budget Compliance**: Strict adherence to lane budgets and timeouts
+6. **Provider Penalties**: Rate-limit or failure penalties for provider demotion
+7. **Keyless Boosts**: High-credibility keyless sources (Wikipedia, MDN) get ranking boosts
 
 ---
 

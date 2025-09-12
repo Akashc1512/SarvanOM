@@ -262,18 +262,32 @@ class ProviderMetrics:
             "coingecko", "qdrant", "meilisearch", "arangodb"
         ]
     
-    def record_provider_request(self, provider: str, success: bool, response_time: float, data_quality: float = 1.0):
+    def record_provider_request(self, provider: str, success: bool, response_time: float, data_quality: float = 1.0, fallback_used: bool = False):
         """Record provider request"""
         self.metrics.record_counter(
             "provider_requests_total",
-            labels={"provider": provider, "success": success}
+            labels={"provider": provider, "success": success, "fallback_used": fallback_used}
         )
+        
+        # Track keyless fallback usage
+        if fallback_used:
+            self.metrics.record_counter(
+                "keyless_fallback_used_total",
+                labels={"provider": provider, "lane": self.get_lane_for_provider(provider)}
+            )
         
         self.metrics.record_histogram(
             "provider_response_time_ms",
             response_time,
             labels={"provider": provider, "success": success}
         )
+        
+        # Track provider failure/timeout rates for auto-demotion
+        if not success:
+            self.metrics.record_counter(
+                "provider_failures_total",
+                labels={"provider": provider, "failure_type": "timeout" if response_time > 800 else "error"}
+            )
         
         self.metrics.record_histogram(
             "provider_data_quality",

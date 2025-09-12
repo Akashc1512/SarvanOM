@@ -47,7 +47,17 @@ The settings page allows users to configure their SarvanOM v2 experience, includ
   - Description: "System learns when you typically accept or skip refinements"
   - Privacy Note: "Uses anonymized interaction data"
 
-#### 2.4 Constraint Defaults
+#### 2.4 Active Feeds Information
+- **Feed Status Display**: Shows which feeds are active based on available API keys
+- **Keyless Fallbacks**: "Keyless fallbacks are enabled by default for better coverage"
+- **Toggle Option**: "Disable keyless fallbacks" (with warning about reduced coverage)
+- **Feed Breakdown**:
+  - Web Search: Brave Search (if key available) → SerpAPI (if key available) → Keyless fallbacks
+  - News: Guardian Open Platform (if key available) → NewsAPI (if key available) → Keyless fallbacks  
+  - Markets: Alpha Vantage (if key available) → Finnhub/FMP (if keys available) → Keyless fallbacks
+  - Media: YouTube Data API (if key available) → Keyless fallbacks
+
+#### 2.5 Constraint Defaults
 - **Default Time Range**: Dropdown (Today, Last Week, Last Month, Last Year)
 - **Default Sources**: Multi-select (All, Academic, News, Web)
 - **Default Citations**: Toggle (Required, Optional, None)

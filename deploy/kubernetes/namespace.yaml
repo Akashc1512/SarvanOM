@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sarvanom-production
+  labels:
+    name: sarvanom-production
+    environment: production
+    app: sarvanom
+    version: v2
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sarvanom-staging
+  labels:
+    name: sarvanom-staging
+    environment: staging
+    app: sarvanom
+    version: v2
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sarvanom-development
+  labels:
+    name: sarvanom-development
+    environment: development
+    app: sarvanom
+    version: v2

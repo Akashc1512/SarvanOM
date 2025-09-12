@@ -26,11 +26,13 @@ The Retrieval Lanes system provides multiple parallel retrieval strategies to en
 ### **Web Lane Configuration**
 | Property | Value | Description |
 |----------|-------|-------------|
-| **Primary Engine** | Custom web crawler | Real-time web search |
-| **Fallback Engine** | DuckDuckGo API | Backup search provider |
+| **Primary Engine** | Brave Search API | Real-time web search (BRAVE_SEARCH_API_KEY) |
+| **Fallback Engine** | SerpAPI | Backup search provider (SERPAPI_KEY) |
+| **Keyless Fallbacks** | DuckDuckGo IA, Wikipedia API, StackExchange API, MDN | No API key required |
 | **Budget** | 2s (Simple), 3s (Technical), 4s (Research) | Time allocation |
 | **Max Results** | 20 | Maximum results per query |
 | **Cache TTL** | 300s | Cache time-to-live |
+| **Provider Timeout** | ≤800ms per provider | Individual provider budget |
 
 ### **Web Lane Implementation**
 ```python
@@ -433,11 +435,13 @@ class KeywordLane:
 ### **News Lane Configuration**
 | Property | Value | Description |
 |----------|-------|-------------|
-| **Primary Sources** | News APIs, RSS feeds | Real-time news sources |
-| **Fallback Sources** | Cached news data | Backup news sources |
+| **Primary Source** | Guardian Open Platform | Real-time news (GUARDIAN_OPEN_PLATFORM_KEY) |
+| **Fallback Source** | NewsAPI | Backup news provider (NEWSAPI_KEY) |
+| **Keyless Fallbacks** | GDELT 2.1 API, Hacker News Algolia, RSS feeds | No API key required |
 | **Budget** | 1.5s (Simple), 2s (Technical), 3s (Research) | Time allocation |
 | **Max Results** | 10 | Maximum results per query |
 | **Cache TTL** | 600s | Cache time-to-live |
+| **Provider Timeout** | ≤800ms per provider | Individual provider budget |
 
 ### **News Lane Implementation**
 ```python
@@ -554,11 +558,13 @@ class NewsLane:
 ### **Markets Lane Configuration**
 | Property | Value | Description |
 |----------|-------|-------------|
-| **Primary Sources** | Financial APIs | Real-time market data |
-| **Fallback Sources** | Cached market data | Backup market sources |
+| **Primary Source** | Alpha Vantage | Real-time market data (ALPHAVANTAGE_KEY) |
+| **Fallback Sources** | Finnhub, FMP | Backup market providers (FINNHUB_KEY, FMP_API_KEY) |
+| **Keyless Fallbacks** | Stooq CSV endpoints, SEC EDGAR | No API key required |
 | **Budget** | 1s (Simple), 1.5s (Technical), 2s (Research) | Time allocation |
 | **Max Results** | 15 | Maximum results per query |
 | **Cache TTL** | 300s | Cache time-to-live |
+| **Provider Timeout** | ≤800ms per provider | Individual provider budget |
 
 ### **Markets Lane Implementation**
 ```python

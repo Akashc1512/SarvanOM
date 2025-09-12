@@ -2,19 +2,47 @@
 
 **Date**: September 9, 2025  
 **Status**: ✅ **ACTIVE CONTRACT**  
-**Purpose**: Comprehensive matrix of existing keys, new keys allowed, and deprecation policy
+**Purpose**: Comprehensive matrix of canonical environment variables for SarvanOM v2
 
 ---
 
-## 📋 **Existing Environment Variables (v1)**
+## 📋 **Canonical Environment Variables (v2)**
 
 ### **AI Provider Configuration**
 | Variable | Status | Type | Required | Description | Example |
 |----------|--------|------|----------|-------------|---------|
+| `HUGGINGFACE_API_KEY` | ✅ **CANONICAL** | String | No | HuggingFace API key (general) | `hf_...` |
+| `HUGGINGFACE_READ_TOKEN` | ✅ **CANONICAL** | String | No | HuggingFace read/inference token | `hf_...` |
+| `HUGGINGFACE_WRITE_TOKEN` | ✅ **CANONICAL** | String | No | HuggingFace write/publish token | `hf_...` |
+| `OLLAMA_BASE_URL` | ✅ **CANONICAL** | String | No | Ollama server URL | 
+`http://localhost:11434` |
 | `OPENAI_API_KEY` | ✅ **CANONICAL** | String | Yes | OpenAI API key | `sk-...` |
 | `ANTHROPIC_API_KEY` | ✅ **CANONICAL** | String | Yes | Anthropic API key | `sk-ant-...` |
-| `HUGGINGFACE_API_TOKEN` | ✅ **CANONICAL** | String | Yes | HuggingFace API token | `hf_...` |
-| `OLLAMA_BASE_URL` | ✅ **CANONICAL** | String | No | Ollama server URL | `http://localhost:11434` |
+| `GEMINI_API_KEY` | ✅ **CANONICAL** | String | No | Google Gemini API key for vision/LMM | `AIza...` |
+
+
+### **Search & Retrieval Providers**
+| Variable | Status | Type | Required | Description | Example |
+|----------|--------|------|----------|-------------|---------|
+| `BRAVE_SEARCH_API_KEY` | ✅ **CANONICAL** | String | Yes* | Brave Search API key (preferred) | `BSA...` |
+| `SERPAPI_KEY` | ✅ **CANONICAL** | String | Yes* | SerpAPI key (fallback) | `serpapi_...` |
+| `GUARDIAN_OPEN_PLATFORM_KEY` | ✅ **CANONICAL** | String | Yes* | Guardian Open Platform API key | `guardian_...` |
+| `NEWSAPI_KEY` | ✅ **CANONICAL** | String | Yes* | NewsAPI key (fallback) | `newsapi_...` |
+| `ALPHAVANTAGE_KEY` | ✅ **CANONICAL** | String | Yes* | Alpha Vantage API key (preferred) | `alpha_...` |
+| `FINNHUB_KEY` | ✅ **CANONICAL** | String | No | Finnhub API key (optional) | `finnhub_...` |
+| `FMP_API_KEY` | ✅ **CANONICAL** | String | No | Financial Modeling Prep API key | `fmp_...` |
+| `YOUTUBE_API_KEY` | ✅ **CANONICAL** | String | No | YouTube Data API key | `AIza...` |
+
+### **Database Configuration**
+| Variable | Status | Type | Required | Description | Example |
+|----------|--------|------|----------|-------------|---------|
+| `QDRANT_API_KEY` | ✅ **CANONICAL** | String | No | Qdrant API key (if protected) | `qdrant_...` |
+| `MEILI_MASTER_KEY` | ✅ **CANONICAL** | String | No | Meilisearch master key (if protected) | `master_...` |
+| `ARANGO_USERNAME` | ✅ **CANONICAL** | String | Yes | ArangoDB username | `root` |
+| `ARANGO_PASSWORD` | ✅ **CANONICAL** | String | Yes | ArangoDB password | `arangodb` |
+| `ARANGO_DATABASE` | ✅ **CANONICAL** | String | Yes | ArangoDB database name | `knowledge_graph` |
+
+**Note**: *Required where applicable - at least one primary provider key must be present for each lane (Web Search, News, Markets)
 
 ### **Database Configuration**
 | Variable | Status | Type | Required | Description | Example |

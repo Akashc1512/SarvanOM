@@ -68,6 +68,27 @@
 
 ---
 
+## 🚫 **Provider Key Synonyms → Forbidden**
+
+### **Environment Variable Forbidden Synonyms**
+| Forbidden | Canonical | Context | Action |
+|-----------|-----------|---------|--------|
+| `FINNHUB_API_KEY` | `FINNHUB_KEY` | Finnhub provider | Never use API_KEY suffix |
+| `ALPHAVANTAGE_API_KEY` | `ALPHAVANTAGE_KEY` | Alpha Vantage provider | Never use API_KEY suffix |
+| `GUARDIAN_API_KEY` | `GUARDIAN_OPEN_PLATFORM_KEY` | Guardian provider | Use full canonical name |
+| `NEWS_API_KEY` | `NEWSAPI_KEY` | NewsAPI provider | Use NEWSAPI_KEY format |
+| `FMP_KEY` | `FMP_API_KEY` | Financial Modeling Prep | Use FMP_API_KEY format |
+| `YOUTUBE_DATA_API_KEY` | `YOUTUBE_API_KEY` | YouTube provider | Use YOUTUBE_API_KEY format |
+| `BRAVE_API_KEY` | `BRAVE_SEARCH_API_KEY` | Brave Search provider | Use full canonical name |
+| `SERP_API_KEY` | `SERPAPI_KEY` | SerpAPI provider | Use SERPAPI_KEY format |
+| `QDRANT_KEY` | `QDRANT_API_KEY` | Qdrant provider | Use QDRANT_API_KEY format |
+| `MEILI_KEY` | `MEILI_MASTER_KEY` | Meilisearch provider | Use MEILI_MASTER_KEY format |
+| `ARANGO_USER` | `ARANGO_USERNAME` | ArangoDB provider | Use ARANGO_USERNAME format |
+| `ARANGO_PASS` | `ARANGO_PASSWORD` | ArangoDB provider | Use ARANGO_PASSWORD format |
+| `ARANGO_DB` | `ARANGO_DATABASE` | ArangoDB provider | Use ARANGO_DATABASE format |
+
+---
+
 ## 🚫 **Forbidden Synonyms (Replace Everywhere)**
 
 ### **High Priority Replacements**
