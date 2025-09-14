@@ -46,6 +46,59 @@ SarvanOM v2 implements comprehensive dashboards to monitor system health, perfor
 **Refresh Rate**: 1 minute  
 **Alert Thresholds**: Resource utilization and capacity limits
 
+### **6. Hugging Face Free-Tier Dashboard**
+**Purpose**: Monitor HF Hub discovery, shadow evaluations, and inference fallback  
+**Refresh Rate**: 5 minutes  
+**Alert Thresholds**: Discovery failures, evaluation errors, rate limiting
+
+---
+
+## 🤗 **Hugging Face Free-Tier Dashboard**
+
+### **Dashboard Tiles**
+
+#### **HF Candidates Found**
+- **Metric**: `sarvanom_hf_candidates_found`
+- **Description**: Number of HF model candidates discovered
+- **Threshold**: > 0 (should have candidates)
+- **Alert**: < 1 (no candidates found)
+
+#### **Shadow Eval Runs**
+- **Metric**: `sarvanom_shadow_eval_runs_total`
+- **Description**: Total shadow evaluation runs by dataset and model
+- **Threshold**: > 0 (evaluations running)
+- **Alert**: 0 for 24h (no evaluations)
+
+#### **Refiner Latency HF API**
+- **Metric**: `sarvanom_refiner_latency_hf_api_ms`
+- **Description**: Refinement latency via HF Inference API
+- **Threshold**: p95 ≤ 800ms (guided prompt budget)
+- **Alert**: p95 > 800ms (budget exceeded)
+
+#### **HF Inference Requests**
+- **Metric**: `sarvanom_hf_inference_requests_total`
+- **Description**: Total HF inference requests by model and status
+- **Threshold**: Success rate > 90%
+- **Alert**: Success rate < 90%
+
+#### **HF Inference Rate Limited**
+- **Metric**: `sarvanom_hf_inference_rate_limited_total`
+- **Description**: HF inference requests that were rate limited
+- **Threshold**: < 10% of total requests
+- **Alert**: > 20% rate limited
+
+#### **HF Datasets Evaluation**
+- **Metric**: `sarvanom_hf_datasets_eval_total`
+- **Description**: Total HF datasets evaluations by dataset and status
+- **Threshold**: Success rate > 95%
+- **Alert**: Success rate < 95%
+
+#### **HF Evaluation Scores**
+- **Metric**: `sarvanom_hf_eval_scores`
+- **Description**: Evaluation scores by dataset, metric, and model
+- **Threshold**: Average score > 0.7
+- **Alert**: Average score < 0.7
+
 ---
 
 ## 🏥 **System Health Dashboard**

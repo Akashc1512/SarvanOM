@@ -1,6 +1,6 @@
 # Deprecation Notes - SarvanOM v2
 
-**Generated**: 2025-09-14T13:13:36.903599
+**Generated**: 2025-09-14T14:37:17.140873
 **Purpose**: Proposed safe moves to /deprecated/ directory
 
 ## Backend Deprecations
@@ -391,22 +391,10 @@
 **Proposed Move**: `deprecated/backend/services\guided_prompt\main.py`
 **Reason**: endpoint duplication
 
-**File**: `services\analytics\metrics\knowledge_platform_metrics.py`
+**File**: `services\crud\main.py`
 **Symbol**: circular import shared.core.unified_logging
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\metrics\knowledge_platform_metrics.py`
-**Reason**: circular duplication
-
-**File**: `services\analytics\metrics.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\metrics.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\cache\cache_config.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache\cache_config.py`
+**Proposed Move**: `deprecated/backend/services\crud\main.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\services\retrieval_aggregator.py`
@@ -415,34 +403,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\services\retrieval_aggregator.py`
 **Reason**: circular duplication
 
-**File**: `services\crud\main.py`
+**File**: `shared\core\services\enhanced_router_service.py`
 **Symbol**: circular import shared.core.unified_logging
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\crud\main.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\agents\base_agent.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\base_agent.py`
-**Reason**: circular duplication
-
-**File**: `services\analytics\analytics.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\analytics.py`
-**Reason**: circular duplication
-
-**File**: `services\analytics\integration_monitor.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\integration_monitor.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\agents\citation_agent.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
+**Proposed Move**: `deprecated/backend/shared\core\services\enhanced_router_service.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\utilities\timing_utilities.py`
@@ -451,16 +415,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\utilities\timing_utilities.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\agents\knowledge_graph_service.py`
+**File**: `shared\core\services\index_fabric_service.py`
 **Symbol**: circular import shared.core.unified_logging
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\knowledge_graph_service.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\citations_service.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\citations_service.py`
+**Proposed Move**: `deprecated/backend/shared\core\services\index_fabric_service.py`
 **Reason**: circular duplication
 
 **File**: `services\fact_check\routes.py`
@@ -469,94 +427,10 @@
 **Proposed Move**: `deprecated/backend/services\fact_check\routes.py`
 **Reason**: circular duplication
 
-**File**: `services\analytics\health_checks.py`
+**File**: `shared\core\agents\knowledge_graph_service.py`
 **Symbol**: circular import shared.core.unified_logging
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\health_checks.py`
-**Reason**: circular duplication
-
-**File**: `services\monitoring\health.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\monitoring\health.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\index_fabric_service.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\index_fabric_service.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\cache\cache_invalidation.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache\cache_invalidation.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\gateway_app.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\gateway_app.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\agents\factcheck_agent.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\factcheck_agent.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\cache\cached_retrieval_agent.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache\cached_retrieval_agent.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\cache\cache_metrics.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache\cache_metrics.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\agents\retrieval_agent.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\retrieval_agent.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\enhanced_router_service.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\enhanced_router_service.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\utilities\validation_utilities.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\utilities\validation_utilities.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\cache\cache_manager.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache\cache_manager.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\agents\synthesis_agent.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\synthesis_agent.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\main.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\routes.py`
-**Symbol**: circular import shared.core.unified_logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\routes.py`
+**Proposed Move**: `deprecated/backend/shared\core\agents\knowledge_graph_service.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\cache\cached_agents.py`
@@ -565,100 +439,136 @@
 **Proposed Move**: `deprecated/backend/shared\core\cache\cached_agents.py`
 **Reason**: circular duplication
 
+**File**: `shared\core\agents\base_agent.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\base_agent.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\routes.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\routes.py`
+**Reason**: circular duplication
+
+**File**: `services\analytics\metrics.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\analytics\metrics.py`
+**Reason**: circular duplication
+
 **File**: `shared\core\services\startup_warmup_service.py`
 **Symbol**: circular import shared.core.unified_logging
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\services\startup_warmup_service.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\connection_pool.py`
-**Symbol**: circular import dotenv
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\connection_pool.py`
-**Reason**: circular duplication
-
-**File**: `services\analytics\metrics.py`
-**Symbol**: circular import dotenv
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\metrics.py`
-**Reason**: circular duplication
-
-**File**: `services\crud\main.py`
-**Symbol**: circular import dotenv
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\crud\main.py`
-**Reason**: circular duplication
-
-**File**: `services\synthesis\main.py`
-**Symbol**: circular import dotenv
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\synthesis\main.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\agents\base_agent.py`
-**Symbol**: circular import dotenv
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\base_agent.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\providers\gpu_providers.py`
-**Symbol**: circular import dotenv
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\providers\gpu_providers.py`
-**Reason**: circular duplication
-
-**File**: `services\analytics\analytics.py`
-**Symbol**: circular import dotenv
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\analytics.py`
-**Reason**: circular duplication
-
-**File**: `services\analytics\integration_monitor.py`
-**Symbol**: circular import dotenv
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\integration_monitor.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\agents\citation_agent.py`
-**Symbol**: circular import dotenv
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\api\config.py`
-**Symbol**: circular import dotenv
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\api\config.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\huggingface_integration.py`
-**Symbol**: circular import dotenv
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\huggingface_integration.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\base_agent.py`
-**Symbol**: circular import dotenv
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\base_agent.py`
-**Reason**: circular duplication
-
 **File**: `services\analytics\health_checks.py`
-**Symbol**: circular import dotenv
+**Symbol**: circular import shared.core.unified_logging
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\analytics\health_checks.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\vector_database.py`
-**Symbol**: circular import dotenv
+**File**: `shared\core\agents\factcheck_agent.py`
+**Symbol**: circular import shared.core.unified_logging
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\vector_database.py`
+**Proposed Move**: `deprecated/backend/shared\core\agents\factcheck_agent.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\citations_service.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\citations_service.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\cache\cache_metrics.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\cache\cache_metrics.py`
+**Reason**: circular duplication
+
+**File**: `services\monitoring\health.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\monitoring\health.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\agents\citation_agent.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
+**Reason**: circular duplication
+
+**File**: `services\analytics\analytics.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\analytics\analytics.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\cache\cache_manager.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\cache\cache_manager.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\utilities\validation_utilities.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\utilities\validation_utilities.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\agents\synthesis_agent.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\synthesis_agent.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\agents\retrieval_agent.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\retrieval_agent.py`
+**Reason**: circular duplication
+
+**File**: `services\analytics\metrics\knowledge_platform_metrics.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\analytics\metrics\knowledge_platform_metrics.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\gateway_app.py`
-**Symbol**: circular import dotenv
+**Symbol**: circular import shared.core.unified_logging
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\gateway_app.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\main.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\main.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\cache\cached_retrieval_agent.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\cache\cached_retrieval_agent.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\cache\cache_config.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\cache\cache_config.py`
+**Reason**: circular duplication
+
+**File**: `services\analytics\integration_monitor.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\analytics\integration_monitor.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\cache\cache_invalidation.py`
+**Symbol**: circular import shared.core.unified_logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\cache\cache_invalidation.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\unified_logging.py`
@@ -667,10 +577,34 @@
 **Proposed Move**: `deprecated/backend/shared\core\unified_logging.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\agents\retrieval_agent.py`
+**File**: `services\crud\main.py`
 **Symbol**: circular import dotenv
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\retrieval_agent.py`
+**Proposed Move**: `deprecated/backend/services\crud\main.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\base_agent.py`
+**Symbol**: circular import dotenv
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\base_agent.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\agents\base_agent.py`
+**Symbol**: circular import dotenv
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\base_agent.py`
+**Reason**: circular duplication
+
+**File**: `services\analytics\metrics.py`
+**Symbol**: circular import dotenv
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\analytics\metrics.py`
+**Reason**: circular duplication
+
+**File**: `services\synthesis\main.py`
+**Symbol**: circular import dotenv
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\synthesis\main.py`
 **Reason**: circular duplication
 
 **File**: `shared\models\models.py`
@@ -679,10 +613,28 @@
 **Proposed Move**: `deprecated/backend/shared\models\models.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\main.py`
+**File**: `services\gateway\providers\gpu_providers.py`
 **Symbol**: circular import dotenv
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\main.py`
+**Proposed Move**: `deprecated/backend/services\gateway\providers\gpu_providers.py`
+**Reason**: circular duplication
+
+**File**: `services\analytics\health_checks.py`
+**Symbol**: circular import dotenv
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\analytics\health_checks.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\agents\citation_agent.py`
+**Symbol**: circular import dotenv
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
+**Reason**: circular duplication
+
+**File**: `services\analytics\analytics.py`
+**Symbol**: circular import dotenv
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\analytics\analytics.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\real_llm_integration.py`
@@ -691,34 +643,58 @@
 **Proposed Move**: `deprecated/backend/services\gateway\real_llm_integration.py`
 **Reason**: circular duplication
 
+**File**: `services\gateway\huggingface_integration.py`
+**Symbol**: circular import dotenv
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\huggingface_integration.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\connection_pool.py`
+**Symbol**: circular import dotenv
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\connection_pool.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\vector_database.py`
+**Symbol**: circular import dotenv
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\vector_database.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\agents\retrieval_agent.py`
+**Symbol**: circular import dotenv
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\retrieval_agent.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\gateway_app.py`
+**Symbol**: circular import dotenv
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\gateway_app.py`
+**Reason**: circular duplication
+
 **File**: `services\gateway\analytics_collector.py`
 **Symbol**: circular import dotenv
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\analytics_collector.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\health_checker.py`
-**Symbol**: circular import shared.core.api.config
+**File**: `services\gateway\main.py`
+**Symbol**: circular import dotenv
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\health_checker.py`
+**Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\connection_pool.py`
-**Symbol**: circular import shared.core.api.config
+**File**: `shared\core\api\config.py`
+**Symbol**: circular import dotenv
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\connection_pool.py`
+**Proposed Move**: `deprecated/backend/shared\core\api\config.py`
 **Reason**: circular duplication
 
 **File**: `services\analytics\integration_monitor.py`
-**Symbol**: circular import shared.core.api.config
+**Symbol**: circular import dotenv
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\analytics\integration_monitor.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\logging_config.py`
-**Symbol**: circular import shared.core.api.config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\logging_config.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\agent_pattern.py`
@@ -727,10 +703,16 @@
 **Proposed Move**: `deprecated/backend/shared\core\agent_pattern.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\performance.py`
+**File**: `services\analytics\analytics.py`
 **Symbol**: circular import shared.core.api.config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\performance.py`
+**Proposed Move**: `deprecated/backend/services\analytics\analytics.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\health_checker.py`
+**Symbol**: circular import shared.core.api.config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\health_checker.py`
 **Reason**: circular duplication
 
 **File**: `services\analytics\health_checks.py`
@@ -739,34 +721,34 @@
 **Proposed Move**: `deprecated/backend/services\analytics\health_checks.py`
 **Reason**: circular duplication
 
-**File**: `services\analytics\analytics.py`
+**File**: `shared\core\connection_pool.py`
 **Symbol**: circular import shared.core.api.config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\analytics.py`
+**Proposed Move**: `deprecated/backend/shared\core\connection_pool.py`
 **Reason**: circular duplication
 
-**File**: `services\analytics\feedback_storage.py`
-**Symbol**: circular import abc
+**File**: `shared\core\logging_config.py`
+**Symbol**: circular import shared.core.api.config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\feedback_storage.py`
+**Proposed Move**: `deprecated/backend/shared\core\logging_config.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\error_handler.py`
-**Symbol**: circular import abc
+**File**: `services\analytics\integration_monitor.py`
+**Symbol**: circular import shared.core.api.config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\error_handler.py`
+**Proposed Move**: `deprecated/backend/services\analytics\integration_monitor.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\factory.py`
-**Symbol**: circular import abc
+**File**: `shared\core\performance.py`
+**Symbol**: circular import shared.core.api.config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\factory.py`
+**Proposed Move**: `deprecated/backend/shared\core\performance.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\observer.py`
+**File**: `shared\core\agent_pattern.py`
 **Symbol**: circular import abc
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\observer.py`
+**Proposed Move**: `deprecated/backend/shared\core\agent_pattern.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\cache\cache_manager.py`
@@ -775,16 +757,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\cache\cache_manager.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\interfaces.py`
+**File**: `shared\core\factory.py`
 **Symbol**: circular import abc
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\interfaces.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\decorator.py`
-**Symbol**: circular import abc
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\decorator.py`
+**Proposed Move**: `deprecated/backend/shared\core\factory.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\agents\base_agent.py`
@@ -799,6 +775,30 @@
 **Proposed Move**: `deprecated/backend/shared\core\repository.py`
 **Reason**: circular duplication
 
+**File**: `shared\core\interfaces.py`
+**Symbol**: circular import abc
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\interfaces.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\error_handler.py`
+**Symbol**: circular import abc
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\error_handler.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\observer.py`
+**Symbol**: circular import abc
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\observer.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\base_agent.py`
+**Symbol**: circular import abc
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\base_agent.py`
+**Reason**: circular duplication
+
 **File**: `shared\core\database\repository.py`
 **Symbol**: circular import abc
 **Duplicate Of**: `circular dependency`
@@ -811,370 +811,28 @@
 **Proposed Move**: `deprecated/backend/shared\contracts\service_contracts.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\agent_pattern.py`
-**Symbol**: circular import abc
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agent_pattern.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\cache.py`
-**Symbol**: circular import abc
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\base_agent.py`
-**Symbol**: circular import abc
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\base_agent.py`
-**Reason**: circular duplication
-
 **File**: `shared\vectorstores\vector_store_service.py`
 **Symbol**: circular import abc
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\vectorstores\vector_store_service.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\performance_optimizer.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\performance_optimizer.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\workflow_manager.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\workflow_manager.py`
-**Reason**: circular duplication
-
-**File**: `services\feeds\providers\stooq_provider.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\feeds\providers\stooq_provider.py`
-**Reason**: circular duplication
-
 **File**: `services\analytics\feedback_storage.py`
-**Symbol**: circular import structlog
+**Symbol**: circular import abc
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\analytics\feedback_storage.py`
 **Reason**: circular duplication
 
-**File**: `services\security\main.py`
-**Symbol**: circular import structlog
+**File**: `shared\core\decorator.py`
+**Symbol**: circular import abc
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\security\main.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\database\connection.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\database\connection.py`
-**Reason**: circular duplication
-
-**File**: `services\feeds\providers\guardian_provider.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\feeds\providers\guardian_provider.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\advanced_citations_service.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\advanced_citations_service.py`
-**Reason**: circular duplication
-
-**File**: `services\model_registry\config.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\config.py`
-**Reason**: circular duplication
-
-**File**: `services\security\security_middleware.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\security\security_middleware.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\agent_pattern.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agent_pattern.py`
+**Proposed Move**: `deprecated/backend/shared\core\decorator.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\cache.py`
-**Symbol**: circular import structlog
+**Symbol**: circular import abc
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\cache.py`
-**Reason**: circular duplication
-
-**File**: `services\feeds\providers\hn_algolia_provider.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\feeds\providers\hn_algolia_provider.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\analytics_dashboard_service.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\analytics_dashboard_service.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\routers\health_router.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\routers\health_router.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\api\config.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\api\config.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\error_handler.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\error_handler.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\migrations.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\migrations.py`
-**Reason**: circular duplication
-
-**File**: `services\observability\tracing_middleware.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\observability\tracing_middleware.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\prompt_templates.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\prompt_templates.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\secure_auth.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\secure_auth.py`
-**Reason**: circular duplication
-
-**File**: `services\guided_prompt\config.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\guided_prompt\config.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\database\repository.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\database\repository.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\cost_aware_llm_router.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\cost_aware_llm_router.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\meilisearch_service.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\meilisearch_service.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\vector_singleton_service.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\vector_singleton_service.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\auth\password_hasher.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\auth\password_hasher.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\llm_cost_optimizer.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\llm_cost_optimizer.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\socket_io_manager.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\socket_io_manager.py`
-**Reason**: circular duplication
-
-**File**: `services\feeds\config.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\feeds\config.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\index_fabric_service.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\index_fabric_service.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\system_health.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\system_health.py`
-**Reason**: circular duplication
-
-**File**: `shared\observability\fallback_metrics.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\observability\fallback_metrics.py`
-**Reason**: circular duplication
-
-**File**: `services\analytics\monitoring.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\monitoring.py`
-**Reason**: circular duplication
-
-**File**: `services\auth\routes.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\auth\routes.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\config\central_config.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\config\central_config.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\multi_lane_orchestrator.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\multi_lane_orchestrator.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\error_handling.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\error_handling.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\config\provider_config.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\config\provider_config.py`
-**Reason**: circular duplication
-
-**File**: `shared\repositories\database\user_repository.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\repositories\database\user_repository.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\performance.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\performance.py`
-**Reason**: circular duplication
-
-**File**: `services\model_router\config.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_router\config.py`
-**Reason**: circular duplication
-
-**File**: `services\cicd\main.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\cicd\main.py`
-**Reason**: circular duplication
-
-**File**: `services\feeds\providers\sec_edgar_provider.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\feeds\providers\sec_edgar_provider.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\input_validation.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\input_validation.py`
-**Reason**: circular duplication
-
-**File**: `services\observability\metrics_utils.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\observability\metrics_utils.py`
-**Reason**: circular duplication
-
-**File**: `shared\models\models.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\models\models.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\middleware\rate_limiter.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\middleware\rate_limiter.py`
-**Reason**: circular duplication
-
-**File**: `shared\ci\provider_key_validator.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\ci\provider_key_validator.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\logging_config.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\logging_config.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\enhanced_vector_optimizer.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\enhanced_vector_optimizer.py`
-**Reason**: circular duplication
-
-**File**: `shared\ci\ci_gates.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\ci\ci_gates.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\datastores_optimizer.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\datastores_optimizer.py`
-**Reason**: circular duplication
-
-**File**: `services\observability\main.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\observability\main.py`
-**Reason**: circular duplication
-
-**File**: `services\retrieval\config.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\retrieval\config.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\multilanguage_service.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\multilanguage_service.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\arangodb_service.py`
-**Symbol**: circular import structlog
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\arangodb_service.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\services\performance_monitor.py`
@@ -1183,22 +841,388 @@
 **Proposed Move**: `deprecated/backend/shared\core\services\performance_monitor.py`
 **Reason**: circular duplication
 
+**File**: `shared\core\services\analytics_dashboard_service.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\analytics_dashboard_service.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\datastores_optimizer.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\datastores_optimizer.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\performance_optimizer.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\performance_optimizer.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\error_handler.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\error_handler.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\error_handling.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\error_handling.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\config\central_config.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\config\central_config.py`
+**Reason**: circular duplication
+
+**File**: `services\observability\metrics_utils.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\observability\metrics_utils.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\arangodb_service.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\arangodb_service.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\config\provider_config.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\config\provider_config.py`
+**Reason**: circular duplication
+
+**File**: `services\cicd\main.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\cicd\main.py`
+**Reason**: circular duplication
+
+**File**: `services\model_registry\config.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_registry\config.py`
+**Reason**: circular duplication
+
+**File**: `services\feeds\providers\stooq_provider.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\feeds\providers\stooq_provider.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\logging_config.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\logging_config.py`
+**Reason**: circular duplication
+
+**File**: `services\security\security_middleware.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\security\security_middleware.py`
+**Reason**: circular duplication
+
+**File**: `services\guided_prompt\config.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\guided_prompt\config.py`
+**Reason**: circular duplication
+
+**File**: `services\analytics\feedback_storage.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\analytics\feedback_storage.py`
+**Reason**: circular duplication
+
+**File**: `services\auth\routes.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\auth\routes.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\enhanced_vector_optimizer.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\enhanced_vector_optimizer.py`
+**Reason**: circular duplication
+
 **File**: `services\feeds\providers\gdelt_provider.py`
 **Symbol**: circular import structlog
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\feeds\providers\gdelt_provider.py`
 **Reason**: circular duplication
 
-**File**: `services\analytics\metrics\knowledge_platform_metrics.py`
-**Symbol**: circular import prometheus_client
+**File**: `shared\core\agent_pattern.py`
+**Symbol**: circular import structlog
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\metrics\knowledge_platform_metrics.py`
+**Proposed Move**: `deprecated/backend/shared\core\agent_pattern.py`
 **Reason**: circular duplication
 
-**File**: `services\analytics\metrics.py`
+**File**: `services\retrieval\config.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\retrieval\config.py`
+**Reason**: circular duplication
+
+**File**: `shared\models\models.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\models\models.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\secure_auth.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\secure_auth.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\meilisearch_service.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\meilisearch_service.py`
+**Reason**: circular duplication
+
+**File**: `services\feeds\providers\guardian_provider.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\feeds\providers\guardian_provider.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\database\connection.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\database\connection.py`
+**Reason**: circular duplication
+
+**File**: `shared\ci\provider_key_validator.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\ci\provider_key_validator.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\index_fabric_service.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\index_fabric_service.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\workflow_manager.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\workflow_manager.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\performance.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\performance.py`
+**Reason**: circular duplication
+
+**File**: `shared\observability\fallback_metrics.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\observability\fallback_metrics.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\input_validation.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\input_validation.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\cache.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\cache.py`
+**Reason**: circular duplication
+
+**File**: `services\observability\tracing_middleware.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\observability\tracing_middleware.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\migrations.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\migrations.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\multilanguage_service.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\multilanguage_service.py`
+**Reason**: circular duplication
+
+**File**: `services\feeds\providers\hn_algolia_provider.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\feeds\providers\hn_algolia_provider.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\cost_aware_llm_router.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\cost_aware_llm_router.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\socket_io_manager.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\socket_io_manager.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\database\repository.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\database\repository.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\advanced_citations_service.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\advanced_citations_service.py`
+**Reason**: circular duplication
+
+**File**: `services\feeds\providers\sec_edgar_provider.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\feeds\providers\sec_edgar_provider.py`
+**Reason**: circular duplication
+
+**File**: `services\analytics\monitoring.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\analytics\monitoring.py`
+**Reason**: circular duplication
+
+**File**: `services\model_router\config.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_router\config.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\system_health.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\system_health.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\multi_lane_orchestrator.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\multi_lane_orchestrator.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\llm_cost_optimizer.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\llm_cost_optimizer.py`
+**Reason**: circular duplication
+
+**File**: `shared\repositories\database\user_repository.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\repositories\database\user_repository.py`
+**Reason**: circular duplication
+
+**File**: `shared\ci\ci_gates.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\ci\ci_gates.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\routers\health_router.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\routers\health_router.py`
+**Reason**: circular duplication
+
+**File**: `services\observability\main.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\observability\main.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\auth\password_hasher.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\auth\password_hasher.py`
+**Reason**: circular duplication
+
+**File**: `services\security\main.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\security\main.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\api\config.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\api\config.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\vector_singleton_service.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\vector_singleton_service.py`
+**Reason**: circular duplication
+
+**File**: `services\feeds\config.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\feeds\config.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\middleware\rate_limiter.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\middleware\rate_limiter.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\prompt_templates.py`
+**Symbol**: circular import structlog
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\prompt_templates.py`
+**Reason**: circular duplication
+
+**File**: `services\guided_prompt\main.py`
 **Symbol**: circular import prometheus_client
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\metrics.py`
+**Proposed Move**: `deprecated/backend/services\guided_prompt\main.py`
+**Reason**: circular duplication
+
+**File**: `services\crud\main.py`
+**Symbol**: circular import prometheus_client
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\crud\main.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\api\monitoring.py`
+**Symbol**: circular import prometheus_client
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\api\monitoring.py`
+**Reason**: circular duplication
+
+**File**: `services\retrieval\orchestrator.py`
+**Symbol**: circular import prometheus_client
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\retrieval\orchestrator.py`
+**Reason**: circular duplication
+
+**File**: `services\cicd\main.py`
+**Symbol**: circular import prometheus_client
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\cicd\main.py`
+**Reason**: circular duplication
+
+**File**: `services\auto_upgrade\main.py`
+**Symbol**: circular import prometheus_client
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\auto_upgrade\main.py`
 **Reason**: circular duplication
 
 **File**: `services\analytics\feedback_storage.py`
@@ -1213,16 +1237,22 @@
 **Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
 **Reason**: circular duplication
 
-**File**: `services\security\main.py`
+**File**: `shared\core\metrics\metrics_service.py`
 **Symbol**: circular import prometheus_client
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\security\main.py`
+**Proposed Move**: `deprecated/backend/shared\core\metrics\metrics_service.py`
 **Reason**: circular duplication
 
-**File**: `services\crud\main.py`
+**File**: `services\analytics\metrics.py`
 **Symbol**: circular import prometheus_client
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\crud\main.py`
+**Proposed Move**: `deprecated/backend/services\analytics\metrics.py`
+**Reason**: circular duplication
+
+**File**: `services\retrieval\main.py`
+**Symbol**: circular import prometheus_client
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\retrieval\main.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\app_factory.py`
@@ -1237,22 +1267,10 @@
 **Proposed Move**: `deprecated/backend/services\model_registry\feeds_router.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\metrics\metrics_service.py`
+**File**: `shared\core\performance.py`
 **Symbol**: circular import prometheus_client
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\metrics\metrics_service.py`
-**Reason**: circular duplication
-
-**File**: `services\guided_prompt\main.py`
-**Symbol**: circular import prometheus_client
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\guided_prompt\main.py`
-**Reason**: circular duplication
-
-**File**: `services\model_router\main.py`
-**Symbol**: circular import prometheus_client
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_router\main.py`
+**Proposed Move**: `deprecated/backend/shared\core\performance.py`
 **Reason**: circular duplication
 
 **File**: `shared\observability\fallback_metrics.py`
@@ -1261,46 +1279,10 @@
 **Proposed Move**: `deprecated/backend/shared\observability\fallback_metrics.py`
 **Reason**: circular duplication
 
-**File**: `services\analytics\monitoring.py`
+**File**: `services\model_registry\main.py`
 **Symbol**: circular import prometheus_client
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\monitoring.py`
-**Reason**: circular duplication
-
-**File**: `services\retrieval\orchestrator.py`
-**Symbol**: circular import prometheus_client
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\retrieval\orchestrator.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\api\monitoring.py`
-**Symbol**: circular import prometheus_client
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\api\monitoring.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\performance.py`
-**Symbol**: circular import prometheus_client
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\performance.py`
-**Reason**: circular duplication
-
-**File**: `services\cicd\main.py`
-**Symbol**: circular import prometheus_client
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\cicd\main.py`
-**Reason**: circular duplication
-
-**File**: `services\auto_upgrade\main.py`
-**Symbol**: circular import prometheus_client
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\auto_upgrade\main.py`
-**Reason**: circular duplication
-
-**File**: `services\feeds\main.py`
-**Symbol**: circular import prometheus_client
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\feeds\main.py`
+**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
 **Reason**: circular duplication
 
 **File**: `services\model_registry\routing_router.py`
@@ -1309,28 +1291,16 @@
 **Proposed Move**: `deprecated/backend/services\model_registry\routing_router.py`
 **Reason**: circular duplication
 
+**File**: `services\analytics\monitoring.py`
+**Symbol**: circular import prometheus_client
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\analytics\monitoring.py`
+**Reason**: circular duplication
+
 **File**: `services\model_registry\search_router.py`
 **Symbol**: circular import prometheus_client
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\model_registry\search_router.py`
-**Reason**: circular duplication
-
-**File**: `services\model_registry\main.py`
-**Symbol**: circular import prometheus_client
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
-**Reason**: circular duplication
-
-**File**: `services\retrieval\main.py`
-**Symbol**: circular import prometheus_client
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\retrieval\main.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\main.py`
-**Symbol**: circular import prometheus_client
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
 
 **File**: `services\observability\main.py`
@@ -1339,52 +1309,40 @@
 **Proposed Move**: `deprecated/backend/services\observability\main.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\health_checker.py`
-**Symbol**: circular import aiohttp
+**File**: `services\analytics\metrics\knowledge_platform_metrics.py`
+**Symbol**: circular import prometheus_client
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\health_checker.py`
+**Proposed Move**: `deprecated/backend/services\analytics\metrics\knowledge_platform_metrics.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\connection_pool.py`
-**Symbol**: circular import aiohttp
+**File**: `services\model_router\main.py`
+**Symbol**: circular import prometheus_client
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\connection_pool.py`
+**Proposed Move**: `deprecated/backend/services\model_router\main.py`
 **Reason**: circular duplication
 
-**File**: `services\analytics\integration_monitor.py`
-**Symbol**: circular import aiohttp
+**File**: `services\security\main.py`
+**Symbol**: circular import prometheus_client
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\integration_monitor.py`
+**Proposed Move**: `deprecated/backend/services\security\main.py`
 **Reason**: circular duplication
 
-**File**: `services\retrieval\youtube_retrieval.py`
-**Symbol**: circular import aiohttp
+**File**: `services\gateway\main.py`
+**Symbol**: circular import prometheus_client
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\retrieval\youtube_retrieval.py`
+**Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\services\retrieval_aggregator.py`
-**Symbol**: circular import aiohttp
+**File**: `services\feeds\main.py`
+**Symbol**: circular import prometheus_client
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\retrieval_aggregator.py`
+**Proposed Move**: `deprecated/backend/services\feeds\main.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\retry_logic.py`
+**File**: `shared\core\graceful_degradation.py`
 **Symbol**: circular import aiohttp
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\retry_logic.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\real_llm_integration.py`
-**Symbol**: circular import aiohttp
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\real_llm_integration.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\providers\gpu_providers.py`
-**Symbol**: circular import aiohttp
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\providers\gpu_providers.py`
+**Proposed Move**: `deprecated/backend/shared\core\graceful_degradation.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\providers\ollama_client.py`
@@ -1393,10 +1351,34 @@
 **Proposed Move**: `deprecated/backend/services\gateway\providers\ollama_client.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\graceful_degradation.py`
+**File**: `services\gateway\real_llm_integration.py`
 **Symbol**: circular import aiohttp
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\graceful_degradation.py`
+**Proposed Move**: `deprecated/backend/services\gateway\real_llm_integration.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\retrieval_aggregator.py`
+**Symbol**: circular import aiohttp
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\retrieval_aggregator.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\providers\gpu_providers.py`
+**Symbol**: circular import aiohttp
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\providers\gpu_providers.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\health_checker.py`
+**Symbol**: circular import aiohttp
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\health_checker.py`
+**Reason**: circular duplication
+
+**File**: `services\retrieval\youtube_retrieval.py`
+**Symbol**: circular import aiohttp
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\retrieval\youtube_retrieval.py`
 **Reason**: circular duplication
 
 **File**: `services\retrieval\free_tier.py`
@@ -1411,64 +1393,22 @@
 **Proposed Move**: `deprecated/backend/services\analytics\health_checks.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\health_checker.py`
-**Symbol**: circular import shared.core.config.central_config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\health_checker.py`
-**Reason**: circular duplication
-
 **File**: `shared\core\connection_pool.py`
-**Symbol**: circular import shared.core.config.central_config
+**Symbol**: circular import aiohttp
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\connection_pool.py`
 **Reason**: circular duplication
 
-**File**: `services\knowledge_graph\main.py`
-**Symbol**: circular import shared.core.config.central_config
+**File**: `services\analytics\integration_monitor.py`
+**Symbol**: circular import aiohttp
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
+**Proposed Move**: `deprecated/backend/services\analytics\integration_monitor.py`
 **Reason**: circular duplication
 
-**File**: `services\security\main.py`
-**Symbol**: circular import shared.core.config.central_config
+**File**: `shared\core\retry_logic.py`
+**Symbol**: circular import aiohttp
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\security\main.py`
-**Reason**: circular duplication
-
-**File**: `services\crud\main.py`
-**Symbol**: circular import shared.core.config.central_config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\crud\main.py`
-**Reason**: circular duplication
-
-**File**: `services\synthesis\main.py`
-**Symbol**: circular import shared.core.config.central_config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\synthesis\main.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\database\connection.py`
-**Symbol**: circular import shared.core.config.central_config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\database\connection.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\app_factory.py`
-**Symbol**: circular import shared.core.config.central_config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\app_factory.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\cache.py`
-**Symbol**: circular import shared.core.config.central_config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\memory_manager.py`
-**Symbol**: circular import shared.core.config.central_config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\memory_manager.py`
+**Proposed Move**: `deprecated/backend/shared\core\retry_logic.py`
 **Reason**: circular duplication
 
 **File**: `services\guided_prompt\main.py`
@@ -1477,40 +1417,22 @@
 **Proposed Move**: `deprecated/backend/services\guided_prompt\main.py`
 **Reason**: circular duplication
 
-**File**: `services\analytics\integration_monitor.py`
+**File**: `services\crud\main.py`
 **Symbol**: circular import shared.core.config.central_config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\integration_monitor.py`
+**Proposed Move**: `deprecated/backend/services\crud\main.py`
 **Reason**: circular duplication
 
-**File**: `services\model_router\main.py`
+**File**: `shared\core\health_checker.py`
 **Symbol**: circular import shared.core.config.central_config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_router\main.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\advanced_features.py`
-**Symbol**: circular import shared.core.config.central_config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\advanced_features.py`
+**Proposed Move**: `deprecated/backend/shared\core\health_checker.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\base_agent.py`
 **Symbol**: circular import shared.core.config.central_config
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\base_agent.py`
-**Reason**: circular duplication
-
-**File**: `services\analytics\health_checks.py`
-**Symbol**: circular import shared.core.config.central_config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\health_checks.py`
-**Reason**: circular duplication
-
-**File**: `services\auth\routes.py`
-**Symbol**: circular import shared.core.config.central_config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\auth\routes.py`
 **Reason**: circular duplication
 
 **File**: `services\cicd\main.py`
@@ -1525,22 +1447,22 @@
 **Proposed Move**: `deprecated/backend/services\auto_upgrade\main.py`
 **Reason**: circular duplication
 
-**File**: `services\feeds\main.py`
+**File**: `services\knowledge_graph\main.py`
 **Symbol**: circular import shared.core.config.central_config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\feeds\main.py`
+**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
 **Reason**: circular duplication
 
-**File**: `services\model_registry\main.py`
+**File**: `services\auth\routes.py`
 **Symbol**: circular import shared.core.config.central_config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
+**Proposed Move**: `deprecated/backend/services\auth\routes.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\middleware\rate_limiter.py`
+**File**: `shared\core\memory_manager.py`
 **Symbol**: circular import shared.core.config.central_config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\middleware\rate_limiter.py`
+**Proposed Move**: `deprecated/backend/shared\core\memory_manager.py`
 **Reason**: circular duplication
 
 **File**: `services\retrieval\main.py`
@@ -1549,10 +1471,46 @@
 **Proposed Move**: `deprecated/backend/services\retrieval\main.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\main.py`
+**File**: `services\synthesis\main.py`
 **Symbol**: circular import shared.core.config.central_config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\main.py`
+**Proposed Move**: `deprecated/backend/services\synthesis\main.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\app_factory.py`
+**Symbol**: circular import shared.core.config.central_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\app_factory.py`
+**Reason**: circular duplication
+
+**File**: `services\analytics\health_checks.py`
+**Symbol**: circular import shared.core.config.central_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\analytics\health_checks.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\database\connection.py`
+**Symbol**: circular import shared.core.config.central_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\database\connection.py`
+**Reason**: circular duplication
+
+**File**: `services\model_registry\main.py`
+**Symbol**: circular import shared.core.config.central_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\cache.py`
+**Symbol**: circular import shared.core.config.central_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\cache.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\connection_pool.py`
+**Symbol**: circular import shared.core.config.central_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\connection_pool.py`
 **Reason**: circular duplication
 
 **File**: `services\observability\main.py`
@@ -1561,10 +1519,58 @@
 **Proposed Move**: `deprecated/backend/services\observability\main.py`
 **Reason**: circular duplication
 
+**File**: `services\model_router\main.py`
+**Symbol**: circular import shared.core.config.central_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_router\main.py`
+**Reason**: circular duplication
+
+**File**: `services\security\main.py`
+**Symbol**: circular import shared.core.config.central_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\security\main.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\main.py`
+**Symbol**: circular import shared.core.config.central_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\main.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\advanced_features.py`
+**Symbol**: circular import shared.core.config.central_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\advanced_features.py`
+**Reason**: circular duplication
+
+**File**: `services\analytics\integration_monitor.py`
+**Symbol**: circular import shared.core.config.central_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\analytics\integration_monitor.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\middleware\rate_limiter.py`
+**Symbol**: circular import shared.core.config.central_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\middleware\rate_limiter.py`
+**Reason**: circular duplication
+
+**File**: `services\feeds\main.py`
+**Symbol**: circular import shared.core.config.central_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\feeds\main.py`
+**Reason**: circular duplication
+
 **File**: `shared\core\agents\factcheck_agent.py`
 **Symbol**: circular import shared.core.llm_client_v3
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\agents\factcheck_agent.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\agents\synthesis_agent.py`
+**Symbol**: circular import shared.core.llm_client_v3
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\synthesis_agent.py`
 **Reason**: circular duplication
 
 **File**: `services\analytics\integration_monitor.py`
@@ -1573,10 +1579,10 @@
 **Proposed Move**: `deprecated/backend/services\analytics\integration_monitor.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\agents\synthesis_agent.py`
-**Symbol**: circular import shared.core.llm_client_v3
+**File**: `shared\core\agents\base_agent.py`
+**Symbol**: circular import aioredis
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\synthesis_agent.py`
+**Proposed Move**: `deprecated/backend/shared\core\agents\base_agent.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\base_agent.py`
@@ -1589,12 +1595,6 @@
 **Symbol**: circular import aioredis
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\analytics\integration_monitor.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\agents\base_agent.py`
-**Symbol**: circular import aioredis
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\base_agent.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\vector_database.py`
@@ -1609,46 +1609,16 @@
 **Proposed Move**: `deprecated/backend/services\analytics\integration_monitor.py`
 **Reason**: circular duplication
 
+**File**: `shared\core\services\analytics_dashboard_service.py`
+**Symbol**: circular import psutil
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\analytics_dashboard_service.py`
+**Reason**: circular duplication
+
 **File**: `shared\core\performance_optimizer.py`
 **Symbol**: circular import psutil
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\performance_optimizer.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\system_health.py`
-**Symbol**: circular import psutil
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\system_health.py`
-**Reason**: circular duplication
-
-**File**: `services\analytics\monitoring.py`
-**Symbol**: circular import psutil
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\monitoring.py`
-**Reason**: circular duplication
-
-**File**: `services\analytics\metrics.py`
-**Symbol**: circular import psutil
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\metrics.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\metrics_tracer.py`
-**Symbol**: circular import psutil
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\metrics_tracer.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\api\monitoring.py`
-**Symbol**: circular import psutil
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\api\monitoring.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\performance.py`
-**Symbol**: circular import psutil
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\performance.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\routes.py`
@@ -1657,10 +1627,40 @@
 **Proposed Move**: `deprecated/backend/services\gateway\routes.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\services\analytics_dashboard_service.py`
+**File**: `services\analytics\metrics.py`
 **Symbol**: circular import psutil
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\analytics_dashboard_service.py`
+**Proposed Move**: `deprecated/backend/services\analytics\metrics.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\api\monitoring.py`
+**Symbol**: circular import psutil
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\api\monitoring.py`
+**Reason**: circular duplication
+
+**File**: `services\analytics\monitoring.py`
+**Symbol**: circular import psutil
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\analytics\monitoring.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\system_health.py`
+**Symbol**: circular import psutil
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\system_health.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\metrics_tracer.py`
+**Symbol**: circular import psutil
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\metrics_tracer.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\performance.py`
+**Symbol**: circular import psutil
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\performance.py`
 **Reason**: circular duplication
 
 **File**: `services\monitoring\health.py`
@@ -1669,16 +1669,70 @@
 **Proposed Move**: `deprecated/backend/services\monitoring\health.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\connection_pool.py`
+**File**: `shared\core\unified_logging.py`
 **Symbol**: circular import contextlib
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\connection_pool.py`
+**Proposed Move**: `deprecated/backend/shared\core\unified_logging.py`
 **Reason**: circular duplication
 
 **File**: `services\crud\main.py`
 **Symbol**: circular import contextlib
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\crud\main.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\error_handler.py`
+**Symbol**: circular import contextlib
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\error_handler.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\arangodb_service.py`
+**Symbol**: circular import contextlib
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\arangodb_service.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\logging_config.py`
+**Symbol**: circular import contextlib
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\logging_config.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\memory_manager_postgres.py`
+**Symbol**: circular import contextlib
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\memory_manager_postgres.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\metrics_tracer.py`
+**Symbol**: circular import contextlib
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\metrics_tracer.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\cache_manager_postgres.py`
+**Symbol**: circular import contextlib
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\cache_manager_postgres.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\database.py`
+**Symbol**: circular import contextlib
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\database.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\app_factory.py`
+**Symbol**: circular import contextlib
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\app_factory.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\sla_budget_enforcer.py`
+**Symbol**: circular import contextlib
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\sla_budget_enforcer.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\database\connection.py`
@@ -1693,10 +1747,10 @@
 **Proposed Move**: `deprecated/backend/shared\vectorstores\connection_manager.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\app_factory.py`
+**File**: `shared\core\performance.py`
 **Symbol**: circular import contextlib
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\app_factory.py`
+**Proposed Move**: `deprecated/backend/shared\core\performance.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\cache.py`
@@ -1705,28 +1759,22 @@
 **Proposed Move**: `deprecated/backend/shared\core\cache.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\sla_budget_enforcer.py`
-**Symbol**: circular import contextlib
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\sla_budget_enforcer.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\error_handler.py`
-**Symbol**: circular import contextlib
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\error_handler.py`
-**Reason**: circular duplication
-
 **File**: `shared\core\database\repository.py`
 **Symbol**: circular import contextlib
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\database\repository.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\database.py`
+**File**: `services\analytics\monitoring.py`
 **Symbol**: circular import contextlib
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\database.py`
+**Proposed Move**: `deprecated/backend/services\analytics\monitoring.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\connection_pool.py`
+**Symbol**: circular import contextlib
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\connection_pool.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\graceful_degradation.py`
@@ -1735,40 +1783,16 @@
 **Proposed Move**: `deprecated/backend/shared\core\graceful_degradation.py`
 **Reason**: circular duplication
 
-**File**: `services\analytics\monitoring.py`
-**Symbol**: circular import contextlib
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\monitoring.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\metrics_tracer.py`
-**Symbol**: circular import contextlib
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\metrics_tracer.py`
-**Reason**: circular duplication
-
 **File**: `services\gateway\gateway_app.py`
 **Symbol**: circular import contextlib
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\gateway_app.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\unified_logging.py`
+**File**: `services\gateway\main.py`
 **Symbol**: circular import contextlib
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\unified_logging.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\performance.py`
-**Symbol**: circular import contextlib
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\performance.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\memory_manager_postgres.py`
-**Symbol**: circular import contextlib
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\memory_manager_postgres.py`
+**Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\middleware\rate_limiter.py`
@@ -1777,64 +1801,16 @@
 **Proposed Move**: `deprecated/backend/shared\core\middleware\rate_limiter.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\logging_config.py`
-**Symbol**: circular import contextlib
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\logging_config.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\main.py`
-**Symbol**: circular import contextlib
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\cache_manager_postgres.py`
-**Symbol**: circular import contextlib
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache_manager_postgres.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\arangodb_service.py`
-**Symbol**: circular import contextlib
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\arangodb_service.py`
-**Reason**: circular duplication
-
-**File**: `services\model_registry\main.py`
-**Symbol**: circular import opentelemetry
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
-**Reason**: circular duplication
-
-**File**: `services\analytics\monitoring.py`
-**Symbol**: circular import opentelemetry
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\analytics\monitoring.py`
-**Reason**: circular duplication
-
 **File**: `services\guided_prompt\main.py`
 **Symbol**: circular import opentelemetry
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\guided_prompt\main.py`
 **Reason**: circular duplication
 
-**File**: `services\knowledge_graph\main.py`
+**File**: `services\observability\main.py`
 **Symbol**: circular import opentelemetry
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
-**Reason**: circular duplication
-
-**File**: `services\security\main.py`
-**Symbol**: circular import opentelemetry
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\security\main.py`
-**Reason**: circular duplication
-
-**File**: `services\model_router\main.py`
-**Symbol**: circular import opentelemetry
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_router\main.py`
+**Proposed Move**: `deprecated/backend/services\observability\main.py`
 **Reason**: circular duplication
 
 **File**: `services\crud\main.py`
@@ -1843,10 +1819,22 @@
 **Proposed Move**: `deprecated/backend/services\crud\main.py`
 **Reason**: circular duplication
 
+**File**: `services\model_router\main.py`
+**Symbol**: circular import opentelemetry
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_router\main.py`
+**Reason**: circular duplication
+
 **File**: `services\retrieval\main.py`
 **Symbol**: circular import opentelemetry
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\retrieval\main.py`
+**Reason**: circular duplication
+
+**File**: `services\security\main.py`
+**Symbol**: circular import opentelemetry
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\security\main.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\main.py`
@@ -1855,10 +1843,10 @@
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
 
-**File**: `services\observability\main.py`
+**File**: `services\analytics\monitoring.py`
 **Symbol**: circular import opentelemetry
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\observability\main.py`
+**Proposed Move**: `deprecated/backend/services\analytics\monitoring.py`
 **Reason**: circular duplication
 
 **File**: `services\cicd\main.py`
@@ -1873,40 +1861,28 @@
 **Proposed Move**: `deprecated/backend/services\auto_upgrade\main.py`
 **Reason**: circular duplication
 
+**File**: `services\knowledge_graph\main.py`
+**Symbol**: circular import opentelemetry
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
+**Reason**: circular duplication
+
+**File**: `services\model_registry\main.py`
+**Symbol**: circular import opentelemetry
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
+**Reason**: circular duplication
+
 **File**: `services\feeds\main.py`
 **Symbol**: circular import opentelemetry
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\feeds\main.py`
 **Reason**: circular duplication
 
-**File**: `services\fact_check\main.py`
-**Symbol**: circular import __future__
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\fact_check\main.py`
-**Reason**: circular duplication
-
-**File**: `shared\vectorstores\vector_store_service.py`
-**Symbol**: circular import __future__
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\vectorstores\vector_store_service.py`
-**Reason**: circular duplication
-
-**File**: `services\search\main.py`
-**Symbol**: circular import __future__
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\search\main.py`
-**Reason**: circular duplication
-
 **File**: `services\synthesis\main.py`
 **Symbol**: circular import __future__
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\synthesis\main.py`
-**Reason**: circular duplication
-
-**File**: `shared\embeddings\local_embedder.py`
-**Symbol**: circular import __future__
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\embeddings\local_embedder.py`
 **Reason**: circular duplication
 
 **File**: `shared\contracts\query.py`
@@ -1915,10 +1891,16 @@
 **Proposed Move**: `deprecated/backend/shared\contracts\query.py`
 **Reason**: circular duplication
 
-**File**: `services\auth\main.py`
+**File**: `services\search\main.py`
 **Symbol**: circular import __future__
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\auth\main.py`
+**Proposed Move**: `deprecated/backend/services\search\main.py`
+**Reason**: circular duplication
+
+**File**: `shared\vectorstores\vector_store_service.py`
+**Symbol**: circular import __future__
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\vectorstores\vector_store_service.py`
 **Reason**: circular duplication
 
 **File**: `shared\clients\microservices.py`
@@ -1927,22 +1909,46 @@
 **Proposed Move**: `deprecated/backend/shared\clients\microservices.py`
 **Reason**: circular duplication
 
+**File**: `shared\embeddings\local_embedder.py`
+**Symbol**: circular import __future__
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\embeddings\local_embedder.py`
+**Reason**: circular duplication
+
 **File**: `services\retrieval\wiki.py`
 **Symbol**: circular import __future__
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\retrieval\wiki.py`
 **Reason**: circular duplication
 
-**File**: `services\synthesis\main.py`
+**File**: `services\auth\main.py`
+**Symbol**: circular import __future__
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\auth\main.py`
+**Reason**: circular duplication
+
+**File**: `services\fact_check\main.py`
+**Symbol**: circular import __future__
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\fact_check\main.py`
+**Reason**: circular duplication
+
+**File**: `services\auth\main.py`
 **Symbol**: circular import shared.core.app_factory
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\synthesis\main.py`
+**Proposed Move**: `deprecated/backend/services\auth\main.py`
 **Reason**: circular duplication
 
 **File**: `services\fact_check\main.py`
 **Symbol**: circular import shared.core.app_factory
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\fact_check\main.py`
+**Reason**: circular duplication
+
+**File**: `services\synthesis\main.py`
+**Symbol**: circular import shared.core.app_factory
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\synthesis\main.py`
 **Reason**: circular duplication
 
 **File**: `services\search\main.py`
@@ -1952,7 +1958,7 @@
 **Reason**: circular duplication
 
 **File**: `services\auth\main.py`
-**Symbol**: circular import shared.core.app_factory
+**Symbol**: circular import services.auth.routes
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\auth\main.py`
 **Reason**: circular duplication
@@ -1963,52 +1969,28 @@
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
 
-**File**: `services\auth\main.py`
-**Symbol**: circular import services.auth.routes
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\auth\main.py`
-**Reason**: circular duplication
-
-**File**: `services\model_registry\main.py`
-**Symbol**: circular import uvicorn
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
-**Reason**: circular duplication
-
-**File**: `services\fact_check\main.py`
-**Symbol**: circular import uvicorn
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\fact_check\main.py`
-**Reason**: circular duplication
-
 **File**: `services\guided_prompt\main.py`
 **Symbol**: circular import uvicorn
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\guided_prompt\main.py`
 **Reason**: circular duplication
 
-**File**: `services\knowledge_graph\main.py`
+**File**: `services\observability\main.py`
 **Symbol**: circular import uvicorn
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
-**Reason**: circular duplication
-
-**File**: `services\security\main.py`
-**Symbol**: circular import uvicorn
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\security\main.py`
-**Reason**: circular duplication
-
-**File**: `services\model_router\main.py`
-**Symbol**: circular import uvicorn
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_router\main.py`
+**Proposed Move**: `deprecated/backend/services\observability\main.py`
 **Reason**: circular duplication
 
 **File**: `services\crud\main.py`
 **Symbol**: circular import uvicorn
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\crud\main.py`
+**Reason**: circular duplication
+
+**File**: `services\model_router\main.py`
+**Symbol**: circular import uvicorn
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_router\main.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\gateway_app.py`
@@ -2023,10 +2005,10 @@
 **Proposed Move**: `deprecated/backend/services\retrieval\main.py`
 **Reason**: circular duplication
 
-**File**: `services\search\main.py`
+**File**: `services\security\main.py`
 **Symbol**: circular import uvicorn
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\search\main.py`
+**Proposed Move**: `deprecated/backend/services\security\main.py`
 **Reason**: circular duplication
 
 **File**: `services\synthesis\main.py`
@@ -2035,22 +2017,22 @@
 **Proposed Move**: `deprecated/backend/services\synthesis\main.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\app_factory.py`
-**Symbol**: circular import uvicorn
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\app_factory.py`
-**Reason**: circular duplication
-
 **File**: `services\gateway\main.py`
 **Symbol**: circular import uvicorn
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
 
-**File**: `services\observability\main.py`
+**File**: `services\search\main.py`
 **Symbol**: circular import uvicorn
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\observability\main.py`
+**Proposed Move**: `deprecated/backend/services\search\main.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\app_factory.py`
+**Symbol**: circular import uvicorn
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\app_factory.py`
 **Reason**: circular duplication
 
 **File**: `services\cicd\main.py`
@@ -2065,16 +2047,34 @@
 **Proposed Move**: `deprecated/backend/services\auto_upgrade\main.py`
 **Reason**: circular duplication
 
-**File**: `services\feeds\main.py`
-**Symbol**: circular import uvicorn
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\feeds\main.py`
-**Reason**: circular duplication
-
 **File**: `services\auth\main.py`
 **Symbol**: circular import uvicorn
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\auth\main.py`
+**Reason**: circular duplication
+
+**File**: `services\fact_check\main.py`
+**Symbol**: circular import uvicorn
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\fact_check\main.py`
+**Reason**: circular duplication
+
+**File**: `services\knowledge_graph\main.py`
+**Symbol**: circular import uvicorn
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
+**Reason**: circular duplication
+
+**File**: `services\model_registry\main.py`
+**Symbol**: circular import uvicorn
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
+**Reason**: circular duplication
+
+**File**: `services\feeds\main.py`
+**Symbol**: circular import uvicorn
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\feeds\main.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\routes.py`
@@ -2083,10 +2083,10 @@
 **Proposed Move**: `deprecated/backend/services\gateway\routes.py`
 **Reason**: circular duplication
 
-**File**: `services\search\main.py`
+**File**: `shared\clients\microservices.py`
 **Symbol**: circular import shared.core.api.api_models
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\search\main.py`
+**Proposed Move**: `deprecated/backend/shared\clients\microservices.py`
 **Reason**: circular duplication
 
 **File**: `services\auth\routes.py`
@@ -2095,10 +2095,10 @@
 **Proposed Move**: `deprecated/backend/services\auth\routes.py`
 **Reason**: circular duplication
 
-**File**: `shared\clients\microservices.py`
+**File**: `services\search\main.py`
 **Symbol**: circular import shared.core.api.api_models
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\clients\microservices.py`
+**Proposed Move**: `deprecated/backend/services\search\main.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\routers\health_router.py`
@@ -2107,28 +2107,16 @@
 **Proposed Move**: `deprecated/backend/services\gateway\routers\health_router.py`
 **Reason**: circular duplication
 
-**File**: `services\auth\routes.py`
+**File**: `shared\core\memory_manager.py`
 **Symbol**: circular import shared.core.database
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\auth\routes.py`
+**Proposed Move**: `deprecated/backend/shared\core\memory_manager.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\secure_auth.py`
 **Symbol**: circular import shared.core.database
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\secure_auth.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\cache_manager_postgres.py`
-**Symbol**: circular import shared.core.database
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache_manager_postgres.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\memory_manager.py`
-**Symbol**: circular import shared.core.database
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\memory_manager.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\socket_io_manager.py`
@@ -2143,10 +2131,16 @@
 **Proposed Move**: `deprecated/backend/shared\core\memory_manager_postgres.py`
 **Reason**: circular duplication
 
-**File**: `services\model_registry\main.py`
-**Symbol**: circular import opentelemetry.exporter.jaeger.thrift
+**File**: `services\auth\routes.py`
+**Symbol**: circular import shared.core.database
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
+**Proposed Move**: `deprecated/backend/services\auth\routes.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\cache_manager_postgres.py`
+**Symbol**: circular import shared.core.database
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\cache_manager_postgres.py`
 **Reason**: circular duplication
 
 **File**: `services\guided_prompt\main.py`
@@ -2155,22 +2149,10 @@
 **Proposed Move**: `deprecated/backend/services\guided_prompt\main.py`
 **Reason**: circular duplication
 
-**File**: `services\knowledge_graph\main.py`
+**File**: `services\observability\main.py`
 **Symbol**: circular import opentelemetry.exporter.jaeger.thrift
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
-**Reason**: circular duplication
-
-**File**: `services\security\main.py`
-**Symbol**: circular import opentelemetry.exporter.jaeger.thrift
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\security\main.py`
-**Reason**: circular duplication
-
-**File**: `services\model_router\main.py`
-**Symbol**: circular import opentelemetry.exporter.jaeger.thrift
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_router\main.py`
+**Proposed Move**: `deprecated/backend/services\observability\main.py`
 **Reason**: circular duplication
 
 **File**: `services\crud\main.py`
@@ -2179,22 +2161,28 @@
 **Proposed Move**: `deprecated/backend/services\crud\main.py`
 **Reason**: circular duplication
 
+**File**: `services\model_router\main.py`
+**Symbol**: circular import opentelemetry.exporter.jaeger.thrift
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_router\main.py`
+**Reason**: circular duplication
+
 **File**: `services\retrieval\main.py`
 **Symbol**: circular import opentelemetry.exporter.jaeger.thrift
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\retrieval\main.py`
 **Reason**: circular duplication
 
+**File**: `services\security\main.py`
+**Symbol**: circular import opentelemetry.exporter.jaeger.thrift
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\security\main.py`
+**Reason**: circular duplication
+
 **File**: `services\gateway\main.py`
 **Symbol**: circular import opentelemetry.exporter.jaeger.thrift
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `services\observability\main.py`
-**Symbol**: circular import opentelemetry.exporter.jaeger.thrift
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\observability\main.py`
 **Reason**: circular duplication
 
 **File**: `services\cicd\main.py`
@@ -2209,40 +2197,34 @@
 **Proposed Move**: `deprecated/backend/services\auto_upgrade\main.py`
 **Reason**: circular duplication
 
+**File**: `services\knowledge_graph\main.py`
+**Symbol**: circular import opentelemetry.exporter.jaeger.thrift
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
+**Reason**: circular duplication
+
+**File**: `services\model_registry\main.py`
+**Symbol**: circular import opentelemetry.exporter.jaeger.thrift
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
+**Reason**: circular duplication
+
 **File**: `services\feeds\main.py`
 **Symbol**: circular import opentelemetry.exporter.jaeger.thrift
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\feeds\main.py`
 **Reason**: circular duplication
 
-**File**: `services\model_registry\main.py`
-**Symbol**: circular import opentelemetry.sdk.trace
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
-**Reason**: circular duplication
-
 **File**: `services\guided_prompt\main.py`
 **Symbol**: circular import opentelemetry.sdk.trace
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\guided_prompt\main.py`
 **Reason**: circular duplication
 
-**File**: `services\knowledge_graph\main.py`
+**File**: `services\observability\main.py`
 **Symbol**: circular import opentelemetry.sdk.trace
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
-**Reason**: circular duplication
-
-**File**: `services\security\main.py`
-**Symbol**: circular import opentelemetry.sdk.trace
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\security\main.py`
-**Reason**: circular duplication
-
-**File**: `services\model_router\main.py`
-**Symbol**: circular import opentelemetry.sdk.trace
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_router\main.py`
+**Proposed Move**: `deprecated/backend/services\observability\main.py`
 **Reason**: circular duplication
 
 **File**: `services\crud\main.py`
@@ -2251,22 +2233,28 @@
 **Proposed Move**: `deprecated/backend/services\crud\main.py`
 **Reason**: circular duplication
 
+**File**: `services\model_router\main.py`
+**Symbol**: circular import opentelemetry.sdk.trace
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_router\main.py`
+**Reason**: circular duplication
+
 **File**: `services\retrieval\main.py`
 **Symbol**: circular import opentelemetry.sdk.trace
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\retrieval\main.py`
 **Reason**: circular duplication
 
+**File**: `services\security\main.py`
+**Symbol**: circular import opentelemetry.sdk.trace
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\security\main.py`
+**Reason**: circular duplication
+
 **File**: `services\gateway\main.py`
 **Symbol**: circular import opentelemetry.sdk.trace
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `services\observability\main.py`
-**Symbol**: circular import opentelemetry.sdk.trace
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\observability\main.py`
 **Reason**: circular duplication
 
 **File**: `services\cicd\main.py`
@@ -2281,40 +2269,34 @@
 **Proposed Move**: `deprecated/backend/services\auto_upgrade\main.py`
 **Reason**: circular duplication
 
+**File**: `services\knowledge_graph\main.py`
+**Symbol**: circular import opentelemetry.sdk.trace
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
+**Reason**: circular duplication
+
+**File**: `services\model_registry\main.py`
+**Symbol**: circular import opentelemetry.sdk.trace
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
+**Reason**: circular duplication
+
 **File**: `services\feeds\main.py`
 **Symbol**: circular import opentelemetry.sdk.trace
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\feeds\main.py`
 **Reason**: circular duplication
 
-**File**: `services\model_registry\main.py`
-**Symbol**: circular import opentelemetry.sdk.trace.export
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
-**Reason**: circular duplication
-
 **File**: `services\guided_prompt\main.py`
 **Symbol**: circular import opentelemetry.sdk.trace.export
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\guided_prompt\main.py`
 **Reason**: circular duplication
 
-**File**: `services\knowledge_graph\main.py`
+**File**: `services\observability\main.py`
 **Symbol**: circular import opentelemetry.sdk.trace.export
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
-**Reason**: circular duplication
-
-**File**: `services\security\main.py`
-**Symbol**: circular import opentelemetry.sdk.trace.export
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\security\main.py`
-**Reason**: circular duplication
-
-**File**: `services\model_router\main.py`
-**Symbol**: circular import opentelemetry.sdk.trace.export
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_router\main.py`
+**Proposed Move**: `deprecated/backend/services\observability\main.py`
 **Reason**: circular duplication
 
 **File**: `services\crud\main.py`
@@ -2323,22 +2305,28 @@
 **Proposed Move**: `deprecated/backend/services\crud\main.py`
 **Reason**: circular duplication
 
+**File**: `services\model_router\main.py`
+**Symbol**: circular import opentelemetry.sdk.trace.export
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_router\main.py`
+**Reason**: circular duplication
+
 **File**: `services\retrieval\main.py`
 **Symbol**: circular import opentelemetry.sdk.trace.export
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\retrieval\main.py`
 **Reason**: circular duplication
 
+**File**: `services\security\main.py`
+**Symbol**: circular import opentelemetry.sdk.trace.export
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\security\main.py`
+**Reason**: circular duplication
+
 **File**: `services\gateway\main.py`
 **Symbol**: circular import opentelemetry.sdk.trace.export
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `services\observability\main.py`
-**Symbol**: circular import opentelemetry.sdk.trace.export
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\observability\main.py`
 **Reason**: circular duplication
 
 **File**: `services\cicd\main.py`
@@ -2353,16 +2341,22 @@
 **Proposed Move**: `deprecated/backend/services\auto_upgrade\main.py`
 **Reason**: circular duplication
 
+**File**: `services\knowledge_graph\main.py`
+**Symbol**: circular import opentelemetry.sdk.trace.export
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
+**Reason**: circular duplication
+
+**File**: `services\model_registry\main.py`
+**Symbol**: circular import opentelemetry.sdk.trace.export
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
+**Reason**: circular duplication
+
 **File**: `services\feeds\main.py`
 **Symbol**: circular import opentelemetry.sdk.trace.export
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\feeds\main.py`
-**Reason**: circular duplication
-
-**File**: `services\model_registry\main.py`
-**Symbol**: circular import opentelemetry.instrumentation.fastapi
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
 **Reason**: circular duplication
 
 **File**: `services\guided_prompt\main.py`
@@ -2371,22 +2365,10 @@
 **Proposed Move**: `deprecated/backend/services\guided_prompt\main.py`
 **Reason**: circular duplication
 
-**File**: `services\knowledge_graph\main.py`
+**File**: `services\observability\main.py`
 **Symbol**: circular import opentelemetry.instrumentation.fastapi
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
-**Reason**: circular duplication
-
-**File**: `services\security\main.py`
-**Symbol**: circular import opentelemetry.instrumentation.fastapi
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\security\main.py`
-**Reason**: circular duplication
-
-**File**: `services\model_router\main.py`
-**Symbol**: circular import opentelemetry.instrumentation.fastapi
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_router\main.py`
+**Proposed Move**: `deprecated/backend/services\observability\main.py`
 **Reason**: circular duplication
 
 **File**: `services\crud\main.py`
@@ -2395,22 +2377,28 @@
 **Proposed Move**: `deprecated/backend/services\crud\main.py`
 **Reason**: circular duplication
 
+**File**: `services\model_router\main.py`
+**Symbol**: circular import opentelemetry.instrumentation.fastapi
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_router\main.py`
+**Reason**: circular duplication
+
 **File**: `services\retrieval\main.py`
 **Symbol**: circular import opentelemetry.instrumentation.fastapi
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\retrieval\main.py`
 **Reason**: circular duplication
 
+**File**: `services\security\main.py`
+**Symbol**: circular import opentelemetry.instrumentation.fastapi
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\security\main.py`
+**Reason**: circular duplication
+
 **File**: `services\gateway\main.py`
 **Symbol**: circular import opentelemetry.instrumentation.fastapi
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `services\observability\main.py`
-**Symbol**: circular import opentelemetry.instrumentation.fastapi
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\observability\main.py`
 **Reason**: circular duplication
 
 **File**: `services\cicd\main.py`
@@ -2425,28 +2413,34 @@
 **Proposed Move**: `deprecated/backend/services\auto_upgrade\main.py`
 **Reason**: circular duplication
 
+**File**: `services\knowledge_graph\main.py`
+**Symbol**: circular import opentelemetry.instrumentation.fastapi
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\knowledge_graph\main.py`
+**Reason**: circular duplication
+
+**File**: `services\model_registry\main.py`
+**Symbol**: circular import opentelemetry.instrumentation.fastapi
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
+**Reason**: circular duplication
+
 **File**: `services\feeds\main.py`
 **Symbol**: circular import opentelemetry.instrumentation.fastapi
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\feeds\main.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\main.py`
-**Symbol**: circular import subprocess
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `services\cicd\main.py`
-**Symbol**: circular import subprocess
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\cicd\main.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\migrations.py`
 **Symbol**: circular import subprocess
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\migrations.py`
+**Reason**: circular duplication
+
+**File**: `services\cicd\main.py`
+**Symbol**: circular import subprocess
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\cicd\main.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\system_health.py`
@@ -2456,21 +2450,9 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\main.py`
-**Symbol**: circular import shared.models.crud_models
+**Symbol**: circular import subprocess
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `shared\clients\service_client.py`
-**Symbol**: circular import shared.models.crud_models
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\clients\service_client.py`
-**Reason**: circular duplication
-
-**File**: `services\crud\main.py`
-**Symbol**: circular import shared.models.crud_models
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\crud\main.py`
 **Reason**: circular duplication
 
 **File**: `shared\contracts\service_contracts.py`
@@ -2479,16 +2461,34 @@
 **Proposed Move**: `deprecated/backend/shared\contracts\service_contracts.py`
 **Reason**: circular duplication
 
+**File**: `shared\clients\service_client.py`
+**Symbol**: circular import shared.models.crud_models
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\clients\service_client.py`
+**Reason**: circular duplication
+
 **File**: `services\gateway\main.py`
-**Symbol**: circular import shared.contracts.service_contracts
+**Symbol**: circular import shared.models.crud_models
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
+**Reason**: circular duplication
+
+**File**: `services\crud\main.py`
+**Symbol**: circular import shared.models.crud_models
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\crud\main.py`
 **Reason**: circular duplication
 
 **File**: `shared\clients\service_client.py`
 **Symbol**: circular import shared.contracts.service_contracts
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\clients\service_client.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\main.py`
+**Symbol**: circular import shared.contracts.service_contracts
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
 
 **File**: `services\crud\main.py`
@@ -2509,10 +2509,10 @@
 **Proposed Move**: `deprecated/backend/services\crud\main.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\middleware\security.py`
+**File**: `services\gateway\middleware\observability.py`
 **Symbol**: circular import starlette.middleware.base
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\middleware\security.py`
+**Proposed Move**: `deprecated/backend/services\gateway\middleware\observability.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\main.py`
@@ -2527,10 +2527,10 @@
 **Proposed Move**: `deprecated/backend/services\security\security_middleware.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\middleware\observability.py`
+**File**: `services\gateway\middleware\security.py`
 **Symbol**: circular import starlette.middleware.base
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\middleware\observability.py`
+**Proposed Move**: `deprecated/backend/services\gateway\middleware\security.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\middleware\security_hardening.py`
@@ -2551,34 +2551,40 @@
 **Proposed Move**: `deprecated/backend/services\crud\main.py`
 **Reason**: circular duplication
 
-**File**: `services\fact_check\main.py`
-**Symbol**: circular import routes
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\fact_check\main.py`
-**Reason**: circular duplication
-
 **File**: `services\gateway\gateway_app.py`
 **Symbol**: circular import routes
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\gateway_app.py`
 **Reason**: circular duplication
 
-**File**: `services\retrieval\orchestrator.py`
-**Symbol**: circular import urllib.parse
+**File**: `services\fact_check\main.py`
+**Symbol**: circular import routes
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\retrieval\orchestrator.py`
+**Proposed Move**: `deprecated/backend/services\fact_check\main.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\agents\citation_agent.py`
+**File**: `services\feeds\attribution_manager.py`
 **Symbol**: circular import urllib.parse
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
+**Proposed Move**: `deprecated/backend/services\feeds\attribution_manager.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\services\retrieval_aggregator.py`
 **Symbol**: circular import urllib.parse
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\services\retrieval_aggregator.py`
+**Reason**: circular duplication
+
+**File**: `services\retrieval\free_tier.py`
+**Symbol**: circular import urllib.parse
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\retrieval\free_tier.py`
+**Reason**: circular duplication
+
+**File**: `services\retrieval\orchestrator.py`
+**Symbol**: circular import urllib.parse
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\retrieval\orchestrator.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\database\connection.py`
@@ -2593,10 +2599,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\evidence_quality_validator.py`
 **Reason**: circular duplication
 
-**File**: `services\retrieval\free_tier.py`
+**File**: `shared\core\agents\citation_agent.py`
 **Symbol**: circular import urllib.parse
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\retrieval\free_tier.py`
+**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\input_validation.py`
@@ -2605,10 +2611,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\input_validation.py`
 **Reason**: circular duplication
 
-**File**: `services\feeds\attribution_manager.py`
-**Symbol**: circular import urllib.parse
+**File**: `services\gateway\real_llm_integration.py`
+**Symbol**: circular import shared.core.config.provider_config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\feeds\attribution_manager.py`
+**Proposed Move**: `deprecated/backend/services\gateway\real_llm_integration.py`
 **Reason**: circular duplication
 
 **File**: `services\feeds\config.py`
@@ -2623,12 +2629,6 @@
 **Proposed Move**: `deprecated/backend/services\feeds\main.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\real_llm_integration.py`
-**Symbol**: circular import shared.core.config.provider_config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\real_llm_integration.py`
-**Reason**: circular duplication
-
 **File**: `services\retrieval\free_tier.py`
 **Symbol**: circular import shared.core.config.provider_config
 **Duplicate Of**: `circular dependency`
@@ -2659,28 +2659,28 @@
 **Proposed Move**: `deprecated/backend/services\gateway\background_processor.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\cache.py`
-**Symbol**: circular import pickle
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache.py`
-**Reason**: circular duplication
-
 **File**: `services\gateway\prompt_optimizer.py`
 **Symbol**: circular import pickle
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\prompt_optimizer.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\cache_manager.py`
-**Symbol**: circular import gzip
+**File**: `shared\core\cache.py`
+**Symbol**: circular import pickle
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\cache_manager.py`
+**Proposed Move**: `deprecated/backend/shared\core\cache.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\advanced_features.py`
 **Symbol**: circular import gzip
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\advanced_features.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\cache_manager.py`
+**Symbol**: circular import gzip
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\cache_manager.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\cache.py`
@@ -2695,22 +2695,22 @@
 **Proposed Move**: `deprecated/backend/shared\core\cache\cache_manager.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\advanced_features.py`
-**Symbol**: circular import numpy
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\advanced_features.py`
-**Reason**: circular duplication
-
-**File**: `shared\vectorstores\fallback_vector_db.py`
-**Symbol**: circular import numpy
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\vectorstores\fallback_vector_db.py`
-**Reason**: circular duplication
-
 **File**: `services\gateway\huggingface_integration.py`
 **Symbol**: circular import numpy
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\huggingface_integration.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\citations_service.py`
+**Symbol**: circular import numpy
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\citations_service.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\advanced_features.py`
+**Symbol**: circular import numpy
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\advanced_features.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\citations.py`
@@ -2719,10 +2719,16 @@
 **Proposed Move**: `deprecated/backend/services\gateway\citations.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\services\citations_service.py`
+**File**: `shared\vectorstores\fallback_vector_db.py`
 **Symbol**: circular import numpy
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\citations_service.py`
+**Proposed Move**: `deprecated/backend/shared\vectorstores\fallback_vector_db.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\advanced_features.py`
+**Symbol**: circular import sklearn.feature_extraction.text
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\advanced_features.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\services\citations_service.py`
@@ -2732,7 +2738,7 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\advanced_features.py`
-**Symbol**: circular import sklearn.feature_extraction.text
+**Symbol**: circular import sklearn.metrics.pairwise
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\advanced_features.py`
 **Reason**: circular duplication
@@ -2744,7 +2750,7 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\advanced_features.py`
-**Symbol**: circular import sklearn.metrics.pairwise
+**Symbol**: circular import services.gateway.cache_manager
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\advanced_features.py`
 **Reason**: circular duplication
@@ -2756,7 +2762,7 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\advanced_features.py`
-**Symbol**: circular import services.gateway.cache_manager
+**Symbol**: circular import services.gateway.streaming_manager
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\advanced_features.py`
 **Reason**: circular duplication
@@ -2765,12 +2771,6 @@
 **Symbol**: circular import services.gateway.streaming_manager
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\advanced_features.py`
-**Symbol**: circular import services.gateway.streaming_manager
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\advanced_features.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\routes.py`
@@ -2785,12 +2785,6 @@
 **Proposed Move**: `deprecated/backend/services\gateway\agent_orchestrator.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\error_handling.py`
-**Symbol**: circular import traceback
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\error_handling.py`
-**Reason**: circular duplication
-
 **File**: `services\gateway\agent_orchestrator.py`
 **Symbol**: circular import traceback
 **Duplicate Of**: `circular dependency`
@@ -2803,10 +2797,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\error_handler.py`
 **Reason**: circular duplication
 
-**File**: `services\retrieval\orchestrator.py`
-**Symbol**: circular import requests
+**File**: `shared\core\error_handling.py`
+**Symbol**: circular import traceback
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\retrieval\orchestrator.py`
+**Proposed Move**: `deprecated/backend/shared\core\error_handling.py`
 **Reason**: circular duplication
 
 **File**: `services\retrieval\warmup.py`
@@ -2815,22 +2809,16 @@
 **Proposed Move**: `deprecated/backend/services\retrieval\warmup.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\real_llm_integration.py`
-**Symbol**: circular import requests
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\real_llm_integration.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\providers\gpu_providers.py`
-**Symbol**: circular import requests
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\providers\gpu_providers.py`
-**Reason**: circular duplication
-
 **File**: `services\gateway\providers\ollama_client.py`
 **Symbol**: circular import requests
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\providers\ollama_client.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\real_llm_integration.py`
+**Symbol**: circular import requests
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\real_llm_integration.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\analytics_collector.py`
@@ -2839,16 +2827,40 @@
 **Proposed Move**: `deprecated/backend/services\gateway\analytics_collector.py`
 **Reason**: circular duplication
 
+**File**: `services\gateway\providers\gpu_providers.py`
+**Symbol**: circular import requests
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\providers\gpu_providers.py`
+**Reason**: circular duplication
+
 **File**: `services\retrieval\free_tier.py`
 **Symbol**: circular import requests
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\retrieval\free_tier.py`
 **Reason**: circular duplication
 
+**File**: `services\retrieval\orchestrator.py`
+**Symbol**: circular import requests
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\retrieval\orchestrator.py`
+**Reason**: circular duplication
+
 **File**: `services\retrieval\wiki.py`
 **Symbol**: circular import requests
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\retrieval\wiki.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\system_health.py`
+**Symbol**: circular import concurrent.futures
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\system_health.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\background_processor.py`
+**Symbol**: circular import concurrent.futures
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\background_processor.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\performance_optimizer.py`
@@ -2858,15 +2870,9 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\background_processor.py`
-**Symbol**: circular import concurrent.futures
+**Symbol**: circular import queue
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\background_processor.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\system_health.py`
-**Symbol**: circular import concurrent.futures
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\system_health.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\socket_io_manager.py`
@@ -2876,7 +2882,7 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\background_processor.py`
-**Symbol**: circular import queue
+**Symbol**: circular import signal
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\background_processor.py`
 **Reason**: circular duplication
@@ -2887,16 +2893,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\shutdown_handler.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\background_processor.py`
-**Symbol**: circular import signal
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\background_processor.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\main.py`
+**File**: `services\retrieval\routers\free_tier_router.py`
 **Symbol**: circular import services.retrieval.free_tier
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\main.py`
+**Proposed Move**: `deprecated/backend/services\retrieval\routers\free_tier_router.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\streaming_manager.py`
@@ -2911,22 +2911,10 @@
 **Proposed Move**: `deprecated/backend/services\gateway\citations.py`
 **Reason**: circular duplication
 
-**File**: `services\retrieval\routers\free_tier_router.py`
+**File**: `services\gateway\main.py`
 **Symbol**: circular import services.retrieval.free_tier
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\retrieval\routers\free_tier_router.py`
-**Reason**: circular duplication
-
-**File**: `shared\embeddings\model_cache.py`
-**Symbol**: circular import sentence_transformers
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\embeddings\model_cache.py`
-**Reason**: circular duplication
-
-**File**: `shared\embeddings\local_embedder.py`
-**Symbol**: circular import sentence_transformers
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\embeddings\local_embedder.py`
+**Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\huggingface_integration.py`
@@ -2941,6 +2929,12 @@
 **Proposed Move**: `deprecated/backend/shared\core\services\vector_singleton_service.py`
 **Reason**: circular duplication
 
+**File**: `shared\embeddings\local_embedder.py`
+**Symbol**: circular import sentence_transformers
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\embeddings\local_embedder.py`
+**Reason**: circular duplication
+
 **File**: `services\gateway\citations.py`
 **Symbol**: circular import sentence_transformers
 **Duplicate Of**: `circular dependency`
@@ -2948,6 +2942,12 @@
 **Reason**: circular duplication
 
 **File**: `shared\embeddings\model_cache.py`
+**Symbol**: circular import sentence_transformers
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\embeddings\model_cache.py`
+**Reason**: circular duplication
+
+**File**: `shared\embeddings\model_cache.py`
 **Symbol**: circular import transformers
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\embeddings\model_cache.py`
@@ -2969,18 +2969,6 @@
 **Symbol**: circular import torch
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\huggingface_integration.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\metrics_endpoint.py`
-**Symbol**: circular import services.gateway.middleware.observability
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\metrics_endpoint.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\main.py`
-**Symbol**: circular import services.gateway.middleware.observability
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\real_llm_integration.py`
@@ -2989,28 +2977,28 @@
 **Proposed Move**: `deprecated/backend/services\gateway\real_llm_integration.py`
 **Reason**: circular duplication
 
+**File**: `services\gateway\main.py`
+**Symbol**: circular import services.gateway.middleware.observability
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\main.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\resilience\graceful_degradation.py`
+**Symbol**: circular import services.gateway.middleware.observability
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\resilience\graceful_degradation.py`
+**Reason**: circular duplication
+
 **File**: `services\gateway\streaming_manager.py`
 **Symbol**: circular import services.gateway.middleware.observability
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\streaming_manager.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\resilience\graceful_degradation.py`
+**File**: `services\gateway\metrics_endpoint.py`
 **Symbol**: circular import services.gateway.middleware.observability
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\resilience\graceful_degradation.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\main.py`
-**Symbol**: circular import services.gateway.resilience.circuit_breaker
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\resilience\graceful_degradation.py`
-**Symbol**: circular import services.gateway.resilience.circuit_breaker
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\resilience\graceful_degradation.py`
+**Proposed Move**: `deprecated/backend/services\gateway\metrics_endpoint.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\health\comprehensive_monitor.py`
@@ -3019,40 +3007,16 @@
 **Proposed Move**: `deprecated/backend/services\gateway\health\comprehensive_monitor.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\agents\citation_agent.py`
-**Symbol**: circular import services.gateway.real_llm_integration
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\startup_warmup_service.py`
-**Symbol**: circular import services.gateway.real_llm_integration
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\startup_warmup_service.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\cost_aware_llm_router.py`
-**Symbol**: circular import services.gateway.real_llm_integration
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\cost_aware_llm_router.py`
-**Reason**: circular duplication
-
-**File**: `services\search\main.py`
-**Symbol**: circular import services.gateway.real_llm_integration
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\search\main.py`
-**Reason**: circular duplication
-
-**File**: `services\synthesis\main.py`
-**Symbol**: circular import services.gateway.real_llm_integration
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\synthesis\main.py`
-**Reason**: circular duplication
-
 **File**: `services\gateway\main.py`
-**Symbol**: circular import services.gateway.real_llm_integration
+**Symbol**: circular import services.gateway.resilience.circuit_breaker
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\resilience\graceful_degradation.py`
+**Symbol**: circular import services.gateway.resilience.circuit_breaker
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\resilience\graceful_degradation.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\agent_pattern.py`
@@ -3061,16 +3025,52 @@
 **Proposed Move**: `deprecated/backend/shared\core\agent_pattern.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\streaming_manager.py`
-**Symbol**: circular import services.gateway.real_llm_integration
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\streaming_manager.py`
-**Reason**: circular duplication
-
 **File**: `shared\core\agents\retrieval_agent.py`
 **Symbol**: circular import services.gateway.real_llm_integration
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\agents\retrieval_agent.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\cost_aware_llm_router.py`
+**Symbol**: circular import services.gateway.real_llm_integration
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\cost_aware_llm_router.py`
+**Reason**: circular duplication
+
+**File**: `services\synthesis\main.py`
+**Symbol**: circular import services.gateway.real_llm_integration
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\synthesis\main.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\startup_warmup_service.py`
+**Symbol**: circular import services.gateway.real_llm_integration
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\startup_warmup_service.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\main.py`
+**Symbol**: circular import services.gateway.real_llm_integration
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\main.py`
+**Reason**: circular duplication
+
+**File**: `services\search\main.py`
+**Symbol**: circular import services.gateway.real_llm_integration
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\search\main.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\agents\citation_agent.py`
+**Symbol**: circular import services.gateway.real_llm_integration
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\streaming_manager.py`
+**Symbol**: circular import services.gateway.real_llm_integration
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\streaming_manager.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\main.py`
@@ -3083,12 +3083,6 @@
 **Symbol**: circular import services.gateway.routes
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\search\main.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\main.py`
-**Symbol**: circular import services.gateway.model_router
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\metrics_router.py`
@@ -3098,7 +3092,7 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\main.py`
-**Symbol**: circular import services.gateway.huggingface_integration
+**Symbol**: circular import services.gateway.model_router
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
@@ -3115,6 +3109,36 @@
 **Proposed Move**: `deprecated/backend/services\gateway\providers\huggingface_client.py`
 **Reason**: circular duplication
 
+**File**: `services\gateway\main.py`
+**Symbol**: circular import services.gateway.huggingface_integration
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\main.py`
+**Reason**: circular duplication
+
+**File**: `services\model_registry\search_router.py`
+**Symbol**: circular import random
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_registry\search_router.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\main.py`
+**Symbol**: circular import random
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\main.py`
+**Reason**: circular duplication
+
+**File**: `services\retrieval\free_tier.py`
+**Symbol**: circular import random
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\retrieval\free_tier.py`
+**Reason**: circular duplication
+
+**File**: `services\model_registry\refine_router.py`
+**Symbol**: circular import random
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_registry\refine_router.py`
+**Reason**: circular duplication
+
 **File**: `shared\core\services\enhanced_vector_optimizer.py`
 **Symbol**: circular import random
 **Duplicate Of**: `circular dependency`
@@ -3127,30 +3151,6 @@
 **Proposed Move**: `deprecated/backend/shared\core\retry_logic.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\main.py`
-**Symbol**: circular import random
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `services\model_registry\refine_router.py`
-**Symbol**: circular import random
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\refine_router.py`
-**Reason**: circular duplication
-
-**File**: `services\retrieval\free_tier.py`
-**Symbol**: circular import random
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\retrieval\free_tier.py`
-**Reason**: circular duplication
-
-**File**: `services\model_registry\search_router.py`
-**Symbol**: circular import random
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\search_router.py`
-**Reason**: circular duplication
-
 **File**: `services\gateway\routers\health_router.py`
 **Symbol**: circular import shared.core.services.arangodb_service
 **Duplicate Of**: `circular dependency`
@@ -3161,6 +3161,18 @@
 **Symbol**: circular import shared.core.services.arangodb_service
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\services\startup_warmup_service.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\index_fabric_service.py`
+**Symbol**: circular import shared.core.services.arangodb_service
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\index_fabric_service.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\main.py`
+**Symbol**: circular import shared.core.services.arangodb_service
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\services\multi_lane_orchestrator.py`
@@ -3175,28 +3187,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\agents\knowledge_graph_service.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\main.py`
-**Symbol**: circular import shared.core.services.arangodb_service
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\index_fabric_service.py`
-**Symbol**: circular import shared.core.services.arangodb_service
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\index_fabric_service.py`
-**Reason**: circular duplication
-
 **File**: `services\gateway\routers\health_router.py`
 **Symbol**: circular import shared.core.services.vector_singleton_service
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\routers\health_router.py`
-**Reason**: circular duplication
-
-**File**: `services\retrieval\orchestrator.py`
-**Symbol**: circular import shared.core.services.vector_singleton_service
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\retrieval\orchestrator.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\services\startup_warmup_service.py`
@@ -3205,18 +3199,6 @@
 **Proposed Move**: `deprecated/backend/shared\core\services\startup_warmup_service.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\services\multi_lane_orchestrator.py`
-**Symbol**: circular import shared.core.services.vector_singleton_service
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\multi_lane_orchestrator.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\main.py`
-**Symbol**: circular import shared.core.services.vector_singleton_service
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
 **File**: `shared\core\services\index_fabric_service.py`
 **Symbol**: circular import shared.core.services.vector_singleton_service
 **Duplicate Of**: `circular dependency`
@@ -3224,9 +3206,21 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\main.py`
-**Symbol**: circular import shared.core.services.index_fabric_service
+**Symbol**: circular import shared.core.services.vector_singleton_service
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
+**Reason**: circular duplication
+
+**File**: `services\retrieval\orchestrator.py`
+**Symbol**: circular import shared.core.services.vector_singleton_service
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\retrieval\orchestrator.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\multi_lane_orchestrator.py`
+**Symbol**: circular import shared.core.services.vector_singleton_service
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\multi_lane_orchestrator.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\services\multi_lane_orchestrator.py`
@@ -3236,7 +3230,7 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\main.py`
-**Symbol**: circular import shared.core.services.meilisearch_service
+**Symbol**: circular import shared.core.services.index_fabric_service
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
@@ -3254,15 +3248,9 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\main.py`
-**Symbol**: circular import shared.core.services.retrieval_aggregator
+**Symbol**: circular import shared.core.services.meilisearch_service
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\routers\retrieval_router.py`
-**Symbol**: circular import shared.core.services.retrieval_aggregator
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\routers\retrieval_router.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\services\multi_lane_orchestrator.py`
@@ -3271,8 +3259,14 @@
 **Proposed Move**: `deprecated/backend/shared\core\services\multi_lane_orchestrator.py`
 **Reason**: circular duplication
 
+**File**: `services\gateway\routers\retrieval_router.py`
+**Symbol**: circular import shared.core.services.retrieval_aggregator
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\routers\retrieval_router.py`
+**Reason**: circular duplication
+
 **File**: `services\gateway\main.py`
-**Symbol**: circular import shared.core.services.citations_service
+**Symbol**: circular import shared.core.services.retrieval_aggregator
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
@@ -3284,7 +3278,7 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\main.py`
-**Symbol**: circular import shared.embeddings.local_embedder
+**Symbol**: circular import shared.core.services.citations_service
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
@@ -3296,15 +3290,9 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\main.py`
-**Symbol**: circular import shared.core.config
+**Symbol**: circular import shared.embeddings.local_embedder
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
-**Reason**: circular duplication
-
-**File**: `shared\clients\microservices.py`
-**Symbol**: circular import shared.core.config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\clients\microservices.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\model_router.py`
@@ -3313,8 +3301,14 @@
 **Proposed Move**: `deprecated/backend/services\gateway\model_router.py`
 **Reason**: circular duplication
 
+**File**: `shared\clients\microservices.py`
+**Symbol**: circular import shared.core.config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\clients\microservices.py`
+**Reason**: circular duplication
+
 **File**: `services\gateway\main.py`
-**Symbol**: circular import io
+**Symbol**: circular import shared.core.config
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
@@ -3326,7 +3320,7 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\main.py`
-**Symbol**: circular import services.retrieval.youtube_retrieval
+**Symbol**: circular import io
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
@@ -3337,10 +3331,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\services\multi_lane_orchestrator.py`
 **Reason**: circular duplication
 
-**File**: `services\retrieval\orchestrator.py`
-**Symbol**: circular import shared.core.logging
+**File**: `services\gateway\main.py`
+**Symbol**: circular import services.retrieval.youtube_retrieval
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\retrieval\orchestrator.py`
+**Proposed Move**: `deprecated/backend/services\gateway\main.py`
 **Reason**: circular duplication
 
 **File**: `services\retrieval\warmup.py`
@@ -3355,10 +3349,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\middleware\rate_limiter.py`
 **Reason**: circular duplication
 
-**File**: `services\search\main.py`
+**File**: `shared\core\metrics\metrics_service.py`
 **Symbol**: circular import shared.core.logging
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\search\main.py`
+**Proposed Move**: `deprecated/backend/shared\core\metrics\metrics_service.py`
 **Reason**: circular duplication
 
 **File**: `services\synthesis\main.py`
@@ -3373,34 +3367,40 @@
 **Proposed Move**: `deprecated/backend/shared\core\app_factory.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\scoring_router.py`
-**Symbol**: circular import shared.core.logging
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\scoring_router.py`
-**Reason**: circular duplication
-
 **File**: `services\gateway\model_router.py`
 **Symbol**: circular import shared.core.logging
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\model_router.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\metrics\metrics_service.py`
+**File**: `services\search\main.py`
 **Symbol**: circular import shared.core.logging
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\metrics\metrics_service.py`
+**Proposed Move**: `deprecated/backend/services\search\main.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\metrics_router.py`
+**File**: `services\retrieval\orchestrator.py`
 **Symbol**: circular import shared.core.logging
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\metrics_router.py`
+**Proposed Move**: `deprecated/backend/services\retrieval\orchestrator.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\scoring_router.py`
+**Symbol**: circular import shared.core.logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\scoring_router.py`
 **Reason**: circular duplication
 
 **File**: `shared\vectorstores\vector_store_service.py`
 **Symbol**: circular import shared.core.logging
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\vectorstores\vector_store_service.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\metrics_router.py`
+**Symbol**: circular import shared.core.logging
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\metrics_router.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\real_llm_integration.py`
@@ -3415,10 +3415,22 @@
 **Proposed Move**: `deprecated/backend/services\gateway\scoring_router.py`
 **Reason**: circular duplication
 
+**File**: `services\gateway\real_llm_integration.py`
+**Symbol**: circular import shared.llm.provider_order
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\real_llm_integration.py`
+**Reason**: circular duplication
+
 **File**: `shared\core\services\enhanced_router_service.py`
 **Symbol**: circular import shared.llm.provider_order
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\services\enhanced_router_service.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\providers\registry.py`
+**Symbol**: circular import shared.llm.provider_order
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\providers\registry.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\services\multi_lane_orchestrator.py`
@@ -3433,28 +3445,10 @@
 **Proposed Move**: `deprecated/backend/services\gateway\scoring_router.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\providers\registry.py`
-**Symbol**: circular import shared.llm.provider_order
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\providers\registry.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\real_llm_integration.py`
-**Symbol**: circular import shared.llm.provider_order
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\real_llm_integration.py`
-**Reason**: circular duplication
-
 **File**: `services\gateway\real_llm_integration.py`
 **Symbol**: circular import openai
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\real_llm_integration.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\providers\gpu_providers.py`
-**Symbol**: circular import openai
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\providers\gpu_providers.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\providers\openai_client.py`
@@ -3463,16 +3457,16 @@
 **Proposed Move**: `deprecated/backend/services\gateway\providers\openai_client.py`
 **Reason**: circular duplication
 
+**File**: `services\gateway\providers\gpu_providers.py`
+**Symbol**: circular import openai
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\providers\gpu_providers.py`
+**Reason**: circular duplication
+
 **File**: `services\gateway\real_llm_integration.py`
 **Symbol**: circular import anthropic
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\real_llm_integration.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\providers\gpu_providers.py`
-**Symbol**: circular import anthropic
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\providers\gpu_providers.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\providers\anthropic_client.py`
@@ -3481,10 +3475,10 @@
 **Proposed Move**: `deprecated/backend/services\gateway\providers\anthropic_client.py`
 **Reason**: circular duplication
 
-**File**: `services\retrieval\orchestrator.py`
-**Symbol**: circular import shared.contracts.query
+**File**: `services\gateway\providers\gpu_providers.py`
+**Symbol**: circular import anthropic
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\retrieval\orchestrator.py`
+**Proposed Move**: `deprecated/backend/services\gateway\providers\gpu_providers.py`
 **Reason**: circular duplication
 
 **File**: `services\retrieval\warmup.py`
@@ -3493,16 +3487,22 @@
 **Proposed Move**: `deprecated/backend/services\retrieval\warmup.py`
 **Reason**: circular duplication
 
+**File**: `services\gateway\routes.py`
+**Symbol**: circular import shared.contracts.query
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\routes.py`
+**Reason**: circular duplication
+
 **File**: `services\synthesis\main.py`
 **Symbol**: circular import shared.contracts.query
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\synthesis\main.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\routes.py`
+**File**: `services\retrieval\orchestrator.py`
 **Symbol**: circular import shared.contracts.query
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\routes.py`
+**Proposed Move**: `deprecated/backend/services\retrieval\orchestrator.py`
 **Reason**: circular duplication
 
 **File**: `shared\clients\microservices.py`
@@ -3511,28 +3511,22 @@
 **Proposed Move**: `deprecated/backend/shared\clients\microservices.py`
 **Reason**: circular duplication
 
+**File**: `services\retrieval\config.py`
+**Symbol**: circular import sarvanom.shared.core.config.provider_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\retrieval\config.py`
+**Reason**: circular duplication
+
 **File**: `services\retrieval\orchestrator.py`
 **Symbol**: circular import sarvanom.shared.core.config.provider_config
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\retrieval\orchestrator.py`
 **Reason**: circular duplication
 
-**File**: `services\guided_prompt\config.py`
+**File**: `shared\llm\provider_order.py`
 **Symbol**: circular import sarvanom.shared.core.config.provider_config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\guided_prompt\config.py`
-**Reason**: circular duplication
-
-**File**: `services\model_registry\config.py`
-**Symbol**: circular import sarvanom.shared.core.config.provider_config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\config.py`
-**Reason**: circular duplication
-
-**File**: `services\retrieval\config.py`
-**Symbol**: circular import sarvanom.shared.core.config.provider_config
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\retrieval\config.py`
+**Proposed Move**: `deprecated/backend/shared\llm\provider_order.py`
 **Reason**: circular duplication
 
 **File**: `services\model_router\config.py`
@@ -3541,10 +3535,16 @@
 **Proposed Move**: `deprecated/backend/services\model_router\config.py`
 **Reason**: circular duplication
 
-**File**: `shared\llm\provider_order.py`
+**File**: `services\model_registry\config.py`
 **Symbol**: circular import sarvanom.shared.core.config.provider_config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\llm\provider_order.py`
+**Proposed Move**: `deprecated/backend/services\model_registry\config.py`
+**Reason**: circular duplication
+
+**File**: `services\guided_prompt\config.py`
+**Symbol**: circular import sarvanom.shared.core.config.provider_config
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\guided_prompt\config.py`
 **Reason**: circular duplication
 
 **File**: `services\retrieval\orchestrator.py`
@@ -3589,12 +3589,6 @@
 **Proposed Move**: `deprecated/backend/services\model_registry\feeds_router.py`
 **Reason**: circular duplication
 
-**File**: `services\model_registry\main.py`
-**Symbol**: circular import models
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
-**Reason**: circular duplication
-
 **File**: `services\model_registry\router.py`
 **Symbol**: circular import models
 **Duplicate Of**: `circular dependency`
@@ -3602,21 +3596,9 @@
 **Reason**: circular duplication
 
 **File**: `services\model_registry\main.py`
-**Symbol**: circular import qdrant_client
+**Symbol**: circular import models
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\model_registry\main.py`
-**Reason**: circular duplication
-
-**File**: `shared\vectorstores\connection_manager.py`
-**Symbol**: circular import qdrant_client
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\vectorstores\connection_manager.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\datastores_optimizer.py`
-**Symbol**: circular import qdrant_client
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\datastores_optimizer.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\services\vector_singleton_service.py`
@@ -3625,22 +3607,28 @@
 **Proposed Move**: `deprecated/backend/shared\core\services\vector_singleton_service.py`
 **Reason**: circular duplication
 
+**File**: `shared\vectorstores\connection_manager.py`
+**Symbol**: circular import qdrant_client
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\vectorstores\connection_manager.py`
+**Reason**: circular duplication
+
 **File**: `shared\vectorstores\vector_store_service.py`
 **Symbol**: circular import qdrant_client
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\vectorstores\vector_store_service.py`
 **Reason**: circular duplication
 
-**File**: `services\model_registry\main.py`
-**Symbol**: circular import meilisearch
+**File**: `shared\core\services\datastores_optimizer.py`
+**Symbol**: circular import qdrant_client
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
+**Proposed Move**: `deprecated/backend/shared\core\services\datastores_optimizer.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\services\meilisearch_service.py`
-**Symbol**: circular import meilisearch
+**File**: `services\model_registry\main.py`
+**Symbol**: circular import qdrant_client
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\meilisearch_service.py`
+**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\services\datastores_optimizer.py`
@@ -3649,16 +3637,16 @@
 **Proposed Move**: `deprecated/backend/shared\core\services\datastores_optimizer.py`
 **Reason**: circular duplication
 
-**File**: `services\model_registry\main.py`
-**Symbol**: circular import arango
+**File**: `shared\core\services\meilisearch_service.py`
+**Symbol**: circular import meilisearch
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
+**Proposed Move**: `deprecated/backend/shared\core\services\meilisearch_service.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\vector_database.py`
-**Symbol**: circular import arango
+**File**: `services\model_registry\main.py`
+**Symbol**: circular import meilisearch
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\vector_database.py`
+**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\services\arangodb_service.py`
@@ -3667,16 +3655,28 @@
 **Proposed Move**: `deprecated/backend/shared\core\services\arangodb_service.py`
 **Reason**: circular duplication
 
-**File**: `services\monitoring\metrics.py`
-**Symbol**: circular import config.production.monitoring
+**File**: `shared\core\vector_database.py`
+**Symbol**: circular import arango
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\monitoring\metrics.py`
+**Proposed Move**: `deprecated/backend/shared\core\vector_database.py`
+**Reason**: circular duplication
+
+**File**: `services\model_registry\main.py`
+**Symbol**: circular import arango
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\model_registry\main.py`
 **Reason**: circular duplication
 
 **File**: `services\monitoring\health.py`
 **Symbol**: circular import config.production.monitoring
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\monitoring\health.py`
+**Reason**: circular duplication
+
+**File**: `services\monitoring\metrics.py`
+**Symbol**: circular import config.production.monitoring
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\monitoring\metrics.py`
 **Reason**: circular duplication
 
 **File**: `services\retrieval\warmup.py`
@@ -3689,12 +3689,6 @@
 **Symbol**: circular import services.retrieval.main
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\retrieval\tests\test_retrieval_endpoints.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\middleware\rate_limiter.py`
-**Symbol**: circular import shared.core.cache
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\middleware\rate_limiter.py`
 **Reason**: circular duplication
 
 **File**: `services\gateway\routers\health_router.py`
@@ -3715,6 +3709,18 @@
 **Proposed Move**: `deprecated/backend/shared\core\secure_auth.py`
 **Reason**: circular duplication
 
+**File**: `shared\core\middleware\rate_limiter.py`
+**Symbol**: circular import shared.core.cache
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\middleware\rate_limiter.py`
+**Reason**: circular duplication
+
+**File**: `services\gateway\middleware\security.py`
+**Symbol**: circular import starlette.types
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/services\gateway\middleware\security.py`
+**Reason**: circular duplication
+
 **File**: `services\gateway\middleware\security_hardening.py`
 **Symbol**: circular import starlette.types
 **Duplicate Of**: `circular dependency`
@@ -3722,7 +3728,7 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\middleware\security.py`
-**Symbol**: circular import starlette.types
+**Symbol**: circular import html
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\middleware\security.py`
 **Reason**: circular duplication
@@ -3740,7 +3746,7 @@
 **Reason**: circular duplication
 
 **File**: `services\gateway\middleware\security.py`
-**Symbol**: circular import html
+**Symbol**: circular import observability
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\middleware\security.py`
 **Reason**: circular duplication
@@ -3749,12 +3755,6 @@
 **Symbol**: circular import observability
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/services\gateway\middleware\security_hardening.py`
-**Reason**: circular duplication
-
-**File**: `services\gateway\middleware\security.py`
-**Symbol**: circular import observability
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\middleware\security.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\input_validation.py`
@@ -3769,10 +3769,10 @@
 **Proposed Move**: `deprecated/backend/services\gateway\middleware\security_hardening.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\logging_configuration_manager.py`
+**File**: `services\gateway\routers\tests.py`
 **Symbol**: circular import yaml
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\logging_configuration_manager.py`
+**Proposed Move**: `deprecated/backend/services\gateway\routers\tests.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\sla_budget_enforcer.py`
@@ -3781,10 +3781,16 @@
 **Proposed Move**: `deprecated/backend/shared\core\sla_budget_enforcer.py`
 **Reason**: circular duplication
 
-**File**: `services\gateway\routers\tests.py`
+**File**: `shared\core\logging_configuration_manager.py`
 **Symbol**: circular import yaml
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/services\gateway\routers\tests.py`
+**Proposed Move**: `deprecated/backend/shared\core\logging_configuration_manager.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\database.py`
+**Symbol**: circular import tenacity
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\database.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\agent_pattern.py`
@@ -3799,16 +3805,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\error_handler.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\database.py`
-**Symbol**: circular import tenacity
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\database.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\connection_pool.py`
+**File**: `shared\core\services\analytics_dashboard_service.py`
 **Symbol**: circular import statistics
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\connection_pool.py`
+**Proposed Move**: `deprecated/backend/shared\core\services\analytics_dashboard_service.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\performance.py`
@@ -3817,16 +3817,16 @@
 **Proposed Move**: `deprecated/backend/shared\core\performance.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\services\analytics_dashboard_service.py`
+**File**: `shared\core\connection_pool.py`
 **Symbol**: circular import statistics
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\analytics_dashboard_service.py`
+**Proposed Move**: `deprecated/backend/shared\core\connection_pool.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\factory.py`
+**File**: `shared\core\repository.py`
 **Symbol**: circular import interfaces
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\factory.py`
+**Proposed Move**: `deprecated/backend/shared\core\repository.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\observer.py`
@@ -3841,10 +3841,46 @@
 **Proposed Move**: `deprecated/backend/shared\core\decorator.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\repository.py`
+**File**: `shared\core\factory.py`
 **Symbol**: circular import interfaces
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\repository.py`
+**Proposed Move**: `deprecated/backend/shared\core\factory.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\agents\retrieval_agent.py`
+**Symbol**: circular import shared.core.agents.base_agent
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\retrieval_agent.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\cache\cached_agents.py`
+**Symbol**: circular import shared.core.agents.base_agent
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\cache\cached_agents.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\factory.py`
+**Symbol**: circular import shared.core.agents.base_agent
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\factory.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\cache\cached_retrieval_agent.py`
+**Symbol**: circular import shared.core.agents.base_agent
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\cache\cached_retrieval_agent.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\agents\factcheck_agent.py`
+**Symbol**: circular import shared.core.agents.base_agent
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\factcheck_agent.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\agents\synthesis_agent.py`
+**Symbol**: circular import shared.core.agents.base_agent
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\synthesis_agent.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\agents\citation_agent.py`
@@ -3854,42 +3890,6 @@
 **Reason**: circular duplication
 
 **File**: `shared\core\factory.py`
-**Symbol**: circular import shared.core.agents.base_agent
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\factory.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\agents\factcheck_agent.py`
-**Symbol**: circular import shared.core.agents.base_agent
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\factcheck_agent.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\cache\cached_retrieval_agent.py`
-**Symbol**: circular import shared.core.agents.base_agent
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache\cached_retrieval_agent.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\agents\synthesis_agent.py`
-**Symbol**: circular import shared.core.agents.base_agent
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\synthesis_agent.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\cache\cached_agents.py`
-**Symbol**: circular import shared.core.agents.base_agent
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache\cached_agents.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\agents\retrieval_agent.py`
-**Symbol**: circular import shared.core.agents.base_agent
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\retrieval_agent.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\factory.py`
 **Symbol**: circular import shared.core.agents.retrieval_agent
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\factory.py`
@@ -3901,12 +3901,6 @@
 **Proposed Move**: `deprecated/backend/shared\core\cache\cached_retrieval_agent.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\factory.py`
-**Symbol**: circular import shared.core.agents.factcheck_agent
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\factory.py`
-**Reason**: circular duplication
-
 **File**: `shared\core\cache\cached_agents.py`
 **Symbol**: circular import shared.core.agents.factcheck_agent
 **Duplicate Of**: `circular dependency`
@@ -3914,7 +3908,7 @@
 **Reason**: circular duplication
 
 **File**: `shared\core\factory.py`
-**Symbol**: circular import shared.core.agents.synthesis_agent
+**Symbol**: circular import shared.core.agents.factcheck_agent
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\factory.py`
 **Reason**: circular duplication
@@ -3925,22 +3919,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\cache\cached_agents.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\api\config.py`
-**Symbol**: circular import secrets
+**File**: `shared\core\factory.py`
+**Symbol**: circular import shared.core.agents.synthesis_agent
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\api\config.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\config\central_config.py`
-**Symbol**: circular import secrets
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\config\central_config.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\secure_auth.py`
-**Symbol**: circular import secrets
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\secure_auth.py`
+**Proposed Move**: `deprecated/backend/shared\core\factory.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\auth\password_hasher.py`
@@ -3949,22 +3931,40 @@
 **Proposed Move**: `deprecated/backend/shared\core\auth\password_hasher.py`
 **Reason**: circular duplication
 
+**File**: `shared\core\secure_auth.py`
+**Symbol**: circular import secrets
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\secure_auth.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\config\central_config.py`
+**Symbol**: circular import secrets
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\config\central_config.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\api\config.py`
+**Symbol**: circular import secrets
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\api\config.py`
+**Reason**: circular duplication
+
 **File**: `shared\core\input_validation.py`
 **Symbol**: circular import secrets
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\input_validation.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\logging_config.py`
-**Symbol**: circular import warnings
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\logging_config.py`
-**Reason**: circular duplication
-
 **File**: `shared\core\api\config.py`
 **Symbol**: circular import warnings
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\api\config.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\logging_config.py`
+**Symbol**: circular import warnings
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\logging_config.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\config\central_config.py`
@@ -3985,6 +3985,12 @@
 **Proposed Move**: `deprecated/backend/shared\core\memory_manager_postgres.py`
 **Reason**: circular duplication
 
+**File**: `shared\core\cache\cache_manager.py`
+**Symbol**: circular import weakref
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\cache\cache_manager.py`
+**Reason**: circular duplication
+
 **File**: `shared\core\performance_optimizer.py`
 **Symbol**: circular import weakref
 **Duplicate Of**: `circular dependency`
@@ -3997,22 +4003,16 @@
 **Proposed Move**: `deprecated/backend/shared\core\observer.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\cache\cache_manager.py`
-**Symbol**: circular import weakref
+**File**: `shared\core\performance.py`
+**Symbol**: circular import gc
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache\cache_manager.py`
+**Proposed Move**: `deprecated/backend/shared\core\performance.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\performance_optimizer.py`
 **Symbol**: circular import gc
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\performance_optimizer.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\performance.py`
-**Symbol**: circular import gc
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\performance.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\secure_auth.py`
@@ -4027,6 +4027,12 @@
 **Proposed Move**: `deprecated/backend/shared\core\auth\password_hasher.py`
 **Reason**: circular duplication
 
+**File**: `shared\models\session_memory.py`
+**Symbol**: circular import shared.models.models
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\models\session_memory.py`
+**Reason**: circular duplication
+
 **File**: `shared\models\cache_store.py`
 **Symbol**: circular import shared.models.models
 **Duplicate Of**: `circular dependency`
@@ -4039,12 +4045,6 @@
 **Proposed Move**: `deprecated/backend/shared\core\database\repository.py`
 **Reason**: circular duplication
 
-**File**: `shared\models\session_memory.py`
-**Symbol**: circular import shared.models.models
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\models\session_memory.py`
-**Reason**: circular duplication
-
 **File**: `shared\core\services\vector_singleton_service.py`
 **Symbol**: circular import qdrant_client.models
 **Duplicate Of**: `circular dependency`
@@ -4061,6 +4061,18 @@
 **Symbol**: circular import chromadb
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\services\vector_singleton_service.py`
+**Reason**: circular duplication
+
+**File**: `shared\vectorstores\connection_manager.py`
+**Symbol**: circular import chromadb
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\vectorstores\connection_manager.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\services\datastores_optimizer.py`
+**Symbol**: circular import chromadb
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\services\datastores_optimizer.py`
 **Reason**: circular duplication
 
 **File**: `shared\vectorstores\vector_store_service.py`
@@ -4070,18 +4082,6 @@
 **Reason**: circular duplication
 
 **File**: `shared\vectorstores\connection_manager.py`
-**Symbol**: circular import chromadb
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\vectorstores\connection_manager.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\services\datastores_optimizer.py`
-**Symbol**: circular import chromadb
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\services\datastores_optimizer.py`
-**Reason**: circular duplication
-
-**File**: `shared\vectorstores\connection_manager.py`
 **Symbol**: circular import chromadb.config
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\vectorstores\connection_manager.py`
@@ -4093,22 +4093,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\services\datastores_optimizer.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\agents\synthesis_agent.py`
-**Symbol**: circular import task_processor
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\synthesis_agent.py`
-**Reason**: circular duplication
-
 **File**: `shared\core\agents\factcheck_agent.py`
 **Symbol**: circular import task_processor
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\agents\factcheck_agent.py`
-**Reason**: circular duplication
-
-**File**: `shared\core\agents\citation_agent.py`
-**Symbol**: circular import task_processor
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\agents\retrieval_agent.py`
@@ -4117,8 +4105,14 @@
 **Proposed Move**: `deprecated/backend/shared\core\agents\retrieval_agent.py`
 **Reason**: circular duplication
 
+**File**: `shared\core\agents\citation_agent.py`
+**Symbol**: circular import task_processor
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
+**Reason**: circular duplication
+
 **File**: `shared\core\agents\synthesis_agent.py`
-**Symbol**: circular import shared.core.utilities.response_utilities
+**Symbol**: circular import task_processor
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\agents\synthesis_agent.py`
 **Reason**: circular duplication
@@ -4129,20 +4123,20 @@
 **Proposed Move**: `deprecated/backend/shared\core\agents\factcheck_agent.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\agents\citation_agent.py`
-**Symbol**: circular import shared.core.utilities.response_utilities
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
-**Reason**: circular duplication
-
 **File**: `shared\core\agents\retrieval_agent.py`
 **Symbol**: circular import shared.core.utilities.response_utilities
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\agents\retrieval_agent.py`
 **Reason**: circular duplication
 
+**File**: `shared\core\agents\citation_agent.py`
+**Symbol**: circular import shared.core.utilities.response_utilities
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
+**Reason**: circular duplication
+
 **File**: `shared\core\agents\synthesis_agent.py`
-**Symbol**: circular import agent_decorators
+**Symbol**: circular import shared.core.utilities.response_utilities
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\agents\synthesis_agent.py`
 **Reason**: circular duplication
@@ -4153,20 +4147,20 @@
 **Proposed Move**: `deprecated/backend/shared\core\agents\factcheck_agent.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\agents\citation_agent.py`
-**Symbol**: circular import agent_decorators
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
-**Reason**: circular duplication
-
 **File**: `shared\core\agents\retrieval_agent.py`
 **Symbol**: circular import agent_decorators
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\agents\retrieval_agent.py`
 **Reason**: circular duplication
 
+**File**: `shared\core\agents\citation_agent.py`
+**Symbol**: circular import agent_decorators
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
+**Reason**: circular duplication
+
 **File**: `shared\core\agents\synthesis_agent.py`
-**Symbol**: circular import common_validators
+**Symbol**: circular import agent_decorators
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\agents\synthesis_agent.py`
 **Reason**: circular duplication
@@ -4177,12 +4171,6 @@
 **Proposed Move**: `deprecated/backend/shared\core\agents\factcheck_agent.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\agents\citation_agent.py`
-**Symbol**: circular import common_validators
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
-**Reason**: circular duplication
-
 **File**: `shared\core\agents\retrieval_agent.py`
 **Symbol**: circular import common_validators
 **Duplicate Of**: `circular dependency`
@@ -4190,9 +4178,15 @@
 **Reason**: circular duplication
 
 **File**: `shared\core\agents\citation_agent.py`
-**Symbol**: circular import shared.core.prompt_templates
+**Symbol**: circular import common_validators
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\agents\synthesis_agent.py`
+**Symbol**: circular import common_validators
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\synthesis_agent.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\agents\synthesis_agent.py`
@@ -4201,10 +4195,16 @@
 **Proposed Move**: `deprecated/backend/shared\core\agents\synthesis_agent.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\cache\cache_invalidation.py`
+**File**: `shared\core\agents\citation_agent.py`
+**Symbol**: circular import shared.core.prompt_templates
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\agents\citation_agent.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\cache\cached_agents.py`
 **Symbol**: circular import cache_config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache\cache_invalidation.py`
+**Proposed Move**: `deprecated/backend/shared\core\cache\cached_agents.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\cache\cache_manager.py`
@@ -4225,10 +4225,10 @@
 **Proposed Move**: `deprecated/backend/shared\core\cache\cache_metrics.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\cache\cached_agents.py`
+**File**: `shared\core\cache\cache_invalidation.py`
 **Symbol**: circular import cache_config
 **Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache\cached_agents.py`
+**Proposed Move**: `deprecated/backend/shared\core\cache\cache_invalidation.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\cache\cache_metrics.py`
@@ -4237,16 +4237,16 @@
 **Proposed Move**: `deprecated/backend/shared\core\cache\cache_metrics.py`
 **Reason**: circular duplication
 
-**File**: `shared\core\cache\cached_agents.py`
-**Symbol**: circular import cache_manager
-**Duplicate Of**: `circular dependency`
-**Proposed Move**: `deprecated/backend/shared\core\cache\cached_agents.py`
-**Reason**: circular duplication
-
 **File**: `shared\core\cache\cache_invalidation.py`
 **Symbol**: circular import cache_manager
 **Duplicate Of**: `circular dependency`
 **Proposed Move**: `deprecated/backend/shared\core\cache\cache_invalidation.py`
+**Reason**: circular duplication
+
+**File**: `shared\core\cache\cached_agents.py`
+**Symbol**: circular import cache_manager
+**Duplicate Of**: `circular dependency`
+**Proposed Move**: `deprecated/backend/shared\core\cache\cached_agents.py`
 **Reason**: circular duplication
 
 **File**: `shared\core\cache\cached_retrieval_agent.py`
@@ -11069,46 +11069,10 @@
 
 ### Low Priority
 
-**File**: `frontend\src\components\search\CitationTooltip.tsx`
-**Symbol**: unused component CitationTooltip
-**Duplicate Of**: `unused`
-**Proposed Move**: `deprecated/frontend/frontend\src\components\search\CitationTooltip.tsx`
-**Reason**: component duplication
-
-**File**: `frontend\src\components\analytics\DataNovaDashboard.tsx`
-**Symbol**: unused component DataNovaDashboard
-**Duplicate Of**: `unused`
-**Proposed Move**: `deprecated/frontend/frontend\src\components\analytics\DataNovaDashboard.tsx`
-**Reason**: component duplication
-
-**File**: `frontend\src\components\layout\StandardLayout.tsx`
-**Symbol**: unused component StandardLayout
-**Duplicate Of**: `unused`
-**Proposed Move**: `deprecated/frontend/frontend\src\components\layout\StandardLayout.tsx`
-**Reason**: component duplication
-
-**File**: `frontend\src\components\ui\FallbackBadge.tsx`
-**Symbol**: unused component FallbackBadge
-**Duplicate Of**: `unused`
-**Proposed Move**: `deprecated/frontend/frontend\src\components\ui\FallbackBadge.tsx`
-**Reason**: component duplication
-
 **File**: `frontend\src\components\theme\ThemeProvider.tsx`
 **Symbol**: unused component ThemeProvider
 **Duplicate Of**: `unused`
 **Proposed Move**: `deprecated/frontend/frontend\src\components\theme\ThemeProvider.tsx`
-**Reason**: component duplication
-
-**File**: `frontend\src\components\theme\ThemeToggle.tsx`
-**Symbol**: unused component ThemeToggle
-**Duplicate Of**: `unused`
-**Proposed Move**: `deprecated/frontend/frontend\src\components\theme\ThemeToggle.tsx`
-**Reason**: component duplication
-
-**File**: `frontend\src\components\security\SecurityFooter.tsx`
-**Symbol**: unused component SecurityFooter
-**Duplicate Of**: `unused`
-**Proposed Move**: `deprecated/frontend/frontend\src\components\security\SecurityFooter.tsx`
 **Reason**: component duplication
 
 **File**: `frontend\src\components\layout\Header.tsx`
@@ -11117,16 +11081,52 @@
 **Proposed Move**: `deprecated/frontend/frontend\src\components\layout\Header.tsx`
 **Reason**: component duplication
 
+**File**: `frontend\src\components\security\SecurityFooter.tsx`
+**Symbol**: unused component SecurityFooter
+**Duplicate Of**: `unused`
+**Proposed Move**: `deprecated/frontend/frontend\src\components\security\SecurityFooter.tsx`
+**Reason**: component duplication
+
+**File**: `frontend\src\components\analytics\DataNovaDashboard.tsx`
+**Symbol**: unused component DataNovaDashboard
+**Duplicate Of**: `unused`
+**Proposed Move**: `deprecated/frontend/frontend\src\components\analytics\DataNovaDashboard.tsx`
+**Reason**: component duplication
+
+**File**: `frontend\src\components\theme\ThemeToggle.tsx`
+**Symbol**: unused component ThemeToggle
+**Duplicate Of**: `unused`
+**Proposed Move**: `deprecated/frontend/frontend\src\components\theme\ThemeToggle.tsx`
+**Reason**: component duplication
+
+**File**: `frontend\src\components\search\CitationTooltip.tsx`
+**Symbol**: unused component CitationTooltip
+**Duplicate Of**: `unused`
+**Proposed Move**: `deprecated/frontend/frontend\src\components\search\CitationTooltip.tsx`
+**Reason**: component duplication
+
 **File**: `frontend\src\components\streaming\TokenStream.tsx`
 **Symbol**: unused component TokenStream
 **Duplicate Of**: `unused`
 **Proposed Move**: `deprecated/frontend/frontend\src\components\streaming\TokenStream.tsx`
 **Reason**: component duplication
 
+**File**: `frontend\src\components\ui\FallbackBadge.tsx`
+**Symbol**: unused component FallbackBadge
+**Duplicate Of**: `unused`
+**Proposed Move**: `deprecated/frontend/frontend\src\components\ui\FallbackBadge.tsx`
+**Reason**: component duplication
+
 **File**: `frontend\src\components\blog\EruditeBlog.tsx`
 **Symbol**: unused component EruditeBlog
 **Duplicate Of**: `unused`
 **Proposed Move**: `deprecated/frontend/frontend\src\components\blog\EruditeBlog.tsx`
+**Reason**: component duplication
+
+**File**: `frontend\src\components\layout\StandardLayout.tsx`
+**Symbol**: unused component StandardLayout
+**Duplicate Of**: `unused`
+**Proposed Move**: `deprecated/frontend/frontend\src\components\layout\StandardLayout.tsx`
 **Reason**: component duplication
 
 ## Summary

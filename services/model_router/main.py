@@ -24,12 +24,20 @@ from prometheus_client import Counter, Histogram, Gauge, start_http_server
 # Import centralized configuration
 from shared.core.config.central_config import get_central_config
 
+# Import HF inference fallback
+from .hf_inference_fallback import HFRefinementFallback
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Get configuration
 config = get_central_config()
+
+# Initialize HF inference fallback
+hf_fallback = HFRefinementFallback(
+    hf_api_key=config.get("HUGGINGFACE_API_KEY")
+)
 
 # Prometheus metrics
 router_requests_total = Counter('sarvanom_router_requests_total', 'Total router requests', ['query_type', 'complexity'])
@@ -775,6 +783,33 @@ class ModelSelectionResponse(BaseModel):
 async def health_check():
     """Health check endpoint - fast, no downstream calls"""
     return {"status": "healthy", "service": "model-router", "timestamp": datetime.now().isoformat()}
+
+@app.post("/refine")
+async def refine_query(request: dict):
+    """Refine query using HF inference fallback"""
+    try:
+        query = request.get("query", "")
+        context = request.get("context", "")
+        
+        if not query:
+            raise HTTPException(status_code=400, detail="Query is required")
+        
+        # Use HF fallback for refinement
+        result = await hf_fallback.refine_with_fallback(query, context)
+        
+        return {
+            "refined_query": result["refined_query"],
+            "confidence": result["confidence"],
+            "fallback_used": result["fallback_used"],
+            "model_used": result["model_used"],
+            "latency_ms": result["latency_ms"],
+            "status": result["status"],
+            "rate_limited": result["rate_limited"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Query refinement failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Refinement failed: {str(e)}")
 
 @app.get("/ready")
 async def ready_check():
