@@ -14,7 +14,7 @@ import {
   PlayIcon,
   PauseIcon
 } from "@heroicons/react/24/outline";
-import { SearchInput } from "@/components/features/SearchInput";
+import { SearchInput } from "@/components/search/SearchInput";
 
 interface Project {
   id: string;

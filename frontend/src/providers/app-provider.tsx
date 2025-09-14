@@ -3,7 +3,7 @@
 import React, { createContext, useContext } from "react";
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ErrorBoundary } from "@/components/error-boundary";
+import { ErrorBoundary } from "@/ui/ErrorBoundary";
 // import { StateProvider } from "@/components/state-provider";
 import { CollaborationProvider } from "@/providers/collaboration-provider";
 import { Toaster } from "@/ui/ui/toaster";

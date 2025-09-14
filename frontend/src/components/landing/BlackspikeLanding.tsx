@@ -16,7 +16,7 @@ import {
   CodeBracketIcon,
   ShieldCheckIcon
 } from "@heroicons/react/24/outline";
-import { SearchInput } from "@/components/features/SearchInput";
+import { SearchInput } from "@/components/search/SearchInput";
 
 export default function BlackspikeLanding() {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);

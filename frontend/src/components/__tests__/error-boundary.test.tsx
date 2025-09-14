@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { renderWithProviders, screen, waitFor } from '@/__tests__/utils/test-utils';
-import { ErrorBoundary, withErrorBoundary } from '../error-boundary';
+import { ErrorBoundary, withErrorBoundary } from '@/ui/ErrorBoundary';
 import { errorMonitor } from '@/lib/error-monitoring';
 
 // Mock the error monitoring
