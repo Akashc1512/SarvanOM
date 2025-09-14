@@ -21,7 +21,7 @@ import {
   SwatchIcon
 } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
-import { ThemeToggle } from '@/ui/ThemeToggle';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 interface NavItem {
   name: string;

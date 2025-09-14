@@ -1,6 +1,6 @@
 import React from "react";
 import { render } from "@testing-library/react";
-import { AnswerDisplay } from "../AnswerDisplay";
+import { AnswerDisplay } from "@/components/search/AnswerDisplay";
 import { QueryForm } from "../QueryForm";
 
 // Mock dependencies
