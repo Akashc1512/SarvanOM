@@ -16,7 +16,7 @@ from shared.core.secure_auth import (
 from shared.core.api.api_models import LoginRequest, RegisterRequest
 from shared.core.config.central_config import initialize_config
 from shared.core.database import get_db_manager
-from backend.repositories.database.user_repository import UserRepository
+from shared.repositories.database.user_repository import UserRepository
 from shared.core.auth.password_hasher import PasswordHasher
 
 logger = structlog.get_logger(__name__)

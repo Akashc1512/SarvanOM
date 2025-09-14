@@ -20,14 +20,21 @@ from enum import Enum
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import httpx
 import redis
 from prometheus_client import Counter, Histogram, Gauge, start_http_server
 
+# Import central configuration
+from shared.core.config.central_config import get_central_config
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Get configuration
+config = get_central_config()
 
 # Prometheus metrics
 refinement_requests_total = Counter('sarvanom_refinement_requests_total', 'Total refinement requests', ['refinement_type', 'result'])
@@ -81,9 +88,9 @@ class ConstraintChip:
 class RefinementContext:
     user_id: str
     session_id: str
-    thread_id: Optional[str] = None
     original_query: str
     query_hash: str
+    thread_id: Optional[str] = None
     has_images: bool = False
     has_documents: bool = False
     has_video: bool = False
@@ -211,11 +218,12 @@ class RefinementTrigger:
 class RefinementGenerator:
     """Generates refinement suggestions"""
     
-    def __init__(self, router_url: str = "http://localhost:8001"):
-        self.router_url = router_url
+    def __init__(self, router_url: str = None):
+        self.router_url = router_url or getattr(config, 'model_router_url', 'http://localhost:8001')
         self.http_client = httpx.AsyncClient()
         self.pii_redactor = PIIRedactor()
         self.language_detector = LanguageDetector()
+        self.config = config
     
     async def generate_refinements(self, context: RefinementContext) -> RefinementResult:
         """Generate refinement suggestions for the query"""
@@ -239,8 +247,8 @@ class RefinementGenerator:
             latency_ms = (time.time() - start_time) * 1000
             
             # Check latency budget
-            if latency_ms > 500:  # Exceeded median budget
-                logger.warning(f"Refinement latency {latency_ms}ms exceeded 500ms budget")
+            if latency_ms > self.config.median_budget_ms:  # Exceeded median budget
+                logger.warning(f"Refinement latency {latency_ms}ms exceeded {self.config.median_budget_ms}ms budget")
                 return RefinementResult(
                     should_trigger=False,
                     suggestions=[],
@@ -567,14 +575,71 @@ class GuidedPromptService:
                 refinement_type="guided_prompt"
             ).observe(result.latency_ms / 1000.0)
 
-# FastAPI app
-app = FastAPI(title="Guided Prompt Confirmation Service", version="2.0.0")
+# Create FastAPI app
+app = FastAPI(
+    title="Guided Prompt Confirmation Service",
+    version="2.0.0",
+    description="Pre-flight refinement with ≤500ms median / p95 ≤800ms, auto-skip if over budget"
+)
 
-# Redis client
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+# Set CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.cors_origins if isinstance(config.cors_origins, list) else (config.cors_origins.split(",") if config.cors_origins else ["*"]),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Guided prompt service instance
-guided_prompt_service = GuidedPromptService(redis_client)
+# App state / DI container
+async def init_dependencies():
+    """Initialize shared clients and dependencies"""
+    logger.info("Initializing Guided Prompt dependencies...")
+    
+    # Initialize Redis client
+    app.state.redis_client = redis.Redis.from_url(
+        str(config.redis_url),
+        decode_responses=True,
+        socket_connect_timeout=5,
+        socket_timeout=5,
+        retry_on_timeout=True
+    )
+    
+    # Test Redis connection
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, app.state.redis_client.ping
+        )
+        logger.info("Redis client initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to connect to Redis: {e}")
+        raise
+    
+    # Initialize Guided Prompt Service
+    app.state.guided_prompt_service = GuidedPromptService(app.state.redis_client)
+    logger.info("Guided Prompt Service initialized successfully")
+
+async def cleanup_dependencies():
+    """Cleanup shared clients and dependencies"""
+    logger.info("Cleaning up Guided Prompt dependencies...")
+    
+    if hasattr(app.state, 'redis_client'):
+        try:
+            app.state.redis_client.close()
+            logger.info("Redis client closed successfully")
+        except Exception as e:
+            logger.error(f"Error closing Redis client: {e}")
+
+# Startup/Shutdown events
+@app.on_event("startup")
+async def startup_event():
+    """Application startup event"""
+    await init_dependencies()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Application shutdown event"""
+    await cleanup_dependencies()
 
 # Pydantic models for API
 class QueryRequest(BaseModel):
@@ -611,16 +676,60 @@ class UserSettingsRequest(BaseModel):
     mode: str
     preferences: Optional[Dict[str, Any]] = None
 
+# Health & Config endpoints
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "guided-prompt"}
+    """Health check endpoint - fast, no downstream calls"""
+    return {"status": "healthy", "service": "guided-prompt", "timestamp": datetime.now().isoformat()}
+
+@app.get("/ready")
+async def ready_check():
+    """Ready check endpoint - light ping to critical deps with small timeout"""
+    try:
+        # Check Redis connection with timeout
+        await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(
+                None, app.state.redis_client.ping
+            ),
+            timeout=2.0
+        )
+        return {"status": "ready", "service": "guided-prompt", "timestamp": datetime.now().isoformat()}
+    except Exception as e:
+        logger.error(f"Ready check failed: {e}")
+        raise HTTPException(status_code=503, detail="Service not ready")
+
+@app.get("/config")
+async def get_config_endpoint():
+    """Config endpoint - sanitized echo of active providers and keyless fallbacks"""
+    return {
+        "service": "guided-prompt",
+        "active_providers": {
+            "openai": bool(config.openai_api_key),
+            "anthropic": bool(config.anthropic_api_key),
+            "gemini": bool(getattr(config, 'google_api_key', None)),
+            "huggingface": bool(config.huggingface_api_key or config.huggingface_read_token or config.huggingface_write_token),
+            "ollama": bool(config.ollama_base_url)
+        },
+        "keyless_fallbacks_enabled": getattr(config, 'keyless_fallbacks_enabled', True),
+        "environment": getattr(config, 'environment', 'development'),
+        "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/version")
+async def get_version():
+    """Version endpoint"""
+    return {
+        "service": "guided-prompt",
+        "version": "2.0.0",
+        "build_date": datetime.now().isoformat(),
+        "environment": config.environment.value
+    }
 
 @app.post("/refine", response_model=RefinementResultResponse)
 async def refine_query(request: QueryRequest):
     """Process query for guided prompt confirmation"""
     try:
-        result = await guided_prompt_service.process_query(request.query, request.context or {})
+        result = await app.state.guided_prompt_service.process_query(request.query, request.context or {})
         
         # Convert to response format
         suggestions = [
@@ -652,7 +761,7 @@ async def update_user_settings(request: UserSettingsRequest):
     """Update user settings for guided prompt"""
     try:
         # In real implementation, this would save to database
-        guided_prompt_service.user_settings[request.user_id] = {
+        app.state.guided_prompt_service.user_settings[request.user_id] = {
             "mode": request.mode,
             "preferences": request.preferences or {},
             "last_updated": datetime.now().isoformat()
@@ -668,7 +777,7 @@ async def update_user_settings(request: UserSettingsRequest):
 async def get_user_settings(user_id: str):
     """Get user settings for guided prompt"""
     try:
-        settings = await guided_prompt_service._get_user_settings(user_id)
+        settings = await app.state.guided_prompt_service._get_user_settings(user_id)
         return {"user_id": user_id, "settings": settings}
         
     except Exception as e:
@@ -698,9 +807,50 @@ async def record_feedback(
         logger.error(f"Failed to record feedback: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Observability middleware
+if config.metrics_enabled:
+    # Mount Prometheus metrics
+    from prometheus_client import make_asgi_app
+    metrics_app = make_asgi_app()
+    app.mount("/metrics", metrics_app)
+    logger.info("Prometheus metrics enabled")
+
+if getattr(config, 'tracing_enabled', False) and getattr(config, 'jaeger_agent_host', None):
+    # Mount tracing middleware
+    try:
+        from opentelemetry import trace
+        from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        
+        # Configure Jaeger tracing
+        trace.set_tracer_provider(TracerProvider())
+        jaeger_exporter = JaegerExporter(
+            agent_host_name=config.jaeger_agent_host,
+            agent_port=int(config.jaeger_agent_port) if config.jaeger_agent_port else 6831,
+        )
+        span_processor = BatchSpanProcessor(jaeger_exporter)
+        trace.get_tracer_provider().add_span_processor(span_processor)
+        
+        # Instrument FastAPI
+        FastAPIInstrumentor.instrument_app(app)
+        logger.info("Jaeger tracing enabled")
+    except ImportError:
+        logger.warning("OpenTelemetry packages not available, tracing disabled")
+    except Exception as e:
+        logger.error(f"Failed to enable tracing: {e}")
+
 if __name__ == "__main__":
-    # Start Prometheus metrics server
-    start_http_server(8004)
+    # Start Prometheus metrics server if enabled
+    if config.metrics_enabled:
+        start_http_server(8004)
+        logger.info("Prometheus metrics server started on port 8004")
     
     # Start FastAPI server
-    uvicorn.run(app, host="0.0.0.0", port=8003)
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8003,
+        log_level=config.log_level.value.lower()
+    )

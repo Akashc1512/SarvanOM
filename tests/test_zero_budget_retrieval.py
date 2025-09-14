@@ -21,7 +21,7 @@ from unittest.mock import Mock, patch, AsyncMock, MagicMock
 from datetime import datetime
 
 # Import the zero-budget retrieval system
-from services.retrieval.free_tier import (
+from sarvanom.services.retrieval.free_tier import (
     ZeroBudgetRetrieval, SearchResult, SearchResponse, SearchProvider,
     get_zero_budget_retrieval, combined_search, wiki_search, free_web_search
 )
@@ -41,7 +41,7 @@ class TestZeroBudgetRetrieval:
     @pytest.fixture
     def mock_session(self):
         """Mock aiohttp session."""
-        with patch('aiohttp.ClientSession') as mock_session:
+        with patch('sarvanom.services.retrieval.free_tier.aiohttp.ClientSession') as mock_session:
             mock_session.return_value = AsyncMock()
             yield mock_session
     
@@ -260,7 +260,7 @@ class TestZeroBudgetRetrieval:
         mock_session.return_value.get.return_value.__aenter__.return_value.status = 200
         mock_session.return_value.get.return_value.__aenter__.return_value.json.return_value = brave_response
         
-        with patch('services.retrieval.free_tier.BRAVE_API_KEY', 'test_key'):
+        with patch('sarvanom.services.retrieval.free_tier.BRAVE_API_KEY', 'test_key'):
             results = await retrieval_system._brave_search("artificial intelligence", k=1)
         
         assert len(results) == 1
@@ -480,7 +480,7 @@ class TestZeroBudgetRetrievalErrorHandling:
     async def test_redis_connection_failure(self):
         """Test handling of Redis connection failure."""
         # Create system with Redis connection failure
-        with patch('redis.asyncio.from_url') as mock_redis:
+        with patch('sarvanom.services.retrieval.free_tier.redis.asyncio.from_url') as mock_redis:
             mock_redis.side_effect = Exception("Redis connection failed")
             
             system = ZeroBudgetRetrieval()

@@ -1,0 +1,10 @@
+{
+  "query": "latest AI news",
+  "feed_type": "news",
+  "user_id": "test_user",
+  "session_id": "test_session",
+  "trace_id": "test_trace",
+  "constraints": {
+    "limit": 5
+  }
+}

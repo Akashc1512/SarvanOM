@@ -3,7 +3,7 @@
 # Optimized for Windows 11 Docker Desktop (WSL2 backend)
 # =============================================================================
 
-.PHONY: help up down build logs clean restart health-check test-docker-health doctor
+.PHONY: help up down build logs clean restart health-check test-docker-health doctor ci-gates ci-gates-provider-keys ci-gates-budget ci-gates-performance
 
 # Default target
 help:
@@ -20,6 +20,12 @@ help:
 	@echo "  health-check - Check health of all services"
 	@echo "  test-docker-health - Run comprehensive Docker health tests"
 	@echo "  doctor       - Check development environment setup"
+	@echo ""
+	@echo "CI Quality Gates:"
+	@echo "  ci-gates     - Run all CI quality gates"
+	@echo "  ci-gates-provider-keys - Run provider key validation gates"
+	@echo "  ci-gates-budget - Run budget compliance gates"
+	@echo "  ci-gates-performance - Run performance gates"
 	@echo ""
 
 # Start all services with .env.docker
@@ -266,4 +272,21 @@ guardrails-report: ## Generate guardrails report from latest results
 		fi; \
 	else \
 		echo "No results directory found"; \
-	fi 
+	fi
+
+# CI Quality Gates
+ci-gates: ## Run all CI quality gates
+	@echo "🚀 Running CI Quality Gates..."
+	@python scripts/ci-gates.py --verbose
+
+ci-gates-provider-keys: ## Run provider key validation gates
+	@echo "🔑 Running Provider Key Validation Gates..."
+	@python scripts/ci-gates.py --gates provider-keys --verbose
+
+ci-gates-budget: ## Run budget compliance gates
+	@echo "💰 Running Budget Compliance Gates..."
+	@python scripts/ci-gates.py --gates budget-compliance --verbose
+
+ci-gates-performance: ## Run performance gates
+	@echo "⚡ Running Performance Gates..."
+	@python scripts/ci-gates.py --gates performance --verbose 

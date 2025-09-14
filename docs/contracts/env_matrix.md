@@ -1,8 +1,8 @@
 # Environment Contract Matrix
 
 **Date**: September 9, 2025  
-**Status**: ✅ **ACTIVE CONTRACT**  
-**Purpose**: Comprehensive matrix of canonical environment variables for SarvanOM v2
+**Status**: ✅ **UPDATED FOR PR-7**  
+**Purpose**: Comprehensive matrix of canonical environment variables for SarvanOM v2 with exact runtime behavior
 
 ---
 
@@ -81,12 +81,45 @@
 | `FACTCHECK_SERVICE_URL` | ✅ **CANONICAL** | String | Yes | Fact-check service endpoint | `https://factcheck.sarvanom.com` |
 | `ANALYTICS_SERVICE_URL` | ✅ **CANONICAL** | String | Yes | Analytics service endpoint | `https://analytics.sarvanom.com` |
 
+### **Feature Flags**
+| Variable | Status | Type | Required | Description | Example |
+|----------|--------|------|----------|-------------|---------|
+| `KEYLESS_FALLBACKS_ENABLED` | ✅ **CANONICAL** | Boolean | No | Enable keyless fallbacks for providers | `true` |
+
 ### **Monitoring & Observability**
 | Variable | Status | Type | Required | Description | Example |
 |----------|--------|------|----------|-------------|---------|
 | `SENTRY_DSN` | ✅ **CANONICAL** | String | No | Sentry error tracking DSN | `https://...@sentry.io/...` |
 | `JAEGER_AGENT_HOST` | ✅ **CANONICAL** | String | No | Jaeger tracing agent host | `localhost` |
 | `JAEGER_AGENT_PORT` | ✅ **CANONICAL** | String | No | Jaeger tracing agent port | `6831` |
+
+---
+
+## 🔄 **Runtime Behavior (PR-7 Updated)**
+
+### **Provider Key Validation**
+- **Required Lanes**: Web Search, News, Markets, LLM must have at least one primary provider configured
+- **Fail-Fast**: System fails immediately if required lanes have no configured providers AND keyless fallbacks are disabled
+- **Graceful Degradation**: System continues with keyless fallbacks if `KEYLESS_FALLBACKS_ENABLED=true`
+
+### **Keyless Fallback Behavior**
+- **Default**: `KEYLESS_FALLBACKS_ENABLED=true` (enabled by default)
+- **Web Search**: DuckDuckGo IA, Wikipedia, StackExchange, MDN (always available)
+- **News**: GDELT, HN Algolia, RSS (always available)
+- **Markets**: Stooq, SEC EDGAR (always available)
+- **Budget Compliance**: Keyless-only lanes must still meet 5/7/10s end-to-end budgets
+
+### **Provider Order & Fallbacks**
+- **Web Search**: Brave → SerpAPI → Keyless (DuckDuckGo, Wikipedia, etc.)
+- **News**: Guardian → NewsAPI → Keyless (GDELT, HN Algolia, RSS)
+- **Markets**: Alpha Vantage → Finnhub/FMP → Keyless (Stooq, SEC EDGAR)
+- **LLM**: OpenAI/Anthropic (text), Gemini (vision) with graceful degradation
+
+### **CI Gate Requirements**
+- **Required Keys**: At least one primary provider key per lane
+- **Budget Compliance**: ≤800ms per provider, 5/7/10s end-to-end
+- **Health Checks**: All services must respond to `/health` endpoint
+- **Auto-Demotion**: Providers with >30% failure rate are automatically demoted
 
 ---
 

@@ -1,8 +1,8 @@
 # External Feeds Providers - SarvanOM v2
 
 **Date**: September 9, 2025  
-**Status**: ✅ **ACTIVE CONTRACT**  
-**Purpose**: List free news and markets providers with normalized ingest contract
+**Status**: ✅ **UPDATED FOR PR-7**  
+**Purpose**: List free news and markets providers with normalized ingest contract - exact runtime behavior
 
 ---
 
@@ -16,6 +16,40 @@ SarvanOM v2 integrates with free news and markets providers to provide real-time
 3. **Rate Limit Compliance**: Respect provider rate limits and quotas
 4. **Error Resilience**: Graceful handling of provider failures
 5. **Data Quality**: Validate and clean incoming data
+
+---
+
+## 🔄 **Runtime Behavior (PR-7 Updated)**
+
+### **Provider Order & Execution**
+- **News Lane**: Guardian → NewsAPI → Keyless (GDELT, HN Algolia, RSS)
+- **Markets Lane**: Alpha Vantage → Finnhub/FMP → Keyless (Stooq, SEC EDGAR)
+- **Parallel Fan-Out**: Providers execute in parallel within each lane
+- **First-N Strategy**: Lane completes when sufficient results obtained
+
+### **Budget Enforcement**
+- **Per-Provider Timeout**: ≤800ms per individual provider
+- **Lane Budget**: 2s (Simple), 3s (Technical), 4s (Research)
+- **End-to-End Budget**: 5s (Simple), 7s (Technical), 10s (Research)
+- **Graceful Degradation**: Lane continues with available providers
+
+### **Fallback Logic**
+- **Keyed Providers**: Primary providers with API keys (Guardian, NewsAPI, Alpha Vantage, Finnhub, FMP)
+- **Keyless Providers**: Always available (GDELT, HN Algolia, RSS, Stooq, SEC EDGAR)
+- **Fallback Activation**: Automatic when keyed providers fail or unavailable
+- **Budget Compliance**: Keyless-only lanes must still meet end-to-end budgets
+
+### **Data Normalization**
+- **Common Schema**: All providers normalize to standard article/market schemas
+- **Field Mapping**: Consistent field mapping across all providers
+- **Data Validation**: Input validation and data cleaning
+- **Error Handling**: Graceful handling of provider failures
+
+### **Caching Strategy**
+- **Cache TTL**: Per-provider cache time-to-live
+- **Cache Keys**: Provider-specific cache keys
+- **Cache Invalidation**: Automatic cache invalidation on errors
+- **Cache Warming**: Proactive cache warming for popular queries
 
 ---
 

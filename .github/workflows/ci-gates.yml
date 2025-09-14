@@ -1,0 +1,341 @@
+name: CI Quality Gates
+
+on:
+  pull_request:
+    branches: [ main, develop, release/v2 ]
+  push:
+    branches: [ main, develop, release/v2 ]
+
+jobs:
+  provider-key-validation:
+    name: Provider Key Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run provider key validation
+      run: |
+        python -m sarvanom.shared.ci.ci_gates
+      env:
+        ENVIRONMENT: ci
+        KEYLESS_FALLBACKS_ENABLED: true
+        # Note: In real CI, these would be set as secrets
+        # BRAVE_SEARCH_API_KEY: ${{ secrets.BRAVE_SEARCH_API_KEY }}
+        # SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+        # GUARDIAN_OPEN_PLATFORM_KEY: ${{ secrets.GUARDIAN_OPEN_PLATFORM_KEY }}
+        # NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
+        # ALPHAVANTAGE_KEY: ${{ secrets.ALPHAVANTAGE_KEY }}
+        # OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        # ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        # GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    
+    - name: Upload validation report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: provider-key-validation-report
+        path: |
+          ci-gates-report.json
+          ci-gates-summary.txt
+
+  code-quality:
+    name: Code Quality Gates
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run linting
+      run: |
+        ruff check .
+        ruff format --check .
+    
+    - name: Run type checking
+      run: |
+        mypy .
+    
+    - name: Run security scan
+      run: |
+        safety check
+        bandit -r . -f json -o bandit-report.json
+    
+    - name: Upload security report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-report
+        path: bandit-report.json
+
+  frontend-quality:
+    name: Frontend Quality Gates
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm ci
+    
+    - name: Run linting
+      working-directory: frontend
+      run: |
+        npm run lint
+        npm run lint:fix
+    
+    - name: Run type checking
+      working-directory: frontend
+      run: npx tsc --noEmit
+    
+    - name: Run tests
+      working-directory: frontend
+      run: npm test -- --coverage --watchAll=false
+    
+    - name: Run security audit
+      working-directory: frontend
+      run: npm audit --audit-level=high
+    
+    - name: Build application
+      working-directory: frontend
+      run: npm run build
+    
+    - name: Run Lighthouse CI
+      working-directory: frontend
+      run: |
+        npm install -g @lhci/cli
+        lhci autorun
+
+  performance-gates:
+    name: Performance Gates
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run performance tests
+      run: |
+        pytest tests/performance/ -v --junitxml=performance-results.xml
+    
+    - name: Upload performance results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: performance-results
+        path: performance-results.xml
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run integration tests
+      run: |
+        pytest tests/integration/ -v --junitxml=integration-results.xml
+      env:
+        REDIS_URL: redis://localhost:6379
+        ENVIRONMENT: ci
+    
+    - name: Upload integration results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: integration-results
+        path: integration-results.xml
+
+  end-to-end-tests:
+    name: End-to-End Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Start services
+      run: |
+        # Start backend services
+        python -m sarvanom.services.gateway.main &
+        python -m sarvanom.services.retrieval.main &
+        python -m sarvanom.services.feeds.main &
+        python -m sarvanom.services.model_router.main &
+        sleep 10  # Wait for services to start
+    
+    - name: Run E2E tests
+      run: |
+        pytest tests/e2e/ -v --junitxml=e2e-results.xml
+      env:
+        ENVIRONMENT: ci
+        KEYLESS_FALLBACKS_ENABLED: true
+    
+    - name: Upload E2E results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: e2e-results
+        path: e2e-results.xml
+
+  gate-summary:
+    name: Gate Summary
+    runs-on: ubuntu-latest
+    needs: [provider-key-validation, code-quality, frontend-quality, performance-gates, integration-tests, end-to-end-tests]
+    if: always()
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+    
+    - name: Generate gate summary
+      run: |
+        echo "# CI Quality Gates Summary" > gate-summary.md
+        echo "" >> gate-summary.md
+        echo "## Job Results" >> gate-summary.md
+        echo "" >> gate-summary.md
+        
+        # Check each job result
+        if [ "${{ needs.provider-key-validation.result }}" == "success" ]; then
+          echo "✅ Provider Key Validation: PASSED" >> gate-summary.md
+        else
+          echo "❌ Provider Key Validation: FAILED" >> gate-summary.md
+        fi
+        
+        if [ "${{ needs.code-quality.result }}" == "success" ]; then
+          echo "✅ Code Quality: PASSED" >> gate-summary.md
+        else
+          echo "❌ Code Quality: FAILED" >> gate-summary.md
+        fi
+        
+        if [ "${{ needs.frontend-quality.result }}" == "success" ]; then
+          echo "✅ Frontend Quality: PASSED" >> gate-summary.md
+        else
+          echo "❌ Frontend Quality: FAILED" >> gate-summary.md
+        fi
+        
+        if [ "${{ needs.performance-gates.result }}" == "success" ]; then
+          echo "✅ Performance Gates: PASSED" >> gate-summary.md
+        else
+          echo "❌ Performance Gates: FAILED" >> gate-summary.md
+        fi
+        
+        if [ "${{ needs.integration-tests.result }}" == "success" ]; then
+          echo "✅ Integration Tests: PASSED" >> gate-summary.md
+        else
+          echo "❌ Integration Tests: FAILED" >> gate-summary.md
+        fi
+        
+        if [ "${{ needs.end-to-end-tests.result }}" == "success" ]; then
+          echo "✅ End-to-End Tests: PASSED" >> gate-summary.md
+        else
+          echo "❌ End-to-End Tests: FAILED" >> gate-summary.md
+        fi
+        
+        echo "" >> gate-summary.md
+        echo "## Overall Result" >> gate-summary.md
+        echo "" >> gate-summary.md
+        
+        # Determine overall result
+        if [ "${{ needs.provider-key-validation.result }}" == "success" ] && \
+           [ "${{ needs.code-quality.result }}" == "success" ] && \
+           [ "${{ needs.frontend-quality.result }}" == "success" ] && \
+           [ "${{ needs.performance-gates.result }}" == "success" ] && \
+           [ "${{ needs.integration-tests.result }}" == "success" ] && \
+           [ "${{ needs.end-to-end-tests.result }}" == "success" ]; then
+          echo "🎉 **ALL GATES PASSED** - Ready for merge!" >> gate-summary.md
+        else
+          echo "🚫 **GATES FAILED** - Merge blocked until issues are resolved." >> gate-summary.md
+        fi
+    
+    - name: Upload gate summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: gate-summary
+        path: gate-summary.md
+    
+    - name: Comment on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('gate-summary.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });

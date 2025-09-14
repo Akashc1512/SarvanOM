@@ -1,0 +1,16 @@
+{
+  "query": "What are the benefits of renewable energy?",
+  "sources": [
+    {
+      "content": "Renewable energy sources like solar and wind power produce electricity without emitting greenhouse gases, helping to combat climate change.",
+      "url": "https://example.com/renewable-energy",
+      "title": "Renewable Energy Benefits"
+    },
+    {
+      "content": "Solar and wind energy are becoming increasingly cost-effective, with prices dropping significantly over the past decade.",
+      "url": "https://example.com/cost-effectiveness",
+      "title": "Cost Trends in Renewable Energy"
+    }
+  ],
+  "max_tokens": 500
+}

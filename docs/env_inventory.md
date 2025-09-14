@@ -1,20 +1,40 @@
 # Environment Variables Inventory
 
 **Date**: September 9, 2025  
-**Status**: Current state analysis for SarvanOM v2 implementation  
-**Source**: Configuration files and codebase analysis
+**Status**: ✅ **UPDATED FOR PR-1** - Centralized provider configuration implemented  
+**Source**: Centralized configuration system in `sarvanom/shared/core/config/provider_config.py`
 
 ---
 
-## 📋 **Current Environment Variables (From Configuration Analysis)**
+## 📋 **Centralized Provider Configuration (PR-1 Implementation)**
 
 ### **AI Provider Configuration**
-| Variable | Status | Description | Required |
-|----------|--------|-------------|----------|
-| `OPENAI_API_KEY` | ✅ **EXISTS** | OpenAI API key for GPT models | Yes |
-| `ANTHROPIC_API_KEY` | ✅ **EXISTS** | Anthropic API key for Claude models | Yes |
-| `HUGGINGFACE_API_TOKEN` | ✅ **EXISTS** | HuggingFace API token for models | Yes |
-| `OLLAMA_BASE_URL` | ✅ **EXISTS** | Ollama local server URL | No (default: localhost:11434) |
+| Variable | Status | Description | Required | Implementation |
+|----------|--------|-------------|----------|----------------|
+| `OPENAI_API_KEY` | ✅ **CANONICAL** | OpenAI API key for GPT models | Yes | Centralized config |
+| `ANTHROPIC_API_KEY` | ✅ **CANONICAL** | Anthropic API key for Claude models | Yes | Centralized config |
+| `HUGGINGFACE_API_KEY` | ✅ **CANONICAL** | HuggingFace API key (general) | No | Centralized config |
+| `HUGGINGFACE_READ_TOKEN` | ✅ **CANONICAL** | HuggingFace read/inference token | No | Centralized config |
+| `HUGGINGFACE_WRITE_TOKEN` | ✅ **CANONICAL** | HuggingFace write/publish token | No | Centralized config |
+| `GEMINI_API_KEY` | ✅ **CANONICAL** | Google Gemini API key for vision/LMM | No | Centralized config |
+| `OLLAMA_BASE_URL` | ✅ **CANONICAL** | Ollama local server URL | No | Service-specific config |
+
+### **Search & Retrieval Providers**
+| Variable | Status | Description | Required | Implementation |
+|----------|--------|-------------|----------|----------------|
+| `BRAVE_SEARCH_API_KEY` | ✅ **CANONICAL** | Brave Search API key (preferred) | Yes* | Centralized config |
+| `SERPAPI_KEY` | ✅ **CANONICAL** | SerpAPI key (fallback) | Yes* | Centralized config |
+| `GUARDIAN_OPEN_PLATFORM_KEY` | ✅ **CANONICAL** | Guardian Open Platform API key | Yes* | Centralized config |
+| `NEWSAPI_KEY` | ✅ **CANONICAL** | NewsAPI key (fallback) | Yes* | Centralized config |
+| `ALPHAVANTAGE_KEY` | ✅ **CANONICAL** | Alpha Vantage API key (preferred) | Yes* | Centralized config |
+| `FINNHUB_KEY` | ✅ **CANONICAL** | Finnhub API key (optional) | No | Centralized config |
+| `FMP_API_KEY` | ✅ **CANONICAL** | Financial Modeling Prep API key | No | Centralized config |
+| `YOUTUBE_API_KEY` | ✅ **CANONICAL** | YouTube Data API key | No | Centralized config |
+
+### **Feature Flags**
+| Variable | Status | Description | Required | Implementation |
+|----------|--------|-------------|----------|----------------|
+| `KEYLESS_FALLBACKS_ENABLED` | ✅ **CANONICAL** | Enable keyless fallbacks for providers | No (default: true) | Centralized config |
 
 ### **Database Configuration**
 | Variable | Status | Description | Required |

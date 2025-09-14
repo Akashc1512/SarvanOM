@@ -1,0 +1,139 @@
+{
+  "models": [
+    {
+      "model_id": "gpt-4o-2024-08-06",
+      "provider": "openai",
+      "model_family": "gpt-4o",
+      "version": "2024-08-06",
+      "status": "stable",
+      "capabilities": {
+        "text_generation": true,
+        "tool_use": true,
+        "long_context": true,
+        "streaming": true,
+        "function_calling": true,
+        "multimodal": true
+      },
+      "performance": {
+        "avg_ttft_ms": 100,
+        "avg_completion_ms": 800,
+        "success_rate": 0.99,
+        "quality_score": 0.85
+      },
+      "costs": {
+        "input_tokens_per_1k": 0.0005,
+        "output_tokens_per_1k": 0.0015,
+        "currency": "USD"
+      },
+      "limits": {
+        "max_context_tokens": 16385,
+        "max_output_tokens": 4096,
+        "rate_limit_rpm": 15000,
+        "rate_limit_tpm": 300000
+      },
+      "health": {
+        "status": "healthy",
+        "last_check": "2024-12-28T00:00:00Z",
+        "uptime_percentage": 99.95,
+        "error_rate": 0.01
+      },
+      "metadata": {
+        "release_date": "2024-01-25",
+        "recommended_for": ["refinement", "simple_queries", "fast_inference"],
+        "not_recommended_for": ["complex_reasoning", "multimodal"]
+      }
+    },
+    {
+      "model_id": "claude-3-5-sonnet-20241022",
+      "provider": "anthropic",
+      "model_family": "claude-3-5-sonnet",
+      "version": "20241022",
+      "status": "stable",
+      "capabilities": {
+        "text_generation": true,
+        "tool_use": true,
+        "long_context": true,
+        "streaming": true,
+        "function_calling": true
+      },
+      "performance": {
+        "avg_ttft_ms": 200,
+        "avg_completion_ms": 3000,
+        "success_rate": 0.97,
+        "quality_score": 0.94
+      },
+      "costs": {
+        "input_tokens_per_1k": 0.003,
+        "output_tokens_per_1k": 0.015,
+        "currency": "USD"
+      },
+      "limits": {
+        "max_context_tokens": 200000,
+        "max_output_tokens": 8192,
+        "rate_limit_rpm": 5000,
+        "rate_limit_tpm": 100000
+      },
+      "health": {
+        "status": "healthy",
+        "last_check": "2024-12-28T00:00:00Z",
+        "uptime_percentage": 99.8,
+        "error_rate": 0.03
+      },
+      "metadata": {
+        "release_date": "2024-10-22",
+        "recommended_for": ["general", "reasoning", "long_context"],
+        "not_recommended_for": ["multimodal"]
+      }
+    }
+  ],
+  "providers": [
+    {
+      "provider_id": "openai",
+      "name": "OpenAI",
+      "status": "active",
+      "api_base_url": "https://api.openai.com/v1",
+      "authentication": {
+        "type": "api_key",
+        "header": "Authorization",
+        "format": "Bearer {api_key}"
+      },
+      "health": {
+        "status": "healthy",
+        "last_check": "2024-12-28T00:00:00Z",
+        "uptime_percentage": 99.8,
+        "error_rate": 0.02
+      },
+      "quotas": {
+        "requests_per_minute": 10000,
+        "tokens_per_minute": 200000,
+        "requests_per_day": 1000000,
+        "tokens_per_day": 20000000
+      },
+      "models": ["gpt-4o-2024-08-06"]
+    },
+    {
+      "provider_id": "anthropic",
+      "name": "Anthropic",
+      "status": "active",
+      "api_base_url": "https://api.anthropic.com",
+      "authentication": {
+        "type": "api_key",
+        "header": "x-api-key",
+        "format": "{api_key}"
+      },
+      "health": {
+        "status": "healthy",
+        "last_check": "2024-12-28T00:00:00Z",
+        "uptime_percentage": 99.7,
+        "error_rate": 0.03
+      },
+      "quotas": {
+        "requests_per_minute": 5000,
+        "tokens_per_minute": 100000,
+        "requests_per_day": 500000,
+        "tokens_per_day": 10000000
+      },
+      "models": ["claude-3-5-sonnet-20241022"]
+    }
+  ]
+}

@@ -18,7 +18,7 @@ import time
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 
-from shared.core.services.arangodb_service import get_arangodb_service, ArangoDBService
+from shared.core.services.arangodb_service import arangodb_service, ArangoDBService
 from shared.core.unified_logging import get_logger
 
 logger = get_logger(__name__)
@@ -94,7 +94,7 @@ class KnowledgeGraphService:
     async def _get_service(self) -> ArangoDBService:
         """Get or initialize ArangoDB service."""
         if self.arangodb_service is None:
-            self.arangodb_service = await get_arangodb_service()
+            self.arangodb_service = arangodb_service
         return self.arangodb_service
     
     async def find_entities(self, query: str, entity_types: Optional[List[str]] = None,

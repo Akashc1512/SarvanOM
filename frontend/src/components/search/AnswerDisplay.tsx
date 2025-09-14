@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { useSearchSessionStore } from "@/lib/store";
 import { CitationNumber, CitationLink } from "./CitationTooltip";
 import { ShareButton } from "./ShareButton";
+import { FallbackBadge } from "@/components/ui/FallbackBadge";
 import type { Citation } from "@/lib/api";
 
 interface AnswerDisplayProps {
@@ -25,6 +26,11 @@ interface AnswerDisplayProps {
   citations?: Citation[];
   traceId?: string;
   className?: string;
+  // PR-5: Fallback badge props
+  fallbackUsed?: boolean;
+  fallbackSource?: 'keyed' | 'keyless';
+  fallbackProvider?: string;
+  fallbackLane?: 'web_search' | 'news' | 'markets' | 'vector' | 'kg' | 'keyword';
 }
 
 export function AnswerDisplay({ 
@@ -35,7 +41,12 @@ export function AnswerDisplay({
   processingTime,
   citations = [],
   traceId,
-  className 
+  className,
+  // PR-5: Fallback badge props
+  fallbackUsed = false,
+  fallbackSource = 'keyed',
+  fallbackProvider = '',
+  fallbackLane = 'web_search'
 }: AnswerDisplayProps) {
   const storeAnswer = useSearchSessionStore((s) => s.answerContent);
   const storeLoading = useSearchSessionStore((s) => s.isLoading);
@@ -217,7 +228,19 @@ export function AnswerDisplay({
               <SparklesIcon className="w-6 h-6 text-cosmic-primary-500" />
             </div>
             <div>
-              <h3 className="text-xl font-semibold cosmic-text-primary">AI Response</h3>
+              <div className="flex items-center gap-3 mb-1">
+                <h3 className="text-xl font-semibold cosmic-text-primary">AI Response</h3>
+                {/* PR-5: Fallback Badge */}
+                {fallbackUsed && (
+                  <FallbackBadge
+                    fallbackUsed={fallbackUsed}
+                    source={fallbackSource}
+                    provider={fallbackProvider}
+                    lane={fallbackLane}
+                    traceId={traceId}
+                  />
+                )}
+              </div>
               <div className="flex items-center gap-4 text-sm cosmic-text-tertiary">
                 <div className="flex items-center gap-1">
                   <CheckCircleIcon className="w-4 h-4 text-cosmic-success" />

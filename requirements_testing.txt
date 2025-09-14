@@ -1,0 +1,63 @@
+# SarvanOM Testing Dependencies
+
+# Core testing framework
+aiohttp>=3.8.0
+asyncio-throttle>=1.0.2
+
+# Performance monitoring
+psutil>=5.9.0
+
+# Data processing and analysis
+pandas>=1.5.0
+numpy>=1.24.0
+
+# Configuration and serialization
+pyyaml>=6.0
+pydantic>=2.0.0
+
+# Logging and monitoring
+structlog>=23.0.0
+
+# HTTP client and testing
+httpx>=0.24.0
+requests>=2.28.0
+
+# Async utilities
+aiofiles>=23.0.0
+
+# Development and debugging
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.0.0
+
+# Load testing specific
+locust>=2.15.0  # Alternative load testing framework
+wrk>=0.1.0      # HTTP benchmarking tool (if available)
+
+# Monitoring and metrics
+prometheus-client>=0.16.0
+
+# Data visualization (optional)
+matplotlib>=3.6.0
+seaborn>=0.12.0
+
+# Database testing
+redis>=4.5.0
+pymongo>=4.3.0  # If using MongoDB
+
+# Container and deployment testing
+docker>=6.0.0
+kubernetes>=26.0.0  # If using Kubernetes
+
+# Security testing
+bandit>=1.7.0
+safety>=2.3.0
+
+# Code quality
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.0.0
+
+# Documentation
+sphinx>=6.0.0
+sphinx-rtd-theme>=1.2.0

@@ -25,24 +25,26 @@ import logging
 
 from shared.core.logging import get_logger
 from shared.contracts.query import RetrievalSearchRequest, RetrievalSearchResponse
+from sarvanom.services.retrieval.config import get_config
+from sarvanom.shared.core.config.provider_config import get_provider_config
 
 # Prometheus metrics for per-lane timing
 try:
     from prometheus_client import Counter, Histogram, Gauge
     PROMETHEUS_AVAILABLE = True
     
-    # Per-lane latency histograms
+    # Per-lane latency histograms with provider tags
     lane_latency_histogram = Histogram(
         'retrieval_lane_latency_seconds',
         'Latency of retrieval lanes in seconds',
-        ['lane', 'status']
+        ['lane', 'status', 'provider', 'fallback_used', 'source']
     )
     
-    # Per-lane result counters
+    # Per-lane result counters with provider tags
     lane_result_counter = Counter(
         'retrieval_lane_results_total',
         'Total number of results from retrieval lanes',
-        ['lane', 'status']
+        ['lane', 'status', 'provider', 'fallback_used', 'source']
     )
     
     # Lane status gauge
@@ -139,6 +141,81 @@ class OrchestrationConfig:
         self.latency_budget.fusion_budget_ms = float(os.getenv("FUSION_TIMEOUT_MS", "200"))  # 0.2s (fast)
 
 
+class ProviderManager:
+    """Manages provider order, availability, and fallback logic"""
+    
+    def __init__(self):
+        self.provider_config = get_provider_config()
+        self.retrieval_config = get_config()
+        
+        # Provider order configuration from docs/retrieval/lanes.md
+        self.lane_providers = {
+            "web_search": {
+                "keyed": ["brave_search", "serpapi"],
+                "keyless": ["duckduckgo", "wikipedia", "stackexchange", "mdn"],
+                "budget_ms": 800
+            },
+            "news": {
+                "keyed": ["guardian", "newsapi"],
+                "keyless": ["gdelt", "hn_algolia", "rss"],
+                "budget_ms": 800
+            },
+            "markets": {
+                "keyed": ["alphavantage", "finnhub", "fmp"],
+                "keyless": ["stooq", "sec_edgar"],
+                "budget_ms": 800
+            }
+        }
+    
+    def get_provider_order(self, lane_type: str) -> List[List[str]]:
+        """Get provider execution order for a lane"""
+        if lane_type not in self.lane_providers:
+            return []
+        
+        lane_config = self.lane_providers[lane_type]
+        keyed_providers = lane_config["keyed"]
+        keyless_providers = lane_config["keyless"]
+        
+        # Check which keyed providers are available
+        available_keyed = []
+        for provider in keyed_providers:
+            if self._is_provider_available(provider):
+                available_keyed.append(provider)
+        
+        # If no keyed providers available and keyless fallbacks enabled, use keyless
+        if not available_keyed and self.provider_config.KEYLESS_FALLBACKS_ENABLED:
+            return [keyless_providers]
+        
+        # If keyed providers available, use them first, then keyless as fallback
+        if available_keyed:
+            if self.provider_config.KEYLESS_FALLBACKS_ENABLED:
+                return [available_keyed, keyless_providers]
+            else:
+                return [available_keyed]
+        
+        # No providers available
+        return []
+    
+    def _is_provider_available(self, provider_name: str) -> bool:
+        """Check if a provider is available (has API key)"""
+        provider_key_map = {
+            "brave_search": "BRAVE_SEARCH_API_KEY",
+            "serpapi": "SERPAPI_KEY",
+            "guardian": "GUARDIAN_OPEN_PLATFORM_KEY",
+            "newsapi": "NEWSAPI_KEY",
+            "alphavantage": "ALPHAVANTAGE_KEY",
+            "finnhub": "FINNHUB_KEY",
+            "fmp": "FMP_API_KEY"
+        }
+        
+        if provider_name not in provider_key_map:
+            return True  # Assume available if no key mapping
+        
+        key_name = provider_key_map[provider_name]
+        key_value = getattr(self.provider_config, key_name, None)
+        
+        return key_value is not None and str(key_value) != ""
+
 class RetrievalOrchestrator:
     """
     Centralized orchestrator for hybrid retrieval operations.
@@ -150,6 +227,7 @@ class RetrievalOrchestrator:
     def __init__(self, config: Optional[OrchestrationConfig] = None):
         """Initialize the retrieval orchestrator."""
         self.config = config or OrchestrationConfig()
+        self.provider_manager = ProviderManager()
         self.lane_status: Dict[RetrievalLane, LaneStatus] = {
             lane: LaneStatus.AVAILABLE for lane in RetrievalLane
         }
@@ -434,31 +512,49 @@ class RetrievalOrchestrator:
             return []
     
     async def _web_search_lane(self, request: RetrievalSearchRequest) -> List[Dict[str, Any]]:
-        """Web free-tier retrieval lane with strict timeout enforcement."""
+        """Web search lane with provider order and fallback logic."""
         try:
+            # Get provider order for web search
+            provider_order = self.provider_manager.get_provider_order("web_search")
+            
+            if not provider_order:
+                logger.warning("No web search providers available")
+                return []
+            
             # Use existing web search with small top-k for strict latency
             top_k = min(5, request.max_results)  # Small top-k for speed
             
-            # Run web search in a thread pool to make it async and cancellable
-            import asyncio
+            # Try providers in order with parallel fan-out
+            for provider_batch in provider_order:
+                batch_tasks = []
+                for provider_name in provider_batch:
+                    task = asyncio.create_task(
+                        self._call_web_provider(provider_name, request.query, top_k)
+                    )
+                    batch_tasks.append((provider_name, task))
+                
+                # Wait for batch to complete
+                batch_results = []
+                for provider_name, task in batch_tasks:
+                    try:
+                        result = await task
+                        if result:
+                            batch_results.extend(result)
+                    except Exception as e:
+                        logger.warning(f"Web provider {provider_name} failed: {e}")
+                
+                # If we got results, return them (first-N strategy)
+                if batch_results:
+                    # Add lane metadata
+                    for result in batch_results:
+                        if "metadata" not in result:
+                            result["metadata"] = {}
+                        result["metadata"]["lane"] = "web_search"
+                        result["metadata"]["retrieval_method"] = "provider_ordered_web"
+                    
+                    return batch_results[:top_k]
             
-            # Use run_in_executor to make the synchronous web search async
-            loop = asyncio.get_event_loop()
-            results = await loop.run_in_executor(
-                None, 
-                self._fast_web_search, 
-                request.query, 
-                top_k
-            )
-            
-            # Add lane metadata
-            for result in results:
-                if "metadata" not in result:
-                    result["metadata"] = {}
-                result["metadata"]["lane"] = "web_search"
-                result["metadata"]["retrieval_method"] = "free_tier_web"
-            
-            return results
+            return []
             
         except Exception as e:
             logger.warning(f"Web search lane failed: {e}")
@@ -530,6 +626,325 @@ class RetrievalOrchestrator:
             logger.warning(f"Web search API failed: {e}")
         
         return results[:top_k]
+    
+    async def _call_web_provider(self, provider_name: str, query: str, top_k: int) -> List[Dict[str, Any]]:
+        """Call a specific web search provider"""
+        try:
+            if provider_name == "brave_search":
+                return await self._call_brave_search(query, top_k)
+            elif provider_name == "serpapi":
+                return await self._call_serpapi(query, top_k)
+            elif provider_name == "duckduckgo":
+                return await self._call_duckduckgo(query, top_k)
+            elif provider_name == "wikipedia":
+                return await self._call_wikipedia(query, top_k)
+            elif provider_name == "stackexchange":
+                return await self._call_stackexchange(query, top_k)
+            elif provider_name == "mdn":
+                return await self._call_mdn(query, top_k)
+            else:
+                logger.warning(f"Unknown web provider: {provider_name}")
+                return []
+        except Exception as e:
+            logger.warning(f"Web provider {provider_name} failed: {e}")
+            return []
+    
+    async def _call_brave_search(self, query: str, top_k: int) -> List[Dict[str, Any]]:
+        """Call Brave Search API"""
+        import os
+        import requests
+        
+        brave_key = os.getenv("BRAVE_SEARCH_API_KEY")
+        if not brave_key:
+            return []
+        
+        try:
+            headers = {"X-Subscription-Token": brave_key}
+            params = {"q": query, "count": min(top_k, 3)}
+            r = requests.get(
+                "https://api.search.brave.com/res/v1/web/search",
+                headers=headers,
+                params=params,
+                timeout=2
+            )
+            if r.ok:
+                data = r.json()
+                results = []
+                for item in (data.get("web", {}).get("results", []) or [])[:top_k]:
+                    url = item.get("url")
+                    if url:
+                        results.append({
+                            "id": url,
+                            "content": item.get("description", ""),
+                            "metadata": {
+                                "title": item.get("title", url),
+                                "url": url,
+                                "source": "brave_search",
+                                "provider": "brave_search"
+                            },
+                            "score": 0.8,
+                        })
+                return results
+        except Exception as e:
+            logger.warning(f"Brave Search API failed: {e}")
+        
+        return []
+    
+    async def _call_serpapi(self, query: str, top_k: int) -> List[Dict[str, Any]]:
+        """Call SerpAPI"""
+        import os
+        import requests
+        
+        serpapi_key = os.getenv("SERPAPI_KEY")
+        if not serpapi_key:
+            return []
+        
+        try:
+            params = {
+                "engine": "google",
+                "q": query,
+                "api_key": serpapi_key,
+                "num": min(top_k, 3),
+            }
+            r = requests.get(
+                "https://serpapi.com/search.json", 
+                params=params, 
+                timeout=2
+            )
+            if r.ok:
+                data = r.json()
+                results = []
+                for item in (data.get("organic_results", []) or [])[:top_k]:
+                    url = item.get("link")
+                    if url:
+                        results.append({
+                            "id": url,
+                            "content": item.get("snippet", ""),
+                            "metadata": {
+                                "title": item.get("title", url),
+                                "url": url,
+                                "source": "serpapi",
+                                "provider": "serpapi"
+                            },
+                            "score": 0.8,
+                        })
+                return results
+        except Exception as e:
+            logger.warning(f"SerpAPI failed: {e}")
+        
+        return []
+    
+    async def _call_duckduckgo(self, query: str, top_k: int) -> List[Dict[str, Any]]:
+        """Call DuckDuckGo Instant Answer API (keyless)"""
+        try:
+            # DuckDuckGo Instant Answer API is free and doesn't require API key
+            import requests
+            
+            params = {"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"}
+            r = requests.get(
+                "https://api.duckduckgo.com/",
+                params=params,
+                timeout=2
+            )
+            if r.ok:
+                data = r.json()
+                results = []
+                
+                # Extract abstract
+                if data.get("Abstract"):
+                    results.append({
+                        "id": f"ddg_abstract_{hash(query)}",
+                        "content": data.get("Abstract", ""),
+                        "metadata": {
+                            "title": data.get("Heading", query),
+                            "url": data.get("AbstractURL", ""),
+                            "source": "duckduckgo",
+                            "provider": "duckduckgo"
+                        },
+                        "score": 0.7,
+                    })
+                
+                # Extract related topics
+                for topic in (data.get("RelatedTopics", []) or [])[:top_k-1]:
+                    if isinstance(topic, dict) and topic.get("Text"):
+                        results.append({
+                            "id": f"ddg_topic_{hash(topic.get('Text', ''))}",
+                            "content": topic.get("Text", ""),
+                            "metadata": {
+                                "title": topic.get("FirstURL", "").split("/")[-1] if topic.get("FirstURL") else "",
+                                "url": topic.get("FirstURL", ""),
+                                "source": "duckduckgo",
+                                "provider": "duckduckgo"
+                            },
+                            "score": 0.6,
+                        })
+                
+                return results[:top_k]
+        except Exception as e:
+            logger.warning(f"DuckDuckGo API failed: {e}")
+        
+        return []
+    
+    async def _call_wikipedia(self, query: str, top_k: int) -> List[Dict[str, Any]]:
+        """Call Wikipedia API (keyless)"""
+        try:
+            import requests
+            
+            # Search for pages
+            search_params = {
+                "action": "query",
+                "format": "json",
+                "list": "search",
+                "srsearch": query,
+                "srlimit": min(top_k, 3)
+            }
+            
+            r = requests.get(
+                "https://en.wikipedia.org/w/api.php",
+                params=search_params,
+                timeout=2
+            )
+            
+            if r.ok:
+                data = r.json()
+                results = []
+                
+                for item in (data.get("query", {}).get("search", []) or [])[:top_k]:
+                    page_id = item.get("pageid")
+                    title = item.get("title", "")
+                    
+                    if page_id and title:
+                        # Get page content
+                        content_params = {
+                            "action": "query",
+                            "format": "json",
+                            "pageids": page_id,
+                            "prop": "extracts",
+                            "exintro": "1",
+                            "explaintext": "1"
+                        }
+                        
+                        content_r = requests.get(
+                            "https://en.wikipedia.org/w/api.php",
+                            params=content_params,
+                            timeout=2
+                        )
+                        
+                        if content_r.ok:
+                            content_data = content_r.json()
+                            extract = content_data.get("query", {}).get("pages", {}).get(str(page_id), {}).get("extract", "")
+                            
+                            if extract:
+                                results.append({
+                                    "id": f"wiki_{page_id}",
+                                    "content": extract[:500] + "..." if len(extract) > 500 else extract,
+                                    "metadata": {
+                                        "title": title,
+                                        "url": f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}",
+                                        "source": "wikipedia",
+                                        "provider": "wikipedia"
+                                    },
+                                    "score": 0.9,  # High score for Wikipedia
+                                })
+                
+                return results
+        except Exception as e:
+            logger.warning(f"Wikipedia API failed: {e}")
+        
+        return []
+    
+    async def _call_stackexchange(self, query: str, top_k: int) -> List[Dict[str, Any]]:
+        """Call Stack Exchange API (keyless)"""
+        try:
+            import requests
+            
+            # Search Stack Overflow
+            params = {
+                "order": "desc",
+                "sort": "relevance",
+                "intitle": query,
+                "site": "stackoverflow",
+                "pagesize": min(top_k, 3)
+            }
+            
+            r = requests.get(
+                "https://api.stackexchange.com/2.3/search",
+                params=params,
+                timeout=2
+            )
+            
+            if r.ok:
+                data = r.json()
+                results = []
+                
+                for item in (data.get("items", []) or [])[:top_k]:
+                    question_id = item.get("question_id")
+                    title = item.get("title", "")
+                    
+                    if question_id and title:
+                        results.append({
+                            "id": f"so_{question_id}",
+                            "content": title,
+                            "metadata": {
+                                "title": title,
+                                "url": f"https://stackoverflow.com/questions/{question_id}",
+                                "source": "stackoverflow",
+                                "provider": "stackexchange"
+                            },
+                            "score": 0.8,
+                        })
+                
+                return results
+        except Exception as e:
+            logger.warning(f"Stack Exchange API failed: {e}")
+        
+        return []
+    
+    async def _call_mdn(self, query: str, top_k: int) -> List[Dict[str, Any]]:
+        """Call MDN Web Docs API (keyless)"""
+        try:
+            import requests
+            
+            # Search MDN
+            params = {
+                "q": query,
+                "locale": "en-US",
+                "size": min(top_k, 3)
+            }
+            
+            r = requests.get(
+                "https://developer.mozilla.org/api/v1/search",
+                params=params,
+                timeout=2
+            )
+            
+            if r.ok:
+                data = r.json()
+                results = []
+                
+                for item in (data.get("documents", []) or [])[:top_k]:
+                    title = item.get("title", "")
+                    summary = item.get("summary", "")
+                    url = item.get("mdn_url", "")
+                    
+                    if title and url:
+                        results.append({
+                            "id": f"mdn_{hash(url)}",
+                            "content": summary,
+                            "metadata": {
+                                "title": title,
+                                "url": f"https://developer.mozilla.org{url}",
+                                "source": "mdn",
+                                "provider": "mdn"
+                            },
+                            "score": 0.85,
+                        })
+                
+                return results
+        except Exception as e:
+            logger.warning(f"MDN API failed: {e}")
+        
+        return []
     
     async def _vector_search_lane(self, request: RetrievalSearchRequest) -> List[Dict[str, Any]]:
         """Vector passage search lane using optimized singleton service."""
@@ -802,22 +1217,45 @@ class RetrievalOrchestrator:
             }
         )
         
-        # Emit Prometheus metrics for per-lane timing
+        # Emit Prometheus metrics for per-lane timing with provider tags
         if PROMETHEUS_AVAILABLE:
             # End-to-end latency
             end_to_end_latency_histogram.observe(total_latency / 1000.0)
             
-            # Per-lane metrics
+            # Per-lane metrics with provider tags
             for result in lane_results:
                 lane_name = result.lane.value
                 status = result.status.value
                 latency_seconds = result.latency_ms / 1000.0
                 
-                # Lane latency histogram
-                lane_latency_histogram.labels(lane=lane_name, status=status).observe(latency_seconds)
+                # Extract provider information from results
+                providers_used = set()
+                fallback_used = False
+                for res in result.results:
+                    provider = res.get("metadata", {}).get("provider", "unknown")
+                    providers_used.add(provider)
+                    if provider in ["duckduckgo", "wikipedia", "stackexchange", "mdn", "gdelt", "hn_algolia", "rss", "stooq", "sec_edgar"]:
+                        fallback_used = True
                 
-                # Lane result counter
-                lane_result_counter.labels(lane=lane_name, status=status).inc(len(result.results))
+                # Lane latency histogram with provider tags
+                for provider in providers_used:
+                    lane_latency_histogram.labels(
+                        lane=lane_name, 
+                        status=status,
+                        provider=provider,
+                        fallback_used=str(fallback_used).lower(),
+                        source="keyless" if fallback_used else "keyed"
+                    ).observe(latency_seconds)
+                
+                # Lane result counter with provider tags
+                for provider in providers_used:
+                    lane_result_counter.labels(
+                        lane=lane_name, 
+                        status=status,
+                        provider=provider,
+                        fallback_used=str(fallback_used).lower(),
+                        source="keyless" if fallback_used else "keyed"
+                    ).inc(len(result.results))
                 
                 # Lane status gauge
                 status_value = 1 if result.status == LaneStatus.AVAILABLE else 0

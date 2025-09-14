@@ -20,11 +20,15 @@ from enum import Enum
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import httpx
 import redis
 from prometheus_client import Counter, Histogram, Gauge, start_http_server, generate_latest
 import structlog
+
+# Import central configuration
+from shared.core.config.central_config import get_central_config
 
 # Configure structured logging
 structlog.configure(
@@ -48,6 +52,9 @@ structlog.configure(
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = structlog.get_logger()
+
+# Get configuration
+config = get_central_config()
 
 # Prometheus metrics
 sla_global_ms = Histogram('sarvanom_sla_global_ms', 'Global response time', ['mode', 'complexity'])
@@ -76,9 +83,17 @@ guided_prompt_skip_rate = Gauge('sarvanom_guided_prompt_skip_rate', 'Guided prom
 guided_prompt_ttfr_ms = Histogram('sarvanom_guided_prompt_ttfr_ms', 'Guided prompt time to first refinement', ['mode'])
 guided_prompt_complaint_rate = Gauge('sarvanom_guided_prompt_complaint_rate', 'Guided prompt complaint rate', ['mode'])
 
-trace_requests_total = Counter('sarvanom_trace_requests_total', 'Total traced requests', ['service', 'endpoint', 'status'])
-trace_duration = Histogram('sarvanom_trace_duration_seconds', 'Trace duration', ['service', 'endpoint'])
-trace_errors_total = Counter('sarvanom_trace_errors_total', 'Total trace errors', ['service', 'endpoint', 'error_type'])
+try:
+    trace_requests_total = Counter('sarvanom_trace_requests_total', 'Total traced requests', ['service', 'endpoint', 'status'])
+    trace_duration = Histogram('sarvanom_trace_duration_seconds', 'Trace duration', ['service', 'endpoint'])
+    trace_errors_total = Counter('sarvanom_trace_errors_total', 'Total trace errors', ['service', 'endpoint', 'error_type'])
+except ValueError as e:
+    # Handle duplicate metrics registration
+    logger.warning(f"Metrics already registered: {e}")
+    from prometheus_client import REGISTRY
+    trace_requests_total = REGISTRY._names_to_collectors.get('sarvanom_trace_requests_total')
+    trace_duration = REGISTRY._names_to_collectors.get('sarvanom_trace_duration_seconds')
+    trace_errors_total = REGISTRY._names_to_collectors.get('sarvanom_trace_errors_total')
 
 class QueryMode(str, Enum):
     SIMPLE = "simple"
@@ -605,16 +620,73 @@ class DashboardGenerator:
             ]
         }
 
-# FastAPI app
-app = FastAPI(title="Observability Service", version="2.0.0")
+# Create FastAPI app
+app = FastAPI(
+    title="Observability Service",
+    version="2.0.0",
+    description="Wire metrics, tracing and dashboards as per docs/observability/*"
+)
 
-# Redis client
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+# Set CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.cors_origins if isinstance(config.cors_origins, list) else (config.cors_origins.split(",") if config.cors_origins else ["*"]),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Observability components
-trace_propagation = TracePropagation()
-metrics_collector = MetricsCollector()
-dashboard_generator = DashboardGenerator()
+# App state / DI container
+async def init_dependencies():
+    """Initialize shared clients and dependencies"""
+    logger.info("Initializing Observability dependencies...")
+    
+    # Initialize Redis client
+    app.state.redis_client = redis.Redis.from_url(
+        str(config.redis_url),
+        decode_responses=True,
+        socket_connect_timeout=5,
+        socket_timeout=5,
+        retry_on_timeout=True
+    )
+    
+    # Test Redis connection
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, app.state.redis_client.ping
+        )
+        logger.info("Redis client initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to connect to Redis: {e}")
+        raise
+    
+    # Initialize Observability components
+    app.state.trace_propagation = TracePropagation()
+    app.state.metrics_collector = MetricsCollector()
+    app.state.dashboard_generator = DashboardGenerator()
+    logger.info("Observability components initialized successfully")
+
+async def cleanup_dependencies():
+    """Cleanup shared clients and dependencies"""
+    logger.info("Cleaning up Observability dependencies...")
+    
+    if hasattr(app.state, 'redis_client'):
+        try:
+            app.state.redis_client.close()
+            logger.info("Redis client closed successfully")
+        except Exception as e:
+            logger.error(f"Error closing Redis client: {e}")
+
+# Startup/Shutdown events
+@app.on_event("startup")
+async def startup_event():
+    """Application startup event"""
+    await init_dependencies()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Application shutdown event"""
+    await cleanup_dependencies()
 
 # Pydantic models for API
 class SLAMetricsRequest(BaseModel):
@@ -647,10 +719,53 @@ class GuidedPromptMetricsRequest(BaseModel):
     complaint_rate: float
     mode: str
 
+# Health & Config endpoints
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "observability"}
+    """Health check endpoint - fast, no downstream calls"""
+    return {"status": "healthy", "service": "observability", "timestamp": datetime.now().isoformat()}
+
+@app.get("/ready")
+async def ready_check():
+    """Ready check endpoint - light ping to critical deps with small timeout"""
+    try:
+        # Check Redis connection with timeout
+        await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(
+                None, app.state.redis_client.ping
+            ),
+            timeout=2.0
+        )
+        return {"status": "ready", "service": "observability", "timestamp": datetime.now().isoformat()}
+    except Exception as e:
+        logger.error(f"Ready check failed: {e}")
+        raise HTTPException(status_code=503, detail="Service not ready")
+
+@app.get("/config")
+async def get_config_endpoint():
+    """Config endpoint - sanitized echo of active providers and keyless fallbacks"""
+    return {
+        "service": "observability",
+        "active_providers": {
+            "metrics": getattr(config, 'metrics_enabled', False),
+            "tracing": getattr(config, 'tracing_enabled', False),
+            "jaeger": bool(getattr(config, 'jaeger_agent_host', None)),
+            "sentry": bool(getattr(config, 'sentry_dsn', None))
+        },
+        "keyless_fallbacks_enabled": config.keyless_fallbacks_enabled,
+        "environment": config.environment.value,
+        "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/version")
+async def get_version():
+    """Version endpoint"""
+    return {
+        "service": "observability",
+        "version": "2.0.0",
+        "build_date": datetime.now().isoformat(),
+        "environment": config.environment.value
+    }
 
 @app.post("/metrics/sla")
 async def record_sla_metrics(request: SLAMetricsRequest):
@@ -669,7 +784,7 @@ async def record_sla_metrics(request: SLAMetricsRequest):
             complexity=request.complexity
         )
         
-        metrics_collector.record_sla_metrics(metrics)
+        app.state.metrics_collector.record_sla_metrics(metrics)
         
         return {"status": "success", "message": "SLA metrics recorded"}
         
@@ -692,7 +807,7 @@ async def record_lane_metrics(request: LaneMetricsRequest):
             mode=QueryMode(request.mode)
         )
         
-        metrics_collector.record_lane_metrics(metrics)
+        app.state.metrics_collector.record_lane_metrics(metrics)
         
         return {"status": "success", "message": "Lane metrics recorded"}
         
@@ -713,7 +828,7 @@ async def record_guided_prompt_metrics(request: GuidedPromptMetricsRequest):
             mode=QueryMode(request.mode)
         )
         
-        metrics_collector.record_guided_prompt_metrics(metrics)
+        app.state.metrics_collector.record_guided_prompt_metrics(metrics)
         
         return {"status": "success", "message": "Guided Prompt metrics recorded"}
         
@@ -725,7 +840,7 @@ async def record_guided_prompt_metrics(request: GuidedPromptMetricsRequest):
 async def start_trace(service_name: str, request_id: str = None):
     """Start new trace"""
     try:
-        context = trace_propagation.start_trace(service_name, request_id)
+        context = app.state.trace_propagation.start_trace(service_name, request_id)
         
         return {
             "status": "success",
@@ -748,7 +863,7 @@ async def create_span(parent_trace_id: str, parent_span_id: str, span_name: str,
             request_id="unknown"
         )
         
-        child_context = trace_propagation.create_span(parent_context, span_name, attributes)
+        child_context = app.state.trace_propagation.create_span(parent_context, span_name, attributes)
         
         return {
             "status": "success",
@@ -763,7 +878,7 @@ async def create_span(parent_trace_id: str, parent_span_id: str, span_name: str,
 async def get_system_health_dashboard():
     """Get system health dashboard configuration"""
     try:
-        dashboard = dashboard_generator.generate_system_health_dashboard()
+        dashboard = app.state.dashboard_generator.generate_system_health_dashboard()
         return dashboard
         
     except Exception as e:
@@ -774,7 +889,7 @@ async def get_system_health_dashboard():
 async def get_performance_dashboard():
     """Get performance dashboard configuration"""
     try:
-        dashboard = dashboard_generator.generate_performance_dashboard()
+        dashboard = app.state.dashboard_generator.generate_performance_dashboard()
         return dashboard
         
     except Exception as e:
@@ -785,7 +900,7 @@ async def get_performance_dashboard():
 async def get_guided_prompt_dashboard():
     """Get Guided Prompt dashboard configuration"""
     try:
-        dashboard = dashboard_generator.generate_guided_prompt_dashboard()
+        dashboard = app.state.dashboard_generator.generate_guided_prompt_dashboard()
         return dashboard
         
     except Exception as e:
@@ -803,9 +918,50 @@ async def get_prometheus_metrics():
         logger.error("Failed to generate Prometheus metrics", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
+# Observability middleware
+if config.metrics_enabled:
+    # Mount Prometheus metrics
+    from prometheus_client import make_asgi_app
+    metrics_app = make_asgi_app()
+    app.mount("/metrics", metrics_app)
+    logger.info("Prometheus metrics enabled")
+
+if getattr(config, 'tracing_enabled', False) and getattr(config, 'jaeger_agent_host', None):
+    # Mount tracing middleware
+    try:
+        from opentelemetry import trace
+        from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        
+        # Configure Jaeger tracing
+        trace.set_tracer_provider(TracerProvider())
+        jaeger_exporter = JaegerExporter(
+            agent_host_name=config.jaeger_agent_host,
+            agent_port=int(config.jaeger_agent_port) if config.jaeger_agent_port else 6831,
+        )
+        span_processor = BatchSpanProcessor(jaeger_exporter)
+        trace.get_tracer_provider().add_span_processor(span_processor)
+        
+        # Instrument FastAPI
+        FastAPIInstrumentor.instrument_app(app)
+        logger.info("Jaeger tracing enabled")
+    except ImportError:
+        logger.warning("OpenTelemetry packages not available, tracing disabled")
+    except Exception as e:
+        logger.error(f"Failed to enable tracing: {e}")
+
 if __name__ == "__main__":
-    # Start Prometheus metrics server
-    start_http_server(8010)
+    # Start Prometheus metrics server if enabled
+    if config.metrics_enabled:
+        start_http_server(8010)
+        logger.info("Prometheus metrics server started on port 8010")
     
     # Start FastAPI server
-    uvicorn.run(app, host="0.0.0.0", port=8006)
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8006,
+        log_level=config.log_level.value.lower()
+    )

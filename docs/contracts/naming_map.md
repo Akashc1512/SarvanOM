@@ -1,8 +1,8 @@
 # Cross-Repository Naming Map
 
 **Date**: September 9, 2025  
-**Status**: ✅ **ACTIVE CONTRACT**  
-**Purpose**: Single source of truth for canonical parameter names across API, UI, logs, metrics, and config
+**Status**: ✅ **UPDATED FOR PR-7**  
+**Purpose**: Single source of truth for canonical parameter names across API, UI, logs, metrics, and config with provider fallback terminology
 
 ---
 
@@ -24,6 +24,9 @@
 | `provider` | `llm_provider`, `model_provider` | Provider selection | `provider: "openai"` |
 | `model_id` | `model`, `model_name` | Full model identifier | `model_id: "gpt-4o"` |
 | `model_family` | `family`, `base_model` | Model family | `model_family: "gpt-4o"` |
+| `fallback_used` | `used_fallback`, `is_fallback` | Fallback usage flag | `fallback_used: true` |
+| `fallback_source` | `source`, `fallback_type` | Fallback source type | `fallback_source: "keyless"` |
+| `provider_lane` | `lane`, `retrieval_lane` | Provider lane type | `provider_lane: "web_search"` |
 
 ### **Query Mode Parameters**
 | Canonical Name | Forbidden Synonyms | Usage | Example |
@@ -44,6 +47,22 @@
 |----------------|-------------------|-------|---------|
 | `citations_count` | `citation_count`, `num_citations` | Number of citations | `citations_count: 3` |
 | `disagreement_detected` | `has_disagreement`, `conflict` | Disagreement flag | `disagreement_detected: false` |
+
+### **Provider Lane Terminology**
+| Canonical Name | Forbidden Synonyms | Usage | Example |
+|----------------|-------------------|-------|---------|
+| `web_search` | `web`, `search`, `websearch` | Web search lane | `lane: "web_search"` |
+| `news` | `news_search`, `newsfeed` | News retrieval lane | `lane: "news"` |
+| `markets` | `market_data`, `financial` | Market data lane | `lane: "markets"` |
+| `vector` | `vector_search`, `embeddings` | Vector search lane | `lane: "vector"` |
+| `kg` | `knowledge_graph`, `graph` | Knowledge graph lane | `lane: "kg"` |
+| `keyword` | `keyword_search`, `text_search` | Keyword search lane | `lane: "keyword"` |
+
+### **Fallback Source Types**
+| Canonical Name | Forbidden Synonyms | Usage | Example |
+|----------------|-------------------|-------|---------|
+| `keyed` | `premium`, `paid`, `api` | Keyed provider source | `source: "keyed"` |
+| `keyless` | `free`, `public`, `open` | Keyless provider source | `source: "keyless"` |
 
 ---
 

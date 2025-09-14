@@ -1,0 +1,98 @@
+[
+  {
+    "url": "http://localhost:8000/health",
+    "total_requests": 914,
+    "successful_requests": 914,
+    "failed_requests": 0,
+    "success_rate": 100.0,
+    "avg_response_time": 0.0031194817315566984,
+    "min_response_time": 0.0011305809020996094,
+    "max_response_time": 0.2609233856201172,
+    "requests_per_second": 45.7,
+    "timestamp": "2025-09-14T11:57:57.102242"
+  },
+  {
+    "url": "http://localhost:8004/health",
+    "total_requests": 914,
+    "successful_requests": 914,
+    "failed_requests": 0,
+    "success_rate": 100.0,
+    "avg_response_time": 0.0027698286252679136,
+    "min_response_time": 0.0010700225830078125,
+    "max_response_time": 0.2671079635620117,
+    "requests_per_second": 45.7,
+    "timestamp": "2025-09-14T11:58:19.163869"
+  },
+  {
+    "url": "http://localhost:8005/health",
+    "total_requests": 914,
+    "successful_requests": 914,
+    "failed_requests": 0,
+    "success_rate": 100.0,
+    "avg_response_time": 0.0029708337470791273,
+    "min_response_time": 0.0010499954223632812,
+    "max_response_time": 0.2672550678253174,
+    "requests_per_second": 45.7,
+    "timestamp": "2025-09-14T11:58:41.224214"
+  },
+  {
+    "url": "http://localhost:8012/auth/health",
+    "total_requests": 914,
+    "successful_requests": 140,
+    "failed_requests": 774,
+    "success_rate": 15.317286652078774,
+    "avg_response_time": 0.003858300215305854,
+    "min_response_time": 0.001547098159790039,
+    "max_response_time": 0.27155566215515137,
+    "requests_per_second": 45.7,
+    "timestamp": "2025-09-14T11:59:03.327419"
+  },
+  {
+    "url": "http://localhost:8013/health",
+    "total_requests": 914,
+    "successful_requests": 914,
+    "failed_requests": 0,
+    "success_rate": 100.0,
+    "avg_response_time": 0.0029488619359890793,
+    "min_response_time": 0.0011112689971923828,
+    "max_response_time": 0.2694525718688965,
+    "requests_per_second": 45.7,
+    "timestamp": "2025-09-14T11:59:25.390204"
+  },
+  {
+    "url": "http://localhost:8000/models",
+    "total_requests": 914,
+    "successful_requests": 914,
+    "failed_requests": 0,
+    "success_rate": 100.0,
+    "avg_response_time": 0.0033937841327759057,
+    "min_response_time": 0.0012357234954833984,
+    "max_response_time": 0.2699441909790039,
+    "requests_per_second": 45.7,
+    "timestamp": "2025-09-14T11:59:47.510951"
+  },
+  {
+    "url": "http://localhost:8004/config",
+    "total_requests": 916,
+    "successful_requests": 916,
+    "failed_requests": 0,
+    "success_rate": 100.0,
+    "avg_response_time": 0.0029526855227208033,
+    "min_response_time": 0.0011248588562011719,
+    "max_response_time": 0.2651822566986084,
+    "requests_per_second": 45.8,
+    "timestamp": "2025-09-14T12:00:09.620225"
+  },
+  {
+    "url": "http://localhost:8005/config",
+    "total_requests": 914,
+    "successful_requests": 914,
+    "failed_requests": 0,
+    "success_rate": 100.0,
+    "avg_response_time": 0.0029120228744440057,
+    "min_response_time": 0.001107931137084961,
+    "max_response_time": 0.26644182205200195,
+    "requests_per_second": 45.7,
+    "timestamp": "2025-09-14T12:00:31.704820"
+  }
+]

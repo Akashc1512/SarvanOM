@@ -15,14 +15,21 @@ from dataclasses import dataclass
 from enum import Enum
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import httpx
 from prometheus_client import Counter, Histogram, Gauge, start_http_server
 
+# Import central configuration
+from shared.core.config.central_config import get_central_config
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Get configuration
+config = get_central_config()
 
 # Prometheus metrics
 discovery_runs_total = Counter('sarvanom_discovery_runs_total', 'Total discovery runs', ['provider'])
@@ -343,7 +350,8 @@ class ModelEvaluator:
 class AutoUpgradeService:
     """Main auto-upgrade service"""
     
-    def __init__(self):
+    def __init__(self, config):
+        self.config = config
         self.discovery = ModelDiscovery()
         self.evaluator = ModelEvaluator()
         self.running = False
@@ -495,11 +503,58 @@ class AutoUpgradeService:
         self.running = False
         logger.info("Auto-upgrade service stopped")
 
-# FastAPI app
-app = FastAPI(title="Auto-Upgrade Service", version="2.0.0")
+# Create FastAPI app
+app = FastAPI(
+    title="Auto-Upgrade Service",
+    version="2.0.0",
+    description="Automatically discovers, evaluates, and deploys new stable models while maintaining system reliability"
+)
 
-# Auto-upgrade service instance
-auto_upgrade_service = AutoUpgradeService()
+# Set CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.cors_origins if isinstance(config.cors_origins, list) else (config.cors_origins.split(",") if config.cors_origins else ["*"]),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# App state / DI container
+async def init_dependencies():
+    """Initialize shared clients and dependencies"""
+    logger.info("Initializing Auto-Upgrade dependencies...")
+    
+    # Initialize HTTP client
+    app.state.http_client = httpx.AsyncClient(
+        timeout=httpx.Timeout(30.0),
+        limits=httpx.Limits(max_keepalive_connections=20, max_connections=100)
+    )
+    
+    # Initialize Auto-Upgrade Service
+    app.state.auto_upgrade_service = AutoUpgradeService(config)
+    logger.info("Auto-Upgrade Service initialized successfully")
+
+async def cleanup_dependencies():
+    """Cleanup shared clients and dependencies"""
+    logger.info("Cleaning up Auto-Upgrade dependencies...")
+    
+    if hasattr(app.state, 'http_client'):
+        try:
+            await app.state.http_client.aclose()
+            logger.info("HTTP client closed successfully")
+        except Exception as e:
+            logger.error(f"Error closing HTTP client: {e}")
+
+# Startup/Shutdown events
+@app.on_event("startup")
+async def startup_event():
+    """Application startup event"""
+    await init_dependencies()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Application shutdown event"""
+    await cleanup_dependencies()
 
 # Pydantic models for API
 class ModelCandidateResponse(BaseModel):
@@ -524,28 +579,76 @@ class EvaluationResultResponse(BaseModel):
     evaluation_date: str
     passed: bool
 
+# Health & Config endpoints
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "auto-upgrade"}
+    """Health check endpoint - fast, no downstream calls"""
+    return {"status": "healthy", "service": "auto-upgrade", "timestamp": datetime.now().isoformat()}
 
+@app.get("/ready")
+async def ready_check():
+    """Ready check endpoint - light ping to critical deps with small timeout"""
+    try:
+        # Check HTTP client and auto-upgrade service availability
+        if not hasattr(app.state, 'auto_upgrade_service') or not hasattr(app.state, 'http_client'):
+            raise HTTPException(status_code=503, detail="Dependencies not initialized")
+        
+        # Test HTTP client with a quick request
+        await asyncio.wait_for(
+            app.state.http_client.get("http://httpbin.org/status/200"),
+            timeout=2.0
+        )
+        return {"status": "ready", "service": "auto-upgrade", "timestamp": datetime.now().isoformat()}
+    except Exception as e:
+        logger.error(f"Ready check failed: {e}")
+        raise HTTPException(status_code=503, detail="Service not ready")
+
+@app.get("/config")
+async def get_config_endpoint():
+    """Config endpoint - sanitized echo of active providers and keyless fallbacks"""
+    return {
+        "service": "auto-upgrade",
+        "active_providers": {
+            "openai": bool(config.openai_api_key),
+            "anthropic": bool(config.anthropic_api_key),
+            "gemini": bool(getattr(config, 'google_api_key', None)),
+            "huggingface": bool(config.huggingface_api_key or config.huggingface_read_token or config.huggingface_write_token),
+            "ollama": bool(config.ollama_base_url)
+        },
+        "keyless_fallbacks_enabled": getattr(config, 'keyless_fallbacks_enabled', True),
+        "model_auto_upgrade_enabled": getattr(config, 'model_auto_upgrade_enabled', False),
+        "environment": getattr(config, 'environment', 'development'),
+        "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/version")
+async def get_version():
+    """Version endpoint"""
+    return {
+        "service": "auto-upgrade",
+        "version": "2.0.0",
+        "build_date": datetime.now().isoformat(),
+        "environment": config.environment.value
+    }
+
+# API endpoints
 @app.get("/candidates", response_model=List[ModelCandidateResponse])
 async def get_candidates():
     """Get all model candidates"""
-    return [ModelCandidateResponse(**candidate.__dict__) for candidate in auto_upgrade_service.candidates.values()]
+    return [ModelCandidateResponse(**candidate.__dict__) for candidate in app.state.auto_upgrade_service.candidates.values()]
 
 @app.get("/evaluations", response_model=List[EvaluationResultResponse])
 async def get_evaluations():
     """Get all evaluation results"""
-    return [EvaluationResultResponse(**evaluation.__dict__) for evaluation in auto_upgrade_service.evaluations.values()]
+    return [EvaluationResultResponse(**evaluation.__dict__) for evaluation in app.state.auto_upgrade_service.evaluations.values()]
 
 @app.post("/start")
 async def start_service(background_tasks: BackgroundTasks):
     """Start the auto-upgrade service"""
-    if not auto_upgrade_service.running:
-        background_tasks.add_task(auto_upgrade_service.start_discovery_cycle)
-        background_tasks.add_task(auto_upgrade_service.start_evaluation_cycle)
-        background_tasks.add_task(auto_upgrade_service.start_deployment_cycle)
+    if not app.state.auto_upgrade_service.running:
+        background_tasks.add_task(app.state.auto_upgrade_service.start_discovery_cycle)
+        background_tasks.add_task(app.state.auto_upgrade_service.start_evaluation_cycle)
+        background_tasks.add_task(app.state.auto_upgrade_service.start_deployment_cycle)
         return {"status": "started"}
     else:
         return {"status": "already_running"}
@@ -553,18 +656,59 @@ async def start_service(background_tasks: BackgroundTasks):
 @app.post("/stop")
 async def stop_service():
     """Stop the auto-upgrade service"""
-    auto_upgrade_service.stop()
+    app.state.auto_upgrade_service.stop()
     return {"status": "stopped"}
 
 @app.post("/discover")
 async def trigger_discovery():
     """Trigger manual model discovery"""
-    discovered_models = await auto_upgrade_service.discovery.discover_models()
+    discovered_models = await app.state.auto_upgrade_service.discovery.discover_models()
     return {"discovered": len(discovered_models), "models": [model.model_id for model in discovered_models]}
 
+# Observability middleware
+if config.metrics_enabled:
+    # Mount Prometheus metrics
+    from prometheus_client import make_asgi_app
+    metrics_app = make_asgi_app()
+    app.mount("/metrics", metrics_app)
+    logger.info("Prometheus metrics enabled")
+
+if getattr(config, 'tracing_enabled', False) and getattr(config, 'jaeger_agent_host', None):
+    # Mount tracing middleware
+    try:
+        from opentelemetry import trace
+        from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        
+        # Configure Jaeger tracing
+        trace.set_tracer_provider(TracerProvider())
+        jaeger_exporter = JaegerExporter(
+            agent_host_name=config.jaeger_agent_host,
+            agent_port=int(config.jaeger_agent_port) if config.jaeger_agent_port else 6831,
+        )
+        span_processor = BatchSpanProcessor(jaeger_exporter)
+        trace.get_tracer_provider().add_span_processor(span_processor)
+        
+        # Instrument FastAPI
+        FastAPIInstrumentor.instrument_app(app)
+        logger.info("Jaeger tracing enabled")
+    except ImportError:
+        logger.warning("OpenTelemetry packages not available, tracing disabled")
+    except Exception as e:
+        logger.error(f"Failed to enable tracing: {e}")
+
 if __name__ == "__main__":
-    # Start Prometheus metrics server
-    start_http_server(8003)
+    # Start Prometheus metrics server if enabled
+    if config.metrics_enabled:
+        start_http_server(8003)
+        logger.info("Prometheus metrics server started on port 8003")
     
     # Start FastAPI server
-    uvicorn.run(app, host="0.0.0.0", port=8002)
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8002,
+        log_level=config.log_level.value.lower()
+    )

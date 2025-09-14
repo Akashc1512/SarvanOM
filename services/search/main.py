@@ -91,4 +91,4 @@ app = app_factory()
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("services.search.main:app", host="0.0.0.0", port=8015, reload=True)
+    uvicorn.run("services.search.main:app", host="0.0.0.0", port=8014, reload=True)

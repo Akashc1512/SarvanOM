@@ -1,0 +1,8 @@
+{
+  "query": "What is machine learning?",
+  "task": "general",
+  "context": {
+    "domain": "technical",
+    "complexity": "beginner"
+  }
+}

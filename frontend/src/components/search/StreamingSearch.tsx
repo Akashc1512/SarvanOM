@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useSSEStream } from '../../hooks/useSSEStream';
 import { LaneChips, LaneProgress, PartialAnswerBanner, TTFTIndicator, type LaneStatus } from '../streaming/LaneChips';
 import { TraceIdDisplay, StreamingStatus } from '../streaming/TraceIdDisplay';
+import { FallbackBadge } from '../ui/FallbackBadge';
 
 interface StreamingSearchProps {
   onComplete?: (data: any) => void;
@@ -323,6 +324,14 @@ export function StreamingSearch({ onComplete, onError, className = '' }: Streami
                   <span>{source.domain}</span>
                   <span>Provider: {source.provider}</span>
                   <span>Score: {(source.relevance_score * 100).toFixed(1)}%</span>
+                  {/* Fallback Badge - show if provider is keyless */}
+                  <FallbackBadge
+                    fallbackUsed={source.provider?.includes('keyless') || source.provider?.includes('fallback')}
+                    source={source.provider?.includes('keyless') ? 'keyless' : 'keyed'}
+                    provider={source.provider}
+                    lane="web_search"
+                    traceId={traceId}
+                  />
                 </div>
               </div>
             ))}

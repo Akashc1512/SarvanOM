@@ -5,9 +5,9 @@ from dotenv import load_dotenv
 
 from fastapi import FastAPI
 from shared.core.app_factory import create_app_factory, with_request_metrics
-from shared.core.config import get_central_config
+from shared.core.config.central_config import get_central_config
 from shared.core.logging import get_logger
-from shared.core.agents.llm_client import LLMClient
+# from shared.core.agents.llm_client import LLMClient  # Module doesn't exist
 from shared.core.cache import get_cache_manager
 from shared.contracts.query import SynthesisRequest, SynthesisResponse
 
@@ -161,4 +161,4 @@ app = app_factory()
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("services.synthesis.main:app", host="0.0.0.0", port=8002, reload=True)
+    uvicorn.run("services.synthesis.main:app", host="0.0.0.0", port=8008, reload=True)

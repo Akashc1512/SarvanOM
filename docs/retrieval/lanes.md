@@ -1,8 +1,8 @@
 # Retrieval Lanes - SarvanOM v2
 
 **Date**: September 9, 2025  
-**Status**: ✅ **ACTIVE CONTRACT**  
-**Purpose**: Define retrieval lanes (web, vector, KG, keyword, news, markets) with Pre-flight lane for Guided Prompt
+**Status**: ✅ **UPDATED FOR PR-7**  
+**Purpose**: Define retrieval lanes (web, vector, KG, keyword, news, markets) with Pre-flight lane for Guided Prompt - exact runtime behavior
 
 ---
 
@@ -18,6 +18,34 @@ The Retrieval Lanes system provides multiple parallel retrieval strategies to en
 5. **News Lane**: News and current events retrieval
 6. **Markets Lane**: Financial and market data retrieval
 7. **Pre-flight Lane**: Guided Prompt Confirmation processing
+
+---
+
+## 🔄 **Runtime Behavior (PR-7 Updated)**
+
+### **Provider Order Execution**
+- **Parallel Fan-Out**: Providers within each lane execute in parallel
+- **First-N Strategy**: Lane completes when sufficient results are obtained
+- **Provider Penalty**: Failed providers are temporarily demoted
+- **Auto-Demotion**: Providers with >30% failure rate are automatically demoted
+
+### **Budget Enforcement**
+- **Per-Provider Timeout**: ≤800ms per individual provider
+- **Lane Budget**: 2s (Simple), 3s (Technical), 4s (Research)
+- **End-to-End Budget**: 5s (Simple), 7s (Technical), 10s (Research)
+- **Graceful Degradation**: Lane continues with available providers if budget exceeded
+
+### **Fallback Logic**
+- **Keyed Providers**: Primary and fallback providers with API keys
+- **Keyless Providers**: Always available, no API key required
+- **Fallback Activation**: Automatic when keyed providers fail or unavailable
+- **Budget Compliance**: Keyless-only lanes must still meet end-to-end budgets
+
+### **Metrics & Observability**
+- **Provider Tags**: `provider`, `fallback_used`, `source`, `timeout`
+- **Lane Metrics**: `lane_latency_histogram`, `lane_result_counter`
+- **Health Monitoring**: Real-time provider health status
+- **Auto-Demotion Tracking**: Provider failure rate monitoring
 
 ---
 

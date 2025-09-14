@@ -1,0 +1,5 @@
+{
+  "query": "What is artificial intelligence?",
+  "task_type": "general",
+  "max_tokens": 100
+}

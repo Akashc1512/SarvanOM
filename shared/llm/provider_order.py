@@ -922,8 +922,12 @@ class ProviderRegistry:
     
     def _check_huggingface_availability(self) -> bool:
         """Check if HuggingFace is available."""
+        # Import centralized configuration
+        from sarvanom.shared.core.config.provider_config import get_provider_config
+        provider_config = get_provider_config()
+        
         # Check if HuggingFace API token is set
-        hf_token = os.getenv("HUGGINGFACE_WRITE_TOKEN")
+        hf_token = provider_config.HUGGINGFACE_WRITE_TOKEN.get_secret_value() if provider_config.HUGGINGFACE_WRITE_TOKEN else None
         
         if not hf_token:
             logger.debug("HuggingFace not available: HUGGINGFACE_WRITE_TOKEN not set")
@@ -933,8 +937,12 @@ class ProviderRegistry:
     
     def _check_openai_availability(self) -> bool:
         """Check if OpenAI is available."""
+        # Import centralized configuration
+        from sarvanom.shared.core.config.provider_config import get_provider_config
+        provider_config = get_provider_config()
+        
         # Check if OpenAI API key is set
-        openai_key = os.getenv("OPENAI_API_KEY")
+        openai_key = provider_config.OPENAI_API_KEY.get_secret_value() if provider_config.OPENAI_API_KEY else None
         
         if not openai_key:
             logger.debug("OpenAI not available: OPENAI_API_KEY not set")
@@ -944,8 +952,12 @@ class ProviderRegistry:
     
     def _check_anthropic_availability(self) -> bool:
         """Check if Anthropic is available."""
+        # Import centralized configuration
+        from sarvanom.shared.core.config.provider_config import get_provider_config
+        provider_config = get_provider_config()
+        
         # Check if Anthropic API key is set
-        anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+        anthropic_key = provider_config.ANTHROPIC_API_KEY.get_secret_value() if provider_config.ANTHROPIC_API_KEY else None
         
         if not anthropic_key:
             logger.debug("Anthropic not available: ANTHROPIC_API_KEY not set")

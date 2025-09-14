@@ -95,9 +95,15 @@ Example (pseudocode):
 """
 
 # Configuration from environment
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY")
+# Import centralized configuration
+from shared.core.config.provider_config import provider_config
+
+# Get provider configuration
+# provider_config is already the global instance
+
+OPENAI_API_KEY = provider_config.get_provider_value("OPENAI_API_KEY")
+ANTHROPIC_API_KEY = provider_config.get_provider_value("ANTHROPIC_API_KEY")
+HUGGINGFACE_API_KEY = provider_config.get_provider_value("HUGGINGFACE_API_KEY")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "30"))
 OLLAMA_DEFAULT_MODEL = os.getenv("OLLAMA_DEFAULT_MODEL", "llama3")

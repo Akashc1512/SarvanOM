@@ -24,6 +24,9 @@ try:
 except ImportError:
     pass  # Windows compatibility not available
 
+# Import central configuration
+from shared.core.config.central_config import get_central_config
+
 from fastapi import FastAPI, HTTPException, Request, Response, WebSocket, File, UploadFile, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -62,6 +65,9 @@ from shared.core.system_health import (
 
 # Setup logger early for import error handling
 logger = get_logger(__name__)
+
+# Get configuration
+config = get_central_config()
 
 # Import observability middleware
 from services.gateway.middleware.observability import (
@@ -344,7 +350,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Universal Knowledge Platform API Gateway",
     description="Advanced API Gateway with caching, streaming, background processing, and prompt optimization",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan
 )
 
@@ -353,12 +359,7 @@ app.add_exception_handler(SarvanOMError, sarvanom_exception_handler)
 app.add_exception_handler(Exception, generic_exception_handler)
 
 # Security and observability configuration
-ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:3001", 
-    "https://sarvanom.com",
-    "https://www.sarvanom.com"
-]
+ALLOWED_ORIGINS = config.cors_origins if isinstance(config.cors_origins, list) else (config.cors_origins.split(",") if config.cors_origins else ["*"])
 
 # Enhanced security configuration
 security_hardening_config = SecurityHardeningConfig(
@@ -3308,10 +3309,10 @@ async def version_info():
     trace_id = str(uuid.uuid4())
     
     response = VersionResponse(
-        version="1.0.0",
+        version="2.0.0",
         git_sha=get_git_sha(),
         build_time=get_build_time(),
-        environment=os.getenv("ENVIRONMENT", "development")
+        environment=getattr(config, 'environment', 'development')
     )
     
     # Add trace_id to response headers
@@ -3320,6 +3321,104 @@ async def version_info():
         content=response.dict(),
         headers={"X-Trace-ID": trace_id}
     )
+
+@app.get("/config")
+async def get_config_endpoint():
+    """Config endpoint - sanitized echo of active providers and configuration"""
+    return {
+        "service": "gateway",
+        "active_providers": {
+            "openai": bool(getattr(config, 'openai_api_key', None)),
+            "anthropic": bool(getattr(config, 'anthropic_api_key', None)),
+            "google": bool(getattr(config, 'google_api_key', None)),
+            "huggingface": bool(getattr(config, 'huggingface_api_key', None) or getattr(config, 'huggingface_read_token', None) or getattr(config, 'huggingface_write_token', None)),
+            "ollama": bool(getattr(config, 'ollama_base_url', None))
+        },
+        "keyless_fallbacks_enabled": getattr(config, 'keyless_fallbacks_enabled', True),
+        "environment": getattr(config, 'environment', 'development'),
+        "cors_origins": ALLOWED_ORIGINS,
+        "timestamp": datetime.now().isoformat()
+    }
+
+# Observability middleware
+# Always mount Prometheus metrics endpoint
+try:
+    from prometheus_client import make_asgi_app
+    metrics_app = make_asgi_app()
+    app.mount("/metrics", metrics_app)
+    logger.info("Prometheus metrics endpoint mounted at /metrics")
+except Exception as e:
+    logger.error(f"Failed to mount Prometheus metrics: {e}")
+
+# Conditional tracing setup - only if keys exist
+tracing_enabled = False
+if (hasattr(config, 'tracing_enabled') and config.tracing_enabled and 
+    hasattr(config, 'jaeger_agent_host') and config.jaeger_agent_host):
+    try:
+        from opentelemetry import trace
+        from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        
+        # Configure Jaeger tracing
+        trace.set_tracer_provider(TracerProvider())
+        jaeger_exporter = JaegerExporter(
+            agent_host_name=config.jaeger_agent_host,
+            agent_port=int(config.jaeger_agent_port) if hasattr(config, 'jaeger_agent_port') and config.jaeger_agent_port else 6831,
+        )
+        span_processor = BatchSpanProcessor(jaeger_exporter)
+        trace.get_tracer_provider().add_span_processor(span_processor)
+        
+        # Instrument FastAPI
+        FastAPIInstrumentor.instrument_app(app)
+        tracing_enabled = True
+        logger.info("Jaeger tracing enabled")
+    except ImportError:
+        logger.warning("OpenTelemetry packages not available, tracing disabled")
+    except Exception as e:
+        logger.error(f"Failed to enable tracing: {e}")
+else:
+    logger.info("Tracing disabled - no tracing keys configured")
+
+# Add debug trace endpoint if tracing is enabled
+if tracing_enabled:
+    @app.get("/_debug/trace")
+    async def debug_trace():
+        """Debug endpoint to echo trace information when tracing is enabled"""
+        try:
+            from opentelemetry import trace
+            tracer = trace.get_tracer(__name__)
+            
+            # Create a sample span
+            with tracer.start_as_current_span("debug_trace_echo") as span:
+                span.set_attribute("debug.endpoint", "/_debug/trace")
+                span.set_attribute("debug.timestamp", datetime.now().isoformat())
+                
+                return {
+                    "status": "tracing_enabled",
+                    "tracer_name": tracer.name,
+                    "trace_id": format(span.get_span_context().trace_id, '032x'),
+                    "span_id": format(span.get_span_context().span_id, '016x'),
+                    "timestamp": datetime.now().isoformat(),
+                    "message": "Tracing is active and working"
+                }
+        except Exception as e:
+            logger.error(f"Debug trace endpoint error: {e}")
+            return {
+                "status": "tracing_error",
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+else:
+    @app.get("/_debug/trace")
+    async def debug_trace_disabled():
+        """Debug endpoint when tracing is disabled"""
+        return {
+            "status": "tracing_disabled",
+            "message": "Tracing is not enabled - no tracing keys configured",
+            "timestamp": datetime.now().isoformat()
+        }
 
 # Error handlers
 @app.exception_handler(404)
@@ -4143,4 +4242,5 @@ async def list_system_settings(skip: int = 0, limit: int = 100, category: Option
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    # Gateway service uses port 8007
+    uvicorn.run(app, host="0.0.0.0", port=8007) 

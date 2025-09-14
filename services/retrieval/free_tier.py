@@ -147,9 +147,15 @@ class ProviderHealth:
         return timeout_map.get(self.provider, PROVIDER_TIMEOUT_MS)
 
 
-# Environment variables
-BRAVE_API_KEY = os.getenv("BRAVE_API_KEY", "")
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY", "")
+# Import centralized configuration
+from shared.core.config.provider_config import provider_config
+
+# Get provider configuration
+# provider_config is already the global instance
+
+# Environment variables - use centralized config
+BRAVE_API_KEY = provider_config.get_provider_value("BRAVE_SEARCH_API_KEY") or ""
+YOUTUBE_API_KEY = provider_config.get_provider_value("YOUTUBE_API_KEY") or ""
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 # Fix Docker hostname issues for local development
 if "sarvanom-redis" in REDIS_URL:

@@ -19,15 +19,22 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import httpx
 import redis
 from prometheus_client import Counter, Histogram, Gauge, start_http_server
 
+# Import central configuration
+from shared.core.config.central_config import get_central_config
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Get configuration
+config = get_central_config()
 
 # Prometheus metrics
 retrieval_requests_total = Counter('sarvanom_retrieval_requests_total', 'Total retrieval requests', ['complexity', 'lane'])
@@ -291,14 +298,71 @@ class RetrievalService:
         
         fusion_time.observe(fused_result.fusion_time_ms / 1000.0)
 
-# FastAPI app
-app = FastAPI(title="Retrieval Service", version="2.0.0")
+# Create FastAPI app
+app = FastAPI(
+    title="Retrieval Service",
+    version="2.0.0",
+    description="Multi-lane retrieval system with Qdrant + Meili + Arango + news + markets"
+)
 
-# Redis client
-redis_client = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+# Set CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.cors_origins if isinstance(config.cors_origins, list) else (config.cors_origins.split(",") if config.cors_origins else ["*"]),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Retrieval service instance
-retrieval_service = RetrievalService(redis_client)
+# App state / DI container
+async def init_dependencies():
+    """Initialize shared clients and dependencies"""
+    logger.info("Initializing Retrieval dependencies...")
+    
+    # Initialize Redis client
+    app.state.redis_client = redis.Redis.from_url(
+        str(config.redis_url),
+        decode_responses=True,
+        socket_connect_timeout=5,
+        socket_timeout=5,
+        retry_on_timeout=True
+    )
+    
+    # Test Redis connection
+    try:
+        await asyncio.get_event_loop().run_in_executor(
+            None, app.state.redis_client.ping
+        )
+        logger.info("Redis client initialized successfully")
+    except Exception as e:
+        logger.error(f"Failed to connect to Redis: {e}")
+        raise
+    
+    # Initialize Retrieval Service
+    app.state.retrieval_service = RetrievalService(app.state.redis_client)
+    logger.info("Retrieval Service initialized successfully")
+
+async def cleanup_dependencies():
+    """Cleanup shared clients and dependencies"""
+    logger.info("Cleaning up Retrieval dependencies...")
+    
+    if hasattr(app.state, 'redis_client'):
+        try:
+            app.state.redis_client.close()
+            logger.info("Redis client closed successfully")
+        except Exception as e:
+            logger.error(f"Error closing Redis client: {e}")
+
+# Startup/Shutdown events
+@app.on_event("startup")
+async def startup_event():
+    """Application startup event"""
+    await init_dependencies()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Application shutdown event"""
+    await cleanup_dependencies()
 
 # Pydantic models for API
 class ConstraintChipRequest(BaseModel):
@@ -326,10 +390,53 @@ class RetrievalResultResponse(BaseModel):
     unique_domains: int
     fusion_time_ms: float
 
+# Health & Config endpoints
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "service": "retrieval"}
+    """Health check endpoint - fast, no downstream calls"""
+    return {"status": "healthy", "service": "retrieval", "timestamp": datetime.now().isoformat()}
+
+@app.get("/ready")
+async def ready_check():
+    """Ready check endpoint - light ping to critical deps with small timeout"""
+    try:
+        # Check Redis connection with timeout
+        await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(
+                None, app.state.redis_client.ping
+            ),
+            timeout=2.0
+        )
+        return {"status": "ready", "service": "retrieval", "timestamp": datetime.now().isoformat()}
+    except Exception as e:
+        logger.error(f"Ready check failed: {e}")
+        raise HTTPException(status_code=503, detail="Service not ready")
+
+@app.get("/config")
+async def get_config_endpoint():
+    """Config endpoint - sanitized echo of active providers and keyless fallbacks"""
+    return {
+        "service": "retrieval",
+        "active_providers": {
+            "qdrant": bool(config.vector_db_url),
+            "meilisearch": bool(config.meilisearch_url),
+            "arangodb": bool(getattr(config, 'arango_url', None)),
+            "redis": bool(config.redis_url)
+        },
+        "keyless_fallbacks_enabled": getattr(config, 'keyless_fallbacks_enabled', True),
+        "environment": config.environment.value,
+        "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/version")
+async def get_version():
+    """Version endpoint"""
+    return {
+        "service": "retrieval",
+        "version": "2.0.0",
+        "build_date": datetime.now().isoformat(),
+        "environment": config.environment.value
+    }
 
 @app.post("/retrieve", response_model=RetrievalResultResponse)
 async def retrieve_documents(request: RetrievalRequestModel):
@@ -349,7 +456,7 @@ async def retrieve_documents(request: RetrievalRequestModel):
         )
         
         # Execute retrieval
-        fused_result = await retrieval_service.retrieve(retrieval_request)
+        fused_result = await app.state.retrieval_service.retrieve(retrieval_request)
         
         return RetrievalResultResponse(**asdict(fused_result))
         
@@ -361,14 +468,55 @@ async def retrieve_documents(request: RetrievalRequestModel):
 async def get_lane_status():
     """Get status of all retrieval lanes"""
     return {
-        "lanes": list(retrieval_service.lanes.keys()),
+        "lanes": list(app.state.retrieval_service.lanes.keys()),
         "status": "healthy",
-        "budget_allocations": retrieval_service.budget_allocations
+        "budget_allocations": app.state.retrieval_service.budget_allocations
     }
 
+# Observability middleware
+if config.metrics_enabled:
+    # Mount Prometheus metrics
+    from prometheus_client import make_asgi_app
+    metrics_app = make_asgi_app()
+    app.mount("/metrics", metrics_app)
+    logger.info("Prometheus metrics enabled")
+
+if getattr(config, 'tracing_enabled', False) and getattr(config, 'jaeger_agent_host', None):
+    # Mount tracing middleware
+    try:
+        from opentelemetry import trace
+        from opentelemetry.exporter.jaeger.thrift import JaegerExporter
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+        
+        # Configure Jaeger tracing
+        trace.set_tracer_provider(TracerProvider())
+        jaeger_exporter = JaegerExporter(
+            agent_host_name=config.jaeger_agent_host,
+            agent_port=int(config.jaeger_agent_port) if config.jaeger_agent_port else 6831,
+        )
+        span_processor = BatchSpanProcessor(jaeger_exporter)
+        trace.get_tracer_provider().add_span_processor(span_processor)
+        
+        # Instrument FastAPI
+        FastAPIInstrumentor.instrument_app(app)
+        logger.info("Jaeger tracing enabled")
+    except ImportError:
+        logger.warning("OpenTelemetry packages not available, tracing disabled")
+    except Exception as e:
+        logger.error(f"Failed to enable tracing: {e}")
+
 if __name__ == "__main__":
-    # Start Prometheus metrics server
-    start_http_server(8005)
+    # Start Prometheus metrics server if enabled
+    if config.metrics_enabled:
+        start_http_server(8006)
+        logger.info("Prometheus metrics server started on port 8006")
     
     # Start FastAPI server
-    uvicorn.run(app, host="0.0.0.0", port=8004)
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=8004,
+        log_level=config.log_level.value.lower()
+    )

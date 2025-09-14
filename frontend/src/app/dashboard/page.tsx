@@ -12,6 +12,8 @@ import type {
   AnalyticsData,
 } from "@/types/api";
 import AgentToolkit from "@/ui/AgentToolkit";
+import GuidedPromptModal from "@/components/GuidedPromptModal";
+import { useGuidedPrompt } from "@/hooks/useGuidedPrompt";
 import { motion } from "framer-motion";
 import { 
   Activity, 
@@ -47,6 +49,9 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  
+  // Guided Prompt integration
+  const { isGuidedPromptEnabled, toggleGuidedPrompt } = useGuidedPrompt();
 
   // Load all dashboard data
   useEffect(() => {
@@ -107,6 +112,15 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen cosmic-bg-primary">
       <div className="cosmic-container cosmic-section">
+        {/* Guided Prompt Modal */}
+        <GuidedPromptModal 
+          isOpen={isGuidedPromptEnabled}
+          onClose={() => toggleGuidedPrompt(false)}
+          onConfirm={(refinedQuery) => {
+            // Handle refined query if needed
+            console.log('Refined query:', refinedQuery);
+          }}
+        />
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Navigation - Industry Standard */}
           <motion.div 
